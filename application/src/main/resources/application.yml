@@ -43,6 +43,8 @@ runtime:
     image: ${RUNTIME_MLRUN_IMAGE:ghcr.io/scc-digitalhub/digitalhub-core-wrapper-mlrun:latest}
   kfp:
     image: ${RUNTIME_KFP_IMAGE:ghcr.io/scc-digitalhub/digitalhub-core-wrapper-kfp:latest}
+  kaniko:
+    image: ${RUNTIME_KANIKO_IMAGE:gcr.io/kaniko-project/executor:latest}
 
 # Spring Docs
 springdoc:
@@ -83,9 +85,9 @@ security:
     issuer-uri: ${DH_AUTH_JWT_ISSUER_URI:}
     audience: ${DH_AUTH_JWT_AUDIENCE:${security.oidc.client-id}}
     claim: ${DH_AUTH_JWT_CLAIM:roles}
-  oidc:    
+  oidc:
     client-id: ${DH_AUTH_OIDC_CLIENT_ID:}
-    scope: 
+    scope:
 
 
 

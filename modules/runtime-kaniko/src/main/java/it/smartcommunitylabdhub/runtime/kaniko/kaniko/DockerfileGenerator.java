@@ -1,4 +1,4 @@
-package it.smartcommunitylabdhub.framework.k8s.kubernetes.kaniko;
+package it.smartcommunitylabdhub.runtime.kaniko.kaniko;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,16 +14,16 @@ public class DockerfileGenerator {
         String templateContent = Files.readString(templatePath);
 
         String additionalCommands = buildConfig
-            .getAdditionalCommands()
-            .stream()
-            .map(entry -> entry)
-            .collect(Collectors.joining("\n"));
+                .getAdditionalCommands()
+                .stream()
+                .map(entry -> entry)
+                .collect(Collectors.joining("\n"));
 
         // Replace placeholders with actual values
         String dockerfileContent = templateContent
-            .replace("{{baseImage}}", buildConfig.getBaseImage())
-            .replace("{{additionalCommands}}", additionalCommands)
-            .replace("{{entrypointCommand}}", buildConfig.getEntrypointCommand());
+                .replace("{{baseImage}}", buildConfig.getBaseImage())
+                .replace("{{additionalCommands}}", additionalCommands)
+                .replace("{{entrypointCommand}}", buildConfig.getEntrypointCommand());
 
         // Write the generated Dockerfile
         Files.writeString(dockerfilePath, dockerfileContent);
