@@ -16,6 +16,7 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.Assert;
@@ -115,25 +116,41 @@ public class K8sBuildFramework extends K8sBaseFramework<K8sBuildRunnable, V1Job>
 
         //TODO Add here additional spec from build runnable
         Objects.requireNonNull(Objects.requireNonNull(job.getSpec()).getTemplate().getSpec())
-                .initContainers(List.of(new V1Container()
-                                .name("kaniko-init" + jobBuildConfig.getIdentifier())
-                                .image("alpine:latest")
-                                .volumeMounts(
-                                        List.of(
-                                                new V1VolumeMount().name("shared-dir").mountPath("/shared")
-                                        )
-                                )
-                                .command(
-                                        List.of(
-                                                "sh",
-                                                "-c",
-                                                "wget " +
-                                                        buildConfig.getSharedData() +
-                                                        " -O /shared/data.tgz && tar xf /shared/data.tgz -C /shared"
-                                        )
-                                )
+                .initContainers(runnable.getInitContainers().stream().map(initContainer -> {
+
+                            //TODO Add here additional spec from build runnable
+                            return new V1Container()
+                                    .name(initContainer.getName())
+                                    .image(initContainer.getImage())
+                                    .volumeMounts(
+                                            initContainer
+                                                    .getVolumes().stream()
+                                                    .map(volumeMount -> new V1VolumeMount().name(volumeMount.name())
+                                                            .mountPath(volumeMount.mountPath())).collect(Collectors.toList()))
+                                    .command(initContainer.getCommand());
+
+                        })
+                        .collect(Collectors.toList()));
+
+        List.of(new V1Container()
+                .name("kaniko-init" + jobBuildConfig.getIdentifier())
+                .image("alpine:latest")
+                .volumeMounts(
+                        List.of(
+                                new V1VolumeMount().name("shared-dir").mountPath("/shared")
                         )
-                );
+                )
+                .command(
+                        List.of(
+                                "sh",
+                                "-c",
+                                "wget " +
+                                        buildConfig.getSharedData() +
+                                        " -O /shared/data.tgz && tar xf /shared/data.tgz -C /shared"
+                        )
+                )
+        )
+                            );
 
 
         return new V1Job().metadata(metadata).spec(job.getSpec());
