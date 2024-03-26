@@ -92,88 +92,83 @@ public class KanikoImageBuilder {
             V1Job job = new V1Job()
                     .metadata(new V1ObjectMeta().name("job" + jobBuildConfig.getIdentifier()))
                     .spec(
-                            new V1JobSpec()
-                                    .template(
-                                            new V1PodTemplateSpec()
-                                                    .spec(
-                                                            new V1PodSpec()
-                                                                    .initContainers(
-                                                                            List.of(
-                                                                                    new V1Container()
-                                                                                            .name("kaniko-init" + jobBuildConfig.getIdentifier())
-                                                                                            .image("alpine:latest")
-                                                                                            .volumeMounts(
-                                                                                                    List.of(
-                                                                                                            new V1VolumeMount().name("shared-dir").mountPath("/shared")
-                                                                                                    )
-                                                                                            )
-                                                                                            .command(
-                                                                                                    List.of(
-                                                                                                            "sh",
-                                                                                                            "-c",
-                                                                                                            "wget " +
-                                                                                                                    buildConfig.getSharedData() +
-                                                                                                                    " -O /shared/data.tgz && tar xf /shared/data.tgz -C /shared"
-                                                                                                    )
-                                                                                            )
-                                                                            )
+                            new V1JobSpec().template(
+                                    new V1PodTemplateSpec().spec(new V1PodSpec()
+                                            .initContainers(List.of(new V1Container()
+                                                            .name("kaniko-init" + jobBuildConfig.getIdentifier())
+                                                            .image("alpine:latest")
+                                                            .volumeMounts(
+                                                                    List.of(
+                                                                            new V1VolumeMount().name("shared-dir").mountPath("/shared")
                                                                     )
-                                                                    .containers(
-                                                                            List.of(
-                                                                                    new V1Container()
-                                                                                            .name("kaniko-container" + jobBuildConfig.getIdentifier())
-                                                                                            .image("gcr.io/kaniko-project/executor:latest")
-                                                                                            .volumeMounts(
-                                                                                                    List.of(
-                                                                                                            new V1VolumeMount()
-                                                                                                                    .name("kaniko-config")
-                                                                                                                    .mountPath("/build"),
-                                                                                                            new V1VolumeMount()
-                                                                                                                    .name("kaniko-secret")
-                                                                                                                    .mountPath("/kaniko/.docker"),
-                                                                                                            new V1VolumeMount().name("shared-dir").mountPath("/shared")
-                                                                                                    )
-                                                                                            )
-                                                                                            .env(
-                                                                                                    List.of(
-                                                                                                            new V1EnvVar()
-                                                                                                                    .name("DOCKER_CONFIG")
-                                                                                                                    .value("/kaniko/.docker")
-                                                                                                    )
-                                                                                            )
-                                                                                            .command(
-                                                                                                    List.of(
-                                                                                                            "/kaniko/executor",
-                                                                                                            "--dockerfile=/build/Dockerfile",
-                                                                                                            "--context=/build",
-                                                                                                            "--destination=ltrubbianifbk/dh" +
-                                                                                                                    jobBuildConfig.getIdentifier() +
-                                                                                                                    ":latest"
-                                                                                                    )
-                                                                                            )
-                                                                            )
+                                                            )
+                                                            .command(
+                                                                    List.of(
+                                                                            "sh",
+                                                                            "-c",
+                                                                            "wget " +
+                                                                                    buildConfig.getSharedData() +
+                                                                                    " -O /shared/data.tgz && tar xf /shared/data.tgz -C /shared"
                                                                     )
-                                                                    .volumes(
-                                                                            List.of(
-                                                                                    new V1Volume().name("shared-dir"),
-                                                                                    new V1Volume()
-                                                                                            .name("kaniko-config")
-                                                                                            .configMap(
-                                                                                                    new V1ConfigMapVolumeSource()
-                                                                                                            .name("config-map" + jobBuildConfig.getIdentifier())
-                                                                                            ),
-                                                                                    new V1Volume()
-                                                                                            .name("kaniko-secret")
-                                                                                            .secret(
-                                                                                                    new V1SecretVolumeSource()
-                                                                                                            .secretName("secret" + jobBuildConfig.getIdentifier())
-                                                                                                            .items(List.of(keyToPath))
-                                                                                            )
-                                                                            )
-                                                                    )
-                                                                    .restartPolicy("Never")
+                                                            )
                                                     )
+                                            )
+                                            .containers(
+                                                    List.of(
+                                                            new V1Container()
+                                                                    .name("kaniko-container" + jobBuildConfig.getIdentifier())
+                                                                    .image("gcr.io/kaniko-project/executor:latest")
+                                                                    .volumeMounts(
+                                                                            List.of(
+                                                                                    new V1VolumeMount()
+                                                                                            .name("kaniko-config")
+                                                                                            .mountPath("/build"),
+                                                                                    new V1VolumeMount()
+                                                                                            .name("kaniko-secret")
+                                                                                            .mountPath("/kaniko/.docker"),
+                                                                                    new V1VolumeMount().name("shared-dir").mountPath("/shared")
+                                                                            )
+                                                                    )
+                                                                    .env(
+                                                                            List.of(
+                                                                                    new V1EnvVar()
+                                                                                            .name("DOCKER_CONFIG")
+                                                                                            .value("/kaniko/.docker")
+                                                                            )
+                                                                    )
+                                                                    .command(
+                                                                            List.of(
+                                                                                    "/kaniko/executor",
+                                                                                    "--dockerfile=/build/Dockerfile",
+                                                                                    "--context=/build",
+                                                                                    "--destination=ltrubbianifbk/dh" +
+                                                                                            jobBuildConfig.getIdentifier() +
+                                                                                            ":latest"
+                                                                            )
+                                                                    )
+                                                    )
+                                            )
+                                            .volumes(
+                                                    List.of(
+                                                            new V1Volume().name("shared-dir"),
+                                                            new V1Volume()
+                                                                    .name("kaniko-config")
+                                                                    .configMap(
+                                                                            new V1ConfigMapVolumeSource()
+                                                                                    .name("config-map" + jobBuildConfig.getIdentifier())
+                                                                    ),
+                                                            new V1Volume()
+                                                                    .name("kaniko-secret")
+                                                                    .secret(
+                                                                            new V1SecretVolumeSource()
+                                                                                    .secretName("secret" + jobBuildConfig.getIdentifier())
+                                                                                    .items(List.of(keyToPath))
+                                                                    )
+                                                    )
+                                            )
+                                            .restartPolicy("Never")
                                     )
+                            )
                     );
 
             batchV1Api.createNamespacedJob("default", job, null, null, null, null);
