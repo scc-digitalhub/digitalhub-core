@@ -3,7 +3,7 @@ package it.smartcommunitylabdhub.runtime.kaniko.builders;
 import it.smartcommunitylabdhub.commons.infrastructure.Builder;
 import it.smartcommunitylabdhub.runtime.kaniko.specs.function.FunctionKanikoSpec;
 import it.smartcommunitylabdhub.runtime.kaniko.specs.run.RunKanikoSpec;
-import it.smartcommunitylabdhub.runtime.kaniko.specs.task.TaskBuildSpec;
+import it.smartcommunitylabdhub.runtime.kaniko.specs.task.TaskBuildJavaSpec;
 import java.util.Optional;
 
 /**
@@ -15,10 +15,10 @@ import java.util.Optional;
  * @BuilderComponent(runtime = "dbt", task = "transform")
  */
 
-public class KanikoBuildBuilder implements Builder<FunctionKanikoSpec, TaskBuildSpec, RunKanikoSpec> {
+public class KanikoBuildPythonBuilder implements Builder<FunctionKanikoSpec, TaskBuildJavaSpec, RunKanikoSpec> {
 
     @Override
-    public RunKanikoSpec build(FunctionKanikoSpec funSpec, TaskBuildSpec taskSpec, RunKanikoSpec runSpec) {
+    public RunKanikoSpec build(FunctionKanikoSpec funSpec, TaskBuildJavaSpec taskSpec, RunKanikoSpec runSpec) {
         RunKanikoSpec runKanikoSpec = new RunKanikoSpec(runSpec.toMap());
         runKanikoSpec.setTaskSpec(taskSpec);
         runKanikoSpec.setFuncSpec(funSpec);

@@ -6,7 +6,7 @@ import it.smartcommunitylabdhub.commons.models.entities.run.RunBaseSpec;
 import it.smartcommunitylabdhub.commons.models.enums.EntityName;
 import it.smartcommunitylabdhub.runtime.kaniko.KanikoRuntime;
 import it.smartcommunitylabdhub.runtime.kaniko.specs.function.FunctionKanikoSpec;
-import it.smartcommunitylabdhub.runtime.kaniko.specs.task.TaskBuildSpec;
+import it.smartcommunitylabdhub.runtime.kaniko.specs.task.TaskBuildJavaSpec;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -31,7 +31,7 @@ public class RunKanikoSpec extends RunBaseSpec {
     private Map<String, Serializable> parameters = new HashMap<>();
 
     @JsonProperty("transform_spec")
-    private TaskBuildSpec taskSpec;
+    private TaskBuildJavaSpec taskSpec;
 
     @JsonProperty("function_spec")
     private FunctionKanikoSpec funcSpec;

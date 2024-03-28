@@ -36,7 +36,7 @@ public class FunctionKanikoSpec extends FunctionBaseSpec {
     }
 
     public enum KanikoSourceCodeLanguages {
-        sql,
+        java,
         python,
     }
 }

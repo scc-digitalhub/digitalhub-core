@@ -16,11 +16,11 @@ import it.smartcommunitylabdhub.commons.services.RunnableStore;
 import it.smartcommunitylabdhub.commons.services.entities.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sTaskSpec;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
-import it.smartcommunitylabdhub.runtime.kaniko.builders.KanikoBuildBuilder;
+import it.smartcommunitylabdhub.runtime.kaniko.builders.KanikoBuildJavaBuilder;
 import it.smartcommunitylabdhub.runtime.kaniko.runners.KanikoBuildRunner;
 import it.smartcommunitylabdhub.runtime.kaniko.specs.function.FunctionKanikoSpec;
 import it.smartcommunitylabdhub.runtime.kaniko.specs.run.RunKanikoSpec;
-import it.smartcommunitylabdhub.runtime.kaniko.specs.task.TaskBuildSpec;
+import it.smartcommunitylabdhub.runtime.kaniko.specs.task.TaskBuildJavaSpec;
 import it.smartcommunitylabdhub.runtime.kaniko.status.RunKanikoStatus;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +33,7 @@ public class KanikoRuntime implements Runtime<FunctionKanikoSpec, RunKanikoSpec,
 
     public static final String RUNTIME = "kaniko";
 
-    private final KanikoBuildBuilder builder = new KanikoBuildBuilder();
+    private final KanikoBuildJavaBuilder builder = new KanikoBuildJavaBuilder();
 
     @Autowired
     SecretService secretService;
@@ -60,8 +60,8 @@ public class KanikoRuntime implements Runtime<FunctionKanikoSpec, RunKanikoSpec,
 
         // Retrieve builder using task kind
         switch (kind) {
-            case TaskBuildSpec.KIND -> {
-                TaskBuildSpec taskBuildSpec = new TaskBuildSpec(task.getSpec());
+            case TaskBuildJavaSpec.KIND -> {
+                TaskBuildJavaSpec taskBuildSpec = new TaskBuildJavaSpec(task.getSpec());
                 return builder.build(functionSpec, taskBuildSpec, runSpec);
             }
             default -> throw new IllegalArgumentException(
@@ -87,8 +87,8 @@ public class KanikoRuntime implements Runtime<FunctionKanikoSpec, RunKanikoSpec,
         RunSpecAccessor runAccessor = RunUtils.parseTask(runSpec.getTask());
 
         return switch (runAccessor.getTask()) {
-            case TaskBuildSpec.KIND -> {
-                TaskBuildSpec taskSpec = runSpec.getTaskSpec();
+            case TaskBuildJavaSpec.KIND -> {
+                TaskBuildJavaSpec taskSpec = runSpec.getTaskSpec();
                 if (taskSpec == null) {
                     throw new CoreRuntimeException("null or empty task definition");
                 }

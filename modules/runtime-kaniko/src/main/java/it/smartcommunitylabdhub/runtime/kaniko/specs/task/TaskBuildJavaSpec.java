@@ -14,14 +14,14 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = KanikoRuntime.RUNTIME, kind = TaskBuildSpec.KIND, entity = EntityName.TASK)
-public class TaskBuildSpec extends TaskBaseSpec {
+@SpecType(runtime = KanikoRuntime.RUNTIME, kind = TaskBuildJavaSpec.KIND, entity = EntityName.TASK)
+public class TaskBuildJavaSpec extends TaskBaseSpec {
 
-    public static final String KIND = "kaniko+build";
+    public static final String KIND = "kaniko+buildjava";
 
     private K8sTaskSpec k8s = new K8sTaskSpec();
 
-    public TaskBuildSpec(Map<String, Serializable> data) {
+    public TaskBuildJavaSpec(Map<String, Serializable> data) {
         configure(data);
     }
 
@@ -29,7 +29,7 @@ public class TaskBuildSpec extends TaskBaseSpec {
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
 
-        TaskBuildSpec spec = mapper.convertValue(data, TaskBuildSpec.class);
+        TaskBuildJavaSpec spec = mapper.convertValue(data, TaskBuildJavaSpec.class);
         this.k8s = spec.getK8s();
     }
 }

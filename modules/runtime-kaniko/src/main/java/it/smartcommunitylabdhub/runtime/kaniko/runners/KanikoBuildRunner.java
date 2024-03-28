@@ -10,7 +10,7 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
 import it.smartcommunitylabdhub.runtime.kaniko.KanikoRuntime;
 import it.smartcommunitylabdhub.runtime.kaniko.specs.run.RunKanikoSpec;
-import it.smartcommunitylabdhub.runtime.kaniko.specs.task.TaskBuildSpec;
+import it.smartcommunitylabdhub.runtime.kaniko.specs.task.TaskBuildJavaSpec;
 import java.util.*;
 
 /**
@@ -37,7 +37,7 @@ public class KanikoBuildRunner implements Runner<K8sJobRunnable> {
     public K8sJobRunnable produce(Run run) {
         // Retrieve information about RunKanikoSpec
         RunKanikoSpec runSpec = new RunKanikoSpec(run.getSpec());
-        TaskBuildSpec taskSpec = runSpec.getTaskSpec();
+        TaskBuildJavaSpec taskSpec = runSpec.getTaskSpec();
         if (taskSpec == null) {
             throw new CoreRuntimeException("null or empty task definition");
         }
