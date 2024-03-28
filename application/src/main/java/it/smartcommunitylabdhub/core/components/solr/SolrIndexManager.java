@@ -155,6 +155,12 @@ public class SolrIndexManager {
 
         MultiMapSolrParams.addParam("start", String.valueOf(pageRequest.getOffset()), queryParamMap);
         MultiMapSolrParams.addParam("rows", String.valueOf(pageRequest.getPageSize()), queryParamMap);
+        if(pageRequest.getSort().isSorted()) {
+        	pageRequest.getSort().forEach(order -> {
+        		MultiMapSolrParams.addParam("sort", 
+        				order.getProperty() + " " + order.getDirection().toString(), queryParamMap);
+        	});
+        }
 
         return solrClient.query(solrCollection, new MultiMapSolrParams(queryParamMap));
     }

@@ -17,6 +17,8 @@ import it.smartcommunitylabdhub.core.models.entities.function.FunctionEntity;
 import it.smartcommunitylabdhub.core.repositories.ArtifactRepository;
 import it.smartcommunitylabdhub.core.repositories.DataItemRepository;
 import it.smartcommunitylabdhub.core.repositories.FunctionRepository;
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/solr")
 @ApiVersion("v1")
+@Slf4j
 @PreAuthorize("hasAuthority('ROLE_ADMIN')")
 public class SolrController {
 
@@ -161,6 +164,7 @@ public class SolrController {
             SolrPage<SearchGroupResult> page = solrComponent.groupSearch(q, fq, pageRequest);
             return ResponseEntity.ok(page);
         } catch (Exception e) {
+        	SolrController.log.error(String.format("searchGroup:", e.getMessage()));
             return ResponseEntity.ok(null);
         }
     }
@@ -176,6 +180,7 @@ public class SolrController {
             SolrPage<ItemResult> page = solrComponent.itemSearch(q, fq, pageRequest);
             return ResponseEntity.ok(page);
         } catch (Exception e) {
+        	SolrController.log.error(String.format("search:", e.getMessage()));
             return ResponseEntity.ok(null);
         }
     }
