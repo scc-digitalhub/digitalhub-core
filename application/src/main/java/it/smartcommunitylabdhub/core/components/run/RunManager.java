@@ -21,6 +21,7 @@ import it.smartcommunitylabdhub.commons.models.utils.RunUtils;
 import it.smartcommunitylabdhub.commons.models.utils.TaskUtils;
 import it.smartcommunitylabdhub.commons.services.entities.RunService;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
+import it.smartcommunitylabdhub.core.components.infrastructure.factories.processors.ProcessorRegistry;
 import it.smartcommunitylabdhub.core.components.infrastructure.factories.runtimes.RuntimeFactory;
 import it.smartcommunitylabdhub.core.models.entities.RunEntity;
 import it.smartcommunitylabdhub.core.models.entities.TaskEntity;
@@ -33,10 +34,9 @@ import it.smartcommunitylabdhub.fsm.exceptions.InvalidTransactionException;
 import it.smartcommunitylabdhub.fsm.types.RunStateMachineFactory;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
@@ -71,6 +71,9 @@ public class RunManager {
 
     @Autowired
     private ApplicationEventPublisher eventPublisher;
+
+    @Autowired
+    ProcessorRegistry processorRegistry;
 
     public Run build(@NotNull Run run) throws NoSuchEntityException {
         // GET state machine, init state machine with status
@@ -514,11 +517,28 @@ public class RunManager {
                 return Optional.ofNullable(runStatus);
             });
         try {
+            //TODO call registry processor to retrieve all processor for onRunning and call process()
             Optional<RunBaseStatus> runStatus = fsm.goToState(State.RUNNING, null);
+
+            // Update run status
             runStatus.ifPresentOrElse(
                 runBaseStatus -> {
+
+                    RunRunnable runnable = event != null ? event.getRunnable() : null;
+
+                    // Iterate over all processor and store all RunBaseStatus as optional
+                    List<RunBaseStatus> processorsStatus = processorRegistry.getProcessors("onRunning").stream().map(
+                            processor -> processor.process(run, runnable, runBaseStatus)
+                    ).collect(Collectors.toList());
+
+
+                    // Do merge all status
+
                     run.setStatus(
-                        MapUtils.mergeMultipleMaps(runBaseStatus.toMap(), Map.of("state", State.RUNNING.toString()))
+                        MapUtils.mergeMultipleMaps(
+                                runBaseStatus.toMap(),
+                                Map.of("state", State.RUNNING.toString()),
+                                )
                     );
                 },
                 () -> {

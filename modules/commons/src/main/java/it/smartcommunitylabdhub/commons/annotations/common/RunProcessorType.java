@@ -1,16 +1,18 @@
 package it.smartcommunitylabdhub.commons.annotations.common;
 
-import java.lang.annotation.Documented;
+import it.smartcommunitylabdhub.commons.models.enums.EntityName;
+import org.springframework.stereotype.Indexed;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import org.springframework.stereotype.Component;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@Documented
-@Component
-public @interface ConverterType {
-    String type();
+@Indexed
+public @interface RunProcessorType {
+    String[] stages(); // onRunning onCompleted....
+
+    String id();
 }
