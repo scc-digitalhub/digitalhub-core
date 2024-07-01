@@ -321,24 +321,6 @@ public class ContainerRuntime
 
     @Override
     public RunContainerStatus onRunning(Run run, RunRunnable runnable) {
-        //extract info for status
-        if (runnable instanceof K8sRunnable) {
-            Map<String, Serializable> res = ((K8sRunnable) runnable).getResults();
-            //extract k8s details
-            //TODO
-
-            //extract logs
-            List<CoreLog> logs = ((K8sRunnable) runnable).getLogs();
-            List<CoreMetric> metrics = ((K8sRunnable) runnable).getMetrics();
-
-            if (logs != null) {
-                writeLogs(run, logs, metrics);
-            }
-
-            //dump as-is
-            return RunContainerStatus.builder().k8s(res).build();
-        }
-
         return null;
     }
 
@@ -363,71 +345,16 @@ public class ContainerRuntime
                 functionService.updateFunction(functionId, function, true);
             }
         }
-
-        //extract info for status
-        if (runnable instanceof K8sRunnable) {
-            Map<String, Serializable> res = ((K8sRunnable) runnable).getResults();
-            //extract k8s details
-            //TODO
-
-            //extract logs
-            List<CoreLog> logs = ((K8sRunnable) runnable).getLogs();
-            List<CoreMetric> metrics = ((K8sRunnable) runnable).getMetrics();
-
-            if (logs != null) {
-                writeLogs(run, logs, metrics);
-            }
-
-            //dump as-is
-            return RunContainerStatus.builder().k8s(res).build();
-        }
-
         return null;
     }
 
     @Override
     public RunContainerStatus onError(Run run, RunRunnable runnable) {
-        //extract info for status
-        if (runnable instanceof K8sRunnable) {
-            Map<String, Serializable> res = ((K8sRunnable) runnable).getResults();
-            //extract k8s details
-            //TODO
-
-            //extract logs
-            List<CoreLog> logs = ((K8sRunnable) runnable).getLogs();
-            List<CoreMetric> metrics = ((K8sRunnable) runnable).getMetrics();
-
-            if (logs != null) {
-                writeLogs(run, logs, metrics);
-            }
-
-            //dump as-is
-            return RunContainerStatus.builder().k8s(res).build();
-        }
-
         return null;
     }
 
     @Override
     public RunContainerStatus onStopped(Run run, RunRunnable runnable) {
-        //extract info for status
-        if (runnable instanceof K8sRunnable) {
-            Map<String, Serializable> res = ((K8sRunnable) runnable).getResults();
-            //extract k8s details
-            //TODO
-
-            //extract logs
-            List<CoreLog> logs = ((K8sRunnable) runnable).getLogs();
-            List<CoreMetric> metrics = ((K8sRunnable) runnable).getMetrics();
-
-            if (logs != null) {
-                writeLogs(run, logs, metrics);
-            }
-
-            //dump as-is
-            return RunContainerStatus.builder().k8s(res).build();
-        }
-
         return null;
     }
 
