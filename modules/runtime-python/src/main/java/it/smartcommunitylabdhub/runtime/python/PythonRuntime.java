@@ -3,16 +3,12 @@ package it.smartcommunitylabdhub.runtime.python;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
-import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.infrastructure.Runtime;
 import it.smartcommunitylabdhub.commons.models.base.Executable;
 import it.smartcommunitylabdhub.commons.models.entities.function.Function;
-import it.smartcommunitylabdhub.commons.models.entities.log.Log;
-import it.smartcommunitylabdhub.commons.models.entities.log.LogSpec;
 import it.smartcommunitylabdhub.commons.models.entities.run.Run;
 import it.smartcommunitylabdhub.commons.models.entities.task.Task;
 import it.smartcommunitylabdhub.commons.models.entities.task.TaskBaseSpec;
@@ -24,11 +20,7 @@ import it.smartcommunitylabdhub.commons.services.entities.FunctionService;
 import it.smartcommunitylabdhub.commons.services.entities.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sJobFramework;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sServeFramework;
-import it.smartcommunitylabdhub.framework.k8s.model.K8sLogStatus;
-import it.smartcommunitylabdhub.framework.k8s.objects.CoreLog;
-import it.smartcommunitylabdhub.framework.k8s.objects.CoreMetric;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
-import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sKanikoRunnable;
 import it.smartcommunitylabdhub.runtime.python.runners.PythonBuildRunner;
@@ -42,19 +34,12 @@ import it.smartcommunitylabdhub.runtime.python.specs.task.PythonServeTaskSpec;
 import it.smartcommunitylabdhub.runtime.python.status.PythonRunStatus;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.util.StringUtils;
-import org.springframework.validation.BindException;
 
 @Slf4j
 @RuntimeComponent(runtime = PythonRuntime.RUNTIME)
@@ -288,10 +273,6 @@ public class PythonRuntime implements Runtime<PythonFunctionSpec, PythonRunSpec,
         }
     }
 
-    @Override
-    public PythonRunStatus onRunning(Run run, RunRunnable runnable) {
-        return null;
-    }
 
     @Override
     public PythonRunStatus onComplete(Run run, RunRunnable runnable) {
@@ -315,16 +296,6 @@ public class PythonRuntime implements Runtime<PythonFunctionSpec, PythonRunSpec,
             }
         }
 
-        return null;
-    }
-
-    @Override
-    public PythonRunStatus onError(Run run, RunRunnable runnable) {
-        return null;
-    }
-
-    @Override
-    public PythonRunStatus onStopped(Run run, RunRunnable runnable) {
         return null;
     }
 
@@ -353,8 +324,6 @@ public class PythonRuntime implements Runtime<PythonFunctionSpec, PythonRunSpec,
                 throw new NoSuchEntityException("Error deleting runnable", e);
             }
         }
-
         return null;
     }
-
 }

@@ -155,25 +155,6 @@ public class DbtRuntime implements Runtime<FunctionDbtSpec, RunDbtSpec, RunDbtSt
         }
     }
 
-    @Override
-    public RunDbtStatus onRunning(Run run, RunRunnable runnable) {
-        return null;
-    }
-
-    @Override
-    public RunDbtStatus onComplete(Run run, RunRunnable runnable) {
-        return null;
-    }
-
-    @Override
-    public RunDbtStatus onError(Run run, RunRunnable runnable) {
-        return null;
-    }
-
-    @Override
-    public RunDbtStatus onStopped(Run run, RunRunnable runnable) {
-        return null;
-    }
 
     @Override
     public RunDbtStatus onDeleted(Run run, RunRunnable runnable) {

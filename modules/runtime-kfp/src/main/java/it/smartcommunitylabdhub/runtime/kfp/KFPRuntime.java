@@ -150,25 +150,6 @@ public class KFPRuntime implements Runtime<WorkflowKFPSpec, RunKFPSpec, RunKfpSt
         }
     }
 
-    @Override
-    public RunKfpStatus onRunning(Run run, RunRunnable runnable) {
-        return null;
-    }
-
-    @Override
-    public RunKfpStatus onComplete(Run run, RunRunnable runnable) {
-        return null;
-    }
-
-    @Override
-    public RunKfpStatus onError(Run run, RunRunnable runnable) {
-        return null;
-    }
-
-    @Override
-    public RunKfpStatus onStopped(Run run, RunRunnable runnable) {
-        return null;
-    }
 
     @Override
     public RunKfpStatus onDeleted(Run run, RunRunnable runnable) {
