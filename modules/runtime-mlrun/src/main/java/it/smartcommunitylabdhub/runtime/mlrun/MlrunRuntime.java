@@ -192,26 +192,6 @@ public class MlrunRuntime implements Runtime<FunctionMlrunSpec, RunMlrunSpec, Ru
     }
 
     @Override
-    public RunMlrunStatus onRunning(Run run, RunRunnable runnable) {
-        return null;
-    }
-
-    @Override
-    public RunMlrunStatus onComplete(Run run, RunRunnable runnable) {
-        return null;
-    }
-
-    @Override
-    public RunMlrunStatus onError(Run run, RunRunnable runnable) {
-        return null;
-    }
-
-    @Override
-    public RunMlrunStatus onStopped(Run run, RunRunnable runnable) {
-        return null;
-    }
-
-    @Override
     public RunMlrunStatus onDeleted(Run run, RunRunnable runnable) {
         if (runnable != null) {
             try {

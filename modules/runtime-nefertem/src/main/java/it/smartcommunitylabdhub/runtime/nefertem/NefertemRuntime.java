@@ -190,26 +190,6 @@ public class NefertemRuntime
     }
 
     @Override
-    public RunNefertemStatus onRunning(Run run, RunRunnable runnable) {
-        return null;
-    }
-
-    @Override
-    public RunNefertemStatus onComplete(Run run, RunRunnable runnable) {
-        return null;
-    }
-
-    @Override
-    public RunNefertemStatus onError(Run run, RunRunnable runnable) {
-        return null;
-    }
-
-    @Override
-    public RunNefertemStatus onStopped(Run run, RunRunnable runnable) {
-        return null;
-    }
-
-    @Override
     public RunNefertemStatus onDeleted(Run run, RunRunnable runnable) {
         if (runnable != null) {
             try {
