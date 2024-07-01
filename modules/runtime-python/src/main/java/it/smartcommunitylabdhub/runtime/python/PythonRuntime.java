@@ -290,9 +290,10 @@ public class PythonRuntime implements Runtime<PythonFunctionSpec, PythonRunSpec,
 
     @Override
     public PythonRunStatus onRunning(Run run, RunRunnable runnable) {
+        // TODO cleanup
         //extract info for status
 //        if (runnable instanceof K8sRunnable) {
-//            Map<String, Serializable> res = ((K8sRunnable) runnable).getResults(); // TODO k8sProcessor.
+//            Map<String, Serializable> res = ((K8sRunnable) runnable).getResults();
 //            //extract k8s details
 //
 //
@@ -334,22 +335,22 @@ public class PythonRuntime implements Runtime<PythonFunctionSpec, PythonRunSpec,
         }
 
         //extract info for status
-        if (runnable instanceof K8sRunnable) {
-            Map<String, Serializable> res = ((K8sRunnable) runnable).getResults();
-            //extract k8s details
-            //TODO
-
-            //extract logs
-            List<CoreLog> logs = ((K8sRunnable) runnable).getLogs();
-            List<CoreMetric> metrics = ((K8sRunnable) runnable).getMetrics();
-
-            if (logs != null) {
-//                writeLogs(run, logs, metrics);
-            }
-
-            //dump as-is
-            return PythonRunStatus.builder().k8s(res).build();
-        }
+//        if (runnable instanceof K8sRunnable) {
+//            Map<String, Serializable> res = ((K8sRunnable) runnable).getResults();
+//            //extract k8s details
+//            //TODO
+//
+//            //extract logs
+//            List<CoreLog> logs = ((K8sRunnable) runnable).getLogs();
+//            List<CoreMetric> metrics = ((K8sRunnable) runnable).getMetrics();
+//
+//            if (logs != null) {
+////                writeLogs(run, logs, metrics);
+//            }
+//
+//            //dump as-is
+//            return PythonRunStatus.builder().k8s(res).build();
+//        }
 
         return null;
     }
@@ -357,22 +358,22 @@ public class PythonRuntime implements Runtime<PythonFunctionSpec, PythonRunSpec,
     @Override
     public PythonRunStatus onError(Run run, RunRunnable runnable) {
         //extract info for status
-        if (runnable instanceof K8sRunnable) {
-            Map<String, Serializable> res = ((K8sRunnable) runnable).getResults();
-            //extract k8s details
-            //TODO
-
-            //extract logs
-            List<CoreLog> logs = ((K8sRunnable) runnable).getLogs();
-            List<CoreMetric> metrics = ((K8sRunnable) runnable).getMetrics();
-
-            if (logs != null) {
-//                writeLogs(run, logs, metrics);
-            }
-
-            //dump as-is
-            return PythonRunStatus.builder().k8s(res).build();
-        }
+//        if (runnable instanceof K8sRunnable) {
+//            Map<String, Serializable> res = ((K8sRunnable) runnable).getResults();
+//            //extract k8s details
+//            //TODO
+//
+//            //extract logs
+//            List<CoreLog> logs = ((K8sRunnable) runnable).getLogs();
+//            List<CoreMetric> metrics = ((K8sRunnable) runnable).getMetrics();
+//
+//            if (logs != null) {
+////                writeLogs(run, logs, metrics);
+//            }
+//
+//            //dump as-is
+//            return PythonRunStatus.builder().k8s(res).build();
+//        }
 
         return null;
     }
@@ -380,22 +381,22 @@ public class PythonRuntime implements Runtime<PythonFunctionSpec, PythonRunSpec,
     @Override
     public PythonRunStatus onStopped(Run run, RunRunnable runnable) {
         //extract info for status
-        if (runnable instanceof K8sRunnable) {
-            Map<String, Serializable> res = ((K8sRunnable) runnable).getResults();
-            //extract k8s details
-            //TODO
-
-            //extract logs
-            List<CoreLog> logs = ((K8sRunnable) runnable).getLogs();
-            List<CoreMetric> metrics = ((K8sRunnable) runnable).getMetrics();
-
-            if (logs != null) {
-//                writeLogs(run, logs, metrics);
-            }
-
-            //dump as-is
-            return PythonRunStatus.builder().k8s(res).build();
-        }
+//        if (runnable instanceof K8sRunnable) {
+//            Map<String, Serializable> res = ((K8sRunnable) runnable).getResults();
+//            //extract k8s details
+//            //TODO
+//
+//            //extract logs
+//            List<CoreLog> logs = ((K8sRunnable) runnable).getLogs();
+//            List<CoreMetric> metrics = ((K8sRunnable) runnable).getMetrics();
+//
+//            if (logs != null) {
+////                writeLogs(run, logs, metrics);
+//            }
+//
+//            //dump as-is
+//            return PythonRunStatus.builder().k8s(res).build();
+//        }
 
         return null;
     }

@@ -25,7 +25,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@RunProcessorType(stages = {"onRunning", "onComplete", "onError", "onStopped"}, id = "logProcessor")
+@RunProcessorType(stages = {"onRunning", "onCompleted", "onError", "onStopped", "onDeleted"}, id = "logProcessor")
 @Component("logProcessor")
 public class LogProcessor implements RunProcessor<RunBaseStatus> {
 

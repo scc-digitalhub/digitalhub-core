@@ -5,13 +5,15 @@ import it.smartcommunitylabdhub.commons.infrastructure.RunProcessor;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.entities.run.Run;
 import it.smartcommunitylabdhub.commons.models.entities.run.RunBaseStatus;
+import it.smartcommunitylabdhub.framework.k8s.model.K8sRunStatus;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import org.springframework.stereotype.Component;
 
 import java.io.Serializable;
 import java.util.Map;
 
-@RunProcessorType(stages = {"onRunning", "onComplete", "onError", "onStopped"}, id = "k8sProcessor")
+
+@RunProcessorType(stages = {"onRunning", "onCompleted", "onError", "onStopped", "onDeleted"}, id = "k8sProcessor")
 @Component("k8sProcessor")
 public class K8sProcessor implements RunProcessor<RunBaseStatus> {
     @Override
@@ -19,12 +21,8 @@ public class K8sProcessor implements RunProcessor<RunBaseStatus> {
         if (runRunnable instanceof K8sRunnable) {
             Map<String, Serializable> res = ((K8sRunnable) runRunnable).getResults();
             //extract k8s details
-
-//            return PythonRunStatus.builder().k8s(res).build();
-
-            return null;
+            return K8sRunStatus.builder().k8s(res).build();
         }
-
         return null;
     }
 }
