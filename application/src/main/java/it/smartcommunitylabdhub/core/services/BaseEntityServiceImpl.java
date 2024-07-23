@@ -169,6 +169,8 @@ public class BaseEntityServiceImpl<D extends BaseDTO, E extends BaseEntity> impl
                     ae.setCreatedBy(entity.getCreatedBy());
                 }
 
+                D prevAsDto = dtoBuilder.convert(entity);
+
                 //persist
                 E updated = repository.saveAndFlush(e);
                 if (log.isTraceEnabled()) {
@@ -178,7 +180,7 @@ public class BaseEntityServiceImpl<D extends BaseDTO, E extends BaseEntity> impl
                 //publish
                 if (eventPublisher != null) {
                     log.debug("publish event: update for {}", id);
-                    EntityEvent<E> event = new EntityEvent<>(updated, entity, EntityAction.UPDATE);
+                    EntityEvent<E> event = new EntityEvent<>(updated, entityBuilder.convert(prevAsDto), EntityAction.UPDATE);
                     if (log.isTraceEnabled()) {
                         log.trace("event: {}", String.valueOf(event));
                     }
