@@ -161,6 +161,10 @@ fi
 
 # Process context-refs.txt
 if [ -f "$source_dir/context-refs.txt" ]; then
+    mkdir "-p" "$destination_dir"
+    cd "$destination_dir"
+
+    # Read the context-refs.txt file line by line
     while IFS=, read -r protocol destination source; do
 
         # Parse the url
@@ -175,7 +179,7 @@ if [ -f "$source_dir/context-refs.txt" ]; then
             "git+https")
                 echo "Protocol: $protocol"
                 echo "Downloading $rebuilt_url"
-                echo "to $destination_dir/$destination"
+                echo "to $destination_dir"
 
                 username=$GIT_USERNAME
                 password=$GIT_PASSWORD
@@ -190,11 +194,11 @@ if [ -f "$source_dir/context-refs.txt" ]; then
                         username="$token"
                         password="x-oauth-basic"
                     fi
-                    git clone "https://$username:$password@$rebuilt_url" "$destination_dir/$destination"
+                    git clone "https://$username:$password@$rebuilt_url" "$destination_dir"
                 elif [ -n "$username" ] && [ -n "$password" ]; then
-                    git clone "https://$username:$password@$rebuilt_url" "$destination_dir/$destination"
+                    git clone "https://$username:$password@$rebuilt_url" "$destination_dir"
                 else
-                    git clone "https://$rebuilt_url" "$destination_dir/$destination"
+                    git clone "https://$rebuilt_url" "$destination_dir"
                 fi
             # if fragment do checkout of tag version.
             ;;
