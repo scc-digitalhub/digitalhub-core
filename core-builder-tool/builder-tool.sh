@@ -84,6 +84,7 @@ source_dir="/init-config-map"
 
 # Destination directory shared between containers
 destination_dir="/shared"
+tmp_dir="/tmp"
 
 minio="minio"
 
@@ -161,8 +162,8 @@ fi
 
 # Process context-refs.txt
 if [ -f "$source_dir/context-refs.txt" ]; then
-    mkdir "-p" "$destination_dir"
-    cd "$destination_dir"
+#    mkdir "-p" "$destination_dir"
+#    cd "$destination_dir"
 
     # Read the context-refs.txt file line by line
     while IFS=, read -r protocol destination source; do
@@ -194,12 +195,17 @@ if [ -f "$source_dir/context-refs.txt" ]; then
                         username="$token"
                         password="x-oauth-basic"
                     fi
-                    git clone "https://$username:$password@$rebuilt_url" "$destination_dir"
+                    git clone "https://$username:$password@$rebuilt_url" "$tmp_dir"
                 elif [ -n "$username" ] && [ -n "$password" ]; then
-                    git clone "https://$username:$password@$rebuilt_url" "$destination_dir"
+                    git clone "https://$username:$password@$rebuilt_url" "$tmp_dir"
                 else
-                    git clone "https://$rebuilt_url" "$destination_dir"
+                    git clone "https://$rebuilt_url" "$tmp_dir"
                 fi
+
+                # copy temp in destination_dir
+                cp -r "$tmp_dir" "$destination_dir"
+                rm -rf "$tmp_dir"
+
             # if fragment do checkout of tag version.
             ;;
             "zip+s3") # for now accept a zip file - check if file is a zip, unpack zip
