@@ -207,7 +207,7 @@ if [ -f "$source_dir/context-refs.txt" ]; then
                 echo "===================================="
                 # copy temp in destination_dir
                 echo "Copying $tmp_dir to $destination_dir"
-                cp -r "$tmp_dir" "$destination_dir"
+                cp -r "$tmp_dir/*" "$destination_dir"
                 echo "files in temp dir"
                 ls -l "$tmp_dir"
                 echo "files in shared"
