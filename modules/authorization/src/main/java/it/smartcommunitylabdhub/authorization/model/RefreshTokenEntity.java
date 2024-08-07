@@ -23,7 +23,6 @@ public class RefreshTokenEntity {
     private String id;
     private String refreshToken;
     private String subject;
-    private String jta;
     private Date issuedTime;
     private Date expirationTime;
 }

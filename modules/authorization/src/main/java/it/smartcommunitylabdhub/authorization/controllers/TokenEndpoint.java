@@ -173,7 +173,7 @@ public class TokenEndpoint implements InitializingBean {
             }
 
             // Consume refresh token
-            jwtTokenService.consumeRefreshToken(authentication, token);
+            jwtTokenService.consume(authentication, token);
 
             //token is valid, use as context for generation
             return jwtTokenService.generateCredentials(auth);

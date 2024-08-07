@@ -265,7 +265,7 @@ public class JwtTokenService implements InitializingBean {
     }
 
 
-    public void consumeRefreshToken(Authentication authentication, String refreshToken) {
+    public void consume(Authentication authentication, String refreshToken) {
 
         try {
 
