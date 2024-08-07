@@ -84,6 +84,7 @@ source_dir="/init-config-map"
 
 # Destination directory shared between containers
 destination_dir="/shared"
+tmp_dir="/tmp_shared"
 
 minio="minio"
 
@@ -161,6 +162,10 @@ fi
 
 # Process context-refs.txt
 if [ -f "$source_dir/context-refs.txt" ]; then
+#    mkdir "-p" "$destination_dir"
+    cd "$destination_dir"
+
+    # Read the context-refs.txt file line by line
     while IFS=, read -r protocol destination source; do
 
         # Parse the url
@@ -175,7 +180,7 @@ if [ -f "$source_dir/context-refs.txt" ]; then
             "git+https")
                 echo "Protocol: $protocol"
                 echo "Downloading $rebuilt_url"
-                echo "to $destination_dir/$destination"
+                echo "to $destination_dir"
 
                 username=$GIT_USERNAME
                 password=$GIT_PASSWORD
@@ -190,12 +195,25 @@ if [ -f "$source_dir/context-refs.txt" ]; then
                         username="$token"
                         password="x-oauth-basic"
                     fi
-                    git clone "https://$username:$password@$rebuilt_url" "$destination_dir/$destination"
+                    git clone "https://$username:$password@$rebuilt_url" "$tmp_dir"
                 elif [ -n "$username" ] && [ -n "$password" ]; then
-                    git clone "https://$username:$password@$rebuilt_url" "$destination_dir/$destination"
+                    git clone "https://$username:$password@$rebuilt_url" "$tmp_dir"
                 else
-                    git clone "https://$rebuilt_url" "$destination_dir/$destination"
+                    git clone "https://$rebuilt_url" "$tmp_dir"
                 fi
+
+                # copy temp in destination_dir
+                echo "========= Copying $tmp_dir to $destination_dir ========="
+                cp -a "$tmp_dir/." "$destination_dir/"
+                echo "========= Files in temp dir ========="
+                ls -l "$tmp_dir"
+                echo "========= Files in shared dir ========="
+                ls -l "$destination_dir"
+
+                # remove temp
+                echo "========= Removing $tmp_dir ========="
+                rm -rf "$tmp_dir"
+
             # if fragment do checkout of tag version.
             ;;
             "zip+s3") # for now accept a zip file - check if file is a zip, unpack zip
