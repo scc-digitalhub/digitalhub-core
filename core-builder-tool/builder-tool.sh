@@ -202,8 +202,14 @@ if [ -f "$source_dir/context-refs.txt" ]; then
                     git clone "https://$rebuilt_url" "$tmp_dir"
                 fi
 
+                echo "Current directory:"
+                pwd
                 # copy temp in destination_dir
+                echo "Copying $tmp_dir to $destination_dir"
                 cp -r "$tmp_dir" "$destination_dir"
+
+                # remove temp
+                echo "Removing $tmp_dir"
                 rm -rf "$tmp_dir"
 
             # if fragment do checkout of tag version.
