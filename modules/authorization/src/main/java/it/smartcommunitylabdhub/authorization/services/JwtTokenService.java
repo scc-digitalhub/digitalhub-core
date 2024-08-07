@@ -81,7 +81,7 @@ public class JwtTokenService implements InitializingBean {
     }
 
     @Autowired
-    public void setRefreshTokenDuration(@Value("${jwt.access-token.duration}") Integer refreshTokenDuration) {
+    public void setRefreshTokenDuration(@Value("${jwt.refresh-token.duration}") Integer refreshTokenDuration) {
         if (refreshTokenDuration != null) {
             this.refreshTokenDuration = refreshTokenDuration.intValue();
         }
