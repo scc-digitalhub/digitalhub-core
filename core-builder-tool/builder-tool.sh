@@ -84,7 +84,7 @@ source_dir="/init-config-map"
 
 # Destination directory shared between containers
 destination_dir="/shared"
-tmp_dir="/tmp"
+tmp_dir="/tmp_shared"
 
 minio="minio"
 
@@ -163,7 +163,7 @@ fi
 # Process context-refs.txt
 if [ -f "$source_dir/context-refs.txt" ]; then
 #    mkdir "-p" "$destination_dir"
-#    cd "$destination_dir"
+    cd "$destination_dir"
 
     # Read the context-refs.txt file line by line
     while IFS=, read -r protocol destination source; do
@@ -204,9 +204,14 @@ if [ -f "$source_dir/context-refs.txt" ]; then
 
                 echo "Current directory:"
                 pwd
+                echo "===================================="
                 # copy temp in destination_dir
                 echo "Copying $tmp_dir to $destination_dir"
                 cp -r "$tmp_dir" "$destination_dir"
+                echo "files in temp dir"
+                ls -l "$tmp_dir"
+                echo "files in shared"
+                ls -l "$destination_dir"
 
                 # remove temp
                 echo "Removing $tmp_dir"
