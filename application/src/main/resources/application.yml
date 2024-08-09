@@ -71,7 +71,10 @@ runtime:
       PYTHON3_9: ${RUNTIME_PYTHON_IMAGE_3_9:ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.9}
       PYTHON3_10: ${RUNTIME_PYTHON_IMAGE_3_10:ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.10}
     command: /usr/local/bin/processor
-
+  sklearnserve:
+    image: ${RUNTIME_SKLEARN_SERVE_IMAGE:kserve/sklearnserver:latest}
+  mlflowserve:
+    image: ${RUNTIME_MLFLOW_SERVE_IMAGE:seldonio/mlserver:1.6.0-mlflow}
 
 # Spring Docs
 springdoc:

@@ -304,7 +304,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
                     .stream()
                     .filter(p -> p.port() != null && p.targetPort() != null)
                     .map(p ->
-                        new V1ServicePort().port(p.port()).targetPort(new IntOrString(p.targetPort())).protocol("TCP")
+                        new V1ServicePort().port(p.port()).targetPort(new IntOrString(p.targetPort())).protocol("TCP").name("port" + p.port())
                     )
                     .collect(Collectors.toList())
             )

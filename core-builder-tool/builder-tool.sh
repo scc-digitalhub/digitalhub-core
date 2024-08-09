@@ -213,6 +213,13 @@ if [ -f "$source_dir/context-refs.txt" ]; then
                 curl -o "$destination_dir/$destination" -L "$source"
                 unzip "$destination_dir/$destination" -d "$destination_dir"
                 ;;
+            "s3") # for now accept a folder/path
+                mc alias set $minio $S3_ENDPOINT_URL $AWS_ACCESS_KEY_ID $AWS_SECRET_ACCESS_KEY
+                echo "Protocol: $protocol"
+                echo "Downloading $minio/$rebuilt_url"
+                echo "to $destination_dir/$destination"
+                mc cp --recursive "$minio/$rebuilt_url" "$destination_dir/$destination"
+                ;;
             # Add more cases for other protocols as needed
             *)
                 echo "Unknown protocol: $protocol"
