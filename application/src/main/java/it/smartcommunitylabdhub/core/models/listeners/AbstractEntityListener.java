@@ -5,6 +5,8 @@ import it.smartcommunitylabdhub.core.components.cloud.CloudEntityEvent;
 import it.smartcommunitylabdhub.core.models.base.BaseEntity;
 import it.smartcommunitylabdhub.core.models.events.EntityEvent;
 import it.smartcommunitylabdhub.core.models.indexers.BaseEntityIndexer;
+import it.smartcommunitylabdhub.core.models.relationships.BaseEntityRelationshipsManager;
+
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +22,8 @@ public abstract class AbstractEntityListener<E extends BaseEntity, T extends Bas
     protected final Class<T> clazz;
 
     protected BaseEntityIndexer<E, T> indexer;
+    
+    protected BaseEntityRelationshipsManager<E, T> relatinshipsManager;
 
     protected AbstractEntityListener(Converter<E, T> converter) {
         this.converter = converter;
@@ -34,6 +38,11 @@ public abstract class AbstractEntityListener<E extends BaseEntity, T extends Bas
     @Autowired(required = false)
     public void setIndexer(BaseEntityIndexer<E, T> indexer) {
         this.indexer = indexer;
+    }
+    
+    @Autowired(required = false)
+    public void setRelatinshipsManager(BaseEntityRelationshipsManager<E, T> manager) {
+    	this.relatinshipsManager = manager;
     }
 
     protected void handle(EntityEvent<E> event) {
@@ -58,6 +67,16 @@ public abstract class AbstractEntityListener<E extends BaseEntity, T extends Bas
             } catch (Exception e) {
                 log.error("error with solr: {}", e.getMessage());
             }
+        }
+        
+        //relationships
+        if (relatinshipsManager != null) {
+        	try {
+        		log.debug("set relationship for document with id {}", event.getEntity().getId());
+        		relatinshipsManager.handleEvent(event);
+			} catch (Exception e) {
+				log.error("error with relatinshipsManager: {}", e.getMessage());
+			}
         }
 
         //publish external event

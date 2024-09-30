@@ -1,29 +1,9 @@
 package it.smartcommunitylabdhub.core.controllers.v1.context;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import it.smartcommunitylabdhub.commons.Keys;
-import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
-import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
-import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.models.base.DownloadInfo;
-import it.smartcommunitylabdhub.commons.models.base.FileInfo;
-import it.smartcommunitylabdhub.commons.models.base.UploadInfo;
-import it.smartcommunitylabdhub.commons.models.entities.model.Model;
-import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.core.ApplicationKeys;
-import it.smartcommunitylabdhub.core.annotations.ApiVersion;
-import it.smartcommunitylabdhub.core.models.entities.ModelEntity;
-import it.smartcommunitylabdhub.core.models.queries.filters.entities.ModelEntityFilter;
-import it.smartcommunitylabdhub.core.models.queries.services.SearchableModelService;
-import it.smartcommunitylabdhub.files.service.EntityFilesService;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import java.util.List;
+
 import javax.annotation.Nullable;
-import lombok.extern.slf4j.Slf4j;
+
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -45,6 +25,31 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import it.smartcommunitylabdhub.commons.Keys;
+import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.SystemException;
+import it.smartcommunitylabdhub.commons.models.base.DownloadInfo;
+import it.smartcommunitylabdhub.commons.models.base.FileInfo;
+import it.smartcommunitylabdhub.commons.models.base.RelationshipDetail;
+import it.smartcommunitylabdhub.commons.models.base.UploadInfo;
+import it.smartcommunitylabdhub.commons.models.entities.model.Model;
+import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
+import it.smartcommunitylabdhub.core.ApplicationKeys;
+import it.smartcommunitylabdhub.core.annotations.ApiVersion;
+import it.smartcommunitylabdhub.core.models.entities.ModelEntity;
+import it.smartcommunitylabdhub.core.models.queries.filters.entities.ModelEntityFilter;
+import it.smartcommunitylabdhub.core.models.queries.services.SearchableModelService;
+import it.smartcommunitylabdhub.core.models.relationships.RelationshipsModelService;
+import it.smartcommunitylabdhub.files.service.EntityFilesService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import lombok.extern.slf4j.Slf4j;
+
 @RestController
 @ApiVersion("v1")
 @RequestMapping("/-/{project}/models")
@@ -61,6 +66,9 @@ public class ModelContextController {
 
     @Autowired
     EntityFilesService<Model> filesService;
+    
+    @Autowired
+    RelationshipsModelService relationshipsService;
 
     @Operation(summary = "Create a model in a project context")
     @PostMapping(
@@ -314,5 +322,20 @@ public class ModelContextController {
         }
 
         filesService.storeFileInfo(id, files);
+    }
+    
+    @Operation(summary = "Get relationships info for a given entity, if available")
+    @GetMapping(path = "/{id}/relationships", produces = "application/json; charset=UTF-8")
+    public List<RelationshipDetail> getRelationshipsById(
+    		@PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
+    		@PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id) throws NoSuchEntityException {
+        Model entity = modelService.findModel(id);
+
+        //check for project and name match
+        if ((entity != null) && !entity.getProject().equals(project)) {
+            throw new IllegalArgumentException("invalid project");
+        }
+        
+        return relationshipsService.getRelationships(id);
     }
 }
