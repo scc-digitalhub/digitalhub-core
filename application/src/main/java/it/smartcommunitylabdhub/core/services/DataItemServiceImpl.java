@@ -1,5 +1,20 @@
 package it.smartcommunitylabdhub.core.services;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.lang.Nullable;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.validation.BindException;
+
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
@@ -7,6 +22,7 @@ import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.base.DownloadInfo;
 import it.smartcommunitylabdhub.commons.models.base.FileInfo;
+import it.smartcommunitylabdhub.commons.models.base.RelationshipDetail;
 import it.smartcommunitylabdhub.commons.models.base.UploadInfo;
 import it.smartcommunitylabdhub.commons.models.entities.artifact.ArtifactBaseSpec;
 import it.smartcommunitylabdhub.commons.models.entities.dataitem.DataItem;
@@ -28,30 +44,18 @@ import it.smartcommunitylabdhub.core.models.indexers.DataItemEntityIndexer;
 import it.smartcommunitylabdhub.core.models.indexers.IndexableEntityService;
 import it.smartcommunitylabdhub.core.models.queries.services.SearchableDataItemService;
 import it.smartcommunitylabdhub.core.models.queries.specifications.CommonSpecification;
+import it.smartcommunitylabdhub.core.models.relationships.DataItemEntityRelationshipsManager;
+import it.smartcommunitylabdhub.core.models.relationships.RelationshipsDataItemService;
 import it.smartcommunitylabdhub.files.service.EntityFilesService;
 import it.smartcommunitylabdhub.files.service.FilesService;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.lang.Nullable;
-import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
-import org.springframework.validation.BindException;
 
 @Service
 @Transactional
 @Slf4j
-public class DataItemServiceImpl
-    implements SearchableDataItemService, IndexableEntityService<DataItemEntity>, EntityFilesService<DataItem> {
+public class DataItemServiceImpl implements SearchableDataItemService, IndexableEntityService<DataItemEntity>, EntityFilesService<DataItem> {
 
     @Autowired
     private EntityService<DataItem, DataItemEntity> entityService;
@@ -76,6 +80,9 @@ public class DataItemServiceImpl
 
     @Autowired
     private FilesInfoService filesInfoService;
+    
+    @Autowired
+    private DataItemEntityRelationshipsManager relationshipsManager;
 
     @Override
     public Page<DataItem> listDataItems(Pageable pageable) {
@@ -772,4 +779,9 @@ public class DataItemServiceImpl
             throw new SystemException(e.getMessage());
         }
     }
+
+	@Override
+	public List<RelationshipDetail> getRelationships(String entityId) {
+		return relationshipsManager.getRelationships(entityId);
+	}
 }
