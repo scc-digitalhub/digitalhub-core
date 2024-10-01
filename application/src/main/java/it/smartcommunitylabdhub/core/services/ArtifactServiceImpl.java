@@ -7,6 +7,7 @@ import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.base.DownloadInfo;
 import it.smartcommunitylabdhub.commons.models.base.FileInfo;
+import it.smartcommunitylabdhub.commons.models.base.RelationshipDetail;
 import it.smartcommunitylabdhub.commons.models.base.UploadInfo;
 import it.smartcommunitylabdhub.commons.models.entities.artifact.Artifact;
 import it.smartcommunitylabdhub.commons.models.entities.artifact.ArtifactBaseSpec;
@@ -26,6 +27,8 @@ import it.smartcommunitylabdhub.core.models.indexers.ArtifactEntityIndexer;
 import it.smartcommunitylabdhub.core.models.indexers.IndexableArtifactService;
 import it.smartcommunitylabdhub.core.models.queries.services.SearchableArtifactService;
 import it.smartcommunitylabdhub.core.models.queries.specifications.CommonSpecification;
+import it.smartcommunitylabdhub.core.models.relationships.ArtifactEntityRelationshipsManager;
+import it.smartcommunitylabdhub.core.models.relationships.RelationshipsArtifactService;
 import it.smartcommunitylabdhub.files.service.EntityFilesService;
 import it.smartcommunitylabdhub.files.service.FilesService;
 import jakarta.validation.constraints.NotNull;
@@ -49,7 +52,7 @@ import org.springframework.validation.BindException;
 @Transactional
 @Slf4j
 public class ArtifactServiceImpl
-    implements SearchableArtifactService, IndexableArtifactService, EntityFilesService<Artifact> {
+    implements SearchableArtifactService, IndexableArtifactService, EntityFilesService<Artifact>, RelationshipsArtifactService {
 
     @Autowired
     private EntityService<Artifact, ArtifactEntity> entityService;
@@ -74,6 +77,9 @@ public class ArtifactServiceImpl
 
     @Autowired
     private FilesInfoService filesInfoService;
+    
+    @Autowired
+    private ArtifactEntityRelationshipsManager relationshipsManager;
 
     @Override
     public Page<Artifact> listArtifacts(Pageable pageable) {
@@ -775,4 +781,9 @@ public class ArtifactServiceImpl
             throw new SystemException(e.getMessage());
         }
     }
+
+	@Override
+	public List<RelationshipDetail> getRelationships(String entityId) {
+		return relationshipsManager.getRelationships(entityId);
+	}
 }

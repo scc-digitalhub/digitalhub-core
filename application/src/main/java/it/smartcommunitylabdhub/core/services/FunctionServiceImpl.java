@@ -4,6 +4,7 @@ import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
+import it.smartcommunitylabdhub.commons.models.base.RelationshipDetail;
 import it.smartcommunitylabdhub.commons.models.entities.function.Function;
 import it.smartcommunitylabdhub.commons.models.entities.project.Project;
 import it.smartcommunitylabdhub.commons.models.enums.EntityName;
@@ -20,6 +21,8 @@ import it.smartcommunitylabdhub.core.models.indexers.FunctionEntityIndexer;
 import it.smartcommunitylabdhub.core.models.indexers.IndexableFunctionService;
 import it.smartcommunitylabdhub.core.models.queries.services.SearchableFunctionService;
 import it.smartcommunitylabdhub.core.models.queries.specifications.CommonSpecification;
+import it.smartcommunitylabdhub.core.models.relationships.FunctionEntityRelationshipsManager;
+import it.smartcommunitylabdhub.core.models.relationships.RelationshipsFunctionService;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
@@ -38,7 +41,7 @@ import org.springframework.validation.BindException;
 @Service
 @Transactional
 @Slf4j
-public class FunctionServiceImpl implements SearchableFunctionService, IndexableFunctionService {
+public class FunctionServiceImpl implements SearchableFunctionService, IndexableFunctionService, RelationshipsFunctionService {
 
     @Autowired
     private EntityService<Function, FunctionEntity> entityService;
@@ -60,6 +63,9 @@ public class FunctionServiceImpl implements SearchableFunctionService, Indexable
 
     @Autowired
     private SpecValidator validator;
+    
+    @Autowired
+    private FunctionEntityRelationshipsManager relationshipsManager;
 
     @Override
     public Page<Function> listFunctions(Pageable pageable) {
@@ -475,4 +481,9 @@ public class FunctionServiceImpl implements SearchableFunctionService, Indexable
             }
         }
     }
+
+	@Override
+	public List<RelationshipDetail> getRelationships(String entityId) {
+		return relationshipsManager.getRelationships(entityId);
+	}
 }

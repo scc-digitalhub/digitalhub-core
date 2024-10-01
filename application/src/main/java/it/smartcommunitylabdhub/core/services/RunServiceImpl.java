@@ -1,11 +1,24 @@
 package it.smartcommunitylabdhub.core.services;
 
+import java.util.Collections;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.lang.Nullable;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.validation.BindException;
+
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.base.Executable;
+import it.smartcommunitylabdhub.commons.models.base.RelationshipDetail;
 import it.smartcommunitylabdhub.commons.models.entities.project.Project;
 import it.smartcommunitylabdhub.commons.models.entities.run.Run;
 import it.smartcommunitylabdhub.commons.models.entities.run.RunBaseSpec;
@@ -24,24 +37,16 @@ import it.smartcommunitylabdhub.core.models.entities.RunEntity;
 import it.smartcommunitylabdhub.core.models.entities.TaskEntity;
 import it.smartcommunitylabdhub.core.models.queries.services.SearchableRunService;
 import it.smartcommunitylabdhub.core.models.queries.specifications.CommonSpecification;
+import it.smartcommunitylabdhub.core.models.relationships.RelationshipsRunService;
+import it.smartcommunitylabdhub.core.models.relationships.RunEntityRelationshipsManager;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
-import java.util.Collections;
-import java.util.List;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.lang.Nullable;
-import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
-import org.springframework.validation.BindException;
 
 @Service
 @Transactional
 @Slf4j
-public class RunServiceImpl implements SearchableRunService {
+public class RunServiceImpl implements SearchableRunService, RelationshipsRunService {
 
     @Autowired
     private EntityService<Run, RunEntity> entityService;
@@ -63,6 +68,9 @@ public class RunServiceImpl implements SearchableRunService {
 
     @Autowired
     private SpecValidator validator;
+    
+    @Autowired
+    private RunEntityRelationshipsManager relationshipsManager;
 
     @Override
     public Page<Run> listRuns(Pageable pageable) {
@@ -366,4 +374,9 @@ public class RunServiceImpl implements SearchableRunService {
     private Specification<TaskEntity> createTaskKindSpecification(String kind) {
         return (root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("kind"), kind);
     }
+
+	@Override
+	public List<RelationshipDetail> getRelationships(String entityId) {
+		return relationshipsManager.getRelationships(entityId);
+	}
 }
