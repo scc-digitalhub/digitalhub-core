@@ -1,9 +1,23 @@
 package it.smartcommunitylabdhub.core.services;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.lang.Nullable;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.validation.BindException;
+
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
+import it.smartcommunitylabdhub.commons.models.base.RelationshipDetail;
 import it.smartcommunitylabdhub.commons.models.entities.project.Project;
 import it.smartcommunitylabdhub.commons.models.entities.workflow.Workflow;
 import it.smartcommunitylabdhub.commons.models.enums.EntityName;
@@ -21,25 +35,16 @@ import it.smartcommunitylabdhub.core.models.indexers.IndexableEntityService;
 import it.smartcommunitylabdhub.core.models.indexers.WorkflowEntityIndexer;
 import it.smartcommunitylabdhub.core.models.queries.services.SearchableWorkflowService;
 import it.smartcommunitylabdhub.core.models.queries.specifications.CommonSpecification;
+import it.smartcommunitylabdhub.core.models.relationships.RelationshipsWorkflowService;
+import it.smartcommunitylabdhub.core.models.relationships.WorkflowEntityRelationshipsManager;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
-import java.util.List;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.lang.Nullable;
-import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
-import org.springframework.validation.BindException;
 
 @Service
 @Transactional
 @Slf4j
-public class WorkflowServiceImpl implements SearchableWorkflowService, IndexableEntityService<WorkflowEntity> {
+public class WorkflowServiceImpl implements SearchableWorkflowService, IndexableEntityService<WorkflowEntity>, RelationshipsWorkflowService {
 
     @Autowired
     private EntityService<Workflow, WorkflowEntity> entityService;
@@ -61,6 +66,9 @@ public class WorkflowServiceImpl implements SearchableWorkflowService, Indexable
 
     @Autowired
     private SpecValidator validator;
+    
+    @Autowired
+    private WorkflowEntityRelationshipsManager relationshipsManager;
 
     @Override
     public Page<Workflow> listWorkflows(Pageable pageable) {
@@ -477,4 +485,9 @@ public class WorkflowServiceImpl implements SearchableWorkflowService, Indexable
             }
         }
     }
+
+	@Override
+	public List<RelationshipDetail> getRelationships(String entityId) {
+		return relationshipsManager.getRelationships(entityId);
+	}
 }

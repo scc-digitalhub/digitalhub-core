@@ -13,9 +13,7 @@ import it.smartcommunitylabdhub.commons.models.metadata.RelationshipsMetadata;
 import it.smartcommunitylabdhub.core.models.base.BaseEntity;
 import it.smartcommunitylabdhub.core.models.entities.RelationshipEntity;
 import it.smartcommunitylabdhub.core.repositories.RelationshipRepository;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 public abstract class BaseEntityRelationshipsManager<T extends BaseEntity, D extends BaseDTO>
     implements EntityRelationshipsManager<T>, InitializingBean {
 	
@@ -28,15 +26,15 @@ public abstract class BaseEntityRelationshipsManager<T extends BaseEntity, D ext
     
     public List<RelationshipDetail> getRelationships(String entityId) {
 		List<RelationshipDetail> result = new ArrayList<>();
-		List<RelationshipEntity> list = repository.findByParentIdOrChildId(entityId, entityId);
+		List<RelationshipEntity> list = repository.findBySourceIdOrDestId(entityId, entityId);
 		for(RelationshipEntity entity : list) {
 			RelationshipDetail detail = new RelationshipDetail();
 			detail.setType(entity.getRelationship());
-			if(entity.getChildId().equals(entityId)) {
-				detail.setDest(entity.getChildKey());
+			if(entity.getDestId().equals(entityId)) {
+				detail.setSource(entity.getSourceKey());
 			}
-			if(entity.getParentId().equals(entityId)) {
-				detail.setSource(entity.getParentKey());
+			if(entity.getSourceId().equals(entityId)) {
+				detail.setDest(entity.getDestKey());
 			}
 			result.add(detail);
 		}
@@ -51,22 +49,22 @@ public abstract class BaseEntityRelationshipsManager<T extends BaseEntity, D ext
         	entity.setRelationship(detail.getType());
         	
         	switch (detail.getType()) {
-				case producedBy: {
-					entity.setChildId(getId(detail.getDest()));
-					entity.setChildType(getType(detail.getDest()));
-					entity.setChildKey(detail.getDest());
-					entity.setParentId(dto.getId());
-					entity.setParentKey(dto.getKey());
-					entity.setParentType(type);
+				case PRODUCEDBY: {
+					entity.setDestId(getId(detail.getDest()));
+					entity.setDestType(getType(detail.getDest()));
+					entity.setDestKey(detail.getDest());
+					entity.setSourceId(dto.getId());
+					entity.setSourceKey(dto.getKey());
+					entity.setSourceType(type);
 					break;
 				}
-				case consumer:
-					entity.setChildId(getId(detail.getDest()));
-					entity.setChildType(getType(detail.getDest()));
-					entity.setChildKey(detail.getDest());
-					entity.setParentId(dto.getId());
-					entity.setParentKey(dto.getKey());
-					entity.setParentType(type);
+				case CONSUMES:
+					entity.setDestId(getId(detail.getDest()));
+					entity.setDestType(getType(detail.getDest()));
+					entity.setDestKey(detail.getDest());
+					entity.setSourceId(dto.getId());
+					entity.setSourceKey(dto.getKey());
+					entity.setSourceType(type);
 					break;
 				default:
 					break;
@@ -78,8 +76,10 @@ public abstract class BaseEntityRelationshipsManager<T extends BaseEntity, D ext
     
     protected String getId(String key) {
     	String id = key.replace("store://", "").split("/")[3];
-    	if(id.contains(":"))
-    		return id.split(":")[1];
+    	if(id.contains(":")) {
+    		String[] strings = id.split(":");
+    		return strings[strings.length -1];
+    	}
     	return id;
     }
     
@@ -88,7 +88,7 @@ public abstract class BaseEntityRelationshipsManager<T extends BaseEntity, D ext
     }
     
     protected void deleteRelationships(BaseDTO dto) {
-    	List<RelationshipEntity> list = repository.findByParentIdOrChildId(dto.getId(), dto.getId());
+    	List<RelationshipEntity> list = repository.findBySourceIdOrDestId(dto.getId(), dto.getId());
     	repository.deleteAll(list);
     }
 }

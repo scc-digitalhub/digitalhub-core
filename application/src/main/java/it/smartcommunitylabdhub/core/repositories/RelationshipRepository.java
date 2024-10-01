@@ -8,5 +8,5 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import it.smartcommunitylabdhub.core.models.entities.RelationshipEntity;
 
 public interface RelationshipRepository extends JpaRepository<RelationshipEntity, String>, JpaSpecificationExecutor<RelationshipEntity> {
-	List<RelationshipEntity> findByParentIdOrChildId(String parentId, String childId);
+	List<RelationshipEntity> findBySourceIdOrDestId(String sourceId, String destId);
 }
