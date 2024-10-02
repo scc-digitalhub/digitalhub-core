@@ -781,7 +781,7 @@ public class DataItemServiceImpl implements SearchableDataItemService, Indexable
     }
 
 	@Override
-	public List<RelationshipDetail> getRelationships(String entityId) {
-		return relationshipsManager.getRelationships(entityId);
+	public List<RelationshipDetail> getRelationships(String project, String entityId) {
+		return relationshipsManager.getRelationships(project, entityId);
 	}
 }

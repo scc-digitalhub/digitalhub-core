@@ -487,7 +487,7 @@ public class WorkflowServiceImpl implements SearchableWorkflowService, Indexable
     }
 
 	@Override
-	public List<RelationshipDetail> getRelationships(String entityId) {
-		return relationshipsManager.getRelationships(entityId);
+	public List<RelationshipDetail> getRelationships(String project, String entityId) {
+		return relationshipsManager.getRelationships(project, entityId);
 	}
 }

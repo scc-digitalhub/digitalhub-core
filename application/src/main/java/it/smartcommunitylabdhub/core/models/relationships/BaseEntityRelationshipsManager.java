@@ -24,9 +24,9 @@ public abstract class BaseEntityRelationshipsManager<T extends BaseEntity, D ext
     public void afterPropertiesSet() throws Exception {
     }
     
-    public List<RelationshipDetail> getRelationships(String entityId) {
+    public List<RelationshipDetail> getRelationships(String project, String entityId) {
 		List<RelationshipDetail> result = new ArrayList<>();
-		List<RelationshipEntity> list = repository.findBySourceIdOrDestId(entityId, entityId);
+		List<RelationshipEntity> list = repository.findByEntityId(project, entityId);
 		for(RelationshipEntity entity : list) {
 			RelationshipDetail detail = new RelationshipDetail();
 			detail.setType(entity.getRelationship());
@@ -50,6 +50,8 @@ public abstract class BaseEntityRelationshipsManager<T extends BaseEntity, D ext
         	
         	switch (detail.getType()) {
 				case PRODUCEDBY: {
+					if(!dto.getProject().equals(getProject(detail.getDest()))) 
+						continue;
 					entity.setDestId(getId(detail.getDest()));
 					entity.setDestType(getType(detail.getDest()));
 					entity.setDestKey(detail.getDest());
@@ -59,6 +61,8 @@ public abstract class BaseEntityRelationshipsManager<T extends BaseEntity, D ext
 					break;
 				}
 				case CONSUMES:
+					if(!dto.getProject().equals(getProject(detail.getDest()))) 
+						continue;
 					entity.setDestId(getId(detail.getDest()));
 					entity.setDestType(getType(detail.getDest()));
 					entity.setDestKey(detail.getDest());
@@ -87,8 +91,12 @@ public abstract class BaseEntityRelationshipsManager<T extends BaseEntity, D ext
     	return key.replace("store://", "").split("/")[1];
     }
     
+    protected String getProject(String key) {
+    	return key.replace("store://", "").split("/")[0];
+    }
+    
     protected void deleteRelationships(BaseDTO dto) {
-    	List<RelationshipEntity> list = repository.findBySourceIdOrDestId(dto.getId(), dto.getId());
+    	List<RelationshipEntity> list = repository.findByEntityId(dto.getProject(), dto.getId());
     	repository.deleteAll(list);
     }
 }

@@ -5,5 +5,5 @@ import java.util.List;
 import it.smartcommunitylabdhub.commons.models.base.RelationshipDetail;
 
 public interface RelationshipsWorkflowService {
-	public List<RelationshipDetail> getRelationships(String entityId);
+	public List<RelationshipDetail> getRelationships(String project, String entityId);
 }
