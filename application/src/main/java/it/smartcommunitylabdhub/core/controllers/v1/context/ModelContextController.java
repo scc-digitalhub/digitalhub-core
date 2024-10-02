@@ -336,6 +336,6 @@ public class ModelContextController {
             throw new IllegalArgumentException("invalid project");
         }
         
-        return relationshipsService.getRelationships(id);
+        return relationshipsService.getRelationships(project, id);
     }
 }
