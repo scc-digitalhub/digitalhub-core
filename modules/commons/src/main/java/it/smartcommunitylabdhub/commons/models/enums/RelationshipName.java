@@ -3,9 +3,6 @@ package it.smartcommunitylabdhub.commons.models.enums;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
-import lombok.ToString;
-
-@ToString
 public enum RelationshipName {
 	PRODUCEDBY("producedBy"),
     CONSUMES("consumes");
@@ -28,6 +25,18 @@ public enum RelationshipName {
 	@JsonValue
 	public String getValue()  { 
 		return this.value;
+	}
+	
+	@Override
+	public String toString() {
+		switch (this) {
+			case PRODUCEDBY: 
+				return "producedBy";
+			case CONSUMES:
+				return "consumes";
+		default:
+			return null;
+		}
 	}
 
 }
