@@ -28,7 +28,7 @@
         <!-- <jackson.version>2.15.3</jackson.version> -->
         <kubernetes.version>21.0.0-legacy</kubernetes.version>
         <postgresql.version>42.7.2</postgresql.version>
-        <mysql.version>8.0.33</mysql.version>
+        <mysql.version>8.2.0</mysql.version>
         <checkstyle.config.location>../checkstyle/checkstyle.xml</checkstyle.config.location>
         <checkstyle.failOnViolation>false</checkstyle.failOnViolation>
     </properties>
