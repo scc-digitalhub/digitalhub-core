@@ -55,7 +55,7 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @Transactional
 @Slf4j
-public class DataItemServiceImpl implements SearchableDataItemService, IndexableEntityService<DataItemEntity>, EntityFilesService<DataItem> {
+public class DataItemServiceImpl implements SearchableDataItemService, IndexableEntityService<DataItemEntity>, EntityFilesService<DataItem>, RelationshipsDataItemService {
 
     @Autowired
     private EntityService<DataItem, DataItemEntity> entityService;
