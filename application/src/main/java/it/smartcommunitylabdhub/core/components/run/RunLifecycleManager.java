@@ -33,6 +33,8 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -161,9 +163,87 @@ public class RunLifecycleManager extends LifecycleManager<Run, RunEntity> {
         );
     }
 
+    @Async
+    @EventListener
+    public void receiveAction(LifecycleOperation<Run, RunEvent> event) {
+        log.debug("receive operation for run {}: {}", event.getId(), event.getAction());
+
+        Run run = event.getDto();
+        if (log.isTraceEnabled()) {
+            log.trace("run: {}", String.valueOf(run));
+        }
+
+        RunEvent action = event.getAction();
+
+        switch (action) {
+            case BUILD:
+                build(run);
+                break;
+            case RUN:
+                run(run);
+                break;
+            case STOP:
+                stop(run);
+                break;
+            case RESUME:
+                resume(run);
+                break;
+            case DELETING:
+                delete(run);
+                break;
+            default:
+                log.debug("Action {} not managed", action);
+                break;
+        }
+    }
+
     /*
      * Events: react to a change
      */
+    @Async
+    @EventListener
+    public void receiveEvent(RunnableChangedEvent<RunRunnable> event) {
+        if (event.getState() == null) {
+            return;
+        }
+
+        log.debug("receive event for run {}: {}", event.getId(), event.getState());
+        if (log.isTraceEnabled()) {
+            log.trace("event: {}", event);
+        }
+
+        String id = event.getId();
+        State state = State.valueOf(event.getState());
+
+        // retrieve the run
+        Run run = runService.findRun(id);
+        if (run == null) {
+            log.error("Run with id {} not found", id);
+            return;
+        }
+
+        switch (state) {
+            case COMPLETED:
+                onCompleted(run, event.getRunnable());
+                break;
+            case ERROR:
+                onError(run, event.getRunnable());
+                break;
+            case RUNNING:
+                onRunning(run, event.getRunnable());
+                break;
+            case STOPPED:
+                onStopped(run, event.getRunnable());
+                break;
+            case DELETED:
+                onDeleted(run, event.getRunnable());
+                break;
+            default:
+                log.debug("State {} not managed", state);
+                break;
+        }
+    }
+
     public Run onRunning(Run run, RunRunnable runnable) {
         log.debug("onRunning run with id {}", run.getId());
         if (log.isTraceEnabled()) {
@@ -267,6 +347,10 @@ public class RunLifecycleManager extends LifecycleManager<Run, RunEntity> {
         //delete run via service to handle cascade
         runService.deleteRun(run.getId(), Boolean.TRUE);
     }
+
+    /*
+     * Async: receive action event
+     */
 
     /*
      * Internals

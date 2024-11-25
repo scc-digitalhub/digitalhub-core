@@ -16,6 +16,7 @@ public enum EntityName {
     DATAITEM("dataitem"),
     MODEL("model"),
     TASK("task"),
+    TRIGGER("trigger"),
     RUN("run"),
     LOG("log"),
     METADATA("metadata");

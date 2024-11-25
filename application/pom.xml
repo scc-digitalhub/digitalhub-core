@@ -222,6 +222,11 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-trigger-scheduler</artifactId>
+            <version>${revision}</version>
+        </dependency>                
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-runtime-container</artifactId>
             <version>${revision}</version>
         </dependency>

@@ -262,7 +262,7 @@ public class TaskServiceImpl implements SearchableTaskService {
                 specMap.put("function", current.getSpec().get("function"));
             }
 
-            Spec spec = specRegistry.createSpec(dto.getKind(), dto.getSpec());
+            Spec spec = specRegistry.createSpec(dto.getKind(), specMap);
             if (spec == null) {
                 throw new IllegalArgumentException("invalid kind");
             }

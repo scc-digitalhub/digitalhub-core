@@ -33,6 +33,7 @@
         <module>modules/framework-k8s</module>
         <module>modules/framework-argo</module>
         <module>modules/framework-kaniko</module>
+        <module>modules/trigger-scheduler</module>
         <module>modules/runtime-container</module>
         <module>modules/runtime-dbt</module>
         <module>modules/runtime-nefertem</module>

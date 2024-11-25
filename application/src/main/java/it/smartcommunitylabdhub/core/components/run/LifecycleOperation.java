@@ -1,12 +1,15 @@
 package it.smartcommunitylabdhub.core.components.run;
 
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
+import java.io.Serializable;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.ResolvableTypeProvider;
 import org.springframework.util.Assert;
 
-public class LifecycleOperation<T extends BaseDTO, E> extends ApplicationEvent implements ResolvableTypeProvider {
+public class LifecycleOperation<T extends BaseDTO, E extends Serializable>
+    extends ApplicationEvent
+    implements ResolvableTypeProvider {
 
     private final E action;
     private final T dto;
@@ -24,6 +27,10 @@ public class LifecycleOperation<T extends BaseDTO, E> extends ApplicationEvent i
 
     public E getAction() {
         return action;
+    }
+
+    public String getId() {
+        return dto != null ? dto.getId() : null;
     }
 
     @Override

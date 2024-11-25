@@ -9,6 +9,7 @@ import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.secret.Secret;
 import it.smartcommunitylabdhub.commons.models.task.Task;
+import it.smartcommunitylabdhub.commons.models.trigger.Trigger;
 import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.core.models.entities.ArtifactEntity;
 import it.smartcommunitylabdhub.core.models.entities.DataItemEntity;
@@ -19,6 +20,7 @@ import it.smartcommunitylabdhub.core.models.entities.ProjectEntity;
 import it.smartcommunitylabdhub.core.models.entities.RunEntity;
 import it.smartcommunitylabdhub.core.models.entities.SecretEntity;
 import it.smartcommunitylabdhub.core.models.entities.TaskEntity;
+import it.smartcommunitylabdhub.core.models.entities.TriggerEntity;
 import it.smartcommunitylabdhub.core.models.entities.WorkflowEntity;
 import it.smartcommunitylabdhub.core.repositories.ArtifactRepository;
 import it.smartcommunitylabdhub.core.repositories.DataItemRepository;
@@ -29,6 +31,7 @@ import it.smartcommunitylabdhub.core.repositories.ProjectRepository;
 import it.smartcommunitylabdhub.core.repositories.RunRepository;
 import it.smartcommunitylabdhub.core.repositories.SecretRepository;
 import it.smartcommunitylabdhub.core.repositories.TaskRepository;
+import it.smartcommunitylabdhub.core.repositories.TriggerRepository;
 import it.smartcommunitylabdhub.core.repositories.WorkflowRepository;
 import it.smartcommunitylabdhub.core.services.BaseEntityServiceImpl;
 import it.smartcommunitylabdhub.core.services.EntityService;
@@ -136,6 +139,15 @@ public class PersistenceConfig {
         WorkflowRepository repository,
         Converter<Workflow, WorkflowEntity> entityBuilder,
         Converter<WorkflowEntity, Workflow> dtoBuilder
+    ) {
+        return new BaseEntityServiceImpl<>(repository, entityBuilder, dtoBuilder);
+    }
+
+    @Bean
+    public EntityService<Trigger, TriggerEntity> triggerEntityService(
+        TriggerRepository repository,
+        Converter<Trigger, TriggerEntity> entityBuilder,
+        Converter<TriggerEntity, Trigger> dtoBuilder
     ) {
         return new BaseEntityServiceImpl<>(repository, entityBuilder, dtoBuilder);
     }
