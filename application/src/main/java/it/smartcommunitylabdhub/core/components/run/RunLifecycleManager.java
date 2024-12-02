@@ -88,7 +88,7 @@ public class RunLifecycleManager extends LifecycleManager<Run, RunEntity> {
                     State state = fsm.getCurrentState();
 
                     // Update run spec
-                    spec.ifPresent(s -> run.setSpec(s.toMap()));
+                    spec.ifPresent(s -> r.setSpec(s.toMap()));
 
                     //update status
                     RunBaseStatus runBaseStatus = RunBaseStatus.with(r.getStatus());
@@ -103,7 +103,7 @@ public class RunLifecycleManager extends LifecycleManager<Run, RunEntity> {
                     return r;
                 } catch (InvalidTransitionException e) {
                     log.debug("Invalid transition {} -> {}", e.getFromState(), e.getToState());
-                    return run;
+                    return r;
                 }
             }
         );
@@ -418,7 +418,7 @@ public class RunLifecycleManager extends LifecycleManager<Run, RunEntity> {
                     return r;
                 } catch (InvalidTransitionException e) {
                     log.debug("Invalid transition {} -> {} for event {}", e.getFromState(), e.getToState(), event);
-                    return run;
+                    return r;
                 }
             }
         );
@@ -476,7 +476,7 @@ public class RunLifecycleManager extends LifecycleManager<Run, RunEntity> {
                     return r;
                 } catch (InvalidTransitionException e) {
                     log.debug("Invalid transition {} -> {}", e.getFromState(), e.getToState());
-                    return run;
+                    return r;
                 }
             }
         );

@@ -4,6 +4,7 @@ import it.smartcommunitylabdhub.commons.annotations.infrastructure.ActuatorCompo
 import it.smartcommunitylabdhub.commons.infrastructure.Actuator;
 import it.smartcommunitylabdhub.commons.models.trigger.TriggerBaseSpec;
 import it.smartcommunitylabdhub.commons.models.trigger.TriggerBaseStatus;
+import it.smartcommunitylabdhub.commons.models.trigger.TriggerRunBaseStatus;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -11,15 +12,20 @@ import java.util.stream.Collectors;
 
 public class ActuatorFactory {
 
-    private final Map<String, Actuator<? extends TriggerBaseSpec, ? extends TriggerBaseStatus>> actuatorMap;
+    private final Map<
+        String,
+        Actuator<? extends TriggerBaseSpec, ? extends TriggerBaseStatus, ? extends TriggerRunBaseStatus>
+    > actuatorMap;
 
-    public ActuatorFactory(List<Actuator<? extends TriggerBaseSpec, ? extends TriggerBaseStatus>> actuators) {
+    public ActuatorFactory(
+        List<Actuator<? extends TriggerBaseSpec, ? extends TriggerBaseStatus, ? extends TriggerRunBaseStatus>> actuators
+    ) {
         actuatorMap =
             actuators.stream().collect(Collectors.toMap(this::getActuatorFromAnnotation, Function.identity()));
     }
 
     private String getActuatorFromAnnotation(
-        Actuator<? extends TriggerBaseSpec, ? extends TriggerBaseStatus> actuator
+        Actuator<? extends TriggerBaseSpec, ? extends TriggerBaseStatus, ? extends TriggerRunBaseStatus> actuator
     ) {
         Class<?> runtimeClass = actuator.getClass();
         if (runtimeClass.isAnnotationPresent(ActuatorComponent.class)) {
@@ -38,8 +44,11 @@ public class ActuatorFactory {
      * @return The Runtime for the specified platform.
      * @throws IllegalArgumentException If no Runtime is found for the given platform.
      */
-    public Actuator<? extends TriggerBaseSpec, ? extends TriggerBaseStatus> getActuator(String actuator) {
-        Actuator<? extends TriggerBaseSpec, ? extends TriggerBaseStatus> instance = actuatorMap.get(actuator);
+    public Actuator<? extends TriggerBaseSpec, ? extends TriggerBaseStatus, ? extends TriggerRunBaseStatus> getActuator(
+        String actuator
+    ) {
+        Actuator<? extends TriggerBaseSpec, ? extends TriggerBaseStatus, ? extends TriggerRunBaseStatus> instance =
+            actuatorMap.get(actuator);
         if (instance == null) {
             throw new IllegalArgumentException("No actuator found for name: " + actuator);
         }

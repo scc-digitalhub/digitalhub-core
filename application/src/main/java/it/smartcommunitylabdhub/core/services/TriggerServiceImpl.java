@@ -255,6 +255,11 @@ public class TriggerServiceImpl implements SearchableTriggerService {
                     throw new IllegalArgumentException("invalid or mismatched run template");
                 }
 
+                //TODO check run kind matches task runtime
+                if (!StringUtils.hasText(baseSpec.getRun())) {
+                    throw new IllegalArgumentException("spec: invalid run");
+                }
+
                 //create as new
                 return entityService.create(dto);
             } catch (DuplicatedEntityException e) {

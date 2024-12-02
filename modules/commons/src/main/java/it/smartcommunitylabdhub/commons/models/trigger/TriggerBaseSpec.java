@@ -17,14 +17,18 @@ public class TriggerBaseSpec extends BaseSpec {
     private String task;
 
     @NotEmpty
+    private String run;
+
+    @NotEmpty
     private Map<String, Serializable> template;
 
     @Override
     public void configure(Map<String, Serializable> data) {
-        TriggerBaseSpec runBaseSpec = mapper.convertValue(data, TriggerBaseSpec.class);
+        TriggerBaseSpec spec = mapper.convertValue(data, TriggerBaseSpec.class);
 
-        this.task = runBaseSpec.getTask();
-        this.template = runBaseSpec.getTemplate();
+        this.task = spec.getTask();
+        this.run = spec.getRun();
+        this.template = spec.getTemplate();
     }
 
     public static TriggerBaseSpec from(Map<String, Serializable> data) {
