@@ -6,8 +6,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.io.Serializable;
+import java.util.Map;
+
 @Getter
 @Setter
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class KFPRunStatus extends RunBaseStatus {}
+public class KFPRunStatus extends RunBaseStatus {
+
+    private Map<String, Serializable> nodes;
+}
