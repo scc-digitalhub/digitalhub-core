@@ -17,6 +17,8 @@ public class SolrProperties {
     private String collection;
     private String user;
     private String password;
+    private String adminUser;
+    private String adminPassword;
 
     private Integer timeout;
     private Integer shards;

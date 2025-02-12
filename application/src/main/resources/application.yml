@@ -210,6 +210,8 @@ solr:
   url: ${SOLR_URL:false}
   user: ${SOLR_USER:}
   password: ${SOLR_PASSWORD:}
+  admin-user: ${SOLR_ADMIN_USER:}
+  admin-password: ${SOLR_ADMIN_PASSWORD:}
   collection: ${SOLR_COLLECTION:dhcore}
   timeout: ${SOLR_TIMEOUT:5000}
   shards: ${SOLR_COLLECTION_SHARDS_NUM:1}
