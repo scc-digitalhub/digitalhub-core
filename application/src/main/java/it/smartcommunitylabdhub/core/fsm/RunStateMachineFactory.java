@@ -26,7 +26,7 @@ public class RunStateMachineFactory implements Fsm.Factory<State, RunEvent, RunC
      * Create and configure the StateMachine for managing the state transitions of a Run.
      *
      * @param initialState   The initial state for the StateMachine.
-     * @param initialContext The initial context for the StateMachine.
+     * @param context The initial context for the StateMachine.
      * @return The configured StateMachine instance.
      */
     public Fsm<State, RunEvent, RunContext, RunRunnable> create(State initialState, RunContext context) {
