@@ -31,17 +31,13 @@ import it.smartcommunitylabdhub.framework.k8s.model.K8sTemplate;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
 import jakarta.validation.constraints.NotNull;
+
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,8 +50,9 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
 
     public static final String FRAMEWORK = "k8sserve";
     private static final TypeReference<HashMap<String, Serializable>> typeRef = new TypeReference<
-        HashMap<String, Serializable>
-    >() {};
+            HashMap<String, Serializable>
+            >() {
+    };
 
     private final AppsV1Api appsV1Api;
 
@@ -78,7 +75,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
     public void setInitCommand(@Value("${kubernetes.init.command}") String initCommand) {
         if (StringUtils.hasText(initCommand)) {
             this.initCommand =
-                new LinkedList<>(Arrays.asList(StringUtils.commaDelimitedListToStringArray(initCommand)));
+                    new LinkedList<>(Arrays.asList(StringUtils.commaDelimitedListToStringArray(initCommand)));
         }
     }
 
@@ -99,7 +96,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
         //build default shared volume definition for context building
         if (k8sProperties.getSharedVolume() == null) {
             k8sProperties.setSharedVolume(
-                new CoreVolume(CoreVolume.VolumeType.empty_dir, "/shared", "shared-dir", Map.of("sizeLimit", "100Mi"))
+                    new CoreVolume(CoreVolume.VolumeType.empty_dir, "/shared", "shared-dir", Map.of("sizeLimit", "100Mi"))
             );
         }
     }
@@ -157,10 +154,10 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
             //update results
             try {
                 runnable.setResults(
-                    results
-                        .entrySet()
-                        .stream()
-                        .collect(Collectors.toMap(Entry::getKey, e -> mapper.convertValue(e, typeRef)))
+                        results
+                                .entrySet()
+                                .stream()
+                                .collect(Collectors.toMap(Entry::getKey, e -> mapper.convertValue(e, typeRef)))
                 );
             } catch (IllegalArgumentException e) {
                 log.error("error reading k8s results: {}", e.getMessage());
@@ -169,11 +166,11 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
 
         if (deployment != null && service != null) {
             runnable.setMessage(
-                String.format(
-                    "deployment %s created, service %s created",
-                    deployment.getMetadata().getName(),
-                    service.getMetadata().getName()
-                )
+                    String.format(
+                            "deployment %s created, service %s created",
+                            deployment.getMetadata().getName(),
+                            service.getMetadata().getName()
+                    )
             );
         }
 
@@ -279,8 +276,11 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
             //update results
             try {
                 Map<String, Serializable> results = MapUtils.mergeMultipleMaps(
-                    runnable.getResults(),
-                    Map.of("deployment", deployment != null ? mapper.convertValue(deployment, typeRef) : null)
+                        runnable.getResults(),
+                        Stream.of(new AbstractMap.SimpleEntry<>(
+                                        "deployment", deployment != null ? mapper.convertValue(deployment, typeRef) : null)
+                                )
+                                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
                 );
 
                 //clear pods if present
@@ -328,8 +328,11 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
             //update results
             try {
                 Map<String, Serializable> results = MapUtils.mergeMultipleMaps(
-                    runnable.getResults(),
-                    Map.of("deployment", deployment != null ? mapper.convertValue(deployment, typeRef) : null)
+                        runnable.getResults(),
+                        Stream.of(new AbstractMap.SimpleEntry<>(
+                                        "deployment", deployment != null ? mapper.convertValue(deployment, typeRef) : null)
+                                )
+                                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
                 );
 
                 //clear pods if present

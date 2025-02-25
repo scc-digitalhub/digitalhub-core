@@ -14,9 +14,12 @@ import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
 import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.commons.services.WorkflowService;
+import it.smartcommunitylabdhub.framework.argo.objects.K8sWorkflowObject;
 import it.smartcommunitylabdhub.framework.argo.runnables.K8sArgoWorkflowRunnable;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
+import it.smartcommunitylabdhub.runtime.kfp.dtos.NodeStatusDTO;
+import it.smartcommunitylabdhub.runtime.kfp.mapper.NodeStatusMapper;
 import it.smartcommunitylabdhub.runtime.kfp.runners.KFPBuildRunner;
 import it.smartcommunitylabdhub.runtime.kfp.runners.KFPPipelineRunner;
 import it.smartcommunitylabdhub.runtime.kfp.specs.KFPBuildTaskSpec;
@@ -29,9 +32,7 @@ import jakarta.validation.constraints.NotNull;
 
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +49,9 @@ public class KFPRuntime extends K8sBaseRuntime<KFPWorkflowSpec, KFPRunSpec, KFPR
 
     @Autowired
     private WorkflowService workflowService;
+
+    @Autowired
+    private NodeStatusMapper nodeStatusMapper;
 
     @Value("${runtime.kfp.image}")
     private String image;
@@ -174,7 +178,15 @@ public class KFPRuntime extends K8sBaseRuntime<KFPWorkflowSpec, KFPRunSpec, KFPR
 
                 KFPRunStatus kfpRunStatus = new KFPRunStatus();
                 kfpRunStatus.configure(run.getStatus());
-                kfpRunStatus.setNodes((Map<String, Serializable>) k8sArgoWorkflowRunnable.getResults().get("nodes"));
+
+
+                List<NodeStatusDTO> nodes = nodeStatusMapper.argoNodeToNodeStatusDTO(
+                        (Map<String, Serializable>) k8sArgoWorkflowRunnable.getResults().get("nodes"),
+                        (Map<String, Serializable>) k8sArgoWorkflowRunnable.getResults().get("workflow"),
+                        run
+                );
+
+                kfpRunStatus.setNodes(nodes);
 
                 return kfpRunStatus;
             }
