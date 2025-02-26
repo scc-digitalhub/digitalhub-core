@@ -1,29 +1,36 @@
-package it.smartcommunitylabdhub.core.models.indexers;
+package it.smartcommunitylabdhub.core.components.solr;
 
-import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
-import it.smartcommunitylabdhub.commons.models.metadata.VersioningMetadata;
-import it.smartcommunitylabdhub.commons.models.model.Model;
-import it.smartcommunitylabdhub.core.components.solr.IndexField;
-import it.smartcommunitylabdhub.core.models.builders.model.ModelDTOBuilder;
-import it.smartcommunitylabdhub.core.models.entities.ModelEntity;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
+
 import org.apache.solr.common.SolrInputDocument;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
+import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
+import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.metadata.VersioningMetadata;
+import it.smartcommunitylabdhub.core.models.builders.dataitem.DataItemDTOBuilder;
+import it.smartcommunitylabdhub.core.models.entities.DataItemEntity;
+import it.smartcommunitylabdhub.core.models.indexers.EntityIndexer;
+import it.smartcommunitylabdhub.core.models.indexers.IndexField;
+import lombok.extern.slf4j.Slf4j;
+
 @Component
 @Slf4j
-public class ModelEntityIndexer extends BaseEntityIndexer<ModelEntity, Model> {
+@ConditionalOnProperty(prefix = "solr", name = "url")
+@Primary
+public class SolrDataItemEntityIndexer extends SolrBaseEntityIndexer<DataItem> implements EntityIndexer<DataItemEntity> {
 
-    private static final String TYPE = EntityName.MODEL.getValue();
+    private static final String TYPE = EntityName.DATAITEM.getValue();
 
-    private final ModelDTOBuilder builder;
+    private final DataItemDTOBuilder builder;
 
-    public ModelEntityIndexer(ModelDTOBuilder builder) {
+    public SolrDataItemEntityIndexer(DataItemDTOBuilder builder) {
         Assert.notNull(builder, "builder can not be null");
 
         this.builder = builder;
@@ -38,12 +45,12 @@ public class ModelEntityIndexer extends BaseEntityIndexer<ModelEntity, Model> {
     }
 
     @Override
-    public void index(ModelEntity entity) {
+    public void index(DataItemEntity entity) {
         Assert.notNull(entity, "entity can not be null");
 
         if (solr != null) {
             try {
-                log.debug("index model {}", entity.getId());
+                log.debug("index dataItem {}", entity.getId());
 
                 SolrInputDocument doc = parse(entity);
                 solr.indexDoc(doc);
@@ -54,9 +61,9 @@ public class ModelEntityIndexer extends BaseEntityIndexer<ModelEntity, Model> {
     }
 
     @Override
-    public void indexAll(Collection<ModelEntity> entities) {
+    public void indexAll(Collection<DataItemEntity> entities) {
         Assert.notNull(entities, "entities can not be null");
-        log.debug("index {} models", entities.size());
+        log.debug("index {} dataItems", entities.size());
 
         if (solr != null) {
             try {
@@ -78,15 +85,15 @@ public class ModelEntityIndexer extends BaseEntityIndexer<ModelEntity, Model> {
         }
     }
 
-    private SolrInputDocument parse(ModelEntity entity) {
+    private SolrInputDocument parse(DataItemEntity entity) {
         Assert.notNull(entity, "entity can not be null");
 
-        Model item = builder.convert(entity);
+        DataItem item = builder.convert(entity);
         if (item == null) {
             throw new IllegalArgumentException("invalid or null entity");
         }
 
-        log.debug("parse model {}", item.getId());
+        log.debug("parse dataItem {}", item.getId());
         if (log.isTraceEnabled()) {
             log.trace("item: {}", item);
         }

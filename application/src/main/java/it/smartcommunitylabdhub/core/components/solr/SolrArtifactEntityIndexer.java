@@ -1,29 +1,36 @@
-package it.smartcommunitylabdhub.core.models.indexers;
+package it.smartcommunitylabdhub.core.components.solr;
 
-import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
-import it.smartcommunitylabdhub.commons.models.metadata.VersioningMetadata;
-import it.smartcommunitylabdhub.core.components.solr.IndexField;
-import it.smartcommunitylabdhub.core.models.builders.dataitem.DataItemDTOBuilder;
-import it.smartcommunitylabdhub.core.models.entities.DataItemEntity;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
+
 import org.apache.solr.common.SolrInputDocument;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
+import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
+import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.metadata.VersioningMetadata;
+import it.smartcommunitylabdhub.core.models.builders.artifact.ArtifactDTOBuilder;
+import it.smartcommunitylabdhub.core.models.entities.ArtifactEntity;
+import it.smartcommunitylabdhub.core.models.indexers.EntityIndexer;
+import it.smartcommunitylabdhub.core.models.indexers.IndexField;
+import lombok.extern.slf4j.Slf4j;
+
 @Component
 @Slf4j
-public class DataItemEntityIndexer extends BaseEntityIndexer<DataItemEntity, DataItem> {
+@ConditionalOnProperty(prefix = "solr", name = "url")
+@Primary
+public class SolrArtifactEntityIndexer extends SolrBaseEntityIndexer<Artifact> implements EntityIndexer<ArtifactEntity> {
 
-    private static final String TYPE = EntityName.DATAITEM.getValue();
+    private static final String TYPE = EntityName.ARTIFACT.getValue();
 
-    private final DataItemDTOBuilder builder;
+    private final ArtifactDTOBuilder builder;
 
-    public DataItemEntityIndexer(DataItemDTOBuilder builder) {
+    public SolrArtifactEntityIndexer(ArtifactDTOBuilder builder) {
         Assert.notNull(builder, "builder can not be null");
 
         this.builder = builder;
@@ -38,25 +45,25 @@ public class DataItemEntityIndexer extends BaseEntityIndexer<DataItemEntity, Dat
     }
 
     @Override
-    public void index(DataItemEntity entity) {
+    public void index(ArtifactEntity entity) {
         Assert.notNull(entity, "entity can not be null");
 
         if (solr != null) {
             try {
-                log.debug("index dataItem {}", entity.getId());
+                log.debug("solr index artifact {}", entity.getId());
 
                 SolrInputDocument doc = parse(entity);
                 solr.indexDoc(doc);
             } catch (StoreException e) {
                 log.error("error with solr: {}", e.getMessage());
             }
-        }
+        }        
     }
 
     @Override
-    public void indexAll(Collection<DataItemEntity> entities) {
+    public void indexAll(Collection<ArtifactEntity> entities) {
         Assert.notNull(entities, "entities can not be null");
-        log.debug("index {} dataItems", entities.size());
+        log.debug("index {} artifacts", entities.size());
 
         if (solr != null) {
             try {
@@ -78,15 +85,15 @@ public class DataItemEntityIndexer extends BaseEntityIndexer<DataItemEntity, Dat
         }
     }
 
-    private SolrInputDocument parse(DataItemEntity entity) {
+    private SolrInputDocument parse(ArtifactEntity entity) {
         Assert.notNull(entity, "entity can not be null");
 
-        DataItem item = builder.convert(entity);
+        Artifact item = builder.convert(entity);
         if (item == null) {
             throw new IllegalArgumentException("invalid or null entity");
         }
 
-        log.debug("parse dataItem {}", item.getId());
+        log.debug("parse artifact {}", item.getId());
         if (log.isTraceEnabled()) {
             log.trace("item: {}", item);
         }
@@ -105,5 +112,5 @@ public class DataItemEntityIndexer extends BaseEntityIndexer<DataItemEntity, Dat
         }
 
         return doc;
-    }
+    }    
 }

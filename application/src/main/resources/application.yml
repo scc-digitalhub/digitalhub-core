@@ -219,6 +219,9 @@ solr:
   replicas: ${SOLR_COLLECTION_REPLICATION:1}
   reindex: ${SOLR_REINDEX:never}
 
+lucene:
+  index-path: ${LUCENE_INDEX_PATH:false}
+  reindex: ${LUCENE_REINDEX:never}
 
 # files support
 files:

@@ -34,6 +34,7 @@
         <!-- note: do NOT set jetty.version because spring bom defines it for jetty 12 -->
         <jetty4solr.version>10.0.24</jetty4solr.version>
         <solr.version>9.7.0</solr.version>
+        <lucene.version>9.11.1</lucene.version>
         <checkstyle.config.location>../checkstyle/checkstyle.xml</checkstyle.config.location>
         <checkstyle.failOnViolation>false</checkstyle.failOnViolation>
     </properties>
@@ -198,6 +199,28 @@
             <artifactId>jetty-http</artifactId>
             <version>${jetty4solr.version}</version>
         </dependency>
+        
+        <!-- LUCENE -->
+				<dependency>        
+    			<groupId>org.apache.lucene</groupId>          
+    			<artifactId>lucene-core</artifactId>
+    			<version>${lucene.version}</version>
+				</dependency>        
+				<dependency>
+				    <groupId>org.apache.lucene</groupId>
+				    <artifactId>lucene-queryparser</artifactId>
+				    <version>${lucene.version}</version>
+				</dependency>
+				<dependency>
+				  <groupId>org.apache.lucene</groupId>
+				  <artifactId>lucene-highlighter</artifactId>
+				  <version>${lucene.version}</version>
+				</dependency>
+				<dependency>
+				  <groupId>org.apache.lucene</groupId>
+				  <artifactId>lucene-grouping</artifactId>
+				  <version>${lucene.version}</version>
+				</dependency>
 
         <!-- DH MODULES -->
         <dependency>
