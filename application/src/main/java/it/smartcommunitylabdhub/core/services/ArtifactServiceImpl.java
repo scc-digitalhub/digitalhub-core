@@ -22,8 +22,7 @@ import it.smartcommunitylabdhub.core.models.builders.artifact.ArtifactEntityBuil
 import it.smartcommunitylabdhub.core.models.entities.AbstractEntity_;
 import it.smartcommunitylabdhub.core.models.entities.ArtifactEntity;
 import it.smartcommunitylabdhub.core.models.entities.ProjectEntity;
-import it.smartcommunitylabdhub.core.models.indexers.ArtifactEntityIndexer;
-import it.smartcommunitylabdhub.core.models.indexers.BaseEntityIndexer;
+import it.smartcommunitylabdhub.core.models.indexers.EntityIndexer;
 import it.smartcommunitylabdhub.core.models.indexers.IndexableEntityService;
 import it.smartcommunitylabdhub.core.models.queries.services.SearchableArtifactService;
 import it.smartcommunitylabdhub.core.models.queries.specifications.CommonSpecification;
@@ -66,7 +65,7 @@ public class ArtifactServiceImpl
     private EntityService<Project, ProjectEntity> projectService;
 
     @Autowired
-    private ArtifactEntityIndexer indexer;
+    private EntityIndexer<ArtifactEntity> indexer;
 
     @Autowired
     private ArtifactEntityBuilder entityBuilder;
@@ -471,7 +470,7 @@ public class ArtifactServiceImpl
             hasMore = false;
 
             try {
-                Page<Artifact> page = entityService.list(PageRequest.of(pageNumber, BaseEntityIndexer.PAGE_MAX_SIZE));
+                Page<Artifact> page = entityService.list(PageRequest.of(pageNumber, EntityIndexer.PAGE_MAX_SIZE));
                 indexer.indexAll(
                     page.getContent().stream().map(e -> entityBuilder.convert(e)).collect(Collectors.toList())
                 );

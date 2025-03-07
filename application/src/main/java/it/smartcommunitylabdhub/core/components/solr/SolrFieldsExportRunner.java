@@ -19,7 +19,8 @@ import org.springframework.stereotype.Component;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
-import it.smartcommunitylabdhub.core.models.indexers.SolrEntityIndexer;
+import it.smartcommunitylabdhub.core.models.indexers.EntityIndexer;
+import it.smartcommunitylabdhub.core.models.indexers.IndexField;
 import lombok.extern.slf4j.Slf4j;
 
 @Component
@@ -32,10 +33,10 @@ public class SolrFieldsExportRunner  implements CommandLineRunner {
     @Autowired
     private TemplateEngine templateEngine;
     
-    private List<SolrEntityIndexer<?>> services;
+    private List<EntityIndexer<?>> services;
     
     @Autowired(required = false)
-    public void setServices(List<SolrEntityIndexer<?>> services) {
+    public void setServices(List<EntityIndexer<?>> services) {
         this.services = services;
     }
 

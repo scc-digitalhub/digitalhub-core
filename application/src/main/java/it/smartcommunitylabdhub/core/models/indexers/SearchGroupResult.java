@@ -1,4 +1,4 @@
-package it.smartcommunitylabdhub.core.components.solr;
+package it.smartcommunitylabdhub.core.models.indexers;
 
 import java.util.ArrayList;
 import java.util.List;

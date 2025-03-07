@@ -1,4 +1,13 @@
-package it.smartcommunitylabdhub.core.models.indexers;
+package it.smartcommunitylabdhub.core.components.solr;
+
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
+
+import org.apache.solr.common.SolrInputDocument;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.Assert;
 
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
@@ -6,32 +15,21 @@ import it.smartcommunitylabdhub.commons.models.metadata.AuditMetadata;
 import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
-import it.smartcommunitylabdhub.core.components.solr.IndexField;
-import it.smartcommunitylabdhub.core.components.solr.SolrBaseEntityParser;
-import it.smartcommunitylabdhub.core.components.solr.SolrComponent;
-import it.smartcommunitylabdhub.core.models.base.BaseEntity;
-import java.util.Date;
-import java.util.LinkedList;
-import java.util.List;
+import it.smartcommunitylabdhub.core.models.indexers.IndexField;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.solr.common.SolrInputDocument;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.util.Assert;
 
 @Slf4j
-public abstract class BaseEntityIndexer<T extends BaseEntity, D extends BaseDTO>
-    implements SolrEntityIndexer<T>, InitializingBean {
+public abstract class SolrBaseEntityIndexer<D extends BaseDTO> implements InitializingBean {
 
     public static final int PAGE_MAX_SIZE = 100;
 
     protected SolrComponent solr;
-
+    
     @Autowired(required = false)
     public void setSolr(SolrComponent solr) {
         this.solr = solr;
     }
-
+    
     @Override
     public void afterPropertiesSet() throws Exception {
         if (solr != null) {
@@ -39,6 +37,10 @@ public abstract class BaseEntityIndexer<T extends BaseEntity, D extends BaseDTO>
             log.debug("register fields to solr");
             solr.registerFields(fields());
         }
+    }
+
+    public String buildKeyGroup(String kind, String project, String name) {
+        return kind + "_" + project + "_" + name;
     }
 
     protected SolrInputDocument parse(D item, String type) {
@@ -80,7 +82,7 @@ public abstract class BaseEntityIndexer<T extends BaseEntity, D extends BaseDTO>
 
         return doc;
     }
-
+    
     public List<IndexField> fields() {
         List<IndexField> fields = new LinkedList<>();
 
