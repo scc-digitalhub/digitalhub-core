@@ -24,7 +24,11 @@ public class HPCDLJob implements Serializable{
     private String message;
 
     public HPCDLJob(HPCDLJob job) {
-        //TODO
+        this.id = job.getId();
+        this.image = job.getImage();
+        this.args = job.getArgs();
+        this.inputs = job.getInputs();
+        this.outputs = job.getOutputs();
     }
 
 }

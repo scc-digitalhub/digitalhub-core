@@ -22,6 +22,8 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.Assert;
 
 @Slf4j
 @FrameworkComponent(framework = HPCDLFramework.FRAMEWORK)
@@ -36,15 +38,17 @@ public class HPCDLFramework implements Framework<HPCDLRunnable>, InitializingBea
 
     protected static final ObjectMapper mapper = JacksonMapper.CUSTOM_OBJECT_MAPPER;
 
+    private HPCDLConnector connector;
 
-    public HPCDLFramework() {
+    @Autowired
+    public void setHPCDLConnector(HPCDLConnector connector) {
+        this.connector = connector;
     }
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        // TODO 
+        Assert.notNull(connector, "HPCDLConnector is required");
     }
-
 
     @Override
     public HPCDLRunnable run(HPCDLRunnable runnable) throws HPCDLFrameworkException {
@@ -188,8 +192,7 @@ public class HPCDLFramework implements Framework<HPCDLRunnable>, InitializingBea
         try {
             String name = job.getId();
             log.debug("get HPC-DL job for {}", name);
-            // TODO read
-            return new HPCDLJob(job);
+            return connector.getJob(name);
         } catch (Exception e) {
             log.error("Error with HPC-DL API: {}", e.getMessage());
             throw new HPCDLFrameworkException(e.getMessage(), e);
@@ -200,8 +203,7 @@ public class HPCDLFramework implements Framework<HPCDLRunnable>, InitializingBea
 
         try {
             log.debug("create HPC-DL job for {}", job.getId());
-            // TODO create
-            return new HPCDLJob(job);
+            return connector.createJob(job);
         } catch (Exception e) {
             log.error("Error with  HPC-DL API: {}", e);
             throw new HPCDLFrameworkException(e.getMessage(), e);
@@ -212,8 +214,8 @@ public class HPCDLFramework implements Framework<HPCDLRunnable>, InitializingBea
 
         try {
             String id = job.getId();
-            log.debug("delete HPC DL for {}", id);
-            // TODO delete
+            connector.stopJob(id);
+            log.debug("delete HPC-DL job for {}", id);
         } catch (Exception e) {
             log.error("Error with  HPC-DL API: {}", e);
             throw new HPCDLFrameworkException(e.getMessage(), e);

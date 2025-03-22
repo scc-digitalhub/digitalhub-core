@@ -71,7 +71,7 @@ public class HPCDLMonitor implements Runnable {
         store
             .findAll()
             .stream()
-            .filter(runnable -> runnable.getState() != null && runnable.getState().equals("RUNNING"))
+            .filter(runnable -> runnable.getState() != null && State.RUNNING.name().equals(runnable.getState()))
             .flatMap(runnable -> {
                 log.debug("monitor run {}", runnable.getId());
 
@@ -118,7 +118,7 @@ public class HPCDLMonitor implements Runnable {
                 // something is missing, no recovery
                 log.error("Missing or invalid HPC DL job for {}", runnable.getId());
                 runnable.setState(State.ERROR.name());
-                runnable.setError("HPC DL jobmissing or invalid");
+                runnable.setError("HPC DL job missing or invalid");
 
                 return runnable;
             }
@@ -127,13 +127,16 @@ public class HPCDLMonitor implements Runnable {
 
             //target for succeded/failed is 1
             String phase = status;
-            if (phase != null && "Succeeded".equals(phase)) {
+            if (phase != null && State.COMPLETED.name().equals(phase)) {
                 // Job has succeeded
                 runnable.setState(State.COMPLETED.name());
-            } else if (phase != null && ("Failed".equals(phase) || "Error".equals(phase))) {
+            } else if (phase != null && (State.ERROR.name().equals(phase))) {
                 // Job has failed delete job and pod
                 runnable.setState(State.ERROR.name());
                 runnable.setError("Job failed: " + job.getMessage());
+            } else if (phase != null && (State.STOPPED.name().equals(phase))) {
+                // Job has failed delete job and pod
+                runnable.setState(State.STOPPED.name());
             }
 
         } catch (HPCDLFrameworkException e) {
