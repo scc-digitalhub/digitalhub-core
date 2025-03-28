@@ -28,6 +28,7 @@ public class K8sCRRunnable extends K8sRunnable {
     private String plural;
     private String kind;
 
+    private String name;
 
     @Override
     public String getFramework() {

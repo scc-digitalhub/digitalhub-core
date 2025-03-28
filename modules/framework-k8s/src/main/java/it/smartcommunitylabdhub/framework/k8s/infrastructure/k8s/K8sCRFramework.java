@@ -126,10 +126,8 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
     public DynamicKubernetesObject build(K8sCRRunnable runnable) {
         DynamicKubernetesObject obj = new DynamicKubernetesObject();
 
-        // TODO
         String crName = k8sBuilderHelper.getCRName(
-            runnable.getRuntime(),
-            runnable.getTask(),
+            runnable.getName(),
             runnable.getId()
         );
 
