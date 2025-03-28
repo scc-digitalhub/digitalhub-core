@@ -32,7 +32,6 @@ import lombok.Setter;
 )
 public class KubeAIServeFunctionSpec extends FunctionBaseSpec {
 
-    @JsonProperty("url")
     @NotNull
     @Pattern(
         regexp = 
@@ -46,7 +45,7 @@ public class KubeAIServeFunctionSpec extends FunctionBaseSpec {
         "|" +
         "^hf?://.*$"
     )
-    @Schema(title = "fields.url.title", description = "fields.kubeai.url.description")
+    @Schema(title = "fields.kubeai.url.title", description = "fields.kubeai.url.description")
     private String url;
 
     @JsonProperty("model_name")

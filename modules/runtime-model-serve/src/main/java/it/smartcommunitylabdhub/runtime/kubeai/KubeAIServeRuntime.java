@@ -101,7 +101,6 @@ public class KubeAIServeRuntime
         return switch (runAccessor.getTask()) {
             case KubeAIServeTaskSpec.KIND -> new KubeAIServeRunner(
                 runSpec.getFunctionSpec(),
-                k8sBuilderHelper,
                 modelService
             )
                 .produce(run);

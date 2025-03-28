@@ -13,6 +13,8 @@ import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAILoadBalancing;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -68,6 +70,8 @@ public class KubeAIServeRunSpec extends RunBaseSpec {
     @Schema(title = "fields.kubeai.files.title", description = "fields.kubeai.files.description")
     private List<KubeAIFile> files;
 
+    private Set<String> secrets;
+
     @Override
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
@@ -86,6 +90,7 @@ public class KubeAIServeRunSpec extends RunBaseSpec {
         this.scaleDownDelaySeconds = spec.getScaleDownDelaySeconds();
         this.loadBalancing = spec.getLoadBalancing();
         this.files = spec.getFiles();   
+        this.secrets = spec.getSecrets();
     }
 
     public void setFunctionSpec(KubeAIServeFunctionSpec functionSpec) {
