@@ -87,7 +87,7 @@ public class HuggingfaceServeRunner {
             if (model == null) {
                 throw new CoreRuntimeException("invalid entity reference, HuggingFace model not found");
             }
-            if (!model.getKind().equals("huggingface")) {
+            if (!model.getKind().equals("huggingface") && !model.getKind().equals("hf")) {
                 throw new CoreRuntimeException("invalid entity reference, expected HuggingFace model");
             }
             RelationshipDetail rel = new RelationshipDetail();
@@ -116,7 +116,7 @@ public class HuggingfaceServeRunner {
         );
 
         // model dir or model id
-        if ("huggingface".equals(uri.getScheme())) {
+        if ("huggingface".equals(uri.getScheme()) || "hf".equals(uri.getScheme())) {
             String mdlId = uri.getHost() + uri.getPath();
             String revision = null;
             if (mdlId.contains(":")) {
