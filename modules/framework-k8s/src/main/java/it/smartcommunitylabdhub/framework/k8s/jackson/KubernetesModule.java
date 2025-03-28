@@ -12,6 +12,7 @@ import com.github.victools.jsonschema.generator.SchemaGeneratorConfigBuilder;
 import com.github.victools.jsonschema.generator.SchemaKeyword;
 import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sResourceProfileAware;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sTemplate;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import java.io.IOException;
@@ -108,7 +109,7 @@ public class KubernetesModule implements com.github.victools.jsonschema.generato
         public CustomDefinition provideCustomSchemaDefinition(ResolvedType javaType, SchemaGenerationContext context) {
             SchemaGeneratorConfig config = context.getGeneratorConfig();
 
-            if (templates != null && javaType.isInstanceOf(K8sFunctionTaskBaseSpec.class)) {
+            if (templates != null && javaType.isInstanceOf(K8sResourceProfileAware.class)) {
                 ObjectNode def = context.createStandardDefinition(javaType, this);
                 JsonNode node = Optional
                     .ofNullable(def.get(config.getKeyword(SchemaKeyword.TAG_PROPERTIES)))

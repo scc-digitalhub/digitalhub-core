@@ -19,7 +19,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class K8sFunctionTaskBaseSpec extends FunctionTaskBaseSpec {
+public class K8sFunctionTaskBaseSpec extends FunctionTaskBaseSpec implements K8sResourceProfileAware {
 
     private List<CoreVolume> volumes;
 
