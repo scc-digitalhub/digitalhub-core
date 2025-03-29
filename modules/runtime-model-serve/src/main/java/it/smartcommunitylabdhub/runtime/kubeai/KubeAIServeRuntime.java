@@ -7,6 +7,7 @@ import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
 import it.smartcommunitylabdhub.commons.services.ModelService;
+import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
 import it.smartcommunitylabdhub.runtime.kubeai.specs.KubeAIServeFunctionSpec;
@@ -31,6 +32,9 @@ public class KubeAIServeRuntime
 
     @Autowired
     private ModelService modelService;
+
+    @Autowired
+    private SecretService secretService;
 
     public KubeAIServeRuntime() {
         super(KubeAIServeRunSpec.KIND);
@@ -98,9 +102,17 @@ public class KubeAIServeRuntime
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
+        // explicit project secrets
+        Map<String, String> secretData = secretService.getSecretData(
+            run.getProject(),
+            runSpec.getSecrets()
+        );
+
         return switch (runAccessor.getTask()) {
             case KubeAIServeTaskSpec.KIND -> new KubeAIServeRunner(
                 runSpec.getFunctionSpec(),
+                secretData,
+                k8sBuilderHelper,
                 modelService
             )
                 .produce(run);

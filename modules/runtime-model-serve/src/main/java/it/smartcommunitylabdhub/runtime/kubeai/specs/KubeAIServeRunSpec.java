@@ -7,9 +7,12 @@ import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sResourceProfileAware;
 import it.smartcommunitylabdhub.runtime.kubeai.KubeAIServeRuntime;
 import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAIFile;
 import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAILoadBalancing;
+import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAIScaling;
+
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +26,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @SpecType(runtime = KubeAIServeRuntime.RUNTIME, kind = KubeAIServeRunSpec.KIND, entity = EntityName.RUN)
-public class KubeAIServeRunSpec extends RunBaseSpec {
+public class KubeAIServeRunSpec extends RunBaseSpec implements K8sResourceProfileAware {
 
     public static final String KIND = KubeAIServeRuntime.RUNTIME + "+run";
 
@@ -34,43 +37,24 @@ public class KubeAIServeRunSpec extends RunBaseSpec {
     @JsonUnwrapped
     private KubeAIServeTaskSpec taskServeSpec;
 
+    // execution
     @Schema(title = "fields.kubeai.args.title", description = "fields.kubeai.args.description")
     private List<String> args;
-
-    @Schema(title = "fields.kubeai.resourceprofile.title", description = "fields.kubeai.resourceprofile.description")
-    private String resourceProfile;
-
-    @Schema(title = "fields.kubeai.cacheprofile.title", description = "fields.kubeai.cacheprofile.description")
-    private String cacheProfile;
-
     @Schema(title = "fields.kubeai.env.title", description = "fields.kubeai.env.description")
     private Map<String, String> env;
-
-    @Schema(title = "fields.kubeai.replicas.title", description = "fields.kubeai.replicas.description")
-    private Integer replicas;
-
-    @Schema(title = "fields.kubeai.minreplicas.title", description = "fields.kubeai.minreplicas.description")
-    private Integer minReplicas;
-
-    @Schema(title = "fields.kubeai.maxreplicas.title", description = "fields.kubeai.maxreplicas.description")
-    private Integer maxReplicas;
-
-    @Schema(title = "fields.kubeai.autoscalingdisabled.title", description = "fields.kubeai.autoscalingdisabled.description")
-    private Boolean autoscalingDisabled;
-    
-    @Schema(title = "fields.kubeai.targetrequests.title", description = "fields.kubeai.targetrequests.description")
-    private Integer targetRequests;
-
-    @Schema(title = "fields.kubeai.scaledowndelayseconds.title", description = "fields.kubeai.scaledowndelayseconds.description")
-    private Integer scaleDownDelaySeconds;
-
-    @Schema(title = "fields.kubeai.loadbalancing.title", description = "fields.kubeai.loadbalancing.description")
-    private KubeAILoadBalancing loadBalancing;
-
     @Schema(title = "fields.kubeai.files.title", description = "fields.kubeai.files.description")
     private List<KubeAIFile> files;
 
     private Set<String> secrets;
+
+    // resources
+    @Schema(title = "fields.kubeai.resourceprofile.title", description = "fields.kubeai.resourceprofile.description")
+    private String profile;
+    @Schema(title = "fields.kubeai.cacheprofile.title", description = "fields.kubeai.cacheprofile.description")
+    private String cacheProfile;
+
+    @Schema(title = "fields.kubeai.scaling.title", description = "fields.kubeai.scaling.description")
+    private KubeAIScaling scaling = new KubeAIScaling();
 
     @Override
     public void configure(Map<String, Serializable> data) {
@@ -79,16 +63,10 @@ public class KubeAIServeRunSpec extends RunBaseSpec {
         this.functionSpec = spec.getFunctionSpec();
         this.taskServeSpec = spec.getTaskServeSpec();
         this.args = spec.getArgs();
-        this.resourceProfile = spec.getResourceProfile();
+        this.profile = spec.getProfile();
         this.cacheProfile = spec.getCacheProfile();
         this.env = spec.getEnv();
-        this.replicas = spec.getReplicas();
-        this.minReplicas = spec.getMinReplicas();
-        this.maxReplicas = spec.getMaxReplicas();
-        this.autoscalingDisabled = spec.getAutoscalingDisabled();
-        this.targetRequests = spec.getTargetRequests();
-        this.scaleDownDelaySeconds = spec.getScaleDownDelaySeconds();
-        this.loadBalancing = spec.getLoadBalancing();
+        this.scaling = spec.getScaling();
         this.files = spec.getFiles();   
         this.secrets = spec.getSecrets();
     }
