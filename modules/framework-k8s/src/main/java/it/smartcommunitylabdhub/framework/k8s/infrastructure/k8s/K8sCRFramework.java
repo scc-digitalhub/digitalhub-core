@@ -2,6 +2,7 @@ package it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +17,7 @@ import com.google.gson.JsonParser;
 import io.kubernetes.client.common.KubernetesObject;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
+import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.util.generic.dynamic.DynamicKubernetesApi;
 import io.kubernetes.client.util.generic.dynamic.DynamicKubernetesObject;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.FrameworkComponent;
@@ -47,7 +49,17 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
             log.trace("runnable: {}", runnable);
         }
 
+
         Map<String, KubernetesObject> results = new HashMap<>();
+        //secrets
+        V1Secret secret = buildRunSecret(runnable);
+        if (secret != null) {
+            storeRunSecret(secret);
+            //clear data before storing
+            results.put("secret", secret.stringData(Collections.emptyMap()).data(Collections.emptyMap()));
+        }
+
+
         DynamicKubernetesObject cr = build(runnable);
 
         log.info("create CR for {}", String.valueOf(cr.getMetadata().getName()));
@@ -67,7 +79,16 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
         return runnable;
 
     }
-     
+    
+    @Override
+    protected V1Secret buildRunSecret(K8sCRRunnable runnable) {
+        // check if CR-specific secret is required and if so, create it
+        if (Boolean.TRUE.equals(runnable.getRequiresSecret())) {
+            return super.buildRunSecret(runnable);
+        }
+        return null;
+    }
+
     public DynamicKubernetesApi getDynamicKubernetesApi(K8sCRRunnable runnable) {
         return new DynamicKubernetesApi(runnable.getApiGroup(), runnable.getApiVersion(), runnable.getPlural(), apiClient);
     }
@@ -94,6 +115,9 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
         delete(cr, dynamicApi);
         messages.add(String.format("CR %s deleted", cr.getMetadata().getName()));
 
+        //secrets
+        cleanRunSecret(runnable);
+
         //update state
         runnable.setState(State.DELETED.name());
         runnable.setMessage(String.join(", ", messages));
@@ -104,6 +128,14 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
 
         return runnable;    
     }
+
+    protected void cleanRunSecret(K8sCRRunnable runnable) {
+        // check if CR-specific secret is required and if so, delete it
+        if (Boolean.TRUE.equals(runnable.getRequiresSecret())) {
+            super.cleanRunSecret(runnable);
+        }
+    }
+
 
     public DynamicKubernetesObject get(@NotNull DynamicKubernetesObject cr, DynamicKubernetesApi dynamicApi) throws K8sFrameworkException {
         Assert.notNull(cr.getMetadata(), "metadata can not be null");
