@@ -27,11 +27,13 @@ public class K8sCRRunnable extends K8sRunnable {
     private String apiVersion;
     private String plural;
     private String kind;
-
     private String name;
+
+    private Boolean requiresSecret;
 
     @Override
     public String getFramework() {
         return K8sCRFramework.FRAMEWORK;
     }
 }
+
