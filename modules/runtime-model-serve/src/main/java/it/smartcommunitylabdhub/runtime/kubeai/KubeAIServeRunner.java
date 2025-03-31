@@ -29,6 +29,8 @@ import java.util.Map;
 
 public class KubeAIServeRunner {
 
+    private static final String BASE_PROFILE = "cpu:1";
+
     private final KubeAIServeFunctionSpec functionSpec;
 
     private final ModelService modelService;
@@ -115,7 +117,7 @@ public class KubeAIServeRunner {
             }            
         }
         int minReplicas = runSpec.getScaling() != null && runSpec.getScaling().getMinReplicas() != null ? runSpec.getScaling().getMinReplicas() : replicas;
-        String resourceProfile = runSpec.getProfile() != null ? runSpec.getProfile() : "cpu:1";
+        String resourceProfile = runSpec.getProfile() != null ? runSpec.getProfile() : BASE_PROFILE;
 
         KubeAIModelSpec modelSpec = KubeAIModelSpec.builder()
             .url(url)
@@ -129,6 +131,7 @@ public class KubeAIServeRunner {
                 functionSpec.getFeatures().stream().map(KubeAIFeature::name).toList()
             )            
             .engine(functionSpec.getEngine().name())
+            .env(env)
             .files(runSpec.getFiles())
             .replicas(replicas)
             .minReplicas(minReplicas)
