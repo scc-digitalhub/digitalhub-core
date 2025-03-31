@@ -18,8 +18,8 @@ public class KubeAIModelSpec {
 
     private String url;
     private List<KubeAIAdapter> adapters;
-    private KubeAIEngine engine;
-    private List<KubeAIFeature> features;
+    private String engine;
+    private List<String> features;
     private String image;
 
     private List<String> args;

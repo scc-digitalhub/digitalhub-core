@@ -16,13 +16,13 @@ import it.smartcommunitylabdhub.commons.services.ModelService;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
-import it.smartcommunitylabdhub.runtime.huggingface.HuggingfaceServeRuntime;
-import it.smartcommunitylabdhub.runtime.huggingface.specs.HuggingfaceServeTaskSpec;
+import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAIFeature;
 import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAIModelSpec;
 import it.smartcommunitylabdhub.runtime.kubeai.specs.KubeAIServeFunctionSpec;
 import it.smartcommunitylabdhub.runtime.kubeai.specs.KubeAIServeRunSpec;
 import it.smartcommunitylabdhub.runtime.kubeai.specs.KubeAIServeTaskSpec;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +34,7 @@ public class KubeAIServeRunner {
     private final ModelService modelService;
     private final K8sBuilderHelper k8sBuilderHelper;    
     private Map<String, String> secretData;
+    private Map<String, String> credentialsData;
 
     private static final String KUBEAI_API_GROUP = "kubeai.org";
     private static final String KUBEAI_API_VERSION = "v1";
@@ -43,12 +44,14 @@ public class KubeAIServeRunner {
     public KubeAIServeRunner(
         KubeAIServeFunctionSpec functionSpec,
         Map<String, String> secretData, 
+        Map<String, String> credentialsData, 
         K8sBuilderHelper k8sBuilderHelper,
         ModelService modelService
     ) {
         this.functionSpec = functionSpec;
         this.modelService = modelService;
         this.secretData = secretData;
+        this.credentialsData = credentialsData;
         this.k8sBuilderHelper = k8sBuilderHelper;
     }
 
@@ -86,8 +89,12 @@ public class KubeAIServeRunner {
             }
         }
 
-        // TODO: populate env from edplicit env, then from user secret and then from explicit project secret 
+        // populate env from edplicit env, then from user secret and then from explicit project secret 
         Map<String, String> env = new HashMap<>();
+        // credentials secrets
+        if (credentialsData != null) {
+            env.putAll(credentialsData);
+        }
         // explcit secrets
         if (secretData != null) {
             env.putAll(secretData);
@@ -98,20 +105,33 @@ public class KubeAIServeRunner {
             env.putAll(runSpec.getEnv());
         }
 
+        // set to 1 if no scaling is defined
+        int replicas = 1;
+        if (runSpec.getScaling() != null) {
+            if (runSpec.getScaling().getReplicas() != null) {
+                replicas = runSpec.getScaling().getReplicas();
+            } else if (runSpec.getScaling().getMinReplicas() != null) {
+                replicas = runSpec.getScaling().getMinReplicas();
+            }            
+        }
+        int minReplicas = runSpec.getScaling() != null && runSpec.getScaling().getMinReplicas() != null ? runSpec.getScaling().getMinReplicas() : replicas;
+        String resourceProfile = runSpec.getProfile() != null ? runSpec.getProfile() : "cpu:1";
 
         KubeAIModelSpec modelSpec = KubeAIModelSpec.builder()
             .url(url)
             .image(functionSpec.getImage())
             .args(runSpec.getArgs())
             .cacheProfile(runSpec.getCacheProfile())
-            .resourceProfile(runSpec.getProfile())
+            .resourceProfile(resourceProfile)
             .adapters(functionSpec.getAdapters())
-            .features(functionSpec.getFeatures())
-            .engine(functionSpec.getEngine())
+            .features(
+                functionSpec.getFeatures() == null ? Collections.emptyList() :
+                functionSpec.getFeatures().stream().map(KubeAIFeature::name).toList()
+            )            
+            .engine(functionSpec.getEngine().name())
             .files(runSpec.getFiles())
-            .env(env)
-            .replicas(runSpec.getScaling().getReplicas())
-            .minReplicas(runSpec.getScaling().getMinReplicas())
+            .replicas(replicas)
+            .minReplicas(minReplicas)
             .maxReplicas(runSpec.getScaling().getMaxReplicas())
             .autoscalingDisabled(runSpec.getScaling().getAutoscalingDisabled())
             .targetRequests(runSpec.getScaling().getTargetRequests())

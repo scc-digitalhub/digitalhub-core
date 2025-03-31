@@ -16,22 +16,27 @@ public class KubeAIScaling {
 
 
     @Schema(title = "fields.kubeai.replicas.title", description = "fields.kubeai.replicas.description")
-    private Integer replicas;
+    @Builder.Default
+    private Integer replicas = 1;
 
     @Schema(title = "fields.kubeai.minreplicas.title", description = "fields.kubeai.minreplicas.description")
-    private Integer minReplicas;
+    @Builder.Default
+    private Integer minReplicas = 1;
 
     @Schema(title = "fields.kubeai.maxreplicas.title", description = "fields.kubeai.maxreplicas.description")
     private Integer maxReplicas;
 
     @Schema(title = "fields.kubeai.autoscalingdisabled.title", description = "fields.kubeai.autoscalingdisabled.description")
-    private Boolean autoscalingDisabled;
+    @Builder.Default
+    private Boolean autoscalingDisabled = false;
     
     @Schema(title = "fields.kubeai.targetrequests.title", description = "fields.kubeai.targetrequests.description")
-    private Integer targetRequests;
+    @Builder.Default
+    private Integer targetRequests = 100;
 
     @Schema(title = "fields.kubeai.scaledowndelayseconds.title", description = "fields.kubeai.scaledowndelayseconds.description")
-    private Integer scaleDownDelaySeconds;
+    @Builder.Default
+    private Integer scaleDownDelaySeconds = 30;
 
     @Schema(title = "fields.kubeai.loadbalancing.title", description = "fields.kubeai.loadbalancing.description")
     private KubeAILoadBalancing loadBalancing;

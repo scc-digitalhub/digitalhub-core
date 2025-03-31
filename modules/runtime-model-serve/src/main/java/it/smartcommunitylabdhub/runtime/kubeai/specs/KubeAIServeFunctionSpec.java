@@ -17,12 +17,14 @@ import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAIFeature;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @SpecType(
@@ -66,11 +68,12 @@ public class KubeAIServeFunctionSpec extends FunctionBaseSpec {
 
 
     @JsonProperty("features")
-    @Schema(title = "fields.kubeai.features.title", description = "fields.kubeai.features.description")
-    private List<KubeAIFeature> features;
+    @Schema(title = "fields.kubeai.features.title", description = "fields.kubeai.features.description", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Builder.Default
+    private List<KubeAIFeature> features = List.of(KubeAIFeature.TextGeneration);
 
     @JsonProperty("engine")
-    @Schema(title = "fields.kubeai.engine.title", description = "fields.kubeai.engine.description")
+    @Schema(title = "fields.kubeai.engine.title", description = "fields.kubeai.engine.description", requiredMode = Schema.RequiredMode.REQUIRED)
     private KubeAIEngine engine;
 
     @Override
