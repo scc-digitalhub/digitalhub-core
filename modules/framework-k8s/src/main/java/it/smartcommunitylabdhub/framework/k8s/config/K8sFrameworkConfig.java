@@ -128,10 +128,10 @@ public class K8sFrameworkConfig {
     @Bean
     @ConditionalOnKubernetes
     public K8sRunnableListener<K8sCRRunnable> k8sCRRunnableListener(
-        K8sCRFramework serveFramework,
+        K8sCRFramework crFramework,
         RunnableStore<K8sCRRunnable> store
     ) {
-        return new K8sCRListener(serveFramework, store);
+        return new K8sCRListener(crFramework, store);
     }
 
     @Bean
