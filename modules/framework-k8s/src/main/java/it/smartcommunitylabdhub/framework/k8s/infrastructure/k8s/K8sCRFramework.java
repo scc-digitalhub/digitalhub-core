@@ -11,7 +11,9 @@ import java.util.stream.Collectors;
 
 import org.springframework.util.Assert;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -71,7 +73,12 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
 
         log.info("create CR for {}", String.valueOf(cr.getMetadata().getName()));
         cr = create(cr, getDynamicKubernetesApi(runnable));
-        results.put(cr.getKind(), cr.getRaw());
+        try {
+            Map<String, Serializable> spec = jsonElementToSpec(cr.getRaw());
+            results.put(cr.getKind(), spec);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+        }
         //update state
         runnable.setState(State.RUNNING.name());
         
@@ -207,10 +214,10 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
         return jsonObject;
     }
 
-    public Map<String, Serializable> jsonElementToSpec(JsonElement jsonElement) {
+    public Map<String, Serializable> jsonElementToSpec(JsonElement jsonElement) throws Exception {
         Gson gson = new Gson();
         String json = gson.toJson(jsonElement);
-        return mapper.convertValue(json, typeRef);
+        return mapper.readValue(json, typeRef);
     }
     
     private DynamicKubernetesObject create(DynamicKubernetesObject cr, DynamicKubernetesApi dynamicApi) throws K8sFrameworkException {
