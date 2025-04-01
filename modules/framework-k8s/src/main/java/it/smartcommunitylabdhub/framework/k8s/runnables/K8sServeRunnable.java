@@ -19,7 +19,7 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @NoArgsConstructor
 @ToString(callSuper = true)
-public class K8sServeRunnable extends K8sRunnable {
+public final class K8sServeRunnable extends K8sRunnable {
 
     private List<CorePort> servicePorts;
 

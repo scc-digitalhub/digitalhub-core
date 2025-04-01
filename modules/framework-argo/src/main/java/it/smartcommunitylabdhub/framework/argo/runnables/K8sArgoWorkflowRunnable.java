@@ -12,12 +12,12 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 @RunnableComponent(framework = K8sArgoWorkflowFramework.FRAMEWORK)
-@SuperBuilder
+@SuperBuilder(toBuilder = true)
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class K8sArgoWorkflowRunnable extends K8sRunnable {
+public final class K8sArgoWorkflowRunnable extends K8sRunnable {
 
     private String workflowSpec;
 

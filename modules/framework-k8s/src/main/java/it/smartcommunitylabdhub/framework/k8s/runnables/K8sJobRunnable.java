@@ -17,7 +17,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString(callSuper = true)
-public class K8sJobRunnable extends K8sRunnable {
+public final class K8sJobRunnable extends K8sRunnable {
 
     @JsonProperty("backoff_limit")
     private Integer backoffLimit;

@@ -17,7 +17,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString(callSuper = true)
-public class K8sCronJobRunnable extends K8sRunnable {
+public final class K8sCronJobRunnable extends K8sRunnable {
 
     private String schedule;
 

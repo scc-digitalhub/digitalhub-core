@@ -85,32 +85,27 @@ public abstract class K8sRunnableListener<R extends K8sRunnable> {
                 if (log.isTraceEnabled()) {
                     log.trace("runnable result from framework {}: {}", clazz.getSimpleName(), runnable);
                 }
-
-                try {
-                    log.debug("update runnable {} {} in store", clazz.getSimpleName(), runnable.getId());
-                    runnableStore.store(runnable.getId(), runnable);
-                } catch (StoreException e) {
-                    log.error("Error with store: {}", e.getMessage());
-                }
             }
         } catch (FrameworkException e) {
             // Set runnable to error state send event
             log.error("Error with k8s for runnable {} {}: {}", clazz.getSimpleName(), runnable.getId(), e.getMessage());
-            runnable.setState(State.ERROR.name());
-            runnable.setError(clazz.getSimpleName() + ":" + String.valueOf(e.getMessage()));
+            if (runnable != null) {
+                runnable.setState(State.ERROR.name());
+                runnable.setError(clazz.getSimpleName() + ":" + String.valueOf(e.getMessage()));
 
-            if (e instanceof K8sFrameworkException) {
-                runnable.setError(((K8sFrameworkException) e).toError());
-            }
-
-            try {
-                log.debug("update runnable {} {} in store", clazz.getSimpleName(), runnable.getId());
-                runnableStore.store(runnable.getId(), runnable);
-            } catch (StoreException se) {
-                log.error("Error with store: {}", se.getMessage());
+                if (e instanceof K8sFrameworkException) {
+                    runnable.setError(((K8sFrameworkException) e).toError());
+                }
             }
         } finally {
             if (runnable != null) {
+                try {
+                    log.debug("update runnable {} {} in store", clazz.getSimpleName(), runnable.getId());
+                    runnableStore.store(runnable.getId(), runnable);
+                } catch (StoreException se) {
+                    log.error("Error with store: {}", se.getMessage());
+                }
+
                 log.debug("Processed runnable {} {}", clazz.getSimpleName(), runnable.getId());
 
                 if (eventPublisher != null) {

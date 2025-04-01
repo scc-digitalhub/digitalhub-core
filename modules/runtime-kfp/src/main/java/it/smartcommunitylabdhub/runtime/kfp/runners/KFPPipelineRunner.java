@@ -5,6 +5,7 @@ import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.framework.argo.runnables.K8sArgoCronWorkflowRunnable;
 import it.smartcommunitylabdhub.framework.argo.runnables.K8sArgoWorkflowRunnable;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runtime.kfp.KFPRuntime;
 import it.smartcommunitylabdhub.runtime.kfp.specs.KFPPipelineTaskSpec;
 import it.smartcommunitylabdhub.runtime.kfp.specs.KFPRunSpec;
@@ -21,7 +22,7 @@ import org.springframework.util.StringUtils;
 
 public class KFPPipelineRunner {
 
-    public K8sArgoWorkflowRunnable produce(Run run) {
+    public K8sRunnable produce(Run run) {
         KFPRunSpec runSpec = new KFPRunSpec(run.getSpec());
         KFPPipelineTaskSpec taskSpec = runSpec.getTaskPipelineSpec();
         KFPWorkflowSpec workflowSpec = runSpec.getWorkflowSpec();
@@ -44,7 +45,7 @@ public class KFPPipelineRunner {
             StandardCharsets.UTF_8
         );
 
-        K8sArgoWorkflowRunnable argoRunnable = K8sArgoWorkflowRunnable
+        K8sRunnable argoRunnable = K8sArgoWorkflowRunnable
             .builder()
             .runtime(KFPRuntime.RUNTIME)
             .task(KFPPipelineTaskSpec.KIND)
