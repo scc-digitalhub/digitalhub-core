@@ -82,6 +82,10 @@ public class RunnableListener {
         // try {
         //read event
         String id = event.getId();
+        if (id == null) {
+            log.error("Event with null Id");
+            return;
+        }
         State state = State.valueOf(event.getState());
 
         // Use service to retrieve the run and check if state is changed

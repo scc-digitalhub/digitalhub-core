@@ -268,7 +268,9 @@ public class RunLifecycleManager extends LifecycleManager<Run, RunEntity> {
             }
 
             //call runtime
-            Optional.ofNullable(runtime.onDeleted(run, runnable));
+            // TODO: VERIFY!
+            // Seems like this is wrong
+            //Optional.ofNullable(runtime.onDeleted(run, runnable));
 
             return;
         }
