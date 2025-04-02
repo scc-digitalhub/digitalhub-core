@@ -108,15 +108,15 @@ public class KubeAIServeRunner {
         }
 
         // set to 1 if no scaling is defined
-        int replicas = 1;
-        if (runSpec.getScaling() != null) {
-            if (runSpec.getScaling().getReplicas() != null) {
-                replicas = runSpec.getScaling().getReplicas();
-            } else if (runSpec.getScaling().getMinReplicas() != null) {
-                replicas = runSpec.getScaling().getMinReplicas();
-            }            
-        }
-        int minReplicas = runSpec.getScaling() != null && runSpec.getScaling().getMinReplicas() != null ? runSpec.getScaling().getMinReplicas() : replicas;
+        // int replicas = 1;
+        // if (runSpec.getScaling() != null) {
+        //     if (runSpec.getScaling().getReplicas() != null) {
+        //         replicas = runSpec.getScaling().getReplicas();
+        //     } else if (runSpec.getScaling().getMinReplicas() != null) {
+        //         replicas = runSpec.getScaling().getMinReplicas();
+        //     }            
+        // }
+        // int minReplicas = runSpec.getScaling() != null && runSpec.getScaling().getMinReplicas() != null ? runSpec.getScaling().getMinReplicas() : replicas;
         String resourceProfile = runSpec.getProfile() != null ? runSpec.getProfile() : BASE_PROFILE;
 
         KubeAIModelSpec modelSpec = KubeAIModelSpec.builder()
@@ -133,8 +133,8 @@ public class KubeAIServeRunner {
             .engine(functionSpec.getEngine().name())
             .env(env)
             .files(runSpec.getFiles())
-            .replicas(replicas)
-            .minReplicas(minReplicas)
+            .replicas(runSpec.getScaling().getReplicas())
+            .minReplicas(runSpec.getScaling().getMinReplicas())
             .maxReplicas(runSpec.getScaling().getMaxReplicas())
             .autoscalingDisabled(runSpec.getScaling().getAutoscalingDisabled())
             .targetRequests(runSpec.getScaling().getTargetRequests())
