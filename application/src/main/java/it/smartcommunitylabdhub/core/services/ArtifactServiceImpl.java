@@ -18,6 +18,7 @@ import it.smartcommunitylabdhub.commons.services.FilesInfoService;
 import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.core.components.infrastructure.specs.SpecValidator;
+import it.smartcommunitylabdhub.core.components.security.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.core.models.builders.artifact.ArtifactEntityBuilder;
 import it.smartcommunitylabdhub.core.models.entities.AbstractEntity_;
 import it.smartcommunitylabdhub.core.models.entities.ArtifactEntity;
@@ -503,7 +504,7 @@ public class ArtifactServiceImpl
                 throw new NoSuchEntityException("file");
             }
 
-            DownloadInfo info = filesService.getDownloadAsUrl(path);
+            DownloadInfo info = filesService.getDownloadAsUrl(path, UserAuthenticationHelper.getUserAuthentication());
             if (log.isTraceEnabled()) {
                 log.trace("download url for artifact with id {}: {} -> {}", id, path, info);
             }
@@ -542,7 +543,7 @@ public class ArtifactServiceImpl
                 })
                 .orElse(path);
 
-            DownloadInfo info = filesService.getDownloadAsUrl(fullPath);
+            DownloadInfo info = filesService.getDownloadAsUrl(fullPath, UserAuthenticationHelper.getUserAuthentication());
             if (log.isTraceEnabled()) {
                 log.trace("download url for artifact with id {} and path {}: {} -> {}", id, sub, path, info);
             }
@@ -583,7 +584,7 @@ public class ArtifactServiceImpl
                     throw new NoSuchEntityException("file");
                 }
 
-                files = filesService.getFileInfo(path);
+                files = filesService.getFileInfo(path, UserAuthenticationHelper.getUserAuthentication());
             }
 
             if (files == null) {
@@ -647,7 +648,7 @@ public class ArtifactServiceImpl
                 }
             }
 
-            UploadInfo info = filesService.getUploadAsUrl(path);
+            UploadInfo info = filesService.getUploadAsUrl(path, UserAuthenticationHelper.getUserAuthentication());
             if (log.isTraceEnabled()) {
                 log.trace("upload url for artifact with id {}: {}", id, info);
             }
@@ -688,7 +689,7 @@ public class ArtifactServiceImpl
                 }
             }
 
-            UploadInfo info = filesService.startMultiPartUpload(path);
+            UploadInfo info = filesService.startMultiPartUpload(path, UserAuthenticationHelper.getUserAuthentication());
             if (log.isTraceEnabled()) {
                 log.trace("start upload url for artifact with id {}: {}", id, info);
             }
@@ -732,7 +733,7 @@ public class ArtifactServiceImpl
                 }
             }
 
-            UploadInfo info = filesService.uploadMultiPart(path, uploadId, partNumber);
+            UploadInfo info = filesService.uploadMultiPart(path, uploadId, partNumber, UserAuthenticationHelper.getUserAuthentication());
             if (log.isTraceEnabled()) {
                 log.trace("part upload url for artifact with path {}: {}", path, info);
             }
@@ -776,7 +777,7 @@ public class ArtifactServiceImpl
                 }
             }
 
-            UploadInfo info = filesService.completeMultiPartUpload(path, uploadId, eTagPartList);
+            UploadInfo info = filesService.completeMultiPartUpload(path, uploadId, eTagPartList, UserAuthenticationHelper.getUserAuthentication());
             if (log.isTraceEnabled()) {
                 log.trace("complete upload url for artifact with path {}: {}", path, info);
             }

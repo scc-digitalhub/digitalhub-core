@@ -1,5 +1,7 @@
 package it.smartcommunitylabdhub.files.http;
 
+import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.files.FileInfo;
 import it.smartcommunitylabdhub.files.models.DownloadInfo;
 import it.smartcommunitylabdhub.files.models.UploadInfo;
@@ -27,7 +29,7 @@ public class HttpStore implements FilesStore {
     private RestTemplate restTemplate = new RestTemplate();
 
     @Override
-    public DownloadInfo downloadAsUrl(@NotNull String path) {
+    public DownloadInfo downloadAsUrl(@NotNull String path, UserAuthentication<?> auth) {
         log.debug("generate download url for {}", path);
 
         //path must be a valid url
@@ -54,7 +56,7 @@ public class HttpStore implements FilesStore {
     }
 
     @Override
-    public List<FileInfo> fileInfo(@NotNull String path) {
+    public List<FileInfo> fileInfo(@NotNull String path, UserAuthentication<?> auth) {
         List<FileInfo> result = new ArrayList<>();
         try {
             String[] split = path.split("/");
@@ -75,17 +77,18 @@ public class HttpStore implements FilesStore {
     }
 
     @Override
-    public UploadInfo uploadAsUrl(@NotNull String path) {
+    public UploadInfo uploadAsUrl(@NotNull String path, UserAuthentication<?> auth) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public UploadInfo startMultiPartUpload(@NotNull String path) {
+    public UploadInfo startMultiPartUpload(@NotNull String path, UserAuthentication<?> auth) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public UploadInfo uploadMultiPart(@NotNull String path, @NotNull String uploadId, @NotNull Integer partNumber) {
+    public UploadInfo uploadMultiPart(@NotNull String path, @NotNull String uploadId, @NotNull Integer partNumber,
+    		UserAuthentication<?> auth) {
         throw new UnsupportedOperationException();
     }
 
@@ -93,8 +96,13 @@ public class HttpStore implements FilesStore {
     public UploadInfo completeMultiPartUpload(
         @NotNull String path,
         @NotNull String uploadId,
-        @NotNull List<String> partList
+        @NotNull List<String> partList,
+        UserAuthentication<?> auth
     ) {
         throw new UnsupportedOperationException();
     }
+
+	@Override
+	public void remove(@NotNull String path, UserAuthentication<?> auth) throws StoreException {
+	}
 }

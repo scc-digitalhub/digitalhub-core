@@ -1,22 +1,26 @@
 package it.smartcommunitylabdhub.files.s3;
 
-import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.models.files.FileInfo;
-import it.smartcommunitylabdhub.files.models.DownloadInfo;
-import it.smartcommunitylabdhub.files.models.UploadInfo;
-import it.smartcommunitylabdhub.files.service.FilesStore;
-import jakarta.validation.constraints.NotNull;
 import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.util.Assert;
+
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
+import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
+import it.smartcommunitylabdhub.commons.models.files.FileInfo;
+import it.smartcommunitylabdhub.files.models.DownloadInfo;
+import it.smartcommunitylabdhub.files.models.UploadInfo;
+import it.smartcommunitylabdhub.files.provider.S3Credentials;
+import it.smartcommunitylabdhub.files.service.FilesStore;
+import jakarta.validation.constraints.NotNull;
+import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.exception.SdkException;
@@ -27,6 +31,7 @@ import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
@@ -47,37 +52,38 @@ public class S3FilesStore implements FilesStore {
     public static final int URL_DURATION = 3600 * 8; //8 hours
     public static final int MAX_KEYS = 200;
 
-    private final String accessKey;
-    private final String secretKey;
+    private final String systemAccessKey;
+    private final String systemSecretKey;
     private final String endpoint;
     private final String bucket;
 
     private int urlDuration = URL_DURATION;
 
-    private S3Client client;
-    private S3Presigner presigner;
-
     public S3FilesStore(String accessKey, String secretKey, String endpoint, String bucket) {
-        Assert.hasText(accessKey, "accessKey is required");
-
-        this.accessKey = accessKey;
-        this.secretKey = secretKey;
+        this.systemAccessKey = accessKey;
+        this.systemSecretKey = secretKey;
         this.endpoint = endpoint;
         this.bucket = bucket;
-
-        buildClient();
     }
-
-    private void buildClient() {
-        //support only basic auth
+    
+    private S3Client getClient(S3Credentials s3Credentials) {
+    	S3Client client = null;
+    	String accessKey = null;
+    	String secretKey = null;
+    	if(s3Credentials != null) {
+    		accessKey = s3Credentials.getAccessKey();
+    		secretKey = s3Credentials.getSecretKey();
+    	} else {
+    		accessKey = systemAccessKey;
+    		secretKey = systemSecretKey;
+    	}
         AwsBasicCredentials credentials = AwsBasicCredentials
-            .builder()
-            .accessKeyId(accessKey)
-            .secretAccessKey(secretKey)
-            .build();
-
+                .builder()
+                .accessKeyId(accessKey)
+                .secretAccessKey(secretKey)
+                .build();
         if (StringUtils.hasText(endpoint)) {
-            this.client =
+        	client =
                 S3Client
                     .builder()
                     .credentialsProvider(StaticCredentialsProvider.create(credentials))
@@ -85,24 +91,58 @@ public class S3FilesStore implements FilesStore {
                     //also enable path style for endpoint by default
                     .forcePathStyle(true)
                     .build();
-
-            this.presigner =
-                S3Presigner
-                    .builder()
-                    .credentialsProvider(StaticCredentialsProvider.create(credentials))
-                    //also enable path style for endpoint by default
-                    .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
-                    .endpointOverride(URI.create(endpoint))
-                    .build();
         } else {
-            this.client = S3Client.builder().credentialsProvider(StaticCredentialsProvider.create(credentials)).build();
-            this.presigner =
-                S3Presigner.builder().credentialsProvider(StaticCredentialsProvider.create(credentials)).build();
+        	client = S3Client.builder().credentialsProvider(StaticCredentialsProvider.create(credentials)).build();
         }
+    	return client;
+    }
+    
+    private S3Presigner getPresignerClient(S3Credentials s3Credentials) {
+    	S3Presigner presigner = null;
+    	String accessKey = null;
+    	String secretKey = null;
+    	if(s3Credentials != null) {
+    		accessKey = s3Credentials.getAccessKey();
+    		secretKey = s3Credentials.getSecretKey();
+    	} else {
+    		accessKey = systemAccessKey;
+    		secretKey = systemSecretKey;
+    	}
+        AwsBasicCredentials credentials = AwsBasicCredentials
+                .builder()
+                .accessKeyId(accessKey)
+                .secretAccessKey(secretKey)
+                .build();
+        if (StringUtils.hasText(endpoint)) {
+            presigner =
+                    S3Presigner
+                        .builder()
+                        .credentialsProvider(StaticCredentialsProvider.create(credentials))
+                        //also enable path style for endpoint by default
+                        .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
+                        .endpointOverride(URI.create(endpoint))
+                        .build();        	
+        } else {
+        	presigner = S3Presigner.builder().credentialsProvider(StaticCredentialsProvider.create(credentials)).build();
+        }
+    	return presigner;
+    }
+    
+    private S3Credentials getCredentials(UserAuthentication<?> auth) {
+    	S3Credentials s3Credentials = null;
+    	if(auth != null) {
+    		for(Credentials credentials : auth.getCredentials()) {
+    			if(credentials instanceof S3Credentials) {
+    				s3Credentials = (S3Credentials) credentials;
+    				break;
+    			}
+    		}
+    	}
+    	return s3Credentials;
     }
 
     @Override
-    public DownloadInfo downloadAsUrl(@NotNull String path) throws StoreException {
+    public DownloadInfo downloadAsUrl(@NotNull String path, UserAuthentication<?> auth) throws StoreException {
         log.debug("generate download url for {}", path);
 
         Keys keys = parseKey(path);
@@ -114,6 +154,8 @@ public class S3FilesStore implements FilesStore {
         if (StringUtils.hasText(bucket) && !bucket.equals(bucketName)) {
             throw new StoreException("bucket mismatch");
         }
+        
+        S3Credentials s3Credentials = getCredentials(auth);
 
         //generate temporary signed url for download
         if (log.isTraceEnabled()) {
@@ -126,7 +168,9 @@ public class S3FilesStore implements FilesStore {
                 log.warn("downloading folders is not supported: {}", path);
                 return null;
             }
-
+            
+            S3Presigner presigner = getPresignerClient(s3Credentials);
+            
             GetObjectPresignRequest preq = GetObjectPresignRequest
                 .builder()
                 .signatureDuration(Duration.ofSeconds(urlDuration))
@@ -146,7 +190,7 @@ public class S3FilesStore implements FilesStore {
     }
 
     @Override
-    public List<FileInfo> fileInfo(@NotNull String path) throws StoreException {
+    public List<FileInfo> fileInfo(@NotNull String path, UserAuthentication<?> auth) throws StoreException {
         log.debug("file info for {}", path);
 
         Keys keys = parseKey(path);
@@ -158,12 +202,15 @@ public class S3FilesStore implements FilesStore {
         if (StringUtils.hasText(bucket) && !bucket.equals(bucketName)) {
             throw new StoreException("bucket mismatch");
         }
+        
+        S3Credentials s3Credentials = getCredentials(auth);
 
         if (log.isTraceEnabled()) {
             log.trace("read object metadata for {}: {}", bucketName, key);
         }
 
         try {
+        	S3Client client = getClient(s3Credentials);
             //support single file in path for now
             if (key.endsWith("/")) {
                 log.warn("reading metadata for folders is partially supported: {}", path);
@@ -224,7 +271,7 @@ public class S3FilesStore implements FilesStore {
     }
 
     @Override
-    public UploadInfo uploadAsUrl(@NotNull String path) throws StoreException {
+    public UploadInfo uploadAsUrl(@NotNull String path, UserAuthentication<?> auth) throws StoreException {
         log.debug("generate upload url for {}", path);
 
         Keys keys = parseKey(path);
@@ -237,6 +284,8 @@ public class S3FilesStore implements FilesStore {
             throw new StoreException("bucket mismatch");
         }
 
+        S3Credentials s3Credentials = getCredentials(auth);
+
         //generate temporary signed url for upload
         if (log.isTraceEnabled()) {
             log.trace("generating presigned url for {}: {}", bucketName, key);
@@ -248,7 +297,9 @@ public class S3FilesStore implements FilesStore {
                 log.warn("upload for folders is not supported: {}", path);
                 return null;
             }
-
+            
+            S3Presigner presigner = getPresignerClient(s3Credentials);
+            
             PutObjectPresignRequest preq = PutObjectPresignRequest
                 .builder()
                 .signatureDuration(Duration.ofSeconds(urlDuration))
@@ -268,7 +319,7 @@ public class S3FilesStore implements FilesStore {
     }
 
     @Override
-    public UploadInfo startMultiPartUpload(@NotNull String path) throws StoreException {
+    public UploadInfo startMultiPartUpload(@NotNull String path, UserAuthentication<?> auth) throws StoreException {
         log.debug("generate multipart upload for {}", path);
 
         Keys keys = parseKey(path);
@@ -281,12 +332,17 @@ public class S3FilesStore implements FilesStore {
             throw new StoreException("bucket mismatch");
         }
 
+        S3Credentials s3Credentials = getCredentials(auth);
+
         //generate temporary signed url for upload
         if (log.isTraceEnabled()) {
             log.trace("generating presigned multipart upload url for {}: {}", bucketName, key);
         }
 
         try {
+        	
+        	S3Client client = getClient(s3Credentials);
+        	
             //support single file in path for now
             if (key.endsWith("/")) {
                 log.warn("upload for folders is not supported: {}", path);
@@ -308,8 +364,8 @@ public class S3FilesStore implements FilesStore {
     }
 
     @Override
-    public UploadInfo uploadMultiPart(@NotNull String path, @NotNull String uploadId, @NotNull Integer partNumber)
-        throws StoreException {
+    public UploadInfo uploadMultiPart(@NotNull String path, @NotNull String uploadId, @NotNull Integer partNumber, 
+    		UserAuthentication<?> auth) throws StoreException {
         log.debug("generate part upload url for {} -> {} - {}", path, uploadId, partNumber);
 
         Keys keys = parseKey(path);
@@ -321,12 +377,16 @@ public class S3FilesStore implements FilesStore {
         if (StringUtils.hasText(bucket) && !bucket.equals(bucketName)) {
             throw new StoreException("bucket mismatch");
         }
+        
+        S3Credentials s3Credentials = getCredentials(auth);
 
         if (log.isTraceEnabled()) {
             log.trace("generating presigned multipart upload part url for {}: {}", bucketName, key);
         }
 
         try {
+        	S3Presigner presigner = getPresignerClient(s3Credentials);
+        	
             //support single file in path for now
             if (key.endsWith("/")) {
                 log.warn("upload for folders is not supported: {}", path);
@@ -363,7 +423,8 @@ public class S3FilesStore implements FilesStore {
     public UploadInfo completeMultiPartUpload(
         @NotNull String path,
         @NotNull String uploadId,
-        @NotNull List<String> eTagPartList
+        @NotNull List<String> eTagPartList,
+        UserAuthentication<?> auth
     ) throws StoreException {
         log.debug("generate complete upload url for {} -> {}", path, uploadId);
 
@@ -376,12 +437,16 @@ public class S3FilesStore implements FilesStore {
         if (StringUtils.hasText(bucket) && !bucket.equals(bucketName)) {
             throw new StoreException("bucket mismatch");
         }
+        
+        S3Credentials s3Credentials = getCredentials(auth);
 
         if (log.isTraceEnabled()) {
             log.trace("generating presigned multipart complete upload url for {}: {}", bucketName, key);
         }
 
         try {
+        	S3Client client = getClient(s3Credentials);
+        	
             //support single file in path for now
             if (key.endsWith("/")) {
                 log.warn("upload for folders is not supported: {}", path);
@@ -456,4 +521,43 @@ public class S3FilesStore implements FilesStore {
     }
 
     private record Keys(String endpoint, String bucket, String key, String fileName) {}
+
+	@Override
+	public void remove(@NotNull String path, UserAuthentication<?> auth) throws StoreException {
+        Keys keys = parseKey(path);
+        log.debug("resolved path to {}", keys);
+
+        String key = keys.key;
+        String bucketName = keys.bucket;
+
+        if (StringUtils.hasText(bucket) && !bucket.equals(bucketName)) {
+            throw new StoreException("bucket mismatch");
+        }
+        
+        S3Credentials s3Credentials = getCredentials(auth);
+
+        if (log.isTraceEnabled()) {
+            log.trace("remove object for {}: {}", bucketName, key);
+        }
+        
+        try {
+        	S3Client client = getClient(s3Credentials);
+        	
+            //support single file in path for now
+            if (key.endsWith("/")) {
+                log.warn("remove for folders is not supported: {}", path);
+                return;
+            }
+            
+            DeleteObjectRequest req = DeleteObjectRequest
+            		.builder()
+            		.bucket(bucketName)
+            		.key(key)
+            		.build();
+            client.deleteObject(req);
+        } catch (SdkException e) {
+            log.error("error with s3 for {}: {}", path, e.getMessage());
+            throw new StoreException("error with s3: " + e.getMessage());
+        }		
+	}
 }
