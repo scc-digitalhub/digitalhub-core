@@ -1,13 +1,5 @@
 package it.smartcommunitylabdhub.core.models.listeners;
 
-import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
-import it.smartcommunitylabdhub.commons.models.project.Project;
-import it.smartcommunitylabdhub.core.models.entities.DataItemEntity;
-import it.smartcommunitylabdhub.core.models.entities.ProjectEntity;
-import it.smartcommunitylabdhub.core.models.events.EntityEvent;
-import it.smartcommunitylabdhub.core.services.EntityService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.convert.converter.Converter;
@@ -16,12 +8,22 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
+import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
+import it.smartcommunitylabdhub.commons.models.project.Project;
+import it.smartcommunitylabdhub.core.models.entities.DataItemEntity;
+import it.smartcommunitylabdhub.core.models.entities.ProjectEntity;
+import it.smartcommunitylabdhub.core.models.events.EntityAction;
+import it.smartcommunitylabdhub.core.models.events.EntityEvent;
+import it.smartcommunitylabdhub.core.services.EntityService;
+import lombok.extern.slf4j.Slf4j;
+
 @Component
 @Slf4j
 public class DataItemEntityListener extends AbstractEntityListener<DataItemEntity, DataItem> {
 
     private EntityService<Project, ProjectEntity> projectService;
-
+    
     public DataItemEntityListener(Converter<DataItemEntity, DataItem> converter) {
         super(converter);
     }
@@ -30,6 +32,7 @@ public class DataItemEntityListener extends AbstractEntityListener<DataItemEntit
     public void setProjectService(EntityService<Project, ProjectEntity> projectService) {
         this.projectService = projectService;
     }
+    
 
     @Async
     @EventListener
@@ -42,6 +45,10 @@ public class DataItemEntityListener extends AbstractEntityListener<DataItemEntit
         //handle
         super.handle(event);
 
+        //files
+        if((filesService != null) && event.getAction().equals(EntityAction.DELETE)) {
+        }
+        
         //update project date
         if (projectService != null) {
             String projectId = event.getEntity().getProject();

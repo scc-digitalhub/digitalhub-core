@@ -8,6 +8,8 @@ import it.smartcommunitylabdhub.core.models.events.EntityEvent;
 import it.smartcommunitylabdhub.core.models.indexers.EntityIndexer;
 import it.smartcommunitylabdhub.core.relationships.BaseEntityRelationshipsManager;
 import it.smartcommunitylabdhub.core.websocket.UserNotificationEntityEvent;
+import it.smartcommunitylabdhub.files.service.FilesService;
+
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +27,8 @@ public abstract class AbstractEntityListener<E extends BaseEntity, T extends Bas
     protected EntityIndexer<E> indexer;
 
     protected BaseEntityRelationshipsManager<E> relationshipsManager;
+    
+    protected FilesService filesService;
 
     protected AbstractEntityListener(Converter<E, T> converter) {
         this.converter = converter;
@@ -44,6 +48,11 @@ public abstract class AbstractEntityListener<E extends BaseEntity, T extends Bas
     @Autowired(required = false)
     public void setRelationshipsManager(BaseEntityRelationshipsManager<E> manager) {
         this.relationshipsManager = manager;
+    }
+    
+    @Autowired(required = false)
+    public void setFilesService(FilesService service) {
+    	this.filesService = service;
     }
 
     protected void handle(EntityEvent<E> event) {
@@ -185,7 +194,7 @@ public abstract class AbstractEntityListener<E extends BaseEntity, T extends Bas
         log.debug("onDelete for {}", entity.getId());
 
         //TODO! index
-
+        
         //relationships
         if (relationshipsManager != null) {
             try {
