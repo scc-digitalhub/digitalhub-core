@@ -1,24 +1,5 @@
 package it.smartcommunitylabdhub.core.models.listeners;
 
-import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
-import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
-import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
-import it.smartcommunitylabdhub.commons.models.artifact.ArtifactBaseSpec;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
-import it.smartcommunitylabdhub.commons.models.files.FileInfo;
-import it.smartcommunitylabdhub.commons.models.files.FilesInfo;
-import it.smartcommunitylabdhub.commons.models.project.Project;
-import it.smartcommunitylabdhub.commons.services.FilesInfoService;
-import it.smartcommunitylabdhub.core.components.security.UserAuthenticationHelper;
-import it.smartcommunitylabdhub.core.models.builders.artifact.ArtifactDTOBuilder;
-import it.smartcommunitylabdhub.core.models.entities.ArtifactEntity;
-import it.smartcommunitylabdhub.core.models.entities.ProjectEntity;
-import it.smartcommunitylabdhub.core.models.events.EntityAction;
-import it.smartcommunitylabdhub.core.models.events.EntityEvent;
-import it.smartcommunitylabdhub.core.services.EntityService;
-import lombok.extern.slf4j.Slf4j;
-
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,11 +11,33 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
+import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
+import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
+import it.smartcommunitylabdhub.commons.models.artifact.ArtifactBaseSpec;
+import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.files.FileInfo;
+import it.smartcommunitylabdhub.commons.models.files.FilesInfo;
+import it.smartcommunitylabdhub.commons.models.project.Project;
+import it.smartcommunitylabdhub.commons.services.FilesInfoService;
+import it.smartcommunitylabdhub.core.components.security.UserAuthenticationHelper;
+import it.smartcommunitylabdhub.core.models.entities.ArtifactEntity;
+import it.smartcommunitylabdhub.core.models.entities.ProjectEntity;
+import it.smartcommunitylabdhub.core.models.events.EntityAction;
+import it.smartcommunitylabdhub.core.models.events.EntityEvent;
+import it.smartcommunitylabdhub.core.services.EntityService;
+import it.smartcommunitylabdhub.files.service.FilesService;
+import lombok.extern.slf4j.Slf4j;
+
 @Component
 @Slf4j
 public class ArtifactEntityListener extends AbstractEntityListener<ArtifactEntity, Artifact> {
 
     private EntityService<Project, ProjectEntity> projectService;
+    
+    @Autowired
+    private  FilesService filesService;
     
     @Autowired
     private FilesInfoService filesInfoService;
