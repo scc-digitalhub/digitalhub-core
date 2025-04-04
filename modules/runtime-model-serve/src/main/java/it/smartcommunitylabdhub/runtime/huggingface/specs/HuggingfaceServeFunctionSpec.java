@@ -36,7 +36,9 @@ public class HuggingfaceServeFunctionSpec extends FunctionBaseSpec {
         "|" +
         Keys.ZIP_PATTERN +
         "|" +
-        "^huggingface?://.*$"
+        "^huggingface?://.*$" +
+        "|" +
+        "^hf?://.*$"
     )
     @Schema(title = "fields.path.title", description = "fields.huggingface.path.description")
     private String path;
