@@ -1,5 +1,8 @@
 package it.smartcommunitylabdhub.framework.k8s.infrastructure.monitor;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import io.kubernetes.client.util.generic.dynamic.DynamicKubernetesApi;
+import io.kubernetes.client.util.generic.dynamic.DynamicKubernetesObject;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.MonitorComponent;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.services.RunnableStore;
@@ -9,19 +12,12 @@ import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sCRFramework;
 import it.smartcommunitylabdhub.framework.k8s.jackson.KubernetesMapper;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
-import lombok.extern.slf4j.Slf4j;
-
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
-
-import com.fasterxml.jackson.core.type.TypeReference;
-
-import io.kubernetes.client.util.generic.dynamic.DynamicKubernetesApi;
-import io.kubernetes.client.util.generic.dynamic.DynamicKubernetesObject;
 
 @Slf4j
 @ConditionalOnKubernetes
@@ -35,10 +31,7 @@ public class K8sCRMonitor extends K8sBaseMonitor<K8sCRRunnable> {
         HashMap<String, Serializable>
     >() {};
 
-    public K8sCRMonitor(
-        RunnableStore<K8sCRRunnable> runnableStore,
-        K8sCRFramework crFramework
-    ) {
+    public K8sCRMonitor(RunnableStore<K8sCRRunnable> runnableStore, K8sCRFramework crFramework) {
         super(runnableStore);
         Assert.notNull(crFramework, "CR framework is required");
 
@@ -60,10 +53,10 @@ public class K8sCRMonitor extends K8sBaseMonitor<K8sCRRunnable> {
                 runnable.setError("CR missing or invalid");
             } else {
                 runnable.setResults(
-                        MapUtils.mergeMultipleMaps(
-                            runnable.getResults(),
-                            Map.of( cr.getKind(), KubernetesMapper.OBJECT_MAPPER.convertValue(cr.getRaw(), typeRef))
-                        )
+                    MapUtils.mergeMultipleMaps(
+                        runnable.getResults(),
+                        Map.of(cr.getKind(), KubernetesMapper.OBJECT_MAPPER.convertValue(cr.getRaw(), typeRef))
+                    )
                 );
             }
             // TODO?

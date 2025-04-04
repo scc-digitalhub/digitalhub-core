@@ -8,10 +8,7 @@ import org.springframework.scheduling.annotation.Async;
 
 public class K8sCRListener extends K8sRunnableListener<K8sCRRunnable> {
 
-    public K8sCRListener(
-        K8sCRFramework k8sFramework,
-        RunnableStore<K8sCRRunnable> runnableStore
-    ) {
+    public K8sCRListener(K8sCRFramework k8sFramework, RunnableStore<K8sCRRunnable> runnableStore) {
         super(k8sFramework, runnableStore);
     }
 

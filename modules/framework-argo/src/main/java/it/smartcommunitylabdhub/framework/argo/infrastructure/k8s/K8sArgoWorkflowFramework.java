@@ -490,7 +490,7 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
                 wfName,
                 null,
                 null,
-                null,
+                "Foreground",
                 null,
                 null
             );

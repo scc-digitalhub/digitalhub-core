@@ -210,7 +210,7 @@ public class K8sBuilderHelper implements InitializingBean {
         return sanitizeNames("d" + "-" + task + "-" + id);
     }
 
-    public String getCRName(String name,  String id) {
+    public String getCRName(String name, String id) {
         return sanitizeNames(name + "-" + id);
     }
 

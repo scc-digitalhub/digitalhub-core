@@ -427,7 +427,7 @@ public class K8sCronJobFramework extends K8sBaseFramework<K8sCronJobRunnable, V1
             String jobName = job.getMetadata().getName();
             log.debug("delete k8s job for {}", jobName);
 
-            batchV1Api.deleteNamespacedCronJob(jobName, namespace, null, null, null, null, null, null);
+            batchV1Api.deleteNamespacedCronJob(jobName, namespace, null, null, null, null, "Foreground", null);
         } catch (ApiException e) {
             log.error("Error with k8s: {}", e.getResponseBody());
             if (log.isTraceEnabled()) {

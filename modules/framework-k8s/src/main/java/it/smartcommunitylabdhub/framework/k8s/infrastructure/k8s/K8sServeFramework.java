@@ -624,6 +624,11 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
             replicas = template.getProfile().getReplicas().intValue();
         }
 
+        //sanity check: replicas should be > 0
+        if (replicas <= 0) {
+            throw new K8sFrameworkException("replicas should be > 0");
+        }
+
         // Create the deploymentSpec with the PodTemplateSpec, leveraging template
         V1DeploymentSpec deploymentSpec = Optional
             .ofNullable(template)
@@ -697,7 +702,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
             String deploymentName = deployment.getMetadata().getName();
             log.debug("delete k8s deployment for {}", deploymentName);
 
-            appsV1Api.deleteNamespacedDeployment(deploymentName, namespace, null, null, null, null, null, null);
+            appsV1Api.deleteNamespacedDeployment(deploymentName, namespace, null, null, null, null, "Foreground", null);
         } catch (ApiException e) {
             log.error("Error with k8s: {}", e.getResponseBody());
             if (log.isTraceEnabled()) {

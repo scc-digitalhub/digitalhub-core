@@ -1,5 +1,24 @@
 package it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import io.kubernetes.client.openapi.ApiClient;
+import io.kubernetes.client.openapi.models.V1ObjectMeta;
+import io.kubernetes.client.openapi.models.V1Secret;
+import io.kubernetes.client.util.generic.KubernetesApiResponse;
+import io.kubernetes.client.util.generic.dynamic.DynamicKubernetesApi;
+import io.kubernetes.client.util.generic.dynamic.DynamicKubernetesObject;
+import io.kubernetes.client.util.generic.options.CreateOptions;
+import io.kubernetes.client.util.generic.options.DeleteOptions;
+import it.smartcommunitylabdhub.commons.annotations.infrastructure.FrameworkComponent;
+import it.smartcommunitylabdhub.commons.exceptions.FrameworkException;
+import it.smartcommunitylabdhub.commons.models.enums.State;
+import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
+import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -8,31 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
-
-import org.springframework.util.Assert;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-
-import io.kubernetes.client.openapi.ApiClient;
-import io.kubernetes.client.openapi.models.V1ObjectMeta;
-import io.kubernetes.client.openapi.models.V1Secret;
-import io.kubernetes.client.util.generic.KubernetesApiResponse;
-import io.kubernetes.client.util.generic.dynamic.DynamicKubernetesApi;
-import io.kubernetes.client.util.generic.dynamic.DynamicKubernetesObject;
-import io.kubernetes.client.util.generic.options.CreateOptions;
-import it.smartcommunitylabdhub.commons.annotations.infrastructure.FrameworkComponent;
-import it.smartcommunitylabdhub.commons.exceptions.FrameworkException;
-import it.smartcommunitylabdhub.commons.models.enums.State;
-import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
-import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
-import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.Assert;
 
 @Slf4j
 @FrameworkComponent(framework = K8sCRFramework.FRAMEWORK)
@@ -58,7 +54,6 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
             log.trace("runnable: {}", runnable);
         }
 
-
         Map<String, Object> results = new HashMap<>();
         //secrets
         V1Secret secret = buildRunSecret(runnable);
@@ -67,7 +62,6 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
             //clear data before storing
             results.put("secret", secret.stringData(Collections.emptyMap()).data(Collections.emptyMap()));
         }
-
 
         DynamicKubernetesObject cr = build(runnable);
 
@@ -81,12 +75,9 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
         }
         //update state
         runnable.setState(State.RUNNING.name());
-        
+
         runnable.setResults(
-            results
-                .entrySet()
-                .stream()
-                .collect(Collectors.toMap(Entry::getKey, e -> mapper.convertValue(e, typeRef)))
+            results.entrySet().stream().collect(Collectors.toMap(Entry::getKey, e -> mapper.convertValue(e, typeRef)))
         );
 
         if (cr != null) {
@@ -98,9 +89,8 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
         }
 
         return runnable;
-
     }
-    
+
     @Override
     protected V1Secret buildRunSecret(K8sCRRunnable runnable) {
         // check if CR-specific secret is required and if so, create it
@@ -111,9 +101,14 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
     }
 
     public DynamicKubernetesApi getDynamicKubernetesApi(K8sCRRunnable runnable) {
-        return new DynamicKubernetesApi(runnable.getApiGroup(), runnable.getApiVersion(), runnable.getPlural(), apiClient);
+        return new DynamicKubernetesApi(
+            runnable.getApiGroup(),
+            runnable.getApiVersion(),
+            runnable.getPlural(),
+            apiClient
+        );
     }
-        
+
     @Override
     public K8sCRRunnable delete(K8sCRRunnable runnable) throws FrameworkException {
         log.info("delete for {}", runnable.getId());
@@ -132,7 +127,7 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
             return runnable;
         }
 
-        if (cr != null) {    
+        if (cr != null) {
             log.info("delete CR for {}", String.valueOf(cr.getMetadata().getName()));
             delete(cr, dynamicApi);
             messages.add(String.format("CR %s deleted", cr.getMetadata().getName()));
@@ -155,7 +150,7 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
             log.trace("result: {}", runnable);
         }
 
-        return runnable;    
+        return runnable;
     }
 
     protected void cleanRunSecret(K8sCRRunnable runnable) {
@@ -165,8 +160,8 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
         }
     }
 
-
-    public DynamicKubernetesObject get(@NotNull DynamicKubernetesObject cr, DynamicKubernetesApi dynamicApi) throws K8sFrameworkException {
+    public DynamicKubernetesObject get(@NotNull DynamicKubernetesObject cr, DynamicKubernetesApi dynamicApi)
+        throws K8sFrameworkException {
         Assert.notNull(cr.getMetadata(), "metadata can not be null");
 
         try {
@@ -187,10 +182,7 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
     public DynamicKubernetesObject build(K8sCRRunnable runnable) {
         DynamicKubernetesObject obj = new DynamicKubernetesObject();
 
-        String crName = k8sBuilderHelper.getCRName(
-            runnable.getName(),
-            runnable.getId()
-        );
+        String crName = k8sBuilderHelper.getCRName(runnable.getName(), runnable.getId());
 
         String apiVersion = runnable.getApiGroup() + "/" + runnable.getApiVersion();
         obj.setApiVersion(apiVersion);
@@ -207,20 +199,21 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
         return obj;
     }
 
-    public JsonElement specToJsonElement(Map<String, Serializable> spec) {
+    private JsonElement specToJsonElement(Map<String, Serializable> spec) {
         Gson gson = new Gson();
         String json = gson.toJson(spec);
         JsonObject jsonObject = JsonParser.parseString(json).getAsJsonObject();
         return jsonObject;
     }
 
-    public Map<String, Serializable> jsonElementToSpec(JsonElement jsonElement) throws Exception {
+    private Map<String, Serializable> jsonElementToSpec(JsonElement jsonElement) throws Exception {
         Gson gson = new Gson();
         String json = gson.toJson(jsonElement);
         return mapper.readValue(json, typeRef);
     }
-    
-    private DynamicKubernetesObject create(DynamicKubernetesObject cr, DynamicKubernetesApi dynamicApi) throws K8sFrameworkException {
+
+    private DynamicKubernetesObject create(DynamicKubernetesObject cr, DynamicKubernetesApi dynamicApi)
+        throws K8sFrameworkException {
         Assert.notNull(cr.getMetadata(), "metadata can not be null");
         try {
             String crName = cr.getMetadata().getName();
@@ -231,8 +224,8 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
                 cr,
                 new CreateOptions()
             );
-            
-            if (result.isSuccess()){
+
+            if (result.isSuccess()) {
                 return result.getObject();
             }
             throw new RuntimeException(result.getStatus().getMessage());
@@ -252,7 +245,11 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
             String crName = cr.getMetadata().getName();
             log.debug("delete CR for {}", crName);
 
-            dynamicApi.delete(namespace, crName);
+            //delete with foreground propagation
+            DeleteOptions options = new DeleteOptions();
+            options.setPropagationPolicy("Foreground");
+
+            dynamicApi.delete(namespace, crName, options);
         } catch (Exception e) {
             log.error("Error with k8s: {}", e.getMessage());
             if (log.isTraceEnabled()) {
@@ -261,5 +258,4 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
             throw new K8sFrameworkException(e.getMessage(), e.getMessage());
         }
     }
-
 }

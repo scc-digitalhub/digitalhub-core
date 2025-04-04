@@ -85,6 +85,7 @@ public class K8sArgoCronWorkflowFramework extends K8sBaseFramework<K8sArgoCronWo
     public void setServiceAccountName(@Value("${argoworkflows.serviceaccount}") String serviceAccountName) {
         this.serviceAccountName = serviceAccountName;
     }
+
     @Autowired
     public void setRunAsUser(@Value("${argoworkflows.user}") Integer runAsUser) {
         this.runAsUser = runAsUser;
@@ -353,8 +354,7 @@ public class K8sArgoCronWorkflowFramework extends K8sBaseFramework<K8sArgoCronWo
 
         if (workflow.getSpec().getWorkflowSpec().getTemplates() != null) {
             for (IoArgoprojWorkflowV1alpha1Template template : workflow.getSpec().getWorkflowSpec().getTemplates()) {
-                template
-                // .automountServiceAccountToken(false)
+                template// .automountServiceAccountToken(false)
                 .securityContext(templateDefaults.getSecurityContext());
             }
         }
@@ -459,7 +459,7 @@ public class K8sArgoCronWorkflowFramework extends K8sBaseFramework<K8sArgoCronWo
                 wfName,
                 null,
                 null,
-                null,
+                "Foreground",
                 null,
                 null
             );

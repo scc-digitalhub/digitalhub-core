@@ -251,14 +251,33 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sKanikoRunnable, V1Jo
             log.trace("runnable: {}", runnable);
         }
 
+        List<String> messages = new ArrayList<>();
+
         V1Job job = get(build(runnable));
 
         //stop by deleting
         log.info("delete job for {}", String.valueOf(job.getMetadata().getName()));
         delete(job);
+        messages.add(String.format("job %s deleted", job.getMetadata().getName()));
+
+        //secrets
+        cleanRunSecret(runnable);
+
+        //init config map
+        try {
+            String configMapName = "init-config-map-" + runnable.getId();
+            V1ConfigMap initConfigMap = coreV1Api.readNamespacedConfigMap(configMapName, namespace, null);
+            if (initConfigMap != null) {
+                coreV1Api.deleteNamespacedConfigMap(configMapName, namespace, null, null, null, null, null, null);
+                messages.add(String.format("configMap %s deleted", configMapName));
+            }
+        } catch (ApiException | NullPointerException e) {
+            //ignore, not existing or error
+        }
 
         //update state
         runnable.setState(State.STOPPED.name());
+        runnable.setMessage(String.join(", ", messages));
 
         if (log.isTraceEnabled()) {
             log.trace("result: {}", runnable);
@@ -282,14 +301,29 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sKanikoRunnable, V1Jo
             return runnable;
         }
 
+        List<String> messages = new ArrayList<>();
+        log.info("delete job for {}", String.valueOf(job.getMetadata().getName()));
+        delete(job);
+        messages.add(String.format("job %s deleted", job.getMetadata().getName()));
+
         //secrets
         cleanRunSecret(runnable);
 
-        log.info("delete job for {}", String.valueOf(job.getMetadata().getName()));
-        delete(job);
+        //init config map
+        try {
+            String configMapName = "init-config-map-" + runnable.getId();
+            V1ConfigMap initConfigMap = coreV1Api.readNamespacedConfigMap(configMapName, namespace, null);
+            if (initConfigMap != null) {
+                coreV1Api.deleteNamespacedConfigMap(configMapName, namespace, null, null, null, null, null, null);
+                messages.add(String.format("configMap %s deleted", configMapName));
+            }
+        } catch (ApiException | NullPointerException e) {
+            //ignore, not existing or error
+        }
 
         //update state
         runnable.setState(State.DELETED.name());
+        runnable.setMessage(String.join(", ", messages));
 
         if (log.isTraceEnabled()) {
             log.trace("result: {}", runnable);
@@ -426,7 +460,8 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sKanikoRunnable, V1Jo
             .affinity(buildAffinity(runnable))
             .tolerations(buildTolerations(runnable))
             .volumes(volumes)
-            .restartPolicy("Never");
+            .restartPolicy("Never")
+            .securityContext(buildPodSecurityContext(runnable));
 
         // Create a PodTemplateSpec with the PodSpec
         V1PodTemplateSpec podTemplateSpec = new V1PodTemplateSpec().metadata(metadata).spec(podSpec);
@@ -516,7 +551,7 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sKanikoRunnable, V1Jo
             String jobName = job.getMetadata().getName();
             log.debug("delete k8s job for {}", jobName);
 
-            batchV1Api.deleteNamespacedJob(jobName, namespace, null, null, null, null, null, null);
+            batchV1Api.deleteNamespacedJob(jobName, namespace, null, null, null, null, "Foreground", null);
         } catch (ApiException e) {
             log.error("Error with k8s: {}", e.getResponseBody());
             if (log.isDebugEnabled()) {
