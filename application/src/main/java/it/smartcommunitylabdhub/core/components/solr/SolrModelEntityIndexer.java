@@ -111,4 +111,17 @@ public class SolrModelEntityIndexer extends SolrBaseEntityIndexer<Model> impleme
 
         return doc;
     }
+
+	@Override
+	public void remove(ModelEntity entity) {
+        Assert.notNull(entity, "entity can not be null");
+        if (solr != null) {
+            try {
+                log.debug("remove index model {}", entity.getId());
+                solr.removeDoc(entity.getId());
+            } catch (StoreException e) {
+                log.error("error with solr: {}", e.getMessage());
+            }
+        }
+	}
 }
