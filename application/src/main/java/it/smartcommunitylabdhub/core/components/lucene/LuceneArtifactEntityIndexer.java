@@ -14,7 +14,6 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
-import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -106,5 +105,18 @@ public class LuceneArtifactEntityIndexer
         doc.add(field);
 
         return doc;
+    }
+
+    @Override
+    public void remove(ArtifactEntity entity) {
+        Assert.notNull(entity, "entity can not be null");
+        if (lucene != null) {
+            try {
+                log.debug("lucene remove index artifact {}", entity.getId());
+                lucene.removeDoc(entity.getId());
+            } catch (StoreException e) {
+                log.error("error with lucene: {}", e.getMessage());
+            }
+        }
     }
 }

@@ -14,7 +14,6 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
-import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
@@ -111,5 +110,18 @@ public class LuceneWorkflowEntityIndexer
         }
 
         return doc;
+    }
+
+    @Override
+    public void remove(WorkflowEntity entity) {
+        Assert.notNull(entity, "entity can not be null");
+        if (lucene != null) {
+            try {
+                log.debug("remove index workflow {}", entity.getId());
+                lucene.removeDoc(entity.getId());
+            } catch (StoreException e) {
+                log.error("error with solr: {}", e.getMessage());
+            }
+        }
     }
 }

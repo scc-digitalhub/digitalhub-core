@@ -113,4 +113,17 @@ public class SolrArtifactEntityIndexer
 
         return doc;
     }
+
+    @Override
+    public void remove(ArtifactEntity entity) {
+        Assert.notNull(entity, "entity can not be null");
+        if (solr != null) {
+            try {
+                log.debug("remove index artifact {}", entity.getId());
+                solr.removeDoc(entity.getId());
+            } catch (StoreException e) {
+                log.error("error with solr: {}", e.getMessage());
+            }
+        }
+    }
 }

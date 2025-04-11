@@ -113,4 +113,17 @@ public class SolrDataItemEntityIndexer
 
         return doc;
     }
+
+    @Override
+    public void remove(DataItemEntity entity) {
+        Assert.notNull(entity, "entity can not be null");
+        if (solr != null) {
+            try {
+                log.debug("remove index dataItem {}", entity.getId());
+                solr.removeDoc(entity.getId());
+            } catch (StoreException e) {
+                log.error("error with solr: {}", e.getMessage());
+            }
+        }
+    }
 }

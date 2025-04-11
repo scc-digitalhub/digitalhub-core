@@ -184,7 +184,14 @@ public abstract class AbstractEntityListener<E extends BaseEntity, T extends Bas
     protected void onDelete(E entity, T dto) {
         log.debug("onDelete for {}", entity.getId());
 
-        //TODO! index
+        if (indexer != null) {
+            try {
+                log.debug("remove index for entity with id {}", entity.getId());
+                indexer.remove(entity);
+            } catch (Exception e) {
+                log.error("error with indexer: {}", e.getMessage());
+            }
+        }
 
         //relationships
         if (relationshipsManager != null) {
