@@ -3,6 +3,7 @@ package it.smartcommunitylabdhub.files.service;
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.files.FileInfo;
+import it.smartcommunitylabdhub.files.http.HttpStore;
 import it.smartcommunitylabdhub.files.models.DownloadInfo;
 import it.smartcommunitylabdhub.files.models.UploadInfo;
 import jakarta.annotation.Nullable;
@@ -27,6 +28,16 @@ import org.springframework.util.Assert;
 public class FilesService {
 
     private final Map<String, FilesStore> stores = new HashMap<>();
+
+    public FilesService() {
+        //create an http read-only store
+        HttpStore store = new HttpStore();
+
+        //register by default
+        registerStore("http://", store);
+        registerStore("https://", store);
+        registerStore("ftp://", store);
+    }
 
     public void registerStore(String prefix, FilesStore store) {
         Assert.hasText(prefix, "prefix is required to match paths");

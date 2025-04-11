@@ -46,4 +46,7 @@ public class S3Config extends AbstractConfiguration {
 
     @JsonProperty("s3_signature_version")
     private String signatureVersion;
+
+    @JsonProperty("s3_path_style")
+    private Boolean pathStyle;
 }
