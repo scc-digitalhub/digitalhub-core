@@ -30,6 +30,11 @@
             <version>${revision}</version>
         </dependency>
         <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-files</artifactId>
+            <version>${revision}</version>
+        </dependency>        
+        <dependency>
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
             <version>${minio.version}</version>

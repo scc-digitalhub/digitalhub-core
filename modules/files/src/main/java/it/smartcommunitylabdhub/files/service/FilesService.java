@@ -1,7 +1,9 @@
 package it.smartcommunitylabdhub.files.service;
 
+import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.files.FileInfo;
+import it.smartcommunitylabdhub.files.http.HttpStore;
 import it.smartcommunitylabdhub.files.models.DownloadInfo;
 import it.smartcommunitylabdhub.files.models.UploadInfo;
 import jakarta.annotation.Nullable;
@@ -26,6 +28,16 @@ import org.springframework.util.Assert;
 public class FilesService {
 
     private final Map<String, FilesStore> stores = new HashMap<>();
+
+    public FilesService() {
+        //create an http read-only store
+        HttpStore store = new HttpStore();
+
+        //register by default
+        registerStore("http://", store);
+        registerStore("https://", store);
+        registerStore("ftp://", store);
+    }
 
     public void registerStore(String prefix, FilesStore store) {
         Assert.hasText(prefix, "prefix is required to match paths");
@@ -66,7 +78,8 @@ public class FilesService {
         return match;
     }
 
-    public @Nullable DownloadInfo getDownloadAsUrl(@NotNull String path) throws StoreException {
+    public @Nullable DownloadInfo getDownloadAsUrl(@NotNull String path, UserAuthentication<?> auth)
+        throws StoreException {
         Assert.hasText(path, "path can not be null or empty");
 
         log.debug("resolve store for {}", path);
@@ -79,7 +92,7 @@ public class FilesService {
 
         log.debug("found store {}", store.getClass().getName());
 
-        DownloadInfo info = store.downloadAsUrl(path);
+        DownloadInfo info = store.downloadAsUrl(path, auth);
 
         if (log.isTraceEnabled()) {
             log.trace("path resolved to download {}", info);
@@ -88,11 +101,12 @@ public class FilesService {
         return info;
     }
 
-    public @Nullable InputStream getDownloadAsStream(@NotNull String path) throws StoreException {
+    public @Nullable InputStream getDownloadAsStream(@NotNull String path, UserAuthentication<?> auth)
+        throws StoreException {
         throw new UnsupportedOperationException();
     }
 
-    public List<FileInfo> getFileInfo(@NotNull String path) throws StoreException {
+    public List<FileInfo> getFileInfo(@NotNull String path, UserAuthentication<?> auth) throws StoreException {
         Assert.hasText(path, "path can not be null or empty");
 
         log.debug("resolve store for {}", path);
@@ -105,7 +119,7 @@ public class FilesService {
 
         log.debug("found store {}", store.getClass().getName());
 
-        List<FileInfo> metadata = store.fileInfo(path);
+        List<FileInfo> metadata = store.fileInfo(path, auth);
 
         if (log.isTraceEnabled()) {
             log.trace("path resolved to metadata {}", metadata);
@@ -114,7 +128,7 @@ public class FilesService {
         return metadata;
     }
 
-    public @Nullable UploadInfo getUploadAsUrl(@NotNull String path) throws StoreException {
+    public @Nullable UploadInfo getUploadAsUrl(@NotNull String path, UserAuthentication<?> auth) throws StoreException {
         Assert.hasText(path, "path can not be null or empty");
 
         log.debug("resolve store for {}", path);
@@ -127,7 +141,7 @@ public class FilesService {
 
         log.debug("found store {}", store.getClass().getName());
 
-        UploadInfo info = store.uploadAsUrl(path);
+        UploadInfo info = store.uploadAsUrl(path, auth);
 
         if (log.isTraceEnabled()) {
             log.trace("path resolved to upload {}", info);
@@ -136,7 +150,8 @@ public class FilesService {
         return info;
     }
 
-    public @Nullable UploadInfo startMultiPartUpload(@NotNull String path) throws StoreException {
+    public @Nullable UploadInfo startMultiPartUpload(@NotNull String path, UserAuthentication<?> auth)
+        throws StoreException {
         Assert.hasText(path, "path can not be null or empty");
 
         log.debug("resolve store for {}", path);
@@ -149,7 +164,7 @@ public class FilesService {
 
         log.debug("found store {}", store.getClass().getName());
 
-        UploadInfo info = store.startMultiPartUpload(path);
+        UploadInfo info = store.startMultiPartUpload(path, auth);
 
         if (log.isTraceEnabled()) {
             log.trace("path resolved to multi-part upload {}", info);
@@ -161,7 +176,8 @@ public class FilesService {
     public @Nullable UploadInfo uploadMultiPart(
         @NotNull String path,
         @NotNull String uploadId,
-        @NotNull Integer partNumber
+        @NotNull Integer partNumber,
+        UserAuthentication<?> auth
     ) throws StoreException {
         Assert.hasText(path, "path can not be null or empty");
         Assert.hasText(uploadId, "uploadId can not be null or empty");
@@ -177,7 +193,7 @@ public class FilesService {
 
         log.debug("found store {}", store.getClass().getName());
 
-        UploadInfo info = store.uploadMultiPart(path, uploadId, partNumber);
+        UploadInfo info = store.uploadMultiPart(path, uploadId, partNumber, auth);
 
         if (log.isTraceEnabled()) {
             log.trace("path resolved to part upload {}", info);
@@ -189,7 +205,8 @@ public class FilesService {
     public @Nullable UploadInfo completeMultiPartUpload(
         @NotNull String path,
         @NotNull String uploadId,
-        @NotNull List<String> partList
+        @NotNull List<String> partList,
+        UserAuthentication<?> auth
     ) throws StoreException {
         Assert.hasText(path, "path can not be null or empty");
         Assert.hasText(uploadId, "uploadId can not be null or empty");
@@ -205,12 +222,23 @@ public class FilesService {
 
         log.debug("found store {}", store.getClass().getName());
 
-        UploadInfo info = store.completeMultiPartUpload(path, uploadId, partList);
+        UploadInfo info = store.completeMultiPartUpload(path, uploadId, partList, auth);
 
         if (log.isTraceEnabled()) {
             log.trace("path resolved to complete upload {}", info);
         }
 
         return info;
+    }
+
+    public void remove(@NotNull String path, UserAuthentication<?> auth) throws StoreException {
+        FilesStore store = getStore(path);
+        if (store != null) {
+            log.debug("found store {}", store.getClass().getName());
+            store.remove(path, auth);
+            log.debug("remove path {}", path);
+        } else {
+            log.debug("no store found.");
+        }
     }
 }

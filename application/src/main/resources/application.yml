@@ -225,14 +225,6 @@ lucene:
 
 # files support
 files:
-  store:
-    s3:
-      access-key: ${AWS_ACCESS_KEY:}
-      secret-key: ${AWS_SECRET_KEY:}
-      endpoint: ${S3_ENDPOINT_URL:}
-      bucket: ${S3_BUCKET:}
-      signature-version: s3v4
-      region: ${S3_REGION:us-east-1}
   max-column-size: ${FILES_MAX_COLUMN_SIZE:2097152}      
 
 # JWT configuration
@@ -255,6 +247,13 @@ credentials:
   provider:
     s3:
       enable: ${S3_CREDENTIALS_PROVIDER:false}
+      endpoint: ${S3_ENDPOINT_URL:}
+      bucket: ${S3_BUCKET:}
+      signature-version: s3v4
+      region: ${S3_REGION:}
+      access-key: ${AWS_ACCESS_KEY:}
+      secret-key: ${AWS_SECRET_KEY:}  
+      path-style-access: ${S3_PATH_STYLE_ACCESS:}    
     db:
       enable: ${DB_CREDENTIALS_PROVIDER:false}
       database: ${DB_CREDENTIALS_DATABASE:}
@@ -267,13 +266,13 @@ credentials:
     minio:
       enable: ${MINIO_CREDENTIALS_PROVIDER:false}      
       endpoint:  ${MINIO_CREDENTIALS_ENDPOINT:${files.store.s3.endpoint}}
-      region: ${MINIO_CREDENTIALS_REGION:${files.store.s3.region}}
-      bucket: ${MINIO_CREDENTIALS_REGION:${files.store.s3.bucket}}
+      region: ${MINIO_CREDENTIALS_REGION:us-east-1}
+      bucket: ${MINIO_CREDENTIALS_BUCKET:${files.store.s3.bucket}}
       claim:  ${MINIO_CREDENTIALS_CLAIM:minio/policy}
       policy:  ${MINIO_CREDENTIALS_POLICY:readwrite}
       duration:  ${MINIO_CREDENTIALS_DURATION:86400}
-      access-key: ${MINIO_CREDENTIALS_ACCESS_KEY:${files.store.s3.access-key}}
-      secret-key: ${MINIO_CREDENTIALS_SECRET_KEY:${files.store.s3.secret-key}}      
+      access-key: ${MINIO_CREDENTIALS_ACCESS_KEY:}
+      secret-key: ${MINIO_CREDENTIALS_SECRET_KEY:}      
 
 
 # Templates
