@@ -540,7 +540,10 @@ public class DataItemServiceImpl
                 })
                 .orElse(path);
 
-            DownloadInfo info = filesService.getDownloadAsUrl(fullPath, UserAuthenticationHelper.getUserAuthentication());
+            DownloadInfo info = filesService.getDownloadAsUrl(
+                fullPath,
+                UserAuthenticationHelper.getUserAuthentication()
+            );
             if (log.isTraceEnabled()) {
                 log.trace("download url for dataitem with id {} and path {}: {} -> {}", id, sub, path, info);
             }
@@ -730,7 +733,12 @@ public class DataItemServiceImpl
                 }
             }
 
-            UploadInfo info = filesService.uploadMultiPart(path, uploadId, partNumber, UserAuthenticationHelper.getUserAuthentication());
+            UploadInfo info = filesService.uploadMultiPart(
+                path,
+                uploadId,
+                partNumber,
+                UserAuthenticationHelper.getUserAuthentication()
+            );
             if (log.isTraceEnabled()) {
                 log.trace("part upload url for dataItem with path {}: {}", path, info);
             }
@@ -774,7 +782,12 @@ public class DataItemServiceImpl
                 }
             }
 
-            UploadInfo info = filesService.completeMultiPartUpload(path, uploadId, eTagPartList, UserAuthenticationHelper.getUserAuthentication());
+            UploadInfo info = filesService.completeMultiPartUpload(
+                path,
+                uploadId,
+                eTagPartList,
+                UserAuthenticationHelper.getUserAuthentication()
+            );
             if (log.isTraceEnabled()) {
                 log.trace("complete upload url for dataItem with path {}: {}", path, info);
             }

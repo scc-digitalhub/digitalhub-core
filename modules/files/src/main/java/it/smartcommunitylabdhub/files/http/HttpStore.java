@@ -87,8 +87,12 @@ public class HttpStore implements FilesStore {
     }
 
     @Override
-    public UploadInfo uploadMultiPart(@NotNull String path, @NotNull String uploadId, @NotNull Integer partNumber,
-    		UserAuthentication<?> auth) {
+    public UploadInfo uploadMultiPart(
+        @NotNull String path,
+        @NotNull String uploadId,
+        @NotNull Integer partNumber,
+        UserAuthentication<?> auth
+    ) {
         throw new UnsupportedOperationException();
     }
 
@@ -102,7 +106,6 @@ public class HttpStore implements FilesStore {
         throw new UnsupportedOperationException();
     }
 
-	@Override
-	public void remove(@NotNull String path, UserAuthentication<?> auth) throws StoreException {
-	}
+    @Override
+    public void remove(@NotNull String path, UserAuthentication<?> auth) throws StoreException {}
 }

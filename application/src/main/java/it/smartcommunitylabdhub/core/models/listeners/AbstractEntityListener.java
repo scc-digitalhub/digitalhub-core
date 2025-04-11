@@ -1,12 +1,5 @@
 package it.smartcommunitylabdhub.core.models.listeners;
 
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.core.convert.converter.Converter;
-
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.core.components.cloud.CloudEntityEvent;
@@ -15,7 +8,12 @@ import it.smartcommunitylabdhub.core.models.events.EntityEvent;
 import it.smartcommunitylabdhub.core.models.indexers.EntityIndexer;
 import it.smartcommunitylabdhub.core.relationships.BaseEntityRelationshipsManager;
 import it.smartcommunitylabdhub.core.websocket.UserNotificationEntityEvent;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.convert.converter.Converter;
 
 @Slf4j
 public abstract class AbstractEntityListener<E extends BaseEntity, T extends BaseDTO> {
@@ -27,7 +25,7 @@ public abstract class AbstractEntityListener<E extends BaseEntity, T extends Bas
     protected EntityIndexer<E> indexer;
 
     protected BaseEntityRelationshipsManager<E> relationshipsManager;
-    
+
     protected AbstractEntityListener(Converter<E, T> converter) {
         this.converter = converter;
         clazz = extractClass();
@@ -47,7 +45,7 @@ public abstract class AbstractEntityListener<E extends BaseEntity, T extends Bas
     public void setRelationshipsManager(BaseEntityRelationshipsManager<E> manager) {
         this.relationshipsManager = manager;
     }
-    
+
     protected void handle(EntityEvent<E> event) {
         log.debug("receive event for {} {}", clazz.getSimpleName(), event.getAction());
 
@@ -187,7 +185,7 @@ public abstract class AbstractEntityListener<E extends BaseEntity, T extends Bas
         log.debug("onDelete for {}", entity.getId());
 
         //TODO! index
-        
+
         //relationships
         if (relationshipsManager != null) {
             try {

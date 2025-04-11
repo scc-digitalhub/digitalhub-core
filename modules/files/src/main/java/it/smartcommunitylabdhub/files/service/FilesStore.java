@@ -15,16 +15,24 @@ public interface FilesStore {
 
     UploadInfo startMultiPartUpload(@NotNull String path, UserAuthentication<?> auth) throws StoreException;
 
-    UploadInfo uploadMultiPart(@NotNull String path, @NotNull String uploadId, @NotNull Integer partNumber, UserAuthentication<?> auth)
-        throws StoreException;
+    UploadInfo uploadMultiPart(
+        @NotNull String path,
+        @NotNull String uploadId,
+        @NotNull Integer partNumber,
+        UserAuthentication<?> auth
+    ) throws StoreException;
 
-    UploadInfo completeMultiPartUpload(@NotNull String path, @NotNull String uploadId, @NotNull List<String> partList, UserAuthentication<?> auth)
-        throws StoreException;
+    UploadInfo completeMultiPartUpload(
+        @NotNull String path,
+        @NotNull String uploadId,
+        @NotNull List<String> partList,
+        UserAuthentication<?> auth
+    ) throws StoreException;
 
     //TODO
     // InputStream downloadAsStream(@NotNull String path);
 
     List<FileInfo> fileInfo(@NotNull String path, UserAuthentication<?> auth) throws StoreException;
-    
+
     void remove(@NotNull String path, UserAuthentication<?> auth) throws StoreException;
 }

@@ -1,16 +1,5 @@
 package it.smartcommunitylabdhub.core.models.listeners;
 
-import java.util.List;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.event.EventListener;
-import org.springframework.core.convert.converter.Converter;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
-
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
@@ -28,16 +17,25 @@ import it.smartcommunitylabdhub.core.models.events.EntityAction;
 import it.smartcommunitylabdhub.core.models.events.EntityEvent;
 import it.smartcommunitylabdhub.core.services.EntityService;
 import it.smartcommunitylabdhub.files.service.FilesService;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Component
 @Slf4j
 public class DataItemEntityListener extends AbstractEntityListener<DataItemEntity, DataItem> {
 
     private EntityService<Project, ProjectEntity> projectService;
-    
+
     @Autowired
-    private  FilesService filesService;
+    private FilesService filesService;
 
     @Autowired
     private FilesInfoService filesInfoService;
@@ -50,7 +48,6 @@ public class DataItemEntityListener extends AbstractEntityListener<DataItemEntit
     public void setProjectService(EntityService<Project, ProjectEntity> projectService) {
         this.projectService = projectService;
     }
-    
 
     @Async
     @EventListener
@@ -64,11 +61,11 @@ public class DataItemEntityListener extends AbstractEntityListener<DataItemEntit
         super.handle(event);
 
         //files
-        if((filesService != null) && event.getAction().equals(EntityAction.DELETE)) {
-        	try {
-            	String id = event.getEntity().getId();
-            	DataItem  entity = converter.convert(event.getEntity());
-                
+        if ((filesService != null) && event.getAction().equals(EntityAction.DELETE)) {
+            try {
+                String id = event.getEntity().getId();
+                DataItem entity = converter.convert(event.getEntity());
+
                 StatusFieldAccessor statusFieldAccessor = StatusFieldAccessor.with(entity.getStatus());
                 List<FileInfo> files = statusFieldAccessor.getFiles();
 
@@ -80,28 +77,31 @@ public class DataItemEntityListener extends AbstractEntityListener<DataItemEntit
                         files = null;
                     }
                 }
-                
+
                 //extract path from spec
                 DataItemBaseSpec spec = new DataItemBaseSpec();
                 spec.configure(entity.getSpec());
-                
+
                 String path = spec.getPath();
                 if (!StringUtils.hasText(path)) {
                     throw new NoSuchEntityException("file");
-                }                
-                
-                for(FileInfo fileInfo : files) {
-                	if(path.endsWith("/")) {
-                		filesService.remove(path + fileInfo.getPath(), UserAuthenticationHelper.getUserAuthentication());
-                	} else {
-                		filesService.remove(path, UserAuthenticationHelper.getUserAuthentication());
-                	}
                 }
-			} catch (Exception e) {
-				log.error("store error", e.getMessage());
-			}
-        }   
-        
+
+                for (FileInfo fileInfo : files) {
+                    if (path.endsWith("/")) {
+                        filesService.remove(
+                            path + fileInfo.getPath(),
+                            UserAuthenticationHelper.getUserAuthentication()
+                        );
+                    } else {
+                        filesService.remove(path, UserAuthenticationHelper.getUserAuthentication());
+                    }
+                }
+            } catch (Exception e) {
+                log.error("store error", e.getMessage());
+            }
+        }
+
         //update project date
         if (projectService != null) {
             String projectId = event.getEntity().getProject();

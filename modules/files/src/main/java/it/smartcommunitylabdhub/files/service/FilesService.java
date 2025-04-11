@@ -1,15 +1,5 @@
 package it.smartcommunitylabdhub.files.service;
 
-import java.io.InputStream;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
-import org.springframework.stereotype.Service;
-import org.springframework.util.Assert;
-
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.files.FileInfo;
@@ -17,7 +7,15 @@ import it.smartcommunitylabdhub.files.models.DownloadInfo;
 import it.smartcommunitylabdhub.files.models.UploadInfo;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 
 /**
  *
@@ -69,7 +67,8 @@ public class FilesService {
         return match;
     }
 
-    public @Nullable DownloadInfo getDownloadAsUrl(@NotNull String path, UserAuthentication<?> auth) throws StoreException {
+    public @Nullable DownloadInfo getDownloadAsUrl(@NotNull String path, UserAuthentication<?> auth)
+        throws StoreException {
         Assert.hasText(path, "path can not be null or empty");
 
         log.debug("resolve store for {}", path);
@@ -91,7 +90,8 @@ public class FilesService {
         return info;
     }
 
-    public @Nullable InputStream getDownloadAsStream(@NotNull String path, UserAuthentication<?> auth) throws StoreException {
+    public @Nullable InputStream getDownloadAsStream(@NotNull String path, UserAuthentication<?> auth)
+        throws StoreException {
         throw new UnsupportedOperationException();
     }
 
@@ -139,7 +139,8 @@ public class FilesService {
         return info;
     }
 
-    public @Nullable UploadInfo startMultiPartUpload(@NotNull String path, UserAuthentication<?> auth) throws StoreException {
+    public @Nullable UploadInfo startMultiPartUpload(@NotNull String path, UserAuthentication<?> auth)
+        throws StoreException {
         Assert.hasText(path, "path can not be null or empty");
 
         log.debug("resolve store for {}", path);
@@ -218,15 +219,15 @@ public class FilesService {
 
         return info;
     }
-    
+
     public void remove(@NotNull String path, UserAuthentication<?> auth) throws StoreException {
         FilesStore store = getStore(path);
         if (store != null) {
-        	log.debug("found store {}", store.getClass().getName());
-        	store.remove(path, auth);
-        	log.debug("remove path {}", path);
+            log.debug("found store {}", store.getClass().getName());
+            store.remove(path, auth);
+            log.debug("remove path {}", path);
         } else {
-        	log.debug("no store found.");
+            log.debug("no store found.");
         }
     }
 }
