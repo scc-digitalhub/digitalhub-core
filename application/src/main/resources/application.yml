@@ -48,7 +48,7 @@ spring:
 spring.org.quartz.scheduler.classLoadHelper.class: org.quartz.simpl.ThreadContextClassLoadHelper
 # fix driver for postgres
 # NOTE: we do NOT support h2 with quartz this way..
-spring.quartz.properties.org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
+#spring.quartz.properties.org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
 
 # Management Endpoints
 management:
