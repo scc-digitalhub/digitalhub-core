@@ -7,7 +7,9 @@ import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
+import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.commons.models.trigger.Trigger;
+import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.core.components.run.TriggerLifecycleManager;
@@ -17,6 +19,9 @@ import it.smartcommunitylabdhub.core.models.queries.services.SearchableTriggerSe
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+
+import java.util.List;
+
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
@@ -56,6 +61,9 @@ public class TriggerContextController {
 
     @Autowired
     private TriggerLifecycleManager triggerManager;
+
+    @Autowired
+    RelationshipsAwareEntityService<Trigger> relationshipsService;
 
     @Operation(summary = "Create a trigger in a project context")
     @PostMapping(
@@ -183,5 +191,21 @@ public class TriggerContextController {
 
         // via manager
         return triggerManager.stop(trigger);
+    }
+
+    @Operation(summary = "Get relationships info for a given entity, if available")
+    @GetMapping(path = "/{id}/relationships", produces = "application/json; charset=UTF-8")
+    public List<RelationshipDetail> getRelationshipsById(
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
+    ) throws NoSuchEntityException {
+        Trigger entity = triggerService.getTrigger(id);
+
+        //check for project and name match
+        if ((entity != null) && !entity.getProject().equals(project)) {
+            throw new IllegalArgumentException("invalid project");
+        }
+
+        return relationshipsService.getRelationships(id);
     }
 }
