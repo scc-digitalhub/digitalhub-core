@@ -91,7 +91,7 @@ public class SchedulerActuator implements Actuator<SchedulerTriggerSpec, Trigger
                     simpleSchedule = simpleSchedule.withIntervalInHours(24);
                 } else if ("weekly".equals(interval)) {
                     simpleSchedule = simpleSchedule.withIntervalInHours(24 * 7);
-                } else if (interval.equals(interval)) {
+                } else if ("monthly".equals(interval)) {
                     simpleSchedule = simpleSchedule.withIntervalInHours(24 * 30);
                 } else {
                     log.warn("invalid schedule for {}", trigger.getKey());
