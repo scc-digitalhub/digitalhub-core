@@ -69,6 +69,7 @@ runtime:
     image: ${RUNTIME_DBT_IMAGE:ghcr.io/scc-digitalhub/digitalhub-sdk/wrapper-dbt:latest}
   kfp:
     image: ${RUNTIME_KFP_IMAGE:ghcr.io/scc-digitalhub/digitalhub-sdk/wrapper-kfp:latest}
+    duration: ${RUNTIME_KFP_DURATION:${jwt.refresh-token.duration}}
   python:
     images:
       PYTHON3_9: ${RUNTIME_PYTHON_IMAGE_3_9:ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.9-latest}

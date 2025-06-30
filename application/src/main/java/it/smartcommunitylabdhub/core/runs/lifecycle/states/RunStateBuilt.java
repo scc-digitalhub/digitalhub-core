@@ -6,53 +6,38 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.core.runs.lifecycle.states;
 
-import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
-import it.smartcommunitylabdhub.authorization.services.CredentialsService;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
-import it.smartcommunitylabdhub.commons.infrastructure.ConfigurableRunnable;
-import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
-import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.infrastructure.SecuredRunnable;
 import it.smartcommunitylabdhub.commons.models.enums.State;
-import it.smartcommunitylabdhub.core.components.security.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.core.runs.lifecycle.RunContext;
 import it.smartcommunitylabdhub.core.runs.lifecycle.RunEvent;
-import it.smartcommunitylabdhub.core.services.ConfigurationService;
 import it.smartcommunitylabdhub.fsm.FsmState;
 import it.smartcommunitylabdhub.fsm.Transition;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
 public class RunStateBuilt implements FsmState.Builder<State, RunEvent, RunContext, RunRunnable> {
-
-    @Autowired
-    CredentialsService credentialsService;
-
-    @Autowired
-    ConfigurationService configurationService;
 
     public FsmState<State, RunEvent, RunContext, RunRunnable> build() {
         //define state
@@ -72,25 +57,6 @@ public class RunStateBuilt implements FsmState.Builder<State, RunEvent, RunConte
 
                     //run via runtime
                     Optional<RunRunnable> runnable = Optional.ofNullable(context.runtime.run(context.run));
-                    runnable.ifPresent(r -> {
-                        //extract auth from security context to inflate secured credentials
-                        UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-                        if (auth != null && r instanceof SecuredRunnable) {
-                            //get credentials from providers
-                            List<Credentials> credentials = credentialsService.getCredentials(
-                                (UserAuthentication<?>) auth
-                            );
-
-                            ((SecuredRunnable) r).setCredentials(credentials);
-                        }
-
-                        //inject configuration if supported
-                        if (r instanceof ConfigurableRunnable) {
-                            List<Configuration> configurations = configurationService.getConfigurations();
-                            ((ConfigurableRunnable) r).setConfigurations(configurations);
-                        }
-                    });
-
                     return runnable;
                 })
                 .build(),
