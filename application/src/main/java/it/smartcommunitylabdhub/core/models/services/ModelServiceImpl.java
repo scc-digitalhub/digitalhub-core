@@ -36,19 +36,15 @@ import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.files.FileInfo;
 import it.smartcommunitylabdhub.commons.models.files.FilesInfo;
-import it.smartcommunitylabdhub.commons.models.metrics.Metrics;
-import it.smartcommunitylabdhub.commons.models.metrics.NumberOrNumberArray;
 import it.smartcommunitylabdhub.commons.models.model.Model;
 import it.smartcommunitylabdhub.commons.models.model.ModelBaseSpec;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.services.FilesInfoService;
-import it.smartcommunitylabdhub.commons.services.MetricsService;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.components.infrastructure.specs.SpecValidator;
-import it.smartcommunitylabdhub.core.metrics.MetricsManager;
 import it.smartcommunitylabdhub.core.models.lifecycle.ModelLifecycleManager;
 import it.smartcommunitylabdhub.core.models.persistence.ModelEntity;
 import it.smartcommunitylabdhub.core.models.specs.ModelBaseStatus;
@@ -64,7 +60,6 @@ import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -79,7 +74,7 @@ import org.springframework.validation.BindException;
 @Service
 @Transactional
 @Slf4j
-public class ModelServiceImpl implements SearchableModelService, EntityFilesService<Model>, MetricsService<Model> {
+public class ModelServiceImpl implements SearchableModelService, EntityFilesService<Model> {
 
     @Autowired
     private EntityService<Model, ModelEntity> entityService;
@@ -101,9 +96,6 @@ public class ModelServiceImpl implements SearchableModelService, EntityFilesServ
 
     @Autowired
     private CredentialsService credentialsService;
-
-    @Autowired
-    private MetricsManager metricsManager;
 
     @Autowired
     private ModelLifecycleManager lifecycleManager;
@@ -899,51 +891,5 @@ public class ModelServiceImpl implements SearchableModelService, EntityFilesServ
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
         }
-    }
-
-    @Override
-    public Map<String, NumberOrNumberArray> getMetrics(@NotNull String entityId)
-        throws StoreException, SystemException {
-        try {
-            Model entity = entityService.get(entityId);
-            StatusFieldAccessor statusFieldAccessor = StatusFieldAccessor.with(entity.getStatus());
-            Map<String, NumberOrNumberArray> metrics = statusFieldAccessor.getMetrics();
-            if (metrics != null) {
-                Map<String, NumberOrNumberArray> entityMetrics = metricsManager.getMetrics(
-                    EntityName.MODEL.getValue(),
-                    entityId
-                );
-                for (Map.Entry<String, NumberOrNumberArray> entry : entityMetrics.entrySet()) {
-                    if (metrics.containsKey(entry.getKey())) continue;
-                    metrics.put(entry.getKey(), entry.getValue());
-                }
-                return metrics;
-            }
-            return metricsManager.getMetrics(EntityName.MODEL.getValue(), entityId);
-        } catch (Exception e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public NumberOrNumberArray getMetrics(@NotNull String entityId, @NotNull String name)
-        throws StoreException, SystemException {
-        try {
-            Model entity = entityService.get(entityId);
-            StatusFieldAccessor statusFieldAccessor = StatusFieldAccessor.with(entity.getStatus());
-            Map<String, NumberOrNumberArray> metrics = statusFieldAccessor.getMetrics();
-            if ((metrics != null) && metrics.containsKey(name)) return metrics.get(name);
-            return metricsManager.getMetrics(EntityName.MODEL.getValue(), entityId, name);
-        } catch (Exception e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public Metrics saveMetrics(@NotNull String entityId, @NotNull String name, NumberOrNumberArray data)
-        throws StoreException, SystemException {
-        return metricsManager.saveMetrics(EntityName.MODEL.getValue(), entityId, name, data);
     }
 }
