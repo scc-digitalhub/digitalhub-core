@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.core.functions.service;
@@ -32,16 +32,13 @@ import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.models.task.Task;
-import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.services.TaskService;
 import it.smartcommunitylabdhub.core.components.infrastructure.specs.SpecValidator;
 import it.smartcommunitylabdhub.core.functions.persistence.FunctionEntity;
 import it.smartcommunitylabdhub.core.functions.persistence.FunctionEntityBuilder;
-import it.smartcommunitylabdhub.core.functions.relationships.FunctionEntityRelationshipsManager;
 import it.smartcommunitylabdhub.core.indexers.EntityIndexer;
 import it.smartcommunitylabdhub.core.indexers.IndexableEntityService;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
@@ -68,9 +65,7 @@ import org.springframework.validation.BindException;
 @Service
 @Transactional
 @Slf4j
-public class FunctionServiceImpl
-    implements
-        SearchableFunctionService, IndexableEntityService<FunctionEntity>, RelationshipsAwareEntityService<Function> {
+public class FunctionServiceImpl implements SearchableFunctionService, IndexableEntityService<FunctionEntity> {
 
     @Autowired
     private EntityService<Function, FunctionEntity> entityService;
@@ -95,9 +90,6 @@ public class FunctionServiceImpl
 
     @Autowired
     private SpecValidator validator;
-
-    @Autowired
-    private FunctionEntityRelationshipsManager relationshipsManager;
 
     @Override
     public Page<Function> listFunctions(Pageable pageable) {
@@ -514,19 +506,6 @@ public class FunctionServiceImpl
                     log.error("error with indexing: {}", e.getMessage());
                 }
             }
-        }
-    }
-
-    @Override
-    public List<RelationshipDetail> getRelationships(String id) {
-        log.debug("get relationships for function {}", String.valueOf(id));
-
-        try {
-            Function function = entityService.get(id);
-            return relationshipsManager.getRelationships(entityBuilder.convert(function));
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
         }
     }
 

@@ -21,14 +21,16 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.dataitems.relationships;
+package it.smartcommunitylabdhub.core.artifacts.services;
 
-import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
-import it.smartcommunitylabdhub.core.dataitems.persistence.DataItemEntity;
-import it.smartcommunitylabdhub.core.relationships.BaseEntityRelationshipsManager;
+import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
+import it.smartcommunitylabdhub.core.artifacts.persistence.ArtifactEntity;
+import it.smartcommunitylabdhub.core.relationships.BaseRelationshipsAwareEntityService;
+import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
-@Component
+@Service
+@Transactional
 @Slf4j
-public class DataItemEntityRelationshipsManager extends BaseEntityRelationshipsManager<DataItemEntity, DataItem> {}
+public class ArtifactRelationshipServiceImpl extends BaseRelationshipsAwareEntityService<ArtifactEntity, Artifact> {}

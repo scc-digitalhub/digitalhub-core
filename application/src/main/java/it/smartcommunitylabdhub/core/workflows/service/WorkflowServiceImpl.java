@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.core.workflows.service;
@@ -31,11 +31,9 @@ import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
-import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.services.TaskService;
 import it.smartcommunitylabdhub.core.components.infrastructure.specs.SpecValidator;
@@ -48,7 +46,6 @@ import it.smartcommunitylabdhub.core.services.EntityService;
 import it.smartcommunitylabdhub.core.tasks.persistence.TaskEntity;
 import it.smartcommunitylabdhub.core.workflows.persistence.WorkflowEntity;
 import it.smartcommunitylabdhub.core.workflows.persistence.WorkflowEntityBuilder;
-import it.smartcommunitylabdhub.core.workflows.relationships.WorkflowEntityRelationshipsManager;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.util.Collections;
@@ -68,9 +65,7 @@ import org.springframework.validation.BindException;
 @Service
 @Transactional
 @Slf4j
-public class WorkflowServiceImpl
-    implements
-        SearchableWorkflowService, IndexableEntityService<WorkflowEntity>, RelationshipsAwareEntityService<Workflow> {
+public class WorkflowServiceImpl implements SearchableWorkflowService, IndexableEntityService<WorkflowEntity> {
 
     @Autowired
     private EntityService<Workflow, WorkflowEntity> entityService;
@@ -95,9 +90,6 @@ public class WorkflowServiceImpl
 
     @Autowired
     private SpecValidator validator;
-
-    @Autowired
-    private WorkflowEntityRelationshipsManager relationshipsManager;
 
     @Override
     public Page<Workflow> listWorkflows(Pageable pageable) {
@@ -515,19 +507,6 @@ public class WorkflowServiceImpl
                     log.error("error with indexing: {}", e.getMessage());
                 }
             }
-        }
-    }
-
-    @Override
-    public List<RelationshipDetail> getRelationships(String id) {
-        log.debug("get relationships for workflow {}", String.valueOf(id));
-
-        try {
-            Workflow workflow = entityService.get(id);
-            return relationshipsManager.getRelationships(entityBuilder.convert(workflow));
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
         }
     }
 

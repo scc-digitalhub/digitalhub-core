@@ -40,17 +40,14 @@ import it.smartcommunitylabdhub.commons.models.files.FileInfo;
 import it.smartcommunitylabdhub.commons.models.files.FilesInfo;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.services.FilesInfoService;
-import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.components.infrastructure.specs.SpecValidator;
 import it.smartcommunitylabdhub.core.dataitems.builders.DataItemEntityBuilder;
 import it.smartcommunitylabdhub.core.dataitems.lifecycle.DataItemLifecycleManager;
 import it.smartcommunitylabdhub.core.dataitems.persistence.DataItemEntity;
-import it.smartcommunitylabdhub.core.dataitems.relationships.DataItemEntityRelationshipsManager;
 import it.smartcommunitylabdhub.core.dataitems.specs.DataItemBaseStatus;
 import it.smartcommunitylabdhub.core.indexers.EntityIndexer;
 import it.smartcommunitylabdhub.core.indexers.IndexableEntityService;
@@ -83,11 +80,7 @@ import org.springframework.validation.BindException;
 @Transactional
 @Slf4j
 public class DataItemServiceImpl
-    implements
-        SearchableDataItemService,
-        IndexableEntityService<DataItemEntity>,
-        EntityFilesService<DataItem>,
-        RelationshipsAwareEntityService<DataItem> {
+    implements SearchableDataItemService, IndexableEntityService<DataItemEntity>, EntityFilesService<DataItem> {
 
     @Autowired
     private EntityService<DataItem, DataItemEntity> entityService;
@@ -112,9 +105,6 @@ public class DataItemServiceImpl
 
     @Autowired
     private FilesInfoService filesInfoService;
-
-    @Autowired
-    private DataItemEntityRelationshipsManager relationshipsManager;
 
     @Autowired
     private CredentialsService credentialsService;
@@ -949,19 +939,6 @@ public class DataItemServiceImpl
             }
 
             return info;
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public List<RelationshipDetail> getRelationships(String id) {
-        log.debug("get relationships for dataitem {}", String.valueOf(id));
-
-        try {
-            DataItem dataitem = entityService.get(id);
-            return relationshipsManager.getRelationships(entityBuilder.convert(dataitem));
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

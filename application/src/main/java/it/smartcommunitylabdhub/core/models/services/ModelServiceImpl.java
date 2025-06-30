@@ -42,11 +42,9 @@ import it.smartcommunitylabdhub.commons.models.model.Model;
 import it.smartcommunitylabdhub.commons.models.model.ModelBaseSpec;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.services.FilesInfoService;
 import it.smartcommunitylabdhub.commons.services.MetricsService;
-import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.components.infrastructure.specs.SpecValidator;
@@ -56,7 +54,6 @@ import it.smartcommunitylabdhub.core.metrics.MetricsManager;
 import it.smartcommunitylabdhub.core.models.builders.ModelEntityBuilder;
 import it.smartcommunitylabdhub.core.models.lifecycle.ModelLifecycleManager;
 import it.smartcommunitylabdhub.core.models.persistence.ModelEntity;
-import it.smartcommunitylabdhub.core.models.relationships.ModelEntityRelationshipsManager;
 import it.smartcommunitylabdhub.core.models.specs.ModelBaseStatus;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
 import it.smartcommunitylabdhub.core.projects.persistence.ProjectEntity;
@@ -89,11 +86,7 @@ import org.springframework.validation.BindException;
 @Slf4j
 public class ModelServiceImpl
     implements
-        SearchableModelService,
-        IndexableEntityService<ModelEntity>,
-        EntityFilesService<Model>,
-        RelationshipsAwareEntityService<Model>,
-        MetricsService<Model> {
+        SearchableModelService, IndexableEntityService<ModelEntity>, EntityFilesService<Model>, MetricsService<Model> {
 
     @Autowired
     private EntityService<Model, ModelEntity> entityService;
@@ -118,9 +111,6 @@ public class ModelServiceImpl
 
     @Autowired
     private FilesInfoService filesInfoService;
-
-    @Autowired
-    private ModelEntityRelationshipsManager relationshipsManager;
 
     @Autowired
     private CredentialsService credentialsService;
@@ -961,19 +951,6 @@ public class ModelServiceImpl
             }
 
             return info;
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public List<RelationshipDetail> getRelationships(String id) {
-        log.debug("get relationships for model {}", String.valueOf(id));
-
-        try {
-            Model model = entityService.get(id);
-            return relationshipsManager.getRelationships(entityBuilder.convert(model));
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
