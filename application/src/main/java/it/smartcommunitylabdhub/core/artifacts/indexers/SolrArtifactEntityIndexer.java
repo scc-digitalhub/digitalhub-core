@@ -21,14 +21,19 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.dataitems.relationships;
+package it.smartcommunitylabdhub.core.artifacts.indexers;
 
-import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
-import it.smartcommunitylabdhub.core.dataitems.persistence.DataItemEntity;
-import it.smartcommunitylabdhub.core.relationships.BaseEntityRelationshipsManager;
+import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
+import it.smartcommunitylabdhub.core.artifacts.persistence.ArtifactEntity;
+import it.smartcommunitylabdhub.core.components.solr.SolrBaseEntityIndexer;
+import it.smartcommunitylabdhub.core.components.solr.SolrComponent;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
-public class DataItemEntityRelationshipsManager extends BaseEntityRelationshipsManager<DataItemEntity, DataItem> {}
+@ConditionalOnBean(SolrComponent.class)
+@Primary
+public class SolrArtifactEntityIndexer extends SolrBaseEntityIndexer<ArtifactEntity, Artifact> {}

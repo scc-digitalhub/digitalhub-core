@@ -21,14 +21,21 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.dataitems.relationships;
+package it.smartcommunitylabdhub.files.models;
 
-import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
-import it.smartcommunitylabdhub.core.dataitems.persistence.DataItemEntity;
-import it.smartcommunitylabdhub.core.relationships.BaseEntityRelationshipsManager;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import it.smartcommunitylabdhub.commons.accessors.Accessor;
+import java.io.Serializable;
+import java.util.Map;
 
-@Component
-@Slf4j
-public class DataItemEntityRelationshipsManager extends BaseEntityRelationshipsManager<DataItemEntity, DataItem> {}
+public interface PathAccessor extends Accessor<Serializable> {
+    /*
+     * from  specs
+     */
+    default String getPath() {
+        return get("path");
+    }
+
+    static PathAccessor with(Map<String, Serializable> map) {
+        return () -> map;
+    }
+}

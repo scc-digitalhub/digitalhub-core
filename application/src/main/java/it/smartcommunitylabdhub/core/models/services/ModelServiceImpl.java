@@ -26,7 +26,6 @@ package it.smartcommunitylabdhub.core.models.services;
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.CredentialsService;
 import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
-import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
@@ -34,49 +33,29 @@ import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.enums.State;
-import it.smartcommunitylabdhub.commons.models.files.FileInfo;
-import it.smartcommunitylabdhub.commons.models.files.FilesInfo;
-import it.smartcommunitylabdhub.commons.models.metrics.Metrics;
-import it.smartcommunitylabdhub.commons.models.metrics.NumberOrNumberArray;
 import it.smartcommunitylabdhub.commons.models.model.Model;
 import it.smartcommunitylabdhub.commons.models.model.ModelBaseSpec;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.services.FilesInfoService;
-import it.smartcommunitylabdhub.commons.services.MetricsService;
-import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.components.infrastructure.specs.SpecValidator;
-import it.smartcommunitylabdhub.core.indexers.EntityIndexer;
-import it.smartcommunitylabdhub.core.indexers.IndexableEntityService;
-import it.smartcommunitylabdhub.core.metrics.MetricsManager;
-import it.smartcommunitylabdhub.core.models.builders.ModelEntityBuilder;
 import it.smartcommunitylabdhub.core.models.lifecycle.ModelLifecycleManager;
 import it.smartcommunitylabdhub.core.models.persistence.ModelEntity;
-import it.smartcommunitylabdhub.core.models.relationships.ModelEntityRelationshipsManager;
 import it.smartcommunitylabdhub.core.models.specs.ModelBaseStatus;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
 import it.smartcommunitylabdhub.core.projects.persistence.ProjectEntity;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.services.EntityService;
-import it.smartcommunitylabdhub.files.models.DownloadInfo;
-import it.smartcommunitylabdhub.files.models.UploadInfo;
-import it.smartcommunitylabdhub.files.service.EntityFilesService;
 import it.smartcommunitylabdhub.files.service.FilesService;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.lang.Nullable;
@@ -87,25 +66,13 @@ import org.springframework.validation.BindException;
 @Service
 @Transactional
 @Slf4j
-public class ModelServiceImpl
-    implements
-        SearchableModelService,
-        IndexableEntityService<ModelEntity>,
-        EntityFilesService<Model>,
-        RelationshipsAwareEntityService<Model>,
-        MetricsService<Model> {
+public class ModelServiceImpl implements SearchableModelService {
 
     @Autowired
     private EntityService<Model, ModelEntity> entityService;
 
     @Autowired
     private EntityService<Project, ProjectEntity> projectService;
-
-    @Autowired(required = false)
-    private EntityIndexer<ModelEntity> indexer;
-
-    @Autowired
-    private ModelEntityBuilder entityBuilder;
 
     @Autowired
     SpecRegistry specRegistry;
@@ -120,13 +87,7 @@ public class ModelServiceImpl
     private FilesInfoService filesInfoService;
 
     @Autowired
-    private ModelEntityRelationshipsManager relationshipsManager;
-
-    @Autowired
     private CredentialsService credentialsService;
-
-    @Autowired
-    private MetricsManager metricsManager;
 
     @Autowired
     private ModelLifecycleManager lifecycleManager;
@@ -518,6 +479,7 @@ public class ModelServiceImpl
 
                         //delete files
                         filesService.remove(path, credentials);
+                        filesInfoService.clearFilesInfo(EntityName.MODEL.name(), id);
                     }
                 }
 
@@ -569,460 +531,5 @@ public class ModelServiceImpl
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
         }
-    }
-
-    @Override
-    public void indexOne(@NotNull String id) {
-        if (indexer != null) {
-            log.debug("index model with id {}", String.valueOf(id));
-            try {
-                Model model = entityService.get(id);
-                indexer.index(entityBuilder.convert(model));
-            } catch (StoreException e) {
-                log.error("store error: {}", e.getMessage());
-                throw new SystemException(e.getMessage());
-            }
-        }
-    }
-
-    @Override
-    public void reindexAll() {
-        if (indexer != null) {
-            log.debug("reindex all models");
-
-            //clear index
-            indexer.clearIndex();
-
-            //use pagination and batch
-            boolean hasMore = true;
-            int pageNumber = 0;
-            while (hasMore) {
-                hasMore = false;
-
-                try {
-                    Page<Model> page = entityService.list(PageRequest.of(pageNumber, EntityIndexer.PAGE_MAX_SIZE));
-                    indexer.indexAll(
-                        page.getContent().stream().map(e -> entityBuilder.convert(e)).collect(Collectors.toList())
-                    );
-                    hasMore = page.hasNext();
-                } catch (IllegalArgumentException | StoreException | SystemException e) {
-                    hasMore = false;
-
-                    log.error("error with indexing: {}", e.getMessage());
-                }
-            }
-        }
-    }
-
-    @Override
-    public DownloadInfo downloadFileAsUrl(@NotNull String id) throws NoSuchEntityException, SystemException {
-        log.debug("download url for model with id {}", String.valueOf(id));
-
-        try {
-            Model entity = entityService.get(id);
-
-            //extract path from spec
-            ModelBaseSpec spec = new ModelBaseSpec();
-            spec.configure(entity.getSpec());
-
-            String path = spec.getPath();
-            if (!StringUtils.hasText(path)) {
-                throw new NoSuchEntityException("file");
-            }
-
-            //try to resolve credentials
-            UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials = auth != null && credentialsService != null
-                ? credentialsService.getCredentials(auth)
-                : null;
-
-            DownloadInfo info = filesService.getDownloadAsUrl(path, credentials);
-            if (log.isTraceEnabled()) {
-                log.trace("download url for entity with id {}: {} -> {}", id, path, info);
-            }
-
-            return info;
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.MODEL.toString());
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public DownloadInfo downloadFileAsUrl(@NotNull String id, @NotNull String sub)
-        throws NoSuchEntityException, SystemException {
-        log.debug("download url for model file with id {} and path {}", String.valueOf(id), String.valueOf(sub));
-
-        try {
-            Model model = entityService.get(id);
-
-            //extract path from spec
-            ModelBaseSpec spec = new ModelBaseSpec();
-            spec.configure(model.getSpec());
-
-            String path = spec.getPath();
-            if (!StringUtils.hasText(path)) {
-                throw new NoSuchEntityException("file");
-            }
-
-            String fullPath = Optional
-                .ofNullable(sub)
-                .map(s -> {
-                    //build sub path *only* if not matching spec path
-                    return path.endsWith(sub) ? path : path + sub;
-                })
-                .orElse(path);
-
-            //try to resolve credentials
-            UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials = auth != null && credentialsService != null
-                ? credentialsService.getCredentials(auth)
-                : null;
-
-            DownloadInfo info = filesService.getDownloadAsUrl(fullPath, credentials);
-            if (log.isTraceEnabled()) {
-                log.trace("download url for model with id {} and path {}: {} -> {}", id, sub, path, info);
-            }
-
-            return info;
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.MODEL.toString());
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public List<FileInfo> getFileInfo(@NotNull String id) throws NoSuchEntityException, SystemException {
-        log.debug("get storage metadata for model with id {}", String.valueOf(id));
-        try {
-            Model entity = entityService.get(id);
-            StatusFieldAccessor statusFieldAccessor = StatusFieldAccessor.with(entity.getStatus());
-            List<FileInfo> files = statusFieldAccessor.getFiles();
-
-            //try to resolve credentials
-            UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials = auth != null && credentialsService != null
-                ? credentialsService.getCredentials(auth)
-                : null;
-
-            if (files == null || files.isEmpty()) {
-                FilesInfo filesInfo = filesInfoService.getFilesInfo(EntityName.MODEL.getValue(), id);
-                if (filesInfo != null && (filesInfo.getFiles() != null)) {
-                    files = filesInfo.getFiles();
-                } else {
-                    files = null;
-                }
-            }
-
-            if (files == null) {
-                //extract path from spec
-                ModelBaseSpec spec = new ModelBaseSpec();
-                spec.configure(entity.getSpec());
-
-                String path = spec.getPath();
-                if (!StringUtils.hasText(path)) {
-                    throw new NoSuchEntityException("file");
-                }
-
-                files = filesService.getFileInfo(path, credentials);
-            }
-
-            if (files == null) {
-                files = Collections.emptyList();
-            }
-
-            if (log.isTraceEnabled()) {
-                log.trace("files info for entity with id {}: {} -> {}", id, EntityName.MODEL.getValue(), files);
-            }
-
-            return files;
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.MODEL.toString());
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public void storeFileInfo(@NotNull String id, List<FileInfo> files) throws SystemException {
-        try {
-            Model entity = entityService.get(id);
-            if (files != null) {
-                log.debug("store files info for {}", entity.getId());
-                filesInfoService.saveFilesInfo(EntityName.MODEL.getValue(), id, files);
-            }
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.MODEL.getValue());
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public UploadInfo uploadFileAsUrl(@NotNull String project, @Nullable String id, @NotNull String filename)
-        throws NoSuchEntityException, SystemException {
-        log.debug("upload url for model with id {}: {}", String.valueOf(id), filename);
-
-        try {
-            String path =
-                filesService.getDefaultStore(projectService.find(project)) +
-                "/" +
-                project +
-                "/" +
-                EntityName.MODEL.getValue() +
-                "/" +
-                id +
-                (filename.startsWith("/") ? filename : "/" + filename);
-
-            //model may not exists (yet)
-            Model model = entityService.find(id);
-
-            if (model != null) {
-                //extract path from spec
-                ModelBaseSpec spec = new ModelBaseSpec();
-                spec.configure(model.getSpec());
-
-                path = spec.getPath();
-                if (!StringUtils.hasText(path)) {
-                    throw new NoSuchEntityException("file");
-                }
-            }
-
-            //try to resolve credentials
-            UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials = auth != null && credentialsService != null
-                ? credentialsService.getCredentials(auth)
-                : null;
-
-            UploadInfo info = filesService.getUploadAsUrl(path, credentials);
-            if (log.isTraceEnabled()) {
-                log.trace("upload url for model with id {}: {}", id, info);
-            }
-
-            return info;
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public UploadInfo startMultiPartUpload(@NotNull String project, @Nullable String id, @NotNull String filename)
-        throws NoSuchEntityException, SystemException {
-        log.debug("start upload url for model with id {}: {}", String.valueOf(id), filename);
-
-        try {
-            String path =
-                filesService.getDefaultStore(projectService.find(project)) +
-                "/" +
-                project +
-                "/" +
-                EntityName.MODEL.getValue() +
-                "/" +
-                id +
-                "/" +
-                (filename.startsWith("/") ? filename : "/" + filename);
-
-            //model may not exists (yet)
-            Model model = entityService.find(id);
-
-            if (model != null) {
-                //extract path from spec
-                ModelBaseSpec spec = new ModelBaseSpec();
-                spec.configure(model.getSpec());
-
-                path = spec.getPath();
-                if (!StringUtils.hasText(path)) {
-                    throw new NoSuchEntityException("file");
-                }
-            }
-
-            //try to resolve credentials
-            UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials = auth != null && credentialsService != null
-                ? credentialsService.getCredentials(auth)
-                : null;
-
-            UploadInfo info = filesService.startMultiPartUpload(path, credentials);
-            if (log.isTraceEnabled()) {
-                log.trace("start upload url for model with id {}: {}", id, info);
-            }
-
-            return info;
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public UploadInfo uploadMultiPart(
-        @NotNull String project,
-        @Nullable String id,
-        @NotNull String filename,
-        @NotNull String uploadId,
-        @NotNull Integer partNumber
-    ) throws NoSuchEntityException, SystemException {
-        log.debug("upload part url for model {}: {}", String.valueOf(id), filename);
-        try {
-            String path =
-                filesService.getDefaultStore(projectService.find(project)) +
-                "/" +
-                project +
-                "/" +
-                EntityName.MODEL.getValue() +
-                "/" +
-                id +
-                "/" +
-                (filename.startsWith("/") ? filename : "/" + filename);
-
-            //model may not exists (yet)
-            Model model = entityService.find(id);
-
-            if (model != null) {
-                //extract path from spec
-                ModelBaseSpec spec = new ModelBaseSpec();
-                spec.configure(model.getSpec());
-
-                path = spec.getPath();
-                if (!StringUtils.hasText(path)) {
-                    throw new NoSuchEntityException("file");
-                }
-            }
-
-            //try to resolve credentials
-            UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials = auth != null && credentialsService != null
-                ? credentialsService.getCredentials(auth)
-                : null;
-
-            UploadInfo info = filesService.uploadMultiPart(path, uploadId, partNumber, credentials);
-            if (log.isTraceEnabled()) {
-                log.trace("part upload url for model with path {}: {}", path, info);
-            }
-
-            return info;
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public UploadInfo completeMultiPartUpload(
-        @NotNull String project,
-        @Nullable String id,
-        @NotNull String filename,
-        @NotNull String uploadId,
-        @NotNull List<String> eTagPartList
-    ) throws NoSuchEntityException, SystemException {
-        log.debug("complete upload url for model {}: {}", String.valueOf(id), filename);
-        try {
-            String path =
-                filesService.getDefaultStore(projectService.find(project)) +
-                "/" +
-                project +
-                "/" +
-                EntityName.MODEL.getValue() +
-                "/" +
-                id +
-                "/" +
-                (filename.startsWith("/") ? filename : "/" + filename);
-
-            //model may not exists (yet)
-            Model model = entityService.find(id);
-
-            if (model != null) {
-                //extract path from spec
-                ModelBaseSpec spec = new ModelBaseSpec();
-                spec.configure(model.getSpec());
-
-                path = spec.getPath();
-                if (!StringUtils.hasText(path)) {
-                    throw new NoSuchEntityException("file");
-                }
-            }
-
-            //try to resolve credentials
-            UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials = auth != null && credentialsService != null
-                ? credentialsService.getCredentials(auth)
-                : null;
-
-            UploadInfo info = filesService.completeMultiPartUpload(path, uploadId, eTagPartList, credentials);
-            if (log.isTraceEnabled()) {
-                log.trace("complete upload url for model with path {}: {}", path, info);
-            }
-
-            return info;
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public List<RelationshipDetail> getRelationships(String id) {
-        log.debug("get relationships for model {}", String.valueOf(id));
-
-        try {
-            Model model = entityService.get(id);
-            return relationshipsManager.getRelationships(entityBuilder.convert(model));
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public Map<String, NumberOrNumberArray> getMetrics(@NotNull String entityId)
-        throws StoreException, SystemException {
-        try {
-            Model entity = entityService.get(entityId);
-            StatusFieldAccessor statusFieldAccessor = StatusFieldAccessor.with(entity.getStatus());
-            Map<String, NumberOrNumberArray> metrics = statusFieldAccessor.getMetrics();
-            if (metrics != null) {
-                Map<String, NumberOrNumberArray> entityMetrics = metricsManager.getMetrics(
-                    EntityName.MODEL.getValue(),
-                    entityId
-                );
-                for (Map.Entry<String, NumberOrNumberArray> entry : entityMetrics.entrySet()) {
-                    if (metrics.containsKey(entry.getKey())) continue;
-                    metrics.put(entry.getKey(), entry.getValue());
-                }
-                return metrics;
-            }
-            return metricsManager.getMetrics(EntityName.MODEL.getValue(), entityId);
-        } catch (Exception e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public NumberOrNumberArray getMetrics(@NotNull String entityId, @NotNull String name)
-        throws StoreException, SystemException {
-        try {
-            Model entity = entityService.get(entityId);
-            StatusFieldAccessor statusFieldAccessor = StatusFieldAccessor.with(entity.getStatus());
-            Map<String, NumberOrNumberArray> metrics = statusFieldAccessor.getMetrics();
-            if ((metrics != null) && metrics.containsKey(name)) return metrics.get(name);
-            return metricsManager.getMetrics(EntityName.MODEL.getValue(), entityId, name);
-        } catch (Exception e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public Metrics saveMetrics(@NotNull String entityId, @NotNull String name, NumberOrNumberArray data)
-        throws StoreException, SystemException {
-        return metricsManager.saveMetrics(EntityName.MODEL.getValue(), entityId, name, data);
     }
 }

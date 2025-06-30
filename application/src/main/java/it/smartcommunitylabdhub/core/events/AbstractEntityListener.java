@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.core.events;
@@ -28,7 +28,7 @@ import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.core.components.cloud.CloudEntityEvent;
 import it.smartcommunitylabdhub.core.indexers.EntityIndexer;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
-import it.smartcommunitylabdhub.core.relationships.BaseEntityRelationshipsManager;
+import it.smartcommunitylabdhub.core.relationships.EntityRelationshipsManager;
 import it.smartcommunitylabdhub.core.websocket.UserNotificationEntityEvent;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -46,7 +46,7 @@ public abstract class AbstractEntityListener<E extends BaseEntity, T extends Bas
 
     protected EntityIndexer<E> indexer;
 
-    protected BaseEntityRelationshipsManager<E> relationshipsManager;
+    protected EntityRelationshipsManager<E> relationshipsManager;
 
     protected AbstractEntityListener(Converter<E, T> converter) {
         this.converter = converter;
@@ -64,7 +64,7 @@ public abstract class AbstractEntityListener<E extends BaseEntity, T extends Bas
     }
 
     @Autowired(required = false)
-    public void setRelationshipsManager(BaseEntityRelationshipsManager<E> manager) {
+    public void setRelationshipsManager(EntityRelationshipsManager<E> manager) {
         this.relationshipsManager = manager;
     }
 

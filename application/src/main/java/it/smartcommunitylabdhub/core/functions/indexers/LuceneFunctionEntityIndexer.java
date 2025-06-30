@@ -21,14 +21,17 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.dataitems.relationships;
+package it.smartcommunitylabdhub.core.functions.indexers;
 
-import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
-import it.smartcommunitylabdhub.core.dataitems.persistence.DataItemEntity;
-import it.smartcommunitylabdhub.core.relationships.BaseEntityRelationshipsManager;
+import it.smartcommunitylabdhub.commons.models.function.Function;
+import it.smartcommunitylabdhub.core.components.lucene.LuceneBaseEntityIndexer;
+import it.smartcommunitylabdhub.core.components.lucene.LuceneComponent;
+import it.smartcommunitylabdhub.core.functions.persistence.FunctionEntity;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
-public class DataItemEntityRelationshipsManager extends BaseEntityRelationshipsManager<DataItemEntity, DataItem> {}
+@ConditionalOnBean(LuceneComponent.class)
+public class LuceneFunctionEntityIndexer extends LuceneBaseEntityIndexer<FunctionEntity, Function> {}

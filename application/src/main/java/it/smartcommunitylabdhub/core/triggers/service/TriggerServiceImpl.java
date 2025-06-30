@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.core.triggers.service;
@@ -32,18 +32,15 @@ import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.trigger.Trigger;
 import it.smartcommunitylabdhub.commons.models.trigger.TriggerBaseSpec;
-import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.core.components.infrastructure.specs.SpecValidator;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
 import it.smartcommunitylabdhub.core.projects.persistence.ProjectEntity;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
-import it.smartcommunitylabdhub.core.relationships.TriggerEntityRelationshipsManager;
 import it.smartcommunitylabdhub.core.services.EntityService;
 import it.smartcommunitylabdhub.core.tasks.persistence.TaskEntity;
 import it.smartcommunitylabdhub.core.triggers.persistence.TriggerEntity;
@@ -65,7 +62,7 @@ import org.springframework.validation.BindException;
 @Service
 @Transactional
 @Slf4j
-public class TriggerServiceImpl implements SearchableTriggerService, RelationshipsAwareEntityService<Trigger> {
+public class TriggerServiceImpl implements SearchableTriggerService {
 
     @Autowired
     private EntityService<Trigger, TriggerEntity> entityService;
@@ -75,9 +72,6 @@ public class TriggerServiceImpl implements SearchableTriggerService, Relationshi
 
     @Autowired
     private EntityService<Project, ProjectEntity> projectService;
-
-    @Autowired
-    private TriggerEntityRelationshipsManager relationshipsManager;
 
     @Autowired
     private TriggerEntityBuilder entityBuilder;
@@ -326,20 +320,6 @@ public class TriggerServiceImpl implements SearchableTriggerService, Relationshi
                 //delete the trigger
                 entityService.delete(id);
             }
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public List<RelationshipDetail> getRelationships(String id) {
-        log.debug("get relationships for trigger {}", String.valueOf(id));
-
-        try {
-            Trigger trigger = entityService.get(id);
-
-            return relationshipsManager.getRelationships(entityBuilder.convert(trigger));
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

@@ -21,14 +21,14 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.dataitems.relationships;
+package it.smartcommunitylabdhub.core.workflows.indexers;
 
-import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
-import it.smartcommunitylabdhub.core.dataitems.persistence.DataItemEntity;
-import it.smartcommunitylabdhub.core.relationships.BaseEntityRelationshipsManager;
+import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
+import it.smartcommunitylabdhub.core.components.lucene.LuceneBaseEntityIndexer;
+import it.smartcommunitylabdhub.core.workflows.persistence.WorkflowEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
-public class DataItemEntityRelationshipsManager extends BaseEntityRelationshipsManager<DataItemEntity, DataItem> {}
+public class LuceneWorkflowEntityIndexer extends LuceneBaseEntityIndexer<WorkflowEntity, Workflow> {}

@@ -6,38 +6,35 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.core.runs.service;
 
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
-import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
-import it.smartcommunitylabdhub.commons.models.enums.RelationshipName;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.metrics.Metrics;
 import it.smartcommunitylabdhub.commons.models.metrics.NumberOrNumberArray;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
@@ -45,9 +42,7 @@ import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.services.LogService;
 import it.smartcommunitylabdhub.commons.services.MetricsService;
-import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
-import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.components.infrastructure.specs.SpecValidator;
 import it.smartcommunitylabdhub.core.metrics.MetricsManager;
@@ -56,7 +51,6 @@ import it.smartcommunitylabdhub.core.projects.persistence.ProjectEntity;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.runs.persistence.RunEntity;
 import it.smartcommunitylabdhub.core.runs.persistence.RunEntityBuilder;
-import it.smartcommunitylabdhub.core.runs.relationships.RunEntityRelationshipsManager;
 import it.smartcommunitylabdhub.core.services.EntityService;
 import it.smartcommunitylabdhub.core.tasks.persistence.TaskEntity;
 import jakarta.transaction.Transactional;
@@ -64,7 +58,6 @@ import jakarta.validation.constraints.NotNull;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -78,7 +71,7 @@ import org.springframework.validation.BindException;
 @Service
 @Transactional
 @Slf4j
-public class RunServiceImpl implements SearchableRunService, RelationshipsAwareEntityService<Run>, MetricsService<Run> {
+public class RunServiceImpl implements SearchableRunService, MetricsService<Run> {
 
     @Autowired
     private EntityService<Run, RunEntity> entityService;
@@ -100,9 +93,6 @@ public class RunServiceImpl implements SearchableRunService, RelationshipsAwareE
 
     @Autowired
     private SpecValidator validator;
-
-    @Autowired
-    private RunEntityRelationshipsManager relationshipsManager;
 
     @Autowired
     private MetricsManager metricsManager;
@@ -392,55 +382,6 @@ public class RunServiceImpl implements SearchableRunService, RelationshipsAwareE
 
     private Specification<RunEntity> createTaskSpecification(String task) {
         return (root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("task"), task);
-    }
-
-    @Override
-    public List<RelationshipDetail> getRelationships(String id) {
-        log.debug("get relationships for run {}", String.valueOf(id));
-
-        try {
-            Run run = entityService.get(id);
-            List<RelationshipDetail> list = relationshipsManager.getRelationships(entityBuilder.convert(run));
-
-            //run is *always* related to function, check and inject if missing
-            String taskPath = RunBaseSpec.with(run.getSpec()).getTask();
-            if (StringUtils.hasText(taskPath)) {
-                // Read spec and retrieve executables
-                TaskSpecAccessor accessor = TaskSpecAccessor.with(run.getSpec());
-
-                if (accessor.isValid()) {
-                    //rebuild key and check
-                    String fk = accessor.getWorkflowId() != null
-                        ? KeyUtils.buildKey(
-                            accessor.getProject(),
-                            EntityName.WORKFLOW.getValue(),
-                            accessor.getRuntime(),
-                            accessor.getWorkflow(),
-                            accessor.getWorkflowId()
-                        )
-                        : KeyUtils.buildKey(
-                            accessor.getProject(),
-                            EntityName.FUNCTION.getValue(),
-                            accessor.getRuntime(),
-                            accessor.getFunction(),
-                            accessor.getFunctionId()
-                        );
-
-                    if (
-                        list.stream().noneMatch(r -> r.getType() == RelationshipName.RUN_OF && fk.equals(r.getDest()))
-                    ) {
-                        //missing, let's add
-                        RelationshipDetail fr = new RelationshipDetail(RelationshipName.RUN_OF, run.getKey(), fk);
-                        list = Stream.concat(list.stream(), Stream.of(fr)).toList();
-                    }
-                }
-            }
-
-            return list;
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
     }
 
     @Override

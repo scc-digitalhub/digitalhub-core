@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.core.functions.service;
@@ -32,18 +32,12 @@ import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.models.task.Task;
-import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.services.TaskService;
 import it.smartcommunitylabdhub.core.components.infrastructure.specs.SpecValidator;
 import it.smartcommunitylabdhub.core.functions.persistence.FunctionEntity;
-import it.smartcommunitylabdhub.core.functions.persistence.FunctionEntityBuilder;
-import it.smartcommunitylabdhub.core.functions.relationships.FunctionEntityRelationshipsManager;
-import it.smartcommunitylabdhub.core.indexers.EntityIndexer;
-import it.smartcommunitylabdhub.core.indexers.IndexableEntityService;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
 import it.smartcommunitylabdhub.core.projects.persistence.ProjectEntity;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
@@ -53,11 +47,9 @@ import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.lang.Nullable;
@@ -68,9 +60,7 @@ import org.springframework.validation.BindException;
 @Service
 @Transactional
 @Slf4j
-public class FunctionServiceImpl
-    implements
-        SearchableFunctionService, IndexableEntityService<FunctionEntity>, RelationshipsAwareEntityService<Function> {
+public class FunctionServiceImpl implements SearchableFunctionService {
 
     @Autowired
     private EntityService<Function, FunctionEntity> entityService;
@@ -84,20 +74,11 @@ public class FunctionServiceImpl
     @Autowired
     private EntityService<Task, TaskEntity> taskEntityService;
 
-    @Autowired(required = false)
-    private EntityIndexer<FunctionEntity> indexer;
-
-    @Autowired
-    private FunctionEntityBuilder entityBuilder;
-
     @Autowired
     private SpecRegistry specRegistry;
 
     @Autowired
     private SpecValidator validator;
-
-    @Autowired
-    private FunctionEntityRelationshipsManager relationshipsManager;
 
     @Override
     public Page<Function> listFunctions(Pageable pageable) {
@@ -468,62 +449,6 @@ public class FunctionServiceImpl
             entityService
                 .searchAll(CommonSpecification.projectEquals(project))
                 .forEach(f -> deleteFunction(f.getId(), Boolean.TRUE));
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public void indexOne(@NotNull String id) {
-        if (indexer != null) {
-            log.debug("index function with id {}", String.valueOf(id));
-            try {
-                Function function = entityService.get(id);
-                indexer.index(entityBuilder.convert(function));
-            } catch (StoreException e) {
-                log.error("store error: {}", e.getMessage());
-                throw new SystemException(e.getMessage());
-            }
-        }
-    }
-
-    @Override
-    public void reindexAll() {
-        if (indexer != null) {
-            log.debug("reindex all functions");
-
-            //clear index
-            indexer.clearIndex();
-
-            //use pagination and batch
-            boolean hasMore = true;
-            int pageNumber = 0;
-            while (hasMore) {
-                hasMore = false;
-
-                try {
-                    Page<Function> page = entityService.list(PageRequest.of(pageNumber, EntityIndexer.PAGE_MAX_SIZE));
-                    indexer.indexAll(
-                        page.getContent().stream().map(e -> entityBuilder.convert(e)).collect(Collectors.toList())
-                    );
-                    hasMore = page.hasNext();
-                } catch (IllegalArgumentException | StoreException | SystemException e) {
-                    hasMore = false;
-
-                    log.error("error with indexing: {}", e.getMessage());
-                }
-            }
-        }
-    }
-
-    @Override
-    public List<RelationshipDetail> getRelationships(String id) {
-        log.debug("get relationships for function {}", String.valueOf(id));
-
-        try {
-            Function function = entityService.get(id);
-            return relationshipsManager.getRelationships(entityBuilder.convert(function));
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

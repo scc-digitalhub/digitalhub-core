@@ -26,7 +26,6 @@ package it.smartcommunitylabdhub.core.artifacts.services;
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.CredentialsService;
 import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
-import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
@@ -36,41 +35,26 @@ import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
 import it.smartcommunitylabdhub.commons.models.artifact.ArtifactBaseSpec;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.enums.State;
-import it.smartcommunitylabdhub.commons.models.files.FileInfo;
-import it.smartcommunitylabdhub.commons.models.files.FilesInfo;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.services.FilesInfoService;
-import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
-import it.smartcommunitylabdhub.core.artifacts.builders.ArtifactEntityBuilder;
 import it.smartcommunitylabdhub.core.artifacts.lifecycle.ArtifactsLifecycleManager;
 import it.smartcommunitylabdhub.core.artifacts.persistence.ArtifactEntity;
-import it.smartcommunitylabdhub.core.artifacts.relationships.ArtifactEntityRelationshipsManager;
 import it.smartcommunitylabdhub.core.artifacts.specs.ArtifactBaseStatus;
 import it.smartcommunitylabdhub.core.components.infrastructure.specs.SpecValidator;
-import it.smartcommunitylabdhub.core.indexers.EntityIndexer;
-import it.smartcommunitylabdhub.core.indexers.IndexableEntityService;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
 import it.smartcommunitylabdhub.core.projects.persistence.ProjectEntity;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.services.EntityService;
-import it.smartcommunitylabdhub.files.models.DownloadInfo;
-import it.smartcommunitylabdhub.files.models.UploadInfo;
-import it.smartcommunitylabdhub.files.service.EntityFilesService;
 import it.smartcommunitylabdhub.files.service.FilesService;
 import jakarta.validation.constraints.NotNull;
-import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.lang.Nullable;
@@ -82,24 +66,13 @@ import org.springframework.validation.BindException;
 @Service
 @Transactional
 @Slf4j
-public class ArtifactServiceImpl
-    implements
-        SearchableArtifactService,
-        IndexableEntityService<ArtifactEntity>,
-        EntityFilesService<Artifact>,
-        RelationshipsAwareEntityService<Artifact> {
+public class ArtifactServiceImpl implements SearchableArtifactService {
 
     @Autowired
     private EntityService<Artifact, ArtifactEntity> entityService;
 
     @Autowired
     private EntityService<Project, ProjectEntity> projectService;
-
-    @Autowired(required = false)
-    private EntityIndexer<ArtifactEntity> indexer;
-
-    @Autowired
-    private ArtifactEntityBuilder entityBuilder;
 
     @Autowired
     private SpecRegistry specRegistry;
@@ -112,9 +85,6 @@ public class ArtifactServiceImpl
 
     @Autowired
     private FilesInfoService filesInfoService;
-
-    @Autowired
-    private ArtifactEntityRelationshipsManager relationshipsManager;
 
     @Autowired
     private CredentialsService credentialsService;
@@ -511,6 +481,7 @@ public class ArtifactServiceImpl
 
                         //delete files
                         filesService.remove(path, credentials);
+                        filesInfoService.clearFilesInfo(EntityName.ARTIFACT.name(), id);
                     }
                 }
 
@@ -559,414 +530,6 @@ public class ArtifactServiceImpl
                 //bulk delete entities only
                 entityService.deleteAll(CommonSpecification.projectEquals(project));
             }
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public void indexOne(@NotNull String id) {
-        if (indexer != null) {
-            log.debug("index artifact with id {}", String.valueOf(id));
-            try {
-                Artifact artifact = entityService.get(id);
-                indexer.index(entityBuilder.convert(artifact));
-            } catch (StoreException e) {
-                log.error("store error: {}", e.getMessage());
-                throw new SystemException(e.getMessage());
-            }
-        }
-    }
-
-    @Override
-    public void reindexAll() {
-        if (indexer != null) {
-            log.debug("reindex all artifacts");
-
-            //clear index
-            indexer.clearIndex();
-
-            //use pagination and batch
-            boolean hasMore = true;
-            int pageNumber = 0;
-            while (hasMore) {
-                hasMore = false;
-
-                try {
-                    Page<Artifact> page = entityService.list(PageRequest.of(pageNumber, EntityIndexer.PAGE_MAX_SIZE));
-                    indexer.indexAll(
-                        page.getContent().stream().map(e -> entityBuilder.convert(e)).collect(Collectors.toList())
-                    );
-                    hasMore = page.hasNext();
-                } catch (IllegalArgumentException | StoreException | SystemException e) {
-                    hasMore = false;
-
-                    log.error("error with indexing: {}", e.getMessage());
-                }
-            }
-        }
-    }
-
-    @Override
-    public DownloadInfo downloadFileAsUrl(@NotNull String id) throws NoSuchEntityException, SystemException {
-        log.debug("download url for artifact with id {}", String.valueOf(id));
-
-        try {
-            Artifact artifact = entityService.get(id);
-
-            //extract path from spec
-            ArtifactBaseSpec spec = new ArtifactBaseSpec();
-            spec.configure(artifact.getSpec());
-
-            String path = spec.getPath();
-            if (!StringUtils.hasText(path)) {
-                throw new NoSuchEntityException("file");
-            }
-
-            //try to resolve credentials
-            UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials = auth != null && credentialsService != null
-                ? credentialsService.getCredentials(auth)
-                : null;
-
-            DownloadInfo info = filesService.getDownloadAsUrl(path, credentials);
-            if (log.isTraceEnabled()) {
-                log.trace("download url for artifact with id {}: {} -> {}", id, path, info);
-            }
-
-            return info;
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.ARTIFACT.toString());
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public DownloadInfo downloadFileAsUrl(@NotNull String id, @NotNull String sub)
-        throws NoSuchEntityException, SystemException {
-        log.debug("download url for artifact file with id {} and path {}", String.valueOf(id), String.valueOf(sub));
-
-        try {
-            Artifact artifact = entityService.get(id);
-
-            //extract path from spec
-            ArtifactBaseSpec spec = new ArtifactBaseSpec();
-            spec.configure(artifact.getSpec());
-
-            String path = spec.getPath();
-            if (!StringUtils.hasText(path)) {
-                throw new NoSuchEntityException("file");
-            }
-
-            String fullPath = Optional
-                .ofNullable(sub)
-                .map(s -> {
-                    //build sub path *only* if not matching spec path
-                    return path.endsWith(sub) ? path : path + sub;
-                })
-                .orElse(path);
-
-            //try to resolve credentials
-            UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials = auth != null && credentialsService != null
-                ? credentialsService.getCredentials(auth)
-                : null;
-
-            DownloadInfo info = filesService.getDownloadAsUrl(fullPath, credentials);
-            if (log.isTraceEnabled()) {
-                log.trace("download url for artifact with id {} and path {}: {} -> {}", id, sub, path, info);
-            }
-
-            return info;
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.ARTIFACT.toString());
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public List<FileInfo> getFileInfo(@NotNull String id) throws NoSuchEntityException, SystemException {
-        log.debug("get files info for artifact with id {}", String.valueOf(id));
-        try {
-            Artifact entity = entityService.get(id);
-            StatusFieldAccessor statusFieldAccessor = StatusFieldAccessor.with(entity.getStatus());
-            List<FileInfo> files = statusFieldAccessor.getFiles();
-
-            //try to resolve credentials
-            UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials = auth != null && credentialsService != null
-                ? credentialsService.getCredentials(auth)
-                : null;
-
-            if (files == null || files.isEmpty()) {
-                FilesInfo filesInfo = filesInfoService.getFilesInfo(EntityName.ARTIFACT.getValue(), id);
-                if (filesInfo != null && (filesInfo.getFiles() != null)) {
-                    files = filesInfo.getFiles();
-                } else {
-                    files = null;
-                }
-            }
-
-            if (files == null) {
-                //extract path from spec
-                ArtifactBaseSpec spec = new ArtifactBaseSpec();
-                spec.configure(entity.getSpec());
-
-                String path = spec.getPath();
-                if (!StringUtils.hasText(path)) {
-                    throw new NoSuchEntityException("file");
-                }
-
-                files = filesService.getFileInfo(path, credentials);
-            }
-
-            if (files == null) {
-                files = Collections.emptyList();
-            }
-
-            if (log.isTraceEnabled()) {
-                log.trace("files info for entity with id {}: {} -> {}", id, EntityName.ARTIFACT.getValue(), files);
-            }
-
-            return files;
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.ARTIFACT.toString());
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public void storeFileInfo(@NotNull String id, List<FileInfo> files) throws SystemException {
-        try {
-            Artifact entity = entityService.get(id);
-            if (files != null) {
-                log.debug("store files info for {}", entity.getId());
-                filesInfoService.saveFilesInfo(EntityName.ARTIFACT.getValue(), id, files);
-            }
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.ARTIFACT.getValue());
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public UploadInfo uploadFileAsUrl(@NotNull String project, @Nullable String id, @NotNull String filename)
-        throws NoSuchEntityException, SystemException {
-        log.debug("upload url for artifact with id {}: {}", String.valueOf(id), filename);
-
-        try {
-            String path =
-                filesService.getDefaultStore(projectService.find(project)) +
-                "/" +
-                project +
-                "/" +
-                EntityName.ARTIFACT.getValue() +
-                "/" +
-                id +
-                (filename.startsWith("/") ? filename : "/" + filename);
-
-            //artifact may not exists (yet)
-            Artifact artifact = entityService.find(id);
-
-            if (artifact != null) {
-                //extract path from spec
-                ArtifactBaseSpec spec = new ArtifactBaseSpec();
-                spec.configure(artifact.getSpec());
-
-                path = spec.getPath();
-                if (!StringUtils.hasText(path)) {
-                    throw new NoSuchEntityException("file");
-                }
-            }
-
-            //try to resolve credentials
-            UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials = auth != null && credentialsService != null
-                ? credentialsService.getCredentials(auth)
-                : null;
-
-            UploadInfo info = filesService.getUploadAsUrl(path, credentials);
-            if (log.isTraceEnabled()) {
-                log.trace("upload url for artifact with id {}: {}", id, info);
-            }
-
-            return info;
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public UploadInfo startMultiPartUpload(@NotNull String project, @Nullable String id, @NotNull String filename)
-        throws NoSuchEntityException, SystemException {
-        log.debug("start upload url for artifact with id {}: {}", String.valueOf(id), filename);
-
-        try {
-            String path =
-                filesService.getDefaultStore(projectService.find(project)) +
-                "/" +
-                project +
-                "/" +
-                EntityName.ARTIFACT.getValue() +
-                "/" +
-                id +
-                "/" +
-                (filename.startsWith("/") ? filename : "/" + filename);
-
-            //artifact may not exists (yet)
-            Artifact artifact = entityService.find(id);
-
-            if (artifact != null) {
-                //extract path from spec
-                ArtifactBaseSpec spec = new ArtifactBaseSpec();
-                spec.configure(artifact.getSpec());
-
-                path = spec.getPath();
-                if (!StringUtils.hasText(path)) {
-                    throw new NoSuchEntityException("file");
-                }
-            }
-
-            //try to resolve credentials
-            UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials = auth != null && credentialsService != null
-                ? credentialsService.getCredentials(auth)
-                : null;
-
-            UploadInfo info = filesService.startMultiPartUpload(path, credentials);
-            if (log.isTraceEnabled()) {
-                log.trace("start upload url for artifact with id {}: {}", id, info);
-            }
-
-            return info;
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public UploadInfo uploadMultiPart(
-        @NotNull String project,
-        @Nullable String id,
-        @NotNull String filename,
-        @NotNull String uploadId,
-        @NotNull Integer partNumber
-    ) throws NoSuchEntityException, SystemException {
-        log.debug("upload part url for artifact {}: {}", String.valueOf(id), filename);
-        try {
-            String path =
-                filesService.getDefaultStore(projectService.find(project)) +
-                "/" +
-                project +
-                "/" +
-                EntityName.ARTIFACT.getValue() +
-                "/" +
-                id +
-                "/" +
-                (filename.startsWith("/") ? filename : "/" + filename);
-
-            //artifact may not exists (yet)
-            Artifact artifact = entityService.find(id);
-
-            if (artifact != null) {
-                //extract path from spec
-                ArtifactBaseSpec spec = new ArtifactBaseSpec();
-                spec.configure(artifact.getSpec());
-
-                path = spec.getPath();
-                if (!StringUtils.hasText(path)) {
-                    throw new NoSuchEntityException("file");
-                }
-            }
-
-            //try to resolve credentials
-            UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials = auth != null && credentialsService != null
-                ? credentialsService.getCredentials(auth)
-                : null;
-            UploadInfo info = filesService.uploadMultiPart(path, uploadId, partNumber, credentials);
-            if (log.isTraceEnabled()) {
-                log.trace("part upload url for artifact with path {}: {}", path, info);
-            }
-
-            return info;
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public UploadInfo completeMultiPartUpload(
-        @NotNull String project,
-        @Nullable String id,
-        @NotNull String filename,
-        @NotNull String uploadId,
-        @NotNull List<String> eTagPartList
-    ) throws NoSuchEntityException, SystemException {
-        log.debug("complete upload url for artifact {}: {}", String.valueOf(id), filename);
-        try {
-            String path =
-                filesService.getDefaultStore(projectService.find(project)) +
-                "/" +
-                project +
-                "/" +
-                EntityName.ARTIFACT.getValue() +
-                "/" +
-                id +
-                "/" +
-                (filename.startsWith("/") ? filename : "/" + filename);
-
-            //artifact may not exists (yet)
-            Artifact artifact = entityService.find(id);
-
-            if (artifact != null) {
-                //extract path from spec
-                ArtifactBaseSpec spec = new ArtifactBaseSpec();
-                spec.configure(artifact.getSpec());
-
-                path = spec.getPath();
-                if (!StringUtils.hasText(path)) {
-                    throw new NoSuchEntityException("file");
-                }
-            }
-
-            //try to resolve credentials
-            UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials = auth != null && credentialsService != null
-                ? credentialsService.getCredentials(auth)
-                : null;
-
-            UploadInfo info = filesService.completeMultiPartUpload(path, uploadId, eTagPartList, credentials);
-            if (log.isTraceEnabled()) {
-                log.trace("complete upload url for artifact with path {}: {}", path, info);
-            }
-
-            return info;
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public List<RelationshipDetail> getRelationships(String id) {
-        log.debug("get relationships for artifact {}", String.valueOf(id));
-
-        try {
-            Artifact artifact = entityService.get(id);
-            return relationshipsManager.getRelationships(entityBuilder.convert(artifact));
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
