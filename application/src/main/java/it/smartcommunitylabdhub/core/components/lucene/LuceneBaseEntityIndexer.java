@@ -6,35 +6,45 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.core.components.lucene;
 
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
+import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.metadata.AuditMetadata;
 import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
+import it.smartcommunitylabdhub.commons.models.metadata.VersioningMetadata;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
+import it.smartcommunitylabdhub.core.indexers.EntityIndexer;
 import it.smartcommunitylabdhub.core.indexers.IndexField;
+import it.smartcommunitylabdhub.core.persistence.BaseEntity;
+import it.smartcommunitylabdhub.core.utils.EntityUtils;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.text.SimpleDateFormat;
+import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.TimeZone;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -44,25 +54,55 @@ import org.apache.lucene.document.TextField;
 import org.apache.lucene.util.BytesRef;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.convert.converter.Converter;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 @Slf4j
-public abstract class LuceneBaseEntityIndexer<D extends BaseDTO> implements InitializingBean {
+public abstract class LuceneBaseEntityIndexer<E extends BaseEntity, D extends BaseDTO>
+    implements EntityIndexer<E>, InitializingBean {
 
     public static final int PAGE_MAX_SIZE = 100;
 
+    protected final EntityName type;
+
     protected LuceneComponent lucene;
 
-    @Autowired(required = false)
+    protected Converter<E, D> converter;
+
+    @SuppressWarnings("unchecked")
+    public LuceneBaseEntityIndexer() {
+        // resolve generics type via subclass trick
+        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+        this.type = EntityUtils.getEntityName((Class<D>) t);
+    }
+
+    @SuppressWarnings("unchecked")
+    public LuceneBaseEntityIndexer(LuceneComponent lucene) {
+        Assert.notNull(lucene, "lucene can not be null");
+        this.lucene = lucene;
+        // resolve generics type via subclass trick
+        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+        this.type = EntityUtils.getEntityName((Class<D>) t);
+    }
+
+    @Autowired
     public void setLucene(LuceneComponent lucene) {
         this.lucene = lucene;
     }
 
-    @Override
-    public void afterPropertiesSet() throws Exception {}
+    @Autowired
+    public void setConverter(Converter<E, D> converter) {
+        this.converter = converter;
+    }
 
-    public String buildKeyGroup(String kind, String project, String name) {
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        Assert.notNull(lucene, "lucene can not be null");
+        Assert.notNull(converter, "converter can not be null");
+    }
+
+    protected String buildKeyGroup(String kind, String project, String name) {
         return kind + "_" + project + "_" + name;
     }
 
@@ -70,7 +110,7 @@ public abstract class LuceneBaseEntityIndexer<D extends BaseDTO> implements Init
         return StringUtils.hasLength(field) ? field : "";
     }
 
-    protected Document parse(D item, String type) {
+    protected Document parse(D item) {
         Assert.notNull(item, "dto can not be null");
         Document doc = new Document();
 
@@ -78,7 +118,7 @@ public abstract class LuceneBaseEntityIndexer<D extends BaseDTO> implements Init
         doc.add(new StringField("keyGroup", keyGroup, Field.Store.YES));
         doc.add(new SortedDocValuesField("keyGroup", new BytesRef(doc.get("keyGroup"))));
 
-        doc.add(new StringField("type", type, Field.Store.YES));
+        doc.add(new StringField("type", type.name(), Field.Store.YES));
         doc.add(new SortedDocValuesField("type", new BytesRef(doc.get("type"))));
 
         //base doc
@@ -102,9 +142,8 @@ public abstract class LuceneBaseEntityIndexer<D extends BaseDTO> implements Init
 
         //extract meta to index
         if (item instanceof MetadataDTO) {
-            BaseMetadata metadata = BaseMetadata.from(((MetadataDTO) item).getMetadata());
-
             //metadata
+            BaseMetadata metadata = BaseMetadata.from(((MetadataDTO) item).getMetadata());
             doc.add(new TextField("metadata.name", getStringValue(metadata.getName()), Field.Store.YES));
             doc.add(new SortedDocValuesField("metadata.name", new BytesRef(doc.get("metadata.name"))));
 
@@ -145,16 +184,107 @@ public abstract class LuceneBaseEntityIndexer<D extends BaseDTO> implements Init
             );
             doc.add(new SortedDocValuesField("metadata.updatedLong", new BytesRef(doc.get("metadata.updatedLong"))));
 
+            //audit
             AuditMetadata auditing = AuditMetadata.from(((MetadataDTO) item).getMetadata());
             doc.add(new StringField("metadata.createdBy", getStringValue(auditing.getCreatedBy()), Field.Store.YES));
             doc.add(new StringField("metadata.updatedBy", getStringValue(auditing.getUpdatedBy()), Field.Store.YES));
+
+            //add versioning
+            VersioningMetadata versioning = VersioningMetadata.from(((MetadataDTO) item).getMetadata());
+            if (StringUtils.hasText(versioning.getVersion())) {
+                doc.add(new TextField("metadata.version", getStringValue(versioning.getVersion()), Field.Store.YES));
+            }
         }
 
         return doc;
     }
 
+    @Override
     public List<IndexField> fields() {
         List<IndexField> fields = new LinkedList<>();
+
+        fields.add(new IndexField("id", "string", true, false, true, true));
+        fields.add(new IndexField("keyGroup", "string", true, false, true, true));
+        fields.add(new IndexField("type", "string", true, false, true, true));
+
+        fields.add(new IndexField("kind", "string", true, false, true, true));
+        fields.add(new IndexField("project", "string", true, false, true, true));
+        fields.add(new IndexField("name", "string", true, false, true, true));
+        fields.add(new IndexField("user", "string", true, false, true, true));
+
+        fields.add(new IndexField("status", "string", true, false, true, true));
+
+        fields.add(new IndexField("metadata.name", "text_en", true, false, true, true));
+        fields.add(new IndexField("metadata.description", "text_en", true, false, true, true));
+        fields.add(new IndexField("metadata.project", "text_en", true, false, true, true));
+
+        fields.add(new IndexField("metadata.labels", "text_en", true, true, true, true));
+
+        fields.add(new IndexField("metadata.created", "pdate", true, false, true, true));
+        fields.add(new IndexField("metadata.updated", "pdate", true, false, true, true));
+        fields.add(new IndexField("metadata.createdBy", "string", true, false, true, true));
+        fields.add(new IndexField("metadata.updatedBy", "string", true, false, true, true));
+
+        fields.add(new IndexField("metadata.version", "text_en", true, false, true, true));
+
         return fields;
+    }
+
+    @Override
+    public void index(E entity) {
+        Assert.notNull(entity, "entity can not be null");
+
+        try {
+            log.debug("lucene index {}: {}", type, entity.getId());
+            D item = converter.convert(entity);
+
+            if (log.isTraceEnabled()) {
+                log.trace("item: {}", item);
+            }
+
+            Document doc = parse(item);
+            if (log.isTraceEnabled()) {
+                log.trace("doc: {}", doc);
+            }
+            
+            // index
+            lucene.indexDoc(doc);
+        } catch (StoreException e) {
+            log.error("error with lucene: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void indexAll(Collection<E> entities) {
+        Assert.notNull(entities, "entities can not be null");
+        log.debug("index {} {}", entities.size(), type);
+
+        try {
+            List<Document> docs = entities.stream().map(e -> parse(converter.convert(e))).collect(Collectors.toList());
+            lucene.indexBounce(docs);
+        } catch (StoreException e) {
+            log.error("error with solr: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void clearIndex() {
+        log.debug("clear index for {}", type);
+        try {
+            lucene.clearIndexByType(type.name());
+        } catch (StoreException e) {
+            log.error("error with solr: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void remove(E entity) {
+        Assert.notNull(entity, "entity can not be null");
+        try {
+            log.debug("lucene remove index {}: {}", type, entity.getId());
+            lucene.removeDoc(entity.getId());
+        } catch (StoreException e) {
+            log.error("error with lucene: {}", e.getMessage());
+        }
     }
 }
