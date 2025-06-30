@@ -244,7 +244,7 @@ solr:
   reindex: ${SOLR_REINDEX:never}
 
 lucene:
-  index-path: ${LUCENE_INDEX_PATH:false}
+  index-path: ${LUCENE_INDEX_PATH:./data/index}
   reindex: ${LUCENE_REINDEX:never}
 
 # files support
