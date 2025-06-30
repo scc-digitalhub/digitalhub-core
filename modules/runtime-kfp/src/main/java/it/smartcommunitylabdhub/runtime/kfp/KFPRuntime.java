@@ -6,27 +6,34 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.runtime.kfp;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.argoproj.workflow.models.IoArgoprojWorkflowV1alpha1Workflow;
+import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
+import it.smartcommunitylabdhub.authorization.providers.AccessCredentials;
+import it.smartcommunitylabdhub.authorization.providers.AccessCredentialsProvider;
+import it.smartcommunitylabdhub.authorization.services.CredentialsService;
+import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
+import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
+import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.jackson.YamlMapperFactory;
 import it.smartcommunitylabdhub.commons.models.base.Executable;
@@ -35,6 +42,7 @@ import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
 import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
+import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.commons.services.WorkflowService;
 import it.smartcommunitylabdhub.framework.argo.objects.K8sWorkflowObject;
@@ -67,6 +75,9 @@ import org.springframework.beans.factory.annotation.Value;
 @Slf4j
 public class KFPRuntime extends K8sBaseRuntime<KFPWorkflowSpec, KFPRunSpec, KFPRunStatus, K8sRunnable> {
 
+    public static final Integer DEFAULT_DURATION = 3600 * 8; // 8 hour
+    public static final Integer MIN_DURATION = 300; // 5 minutes
+
     public static final String RUNTIME = "kfp";
 
     @Autowired
@@ -75,13 +86,35 @@ public class KFPRuntime extends K8sBaseRuntime<KFPWorkflowSpec, KFPRunSpec, KFPR
     @Autowired
     private WorkflowService workflowService;
 
+    @Autowired
+    private CredentialsService credentialsService;
+
+    @Autowired(required = false)
+    private AccessCredentialsProvider accessCredentialsProvider;
+
+    @Autowired
+    private ConfigurationService configurationService;
+
     private NodeStatusMapper nodeStatusMapper = new NodeStatusMapper();
 
     @Value("${runtime.kfp.image}")
     private String image;
 
+    private Integer duration = DEFAULT_DURATION;
+
     public KFPRuntime() {
         super(KFPRunSpec.KIND);
+    }
+
+    @Autowired
+    public void setDuration(@Value("${runtime.kfp.duration}") Integer duration) {
+        if (duration != null && duration > MIN_DURATION) {
+            // set a minimum duration of 5 minutes
+            this.duration = duration;
+        } else {
+            log.warn("Invalid KFP runtime duration {}. Using default {}", duration, DEFAULT_DURATION);
+            this.duration = DEFAULT_DURATION;
+        }
     }
 
     @Override
@@ -138,15 +171,43 @@ public class KFPRuntime extends K8sBaseRuntime<KFPWorkflowSpec, KFPRunSpec, KFPR
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
-        return switch (runAccessor.getTask()) {
-            case KFPPipelineTaskSpec.KIND -> new KFPPipelineRunner().produce(run);
-            case KFPBuildTaskSpec.KIND -> new KFPBuildRunner(
-                image,
-                secretService.getSecretData(run.getProject(), runKfpSpec.getTaskBuildSpec().getSecrets())
-            )
-                .produce(run);
-            default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
-        };
+        K8sRunnable runnable =
+            switch (runAccessor.getTask()) {
+                case KFPPipelineTaskSpec.KIND -> new KFPPipelineRunner().produce(run);
+                case KFPBuildTaskSpec.KIND -> new KFPBuildRunner(
+                    image,
+                    secretService.getSecretData(run.getProject(), runKfpSpec.getTaskBuildSpec().getSecrets())
+                )
+                    .produce(run);
+                default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
+            };
+
+        //extract auth from security context to inflate secured credentials
+        UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
+        if (auth != null) {
+            //get only core credentials from providers
+            if (accessCredentialsProvider != null) {
+                //get custom duration credentials
+                List<Credentials> credentials = List.of(
+                    accessCredentialsProvider.get((UserAuthentication<?>) auth, duration)
+                );
+                runnable.setCredentials(credentials);
+            } else {
+                //keep globally provided access credentials
+                List<Credentials> credentials = credentialsService
+                    .getCredentials((UserAuthentication<?>) auth)
+                    .stream()
+                    .filter(c -> c instanceof AccessCredentials)
+                    .toList();
+                runnable.setCredentials(credentials);
+            }
+        }
+
+        //inject configuration
+        List<Configuration> configurations = configurationService.getConfigurations();
+        runnable.setConfigurations(configurations);
+
+        return runnable;
     }
 
     @Override

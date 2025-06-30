@@ -20,23 +20,11 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.core.services;
+package it.smartcommunitylabdhub.commons.services;
 
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
-import it.smartcommunitylabdhub.commons.infrastructure.ConfigurationProvider;
 import java.util.List;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
-@Slf4j
-@Service
-public class ConfigurationService {
-
-    @Autowired
-    private List<ConfigurationProvider> providers;
-
-    public List<Configuration> getConfigurations() {
-        return providers.stream().map(ConfigurationProvider::getConfig).filter(c -> c != null).toList();
-    }
+public interface ConfigurationService {
+    public List<Configuration> getConfigurations();
 }
