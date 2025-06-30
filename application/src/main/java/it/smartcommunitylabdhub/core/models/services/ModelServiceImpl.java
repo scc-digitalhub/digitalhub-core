@@ -48,10 +48,7 @@ import it.smartcommunitylabdhub.commons.services.MetricsService;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.components.infrastructure.specs.SpecValidator;
-import it.smartcommunitylabdhub.core.indexers.EntityIndexer;
-import it.smartcommunitylabdhub.core.indexers.IndexableEntityService;
 import it.smartcommunitylabdhub.core.metrics.MetricsManager;
-import it.smartcommunitylabdhub.core.models.builders.ModelEntityBuilder;
 import it.smartcommunitylabdhub.core.models.lifecycle.ModelLifecycleManager;
 import it.smartcommunitylabdhub.core.models.persistence.ModelEntity;
 import it.smartcommunitylabdhub.core.models.specs.ModelBaseStatus;
@@ -69,11 +66,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.lang.Nullable;
@@ -84,21 +79,13 @@ import org.springframework.validation.BindException;
 @Service
 @Transactional
 @Slf4j
-public class ModelServiceImpl
-    implements
-        SearchableModelService, IndexableEntityService<ModelEntity>, EntityFilesService<Model>, MetricsService<Model> {
+public class ModelServiceImpl implements SearchableModelService, EntityFilesService<Model>, MetricsService<Model> {
 
     @Autowired
     private EntityService<Model, ModelEntity> entityService;
 
     @Autowired
     private EntityService<Project, ProjectEntity> projectService;
-
-    @Autowired(required = false)
-    private EntityIndexer<ModelEntity> indexer;
-
-    @Autowired
-    private ModelEntityBuilder entityBuilder;
 
     @Autowired
     SpecRegistry specRegistry;
@@ -558,49 +545,6 @@ public class ModelServiceImpl
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public void indexOne(@NotNull String id) {
-        if (indexer != null) {
-            log.debug("index model with id {}", String.valueOf(id));
-            try {
-                Model model = entityService.get(id);
-                indexer.index(entityBuilder.convert(model));
-            } catch (StoreException e) {
-                log.error("store error: {}", e.getMessage());
-                throw new SystemException(e.getMessage());
-            }
-        }
-    }
-
-    @Override
-    public void reindexAll() {
-        if (indexer != null) {
-            log.debug("reindex all models");
-
-            //clear index
-            indexer.clearIndex();
-
-            //use pagination and batch
-            boolean hasMore = true;
-            int pageNumber = 0;
-            while (hasMore) {
-                hasMore = false;
-
-                try {
-                    Page<Model> page = entityService.list(PageRequest.of(pageNumber, EntityIndexer.PAGE_MAX_SIZE));
-                    indexer.indexAll(
-                        page.getContent().stream().map(e -> entityBuilder.convert(e)).collect(Collectors.toList())
-                    );
-                    hasMore = page.hasNext();
-                } catch (IllegalArgumentException | StoreException | SystemException e) {
-                    hasMore = false;
-
-                    log.error("error with indexing: {}", e.getMessage());
-                }
-            }
         }
     }
 

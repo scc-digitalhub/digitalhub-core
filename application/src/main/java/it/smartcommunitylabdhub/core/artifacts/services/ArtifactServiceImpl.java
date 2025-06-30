@@ -44,13 +44,10 @@ import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.services.FilesInfoService;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
-import it.smartcommunitylabdhub.core.artifacts.builders.ArtifactEntityBuilder;
 import it.smartcommunitylabdhub.core.artifacts.lifecycle.ArtifactsLifecycleManager;
 import it.smartcommunitylabdhub.core.artifacts.persistence.ArtifactEntity;
 import it.smartcommunitylabdhub.core.artifacts.specs.ArtifactBaseStatus;
 import it.smartcommunitylabdhub.core.components.infrastructure.specs.SpecValidator;
-import it.smartcommunitylabdhub.core.indexers.EntityIndexer;
-import it.smartcommunitylabdhub.core.indexers.IndexableEntityService;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
 import it.smartcommunitylabdhub.core.projects.persistence.ProjectEntity;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
@@ -63,11 +60,9 @@ import jakarta.validation.constraints.NotNull;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.lang.Nullable;
@@ -79,20 +74,13 @@ import org.springframework.validation.BindException;
 @Service
 @Transactional
 @Slf4j
-public class ArtifactServiceImpl
-    implements SearchableArtifactService, IndexableEntityService<ArtifactEntity>, EntityFilesService<Artifact> {
+public class ArtifactServiceImpl implements SearchableArtifactService, EntityFilesService<Artifact> {
 
     @Autowired
     private EntityService<Artifact, ArtifactEntity> entityService;
 
     @Autowired
     private EntityService<Project, ProjectEntity> projectService;
-
-    @Autowired(required = false)
-    private EntityIndexer<ArtifactEntity> indexer;
-
-    @Autowired
-    private ArtifactEntityBuilder entityBuilder;
 
     @Autowired
     private SpecRegistry specRegistry;
@@ -552,49 +540,6 @@ public class ArtifactServiceImpl
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
-        }
-    }
-
-    @Override
-    public void indexOne(@NotNull String id) {
-        if (indexer != null) {
-            log.debug("index artifact with id {}", String.valueOf(id));
-            try {
-                Artifact artifact = entityService.get(id);
-                indexer.index(entityBuilder.convert(artifact));
-            } catch (StoreException e) {
-                log.error("store error: {}", e.getMessage());
-                throw new SystemException(e.getMessage());
-            }
-        }
-    }
-
-    @Override
-    public void reindexAll() {
-        if (indexer != null) {
-            log.debug("reindex all artifacts");
-
-            //clear index
-            indexer.clearIndex();
-
-            //use pagination and batch
-            boolean hasMore = true;
-            int pageNumber = 0;
-            while (hasMore) {
-                hasMore = false;
-
-                try {
-                    Page<Artifact> page = entityService.list(PageRequest.of(pageNumber, EntityIndexer.PAGE_MAX_SIZE));
-                    indexer.indexAll(
-                        page.getContent().stream().map(e -> entityBuilder.convert(e)).collect(Collectors.toList())
-                    );
-                    hasMore = page.hasNext();
-                } catch (IllegalArgumentException | StoreException | SystemException e) {
-                    hasMore = false;
-
-                    log.error("error with indexing: {}", e.getMessage());
-                }
-            }
         }
     }
 
