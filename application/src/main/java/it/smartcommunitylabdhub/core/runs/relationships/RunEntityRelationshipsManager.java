@@ -25,10 +25,9 @@ package it.smartcommunitylabdhub.core.runs.relationships;
 
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.core.relationships.BaseEntityRelationshipsManager;
-import it.smartcommunitylabdhub.core.runs.persistence.RunEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
-public class RunEntityRelationshipsManager extends BaseEntityRelationshipsManager<RunEntity, Run> {}
+public class RunEntityRelationshipsManager extends BaseEntityRelationshipsManager<Run> {}

@@ -24,7 +24,6 @@
 package it.smartcommunitylabdhub.core.artifacts.indexers;
 
 import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
-import it.smartcommunitylabdhub.core.artifacts.persistence.ArtifactEntity;
 import it.smartcommunitylabdhub.core.components.solr.SolrBaseEntityIndexer;
 import it.smartcommunitylabdhub.core.components.solr.SolrComponent;
 import lombok.extern.slf4j.Slf4j;
@@ -36,4 +35,4 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @ConditionalOnBean(SolrComponent.class)
 @Primary
-public class SolrArtifactEntityIndexer extends SolrBaseEntityIndexer<ArtifactEntity, Artifact> {}
+public class SolrArtifactEntityIndexer extends SolrBaseEntityIndexer<Artifact> {}

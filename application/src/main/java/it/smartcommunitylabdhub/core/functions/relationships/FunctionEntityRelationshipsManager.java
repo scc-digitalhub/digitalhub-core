@@ -24,11 +24,10 @@
 package it.smartcommunitylabdhub.core.functions.relationships;
 
 import it.smartcommunitylabdhub.commons.models.function.Function;
-import it.smartcommunitylabdhub.core.functions.persistence.FunctionEntity;
 import it.smartcommunitylabdhub.core.relationships.BaseEntityRelationshipsManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
-public class FunctionEntityRelationshipsManager extends BaseEntityRelationshipsManager<FunctionEntity, Function> {}
+public class FunctionEntityRelationshipsManager extends BaseEntityRelationshipsManager<Function> {}

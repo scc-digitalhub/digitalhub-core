@@ -25,7 +25,6 @@ package it.smartcommunitylabdhub.core.models.services;
 
 import it.smartcommunitylabdhub.commons.models.model.Model;
 import it.smartcommunitylabdhub.core.files.service.BaseFilesService;
-import it.smartcommunitylabdhub.core.models.persistence.ModelEntity;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,4 +32,4 @@ import org.springframework.stereotype.Service;
 @Service
 @Transactional
 @Slf4j
-public class ModelFilesServiceImpl extends BaseFilesService<ModelEntity, Model> {}
+public class ModelFilesServiceImpl extends BaseFilesService<Model> {}

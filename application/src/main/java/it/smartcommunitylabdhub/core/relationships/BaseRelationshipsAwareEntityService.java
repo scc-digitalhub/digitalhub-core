@@ -22,43 +22,34 @@ import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
 import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
-import it.smartcommunitylabdhub.core.persistence.BaseEntity;
-import it.smartcommunitylabdhub.core.services.EntityService;
+import it.smartcommunitylabdhub.core.repositories.EntityRepository;
 import jakarta.transaction.Transactional;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.convert.converter.Converter;
 import org.springframework.util.Assert;
 
 @Transactional
 @Slf4j
-public class BaseRelationshipsAwareEntityService<E extends BaseEntity, D extends BaseDTO & MetadataDTO>
+public class BaseRelationshipsAwareEntityService<D extends BaseDTO & MetadataDTO>
     implements RelationshipsAwareEntityService<D>, InitializingBean {
 
-    protected EntityService<D, E> entityService;
-    protected Converter<D, E> entityBuilder;
-    protected EntityRelationshipsManager<E> relationshipsManager;
+    protected EntityRepository<D> entityService;
+    protected EntityRelationshipsManager<D> relationshipsManager;
 
     @Autowired
-    public void setEntityService(EntityService<D, E> entityService) {
+    public void setEntityService(EntityRepository<D> entityService) {
         this.entityService = entityService;
     }
 
     @Autowired
-    public void setEntityBuilder(Converter<D, E> entityBuilder) {
-        this.entityBuilder = entityBuilder;
-    }
-
-    @Autowired
-    public void setRelationshipsManager(EntityRelationshipsManager<E> relationshipsManager) {
+    public void setRelationshipsManager(EntityRelationshipsManager<D> relationshipsManager) {
         this.relationshipsManager = relationshipsManager;
     }
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        Assert.notNull(entityBuilder, "builder can not be null");
         Assert.notNull(entityService, "entity service can not be null");
         Assert.notNull(relationshipsManager, "relationships manager can not be null");
     }
@@ -68,8 +59,8 @@ public class BaseRelationshipsAwareEntityService<E extends BaseEntity, D extends
         log.debug("get relationships for workflow {}", String.valueOf(id));
 
         try {
-            D workflow = entityService.get(id);
-            return relationshipsManager.getRelationships(entityBuilder.convert(workflow));
+            D item = entityService.get(id);
+            return relationshipsManager.getRelationships(item);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

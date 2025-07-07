@@ -26,7 +26,6 @@ package it.smartcommunitylabdhub.core.functions.indexers;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.core.components.lucene.LuceneBaseEntityIndexer;
 import it.smartcommunitylabdhub.core.components.lucene.LuceneComponent;
-import it.smartcommunitylabdhub.core.functions.persistence.FunctionEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
@@ -34,4 +33,4 @@ import org.springframework.stereotype.Component;
 @Component
 @Slf4j
 @ConditionalOnBean(LuceneComponent.class)
-public class LuceneFunctionEntityIndexer extends LuceneBaseEntityIndexer<FunctionEntity, Function> {}
+public class LuceneFunctionEntityIndexer extends LuceneBaseEntityIndexer<Function> {}

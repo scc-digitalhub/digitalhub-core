@@ -26,7 +26,6 @@ package it.smartcommunitylabdhub.core.functions.indexers;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.core.components.solr.SolrBaseEntityIndexer;
 import it.smartcommunitylabdhub.core.components.solr.SolrComponent;
-import it.smartcommunitylabdhub.core.functions.persistence.FunctionEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Primary;
@@ -36,4 +35,4 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @ConditionalOnBean(SolrComponent.class)
 @Primary
-public class SolrFunctionEntityIndexer extends SolrBaseEntityIndexer<FunctionEntity, Function> {}
+public class SolrFunctionEntityIndexer extends SolrBaseEntityIndexer<Function> {}

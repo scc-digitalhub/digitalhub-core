@@ -6,29 +6,29 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.core.queries.filters;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.Keys;
+import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.queries.SearchCriteria;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
@@ -51,7 +51,7 @@ import org.springframework.util.StringUtils;
 @AllArgsConstructor
 @NoArgsConstructor
 @Valid
-public abstract class AbstractEntityFilter<T extends BaseEntity> {
+public abstract class AbstractEntityFilter<T extends BaseDTO> {
 
     @Nullable
     protected String q;
@@ -114,7 +114,7 @@ public abstract class AbstractEntityFilter<T extends BaseEntity> {
         Optional
             .ofNullable(user)
             .ifPresent(value ->
-                criteria.add(new BaseEntitySearchCriteria<>("createdBy", value, SearchCriteria.Operation.equal))
+                criteria.add(new BaseEntitySearchCriteria<>("user", value, SearchCriteria.Operation.equal))
             );
 
         Optional

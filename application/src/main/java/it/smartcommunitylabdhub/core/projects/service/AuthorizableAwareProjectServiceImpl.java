@@ -31,7 +31,7 @@ import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.core.projects.persistence.ProjectEntity;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
-import it.smartcommunitylabdhub.core.services.EntityService;
+import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.util.Collections;
@@ -47,7 +47,7 @@ import org.springframework.stereotype.Service;
 public class AuthorizableAwareProjectServiceImpl implements AuthorizableAwareEntityService<Project> {
 
     @Autowired
-    private EntityService<Project, ProjectEntity> entityService;
+    private SearchableEntityRepository<ProjectEntity, Project> entityRepository;
 
     @Autowired
     private ResourceSharingService sharingService;
@@ -57,7 +57,7 @@ public class AuthorizableAwareProjectServiceImpl implements AuthorizableAwareEnt
     public List<String> findIdsByCreatedBy(@NotNull String createdBy) {
         log.debug("find id of projects for createdBy {}", createdBy);
         try {
-            return entityService
+            return entityRepository
                 .searchAll(CommonSpecification.createdByEquals(createdBy))
                 .stream()
                 .map(p -> p.getId())
@@ -73,7 +73,7 @@ public class AuthorizableAwareProjectServiceImpl implements AuthorizableAwareEnt
     public List<String> findIdsByUpdatedBy(@NotNull String updatedBy) {
         log.debug("find id of projects for updatedBy {}", updatedBy);
         try {
-            return entityService
+            return entityRepository
                 .searchAll(CommonSpecification.updatedByEquals(updatedBy))
                 .stream()
                 .map(p -> p.getId())
@@ -89,7 +89,7 @@ public class AuthorizableAwareProjectServiceImpl implements AuthorizableAwareEnt
     public List<String> findIdsByProject(@NotNull String project) {
         log.debug("find id of projects for project {}", project);
         try {
-            Project p = entityService.find(project);
+            Project p = entityRepository.find(project);
             if (p == null) {
                 return Collections.emptyList();
             }
@@ -106,7 +106,7 @@ public class AuthorizableAwareProjectServiceImpl implements AuthorizableAwareEnt
     public List<String> findNamesByCreatedBy(@NotNull String createdBy) {
         log.debug("find name of projects for createdBy {}", createdBy);
         try {
-            return entityService
+            return entityRepository
                 .searchAll(CommonSpecification.createdByEquals(createdBy))
                 .stream()
                 .map(p -> p.getName())
@@ -122,7 +122,7 @@ public class AuthorizableAwareProjectServiceImpl implements AuthorizableAwareEnt
     public List<String> findNamesByUpdatedBy(@NotNull String updatedBy) {
         log.debug("find name of projects for updatedBy {}", updatedBy);
         try {
-            return entityService
+            return entityRepository
                 .searchAll(CommonSpecification.updatedByEquals(updatedBy))
                 .stream()
                 .map(p -> p.getName())
@@ -138,7 +138,7 @@ public class AuthorizableAwareProjectServiceImpl implements AuthorizableAwareEnt
     public List<String> findNamesByProject(@NotNull String project) {
         log.debug("find name of projects for project {}", project);
         try {
-            Project p = entityService.find(project);
+            Project p = entityRepository.find(project);
             if (p == null) {
                 return Collections.emptyList();
             }
@@ -167,7 +167,7 @@ public class AuthorizableAwareProjectServiceImpl implements AuthorizableAwareEnt
                 .stream()
                 .map(s -> {
                     try {
-                        Project p = entityService.find(s.getEntityId());
+                        Project p = entityRepository.find(s.getEntityId());
                         // if (p != null && p.getUser() != null && p.getUser().equals(s.getOwner())) {
                         return p;
                         // }
@@ -203,7 +203,7 @@ public class AuthorizableAwareProjectServiceImpl implements AuthorizableAwareEnt
                 .stream()
                 .map(s -> {
                     try {
-                        Project p = entityService.find(s.getEntityId());
+                        Project p = entityRepository.find(s.getEntityId());
                         // if (p != null && p.getUser() != null && p.getUser().equals(s.getOwner())) {
                         return p;
                         // }

@@ -44,15 +44,14 @@ import it.smartcommunitylabdhub.commons.models.trigger.TriggerBaseStatus;
 import it.smartcommunitylabdhub.commons.models.trigger.TriggerEvent;
 import it.smartcommunitylabdhub.commons.models.trigger.TriggerJob;
 import it.smartcommunitylabdhub.commons.models.trigger.TriggerRunBaseStatus;
-import it.smartcommunitylabdhub.commons.services.RunService;
+import it.smartcommunitylabdhub.commons.services.RunManager;
 import it.smartcommunitylabdhub.commons.services.TaskService;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.components.infrastructure.runtimes.ActuatorFactory;
-import it.smartcommunitylabdhub.core.components.run.LifecycleManager;
 import it.smartcommunitylabdhub.core.events.EntityAction;
 import it.smartcommunitylabdhub.core.events.EntityOperation;
+import it.smartcommunitylabdhub.core.lifecycle.AbstractLifecycleManager;
 import it.smartcommunitylabdhub.core.runs.lifecycle.RunLifecycleManager;
-import it.smartcommunitylabdhub.core.triggers.persistence.TriggerEntity;
 import it.smartcommunitylabdhub.core.triggers.service.TemplateProcessor;
 import it.smartcommunitylabdhub.fsm.Fsm;
 import it.smartcommunitylabdhub.fsm.exceptions.InvalidTransitionException;
@@ -71,7 +70,7 @@ import org.springframework.validation.BindException;
 
 @Slf4j
 @Component
-public class TriggerLifecycleManager extends LifecycleManager<Trigger, TriggerEntity> {
+public class TriggerLifecycleManager extends AbstractLifecycleManager<Trigger> {
 
     @Autowired
     private TriggerFsmFactory fsmFactory;
@@ -83,7 +82,7 @@ public class TriggerLifecycleManager extends LifecycleManager<Trigger, TriggerEn
     private TaskService taskService;
 
     @Autowired
-    private RunService runService;
+    private RunManager runService;
 
     @Autowired
     private RunLifecycleManager runManager;

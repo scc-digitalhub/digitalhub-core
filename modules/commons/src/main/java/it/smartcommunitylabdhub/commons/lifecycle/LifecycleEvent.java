@@ -23,7 +23,6 @@
 package it.smartcommunitylabdhub.commons.lifecycle;
 
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import java.io.Serializable;
 import lombok.AllArgsConstructor;
@@ -45,8 +44,8 @@ public class LifecycleEvent<D extends BaseDTO & StatusDTO> implements Serializab
     private String user;
     private String project;
 
-    private LifecycleEvents event;
-    private State state;
+    private String event;
+    private String state;
     private String message;
     private String error;
 

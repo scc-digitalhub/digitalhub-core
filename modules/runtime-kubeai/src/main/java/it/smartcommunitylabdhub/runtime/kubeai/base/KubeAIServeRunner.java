@@ -35,7 +35,7 @@ import it.smartcommunitylabdhub.commons.models.metadata.RelationshipsMetadata;
 import it.smartcommunitylabdhub.commons.models.model.Model;
 import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.commons.models.run.Run;
-import it.smartcommunitylabdhub.commons.services.ModelService;
+import it.smartcommunitylabdhub.commons.services.ModelManager;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sSecretHelper;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
@@ -61,7 +61,7 @@ public class KubeAIServeRunner {
     private final String engine;
     private final List<String> features;
 
-    private final ModelService modelService;
+    private final ModelManager modelService;
     private final K8sBuilderHelper k8sBuilderHelper;
     private final K8sSecretHelper k8sSecretHelper;
     private Map<String, String> secretData;
@@ -79,7 +79,7 @@ public class KubeAIServeRunner {
         Map<String, String> secretData,
         K8sBuilderHelper k8sBuilderHelper,
         K8sSecretHelper k8sSecretHelper,
-        ModelService modelService
+        ModelManager modelService
     ) {
         this.runtime = runtime;
         this.engine = engine;

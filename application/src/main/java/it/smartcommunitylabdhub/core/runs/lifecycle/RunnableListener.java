@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.core.runs.lifecycle;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.run.Run;
-import it.smartcommunitylabdhub.commons.services.RunService;
+import it.smartcommunitylabdhub.commons.services.RunManager;
 import it.smartcommunitylabdhub.runtimes.events.RunnableChangedEvent;
 import java.util.Collections;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -46,11 +46,11 @@ import org.springframework.util.Assert;
 @Slf4j
 public class RunnableListener {
 
-    private final RunService runService;
+    private final RunManager runService;
     private final RunLifecycleManager runManager;
     private final ThreadPoolTaskExecutor executor;
 
-    public RunnableListener(RunService runService, RunLifecycleManager runManager) {
+    public RunnableListener(RunManager runService, RunLifecycleManager runManager) {
         Assert.notNull(runManager, "run manager is required");
         Assert.notNull(runService, "run service is required");
         this.runService = runService;

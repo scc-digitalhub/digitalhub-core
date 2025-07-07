@@ -24,11 +24,10 @@
 package it.smartcommunitylabdhub.core.artifacts.relationships;
 
 import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
-import it.smartcommunitylabdhub.core.artifacts.persistence.ArtifactEntity;
 import it.smartcommunitylabdhub.core.relationships.BaseEntityRelationshipsManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
-public class ArtifactEntityRelationshipsManager extends BaseEntityRelationshipsManager<ArtifactEntity, Artifact> {}
+public class ArtifactEntityRelationshipsManager extends BaseEntityRelationshipsManager<Artifact> {}

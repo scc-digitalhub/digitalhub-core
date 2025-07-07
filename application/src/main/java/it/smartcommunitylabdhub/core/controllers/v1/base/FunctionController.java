@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.core.controllers.v1.base;
@@ -31,11 +31,10 @@ import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
+import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.core.functions.filters.FunctionEntityFilter;
-import it.smartcommunitylabdhub.core.functions.persistence.FunctionEntity;
-import it.smartcommunitylabdhub.core.functions.service.SearchableFunctionService;
 import it.smartcommunitylabdhub.core.indexers.IndexableEntityService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -74,10 +73,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class FunctionController {
 
     @Autowired
-    SearchableFunctionService functionService;
+    FunctionManager functionManager;
 
     @Autowired
-    IndexableEntityService<FunctionEntity> indexService;
+    IndexableEntityService<Function> indexService;
 
     @Operation(summary = "Create function", description = "Create a function and return")
     @PostMapping(
@@ -87,7 +86,7 @@ public class FunctionController {
     )
     public Function createFunction(@RequestBody @Valid @NotNull Function dto)
         throws DuplicatedEntityException, SystemException, BindException {
-        return functionService.createFunction(dto);
+        return functionManager.createFunction(dto);
     }
 
     @Operation(summary = "List functions", description = "Return a list of all functions")
@@ -99,14 +98,14 @@ public class FunctionController {
             { @SortDefault(sort = "id", direction = Direction.ASC) }
         ) Pageable pageable
     ) {
-        SearchFilter<FunctionEntity> sf = null;
+        SearchFilter<Function> sf = null;
         if (filter != null) {
             sf = filter.toSearchFilter();
         }
         if ("latest".equals(versions)) {
-            return functionService.searchLatestFunctions(pageable, sf);
+            return functionManager.searchLatestFunctions(pageable, sf);
         } else {
-            return functionService.searchFunctions(pageable, sf);
+            return functionManager.searchFunctions(pageable, sf);
         }
     }
 
@@ -114,7 +113,7 @@ public class FunctionController {
     @GetMapping(path = "/{id}", produces = "application/json; charset=UTF-8")
     public Function getFunction(@PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id)
         throws NoSuchEntityException {
-        return functionService.getFunction(id);
+        return functionManager.getFunction(id);
     }
 
     @Operation(summary = "Update specific function", description = "Update and return the function")
@@ -127,7 +126,7 @@ public class FunctionController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestBody @Valid @NotNull Function dto
     ) throws NoSuchEntityException, IllegalArgumentException, SystemException, BindException {
-        return functionService.updateFunction(id, dto);
+        return functionManager.updateFunction(id, dto);
     }
 
     @Operation(summary = "Delete a function", description = "Delete a specific function, with optional cascade on runs")
@@ -136,7 +135,7 @@ public class FunctionController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestParam(required = false) Boolean cascade
     ) {
-        functionService.deleteFunction(id, cascade);
+        functionManager.deleteFunction(id, cascade);
     }
 
     /*

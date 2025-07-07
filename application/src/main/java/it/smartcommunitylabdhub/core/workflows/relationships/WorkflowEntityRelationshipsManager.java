@@ -25,10 +25,9 @@ package it.smartcommunitylabdhub.core.workflows.relationships;
 
 import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.core.relationships.BaseEntityRelationshipsManager;
-import it.smartcommunitylabdhub.core.workflows.persistence.WorkflowEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
-public class WorkflowEntityRelationshipsManager extends BaseEntityRelationshipsManager<WorkflowEntity, Workflow> {}
+public class WorkflowEntityRelationshipsManager extends BaseEntityRelationshipsManager<Workflow> {}

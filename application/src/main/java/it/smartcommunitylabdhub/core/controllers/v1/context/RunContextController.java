@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.core.controllers.v1.context;
@@ -39,12 +39,11 @@ import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.commons.services.LogService;
 import it.smartcommunitylabdhub.commons.services.MetricsService;
 import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
+import it.smartcommunitylabdhub.commons.services.RunManager;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.core.runs.filters.RunEntityFilter;
 import it.smartcommunitylabdhub.core.runs.lifecycle.RunLifecycleManager;
-import it.smartcommunitylabdhub.core.runs.persistence.RunEntity;
-import it.smartcommunitylabdhub.core.runs.service.SearchableRunService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -84,10 +83,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class RunContextController {
 
     @Autowired
-    SearchableRunService runService;
+    RunManager runManager;
 
     @Autowired
-    RunLifecycleManager runManager;
+    RunLifecycleManager lifecycleManager;
 
     @Autowired
     LogService logService;
@@ -112,15 +111,15 @@ public class RunContextController {
         dto.setProject(project);
 
         //create as new, will check for duplicated
-        Run run = runService.createRun(dto);
+        Run run = runManager.createRun(dto);
 
         //if !local then also build+run
         RunBaseSpec runBaseSpec = new RunBaseSpec();
         runBaseSpec.configure(run.getSpec());
 
         if (Boolean.FALSE.equals(runBaseSpec.getLocalExecution())) {
-            run = runManager.build(run);
-            run = runManager.run(run);
+            run = lifecycleManager.build(run);
+            run = lifecycleManager.run(run);
         }
 
         return run;
@@ -135,12 +134,12 @@ public class RunContextController {
             { @SortDefault(sort = "created", direction = Direction.DESC) }
         ) Pageable pageable
     ) {
-        SearchFilter<RunEntity> sf = null;
+        SearchFilter<Run> sf = null;
         if (filter != null) {
             sf = filter.toSearchFilter();
         }
 
-        return runService.searchRunsByProject(project, pageable, sf);
+        return runManager.searchRunsByProject(project, pageable, sf);
     }
 
     @Operation(summary = "Retrieve a specific run given the run id")
@@ -149,7 +148,7 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Run run = runService.getRun(id);
+        Run run = runManager.getRun(id);
 
         //check for project match
         if (!run.getProject().equals(project)) {
@@ -170,14 +169,14 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestBody @Valid @NotNull Run runDTO
     ) throws NoSuchEntityException, IllegalArgumentException, SystemException, BindException {
-        Run run = runService.getRun(id);
+        Run run = runManager.getRun(id);
 
         //check for project match
         if (!run.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
 
-        return runService.updateRun(id, runDTO);
+        return runManager.updateRun(id, runDTO);
     }
 
     @Operation(summary = "Delete a specific run, with optional cascade")
@@ -186,7 +185,7 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Run run = runService.getRun(id);
+        Run run = runManager.getRun(id);
 
         //check for project  match
         if (!run.getProject().equals(project)) {
@@ -194,7 +193,7 @@ public class RunContextController {
         }
 
         //delete via manager
-        return runManager.delete(run);
+        return lifecycleManager.delete(run);
     }
 
     /*
@@ -206,7 +205,7 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Run run = runService.getRun(id);
+        Run run = runManager.getRun(id);
 
         //check for project  match
         if (!run.getProject().equals(project)) {
@@ -214,7 +213,7 @@ public class RunContextController {
         }
 
         // via manager
-        return runManager.build(run);
+        return lifecycleManager.build(run);
     }
 
     @Operation(summary = "Execute a specific run")
@@ -223,7 +222,7 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Run run = runService.getRun(id);
+        Run run = runManager.getRun(id);
 
         //check for project  match
         if (!run.getProject().equals(project)) {
@@ -231,7 +230,7 @@ public class RunContextController {
         }
 
         // via manager
-        return runManager.run(run);
+        return lifecycleManager.run(run);
     }
 
     @Operation(summary = "Stop a specific run execution")
@@ -240,7 +239,7 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Run run = runService.getRun(id);
+        Run run = runManager.getRun(id);
 
         //check for project  match
         if (!run.getProject().equals(project)) {
@@ -248,7 +247,7 @@ public class RunContextController {
         }
 
         // via manager
-        return runManager.stop(run);
+        return lifecycleManager.stop(run);
     }
 
     @Operation(summary = "Resume a specific run execution")
@@ -257,7 +256,7 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Run run = runService.getRun(id);
+        Run run = runManager.getRun(id);
 
         //check for project  match
         if (!run.getProject().equals(project)) {
@@ -265,7 +264,7 @@ public class RunContextController {
         }
 
         // via manager
-        return runManager.resume(run);
+        return lifecycleManager.resume(run);
     }
 
     @Operation(summary = "Delete a specific run execution")
@@ -274,7 +273,7 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Run run = runService.getRun(id);
+        Run run = runManager.getRun(id);
 
         //check for project  match
         if (!run.getProject().equals(project)) {
@@ -282,7 +281,7 @@ public class RunContextController {
         }
 
         // via manager
-        return runManager.delete(run);
+        return lifecycleManager.delete(run);
     }
 
     /*
@@ -295,7 +294,7 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Run run = runService.getRun(id);
+        Run run = runManager.getRun(id);
 
         //check for project
         if (!run.getProject().equals(project)) {
@@ -311,7 +310,7 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Run entity = runService.getRun(id);
+        Run entity = runManager.getRun(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {
@@ -327,7 +326,7 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws StoreException, SystemException {
-        Run entity = runService.getRun(id);
+        Run entity = runManager.getRun(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {
@@ -344,7 +343,7 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @PathVariable String name
     ) throws StoreException, SystemException {
-        Run entity = runService.getRun(id);
+        Run entity = runManager.getRun(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {
@@ -362,7 +361,7 @@ public class RunContextController {
         @PathVariable String name,
         @RequestBody NumberOrNumberArray data
     ) throws StoreException, SystemException {
-        Run entity = runService.getRun(id);
+        Run entity = runManager.getRun(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {

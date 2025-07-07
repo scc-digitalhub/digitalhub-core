@@ -33,7 +33,6 @@ import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import it.smartcommunitylabdhub.core.relationships.BaseRelationshipsAwareEntityService;
-import it.smartcommunitylabdhub.core.runs.persistence.RunEntity;
 import jakarta.transaction.Transactional;
 import java.util.List;
 import java.util.stream.Stream;
@@ -44,7 +43,7 @@ import org.springframework.util.StringUtils;
 @Service
 @Transactional
 @Slf4j
-public class RunRelationshipServiceImpl extends BaseRelationshipsAwareEntityService<RunEntity, Run> {
+public class RunRelationshipServiceImpl extends BaseRelationshipsAwareEntityService<Run> {
 
     @Override
     public List<RelationshipDetail> getRelationships(String id) {
@@ -52,7 +51,7 @@ public class RunRelationshipServiceImpl extends BaseRelationshipsAwareEntityServ
 
         try {
             Run run = entityService.get(id);
-            List<RelationshipDetail> list = relationshipsManager.getRelationships(entityBuilder.convert(run));
+            List<RelationshipDetail> list = super.getRelationships(id);
 
             //run is *always* related to function, check and inject if missing
             String taskPath = RunBaseSpec.with(run.getSpec()).getTask();

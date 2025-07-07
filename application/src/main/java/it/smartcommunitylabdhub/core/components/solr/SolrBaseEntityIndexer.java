@@ -44,6 +44,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.lucene.document.Document;
 import org.apache.solr.common.SolrInputDocument;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,20 +53,18 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 @Slf4j
-public abstract class SolrBaseEntityIndexer<E extends BaseEntity, D extends BaseDTO>
-    implements EntityIndexer<E>, InitializingBean {
+public abstract class SolrBaseEntityIndexer<D extends BaseDTO> implements EntityIndexer<D>, InitializingBean {
 
     public static final int PAGE_MAX_SIZE = 100;
 
     protected final EntityName type;
 
     protected SolrComponent solr;
-    protected Converter<E, D> converter;
 
     @SuppressWarnings("unchecked")
     public SolrBaseEntityIndexer() {
         // resolve generics type via subclass trick
-        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
         this.type = EntityUtils.getEntityName((Class<D>) t);
     }
 
@@ -74,13 +73,8 @@ public abstract class SolrBaseEntityIndexer<E extends BaseEntity, D extends Base
         Assert.notNull(solr, "solr can not be null");
         this.solr = solr;
         // resolve generics type via subclass trick
-        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
         this.type = EntityUtils.getEntityName((Class<D>) t);
-    }
-
-    @Autowired
-    public void setConverter(Converter<E, D> converter) {
-        this.converter = converter;
     }
 
     @Autowired
@@ -91,7 +85,6 @@ public abstract class SolrBaseEntityIndexer<E extends BaseEntity, D extends Base
     @Override
     public void afterPropertiesSet() throws Exception {
         Assert.notNull(solr, "solr can not be null");
-        Assert.notNull(converter, "converter can not be null");
 
         //register fields
         log.debug("register fields to solr");
@@ -180,16 +173,11 @@ public abstract class SolrBaseEntityIndexer<E extends BaseEntity, D extends Base
     }
 
     @Override
-    public void index(E entity) {
-        Assert.notNull(entity, "entity can not be null");
+    public void index(D item) {
+        Assert.notNull(item, "entity can not be null");
 
         try {
-            log.debug("solr index {}: {}", type, entity.getId());
-            D item = converter.convert(entity);
-
-            if (log.isTraceEnabled()) {
-                log.trace("item: {}", item);
-            }
+            log.debug("solr index {}: {}", type, item.getId());
 
             SolrInputDocument doc = parse(item);
             if (log.isTraceEnabled()) {
@@ -204,16 +192,14 @@ public abstract class SolrBaseEntityIndexer<E extends BaseEntity, D extends Base
     }
 
     @Override
-    public void indexAll(Collection<E> entities) {
-        Assert.notNull(entities, "entities can not be null");
-        log.debug("index {} {}", entities.size(), type);
+    public void indexAll(Collection<D> items) {
+        Assert.notNull(items, "entities can not be null");
+        log.debug("index {} {}", items.size(), type);
 
         if (solr != null) {
             try {
-                List<SolrInputDocument> docs = entities
-                    .stream()
-                    .map(e -> parse(converter.convert(e)))
-                    .collect(Collectors.toList());
+                List<SolrInputDocument> docs = items.stream().map(e -> parse(e)).collect(Collectors.toList());
+
                 solr.indexBounce(docs);
             } catch (StoreException e) {
                 log.error("error with solr: {}", e.getMessage());
@@ -232,11 +218,11 @@ public abstract class SolrBaseEntityIndexer<E extends BaseEntity, D extends Base
     }
 
     @Override
-    public void remove(E entity) {
-        Assert.notNull(entity, "entity can not be null");
+    public void remove(D item) {
+        Assert.notNull(item, "entity can not be null");
         try {
-            log.debug("remove index {}: {}", type, entity.getId());
-            solr.removeDoc(entity.getId());
+            log.debug("remove index {}: {}", type, item.getId());
+            solr.removeDoc(item.getId());
         } catch (StoreException e) {
             log.error("error with solr: {}", e.getMessage());
         }

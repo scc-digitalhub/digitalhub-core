@@ -25,7 +25,6 @@ package it.smartcommunitylabdhub.core.dataitems.lifecycle;
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvents;
 import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
 import it.smartcommunitylabdhub.commons.models.enums.State;
-import it.smartcommunitylabdhub.core.dataitems.persistence.DataItemEntity;
 import it.smartcommunitylabdhub.core.dataitems.specs.DataItemBaseStatus;
 import it.smartcommunitylabdhub.core.lifecycle.BaseLifecycleManager;
 import jakarta.validation.constraints.NotNull;
@@ -34,22 +33,22 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-public class DataItemLifecycleManager extends BaseLifecycleManager<DataItem, DataItemEntity, DataItemBaseStatus> {
+public class DataItemLifecycleManager extends BaseLifecycleManager<DataItem, DataItemBaseStatus> {
 
     /*
      * Actions: ask to perform
      */
 
     public DataItem upload(@NotNull DataItem dataItem) {
-        return perform(dataItem, LifecycleEvents.UPLOAD);
+        return perform(dataItem, LifecycleEvents.UPLOAD.name());
     }
 
     public DataItem delete(@NotNull DataItem dataItem) {
-        return perform(dataItem, LifecycleEvents.DELETE);
+        return perform(dataItem, LifecycleEvents.DELETE.name());
     }
 
     public DataItem update(@NotNull DataItem dataItem) {
-        return perform(dataItem, LifecycleEvents.UPDATE);
+        return perform(dataItem, LifecycleEvents.UPDATE.name());
     }
 
     /*
@@ -62,14 +61,14 @@ public class DataItemLifecycleManager extends BaseLifecycleManager<DataItem, Dat
     // }
 
     public DataItem onUploading(@NotNull DataItem dataItem) {
-        return handle(dataItem, State.UPLOADING);
+        return handle(dataItem, State.UPLOADING.name());
     }
 
     public DataItem onReady(@NotNull DataItem dataItem) {
-        return handle(dataItem, State.READY);
+        return handle(dataItem, State.READY.name());
     }
 
     public DataItem onError(@NotNull DataItem dataItem) {
-        return handle(dataItem, State.ERROR);
+        return handle(dataItem, State.ERROR.name());
     }
 }

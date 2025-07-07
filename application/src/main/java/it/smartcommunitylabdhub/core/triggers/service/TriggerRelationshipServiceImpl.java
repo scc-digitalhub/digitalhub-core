@@ -25,7 +25,6 @@ package it.smartcommunitylabdhub.core.triggers.service;
 
 import it.smartcommunitylabdhub.commons.models.trigger.Trigger;
 import it.smartcommunitylabdhub.core.relationships.BaseRelationshipsAwareEntityService;
-import it.smartcommunitylabdhub.core.triggers.persistence.TriggerEntity;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,4 +32,4 @@ import org.springframework.stereotype.Service;
 @Service
 @Transactional
 @Slf4j
-public class TriggerRelationshipServiceImpl extends BaseRelationshipsAwareEntityService<TriggerEntity, Trigger> {}
+public class TriggerRelationshipServiceImpl extends BaseRelationshipsAwareEntityService<Trigger> {}

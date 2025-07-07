@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.core.runs.lifecycle;
@@ -31,14 +31,13 @@ import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
-import it.smartcommunitylabdhub.commons.services.RunService;
+import it.smartcommunitylabdhub.commons.services.RunManager;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.components.infrastructure.processors.ProcessorRegistry;
 import it.smartcommunitylabdhub.core.components.infrastructure.runtimes.RuntimeFactory;
-import it.smartcommunitylabdhub.core.components.run.LifecycleManager;
 import it.smartcommunitylabdhub.core.events.EntityAction;
 import it.smartcommunitylabdhub.core.events.EntityOperation;
-import it.smartcommunitylabdhub.core.runs.persistence.RunEntity;
+import it.smartcommunitylabdhub.core.lifecycle.AbstractLifecycleManager;
 import it.smartcommunitylabdhub.fsm.Fsm;
 import it.smartcommunitylabdhub.fsm.exceptions.InvalidTransitionException;
 import it.smartcommunitylabdhub.runtimes.events.RunnableChangedEvent;
@@ -61,7 +60,7 @@ import org.springframework.util.StringUtils;
 
 @Slf4j
 @Component
-public class RunLifecycleManager extends LifecycleManager<Run, RunEntity> {
+public class RunLifecycleManager extends AbstractLifecycleManager<Run> {
 
     @Autowired
     private RunStateMachineFactory fsmFactory;
@@ -73,7 +72,7 @@ public class RunLifecycleManager extends LifecycleManager<Run, RunEntity> {
     ProcessorRegistry processorRegistry;
 
     @Autowired
-    private RunService runService;
+    private RunManager runService;
 
     /*
      * Actions: ask to perform a change

@@ -30,7 +30,7 @@ import it.smartcommunitylabdhub.commons.infrastructure.TriggerRun;
 import it.smartcommunitylabdhub.commons.models.trigger.Trigger;
 import it.smartcommunitylabdhub.commons.models.trigger.TriggerExecutionEvent;
 import it.smartcommunitylabdhub.commons.models.trigger.TriggerJob;
-import it.smartcommunitylabdhub.commons.services.TriggerService;
+import it.smartcommunitylabdhub.commons.services.TriggerManager;
 import java.util.Collections;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.BiConsumer;
@@ -51,7 +51,7 @@ import org.springframework.util.Assert;
 @Slf4j
 public class TriggerListener {
 
-    private final TriggerService triggerService;
+    private final TriggerManager triggerService;
     private final TriggerLifecycleManager triggerManager;
     private final ThreadPoolTaskExecutor executor;
 
@@ -62,7 +62,7 @@ public class TriggerListener {
         this.authenticationManager = authenticationManagerBuilder.build(new NoOpAuthenticationProvider());
     }
 
-    public TriggerListener(TriggerService triggerService, TriggerLifecycleManager triggerManager) {
+    public TriggerListener(TriggerManager triggerService, TriggerLifecycleManager triggerManager) {
         Assert.notNull(triggerManager, "trigger manager is required");
         Assert.notNull(triggerService, "trigger service is required");
         this.triggerService = triggerService;

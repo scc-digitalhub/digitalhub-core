@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.core.tasks.filters;
@@ -28,10 +28,10 @@ import it.smartcommunitylabdhub.commons.Fields;
 import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.models.queries.SearchCriteria;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
+import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilter;
 import it.smartcommunitylabdhub.core.queries.filters.BaseEntityFilter;
 import it.smartcommunitylabdhub.core.queries.filters.BaseEntitySearchCriteria;
-import it.smartcommunitylabdhub.core.tasks.persistence.TaskEntity;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.Pattern;
 import java.util.ArrayList;
@@ -46,7 +46,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class TaskEntityFilter extends AbstractEntityFilter<TaskEntity> {
+public class TaskEntityFilter extends AbstractEntityFilter<Task> {
 
     @Nullable
     @Pattern(regexp = Keys.FUNCTION_PATTERN)
@@ -59,8 +59,8 @@ public class TaskEntityFilter extends AbstractEntityFilter<TaskEntity> {
     private String workflow;
 
     @Override
-    public SearchFilter<TaskEntity> toSearchFilter() {
-        List<SearchCriteria<TaskEntity>> criteria = new ArrayList<>();
+    public SearchFilter<Task> toSearchFilter() {
+        List<SearchCriteria<Task>> criteria = new ArrayList<>();
 
         //base criteria
         criteria.addAll(super.toSearchFilter().getCriteria());
@@ -79,6 +79,6 @@ public class TaskEntityFilter extends AbstractEntityFilter<TaskEntity> {
                 criteria.add(new BaseEntitySearchCriteria<>(Fields.WORKFLOW, value, SearchCriteria.Operation.equal))
             );
 
-        return BaseEntityFilter.<TaskEntity>builder().criteria(criteria).condition(SearchFilter.Condition.and).build();
+        return BaseEntityFilter.<Task>builder().criteria(criteria).condition(SearchFilter.Condition.and).build();
     }
 }

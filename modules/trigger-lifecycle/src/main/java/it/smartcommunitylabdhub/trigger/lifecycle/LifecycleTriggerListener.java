@@ -108,7 +108,7 @@ public class LifecycleTriggerListener {
                 ? StatusFieldAccessor.with(((StatusDTO) dto).getStatus())
                 : StatusFieldAccessor.with(Collections.emptyMap());
 
-            String state = event.getState() != null ? event.getState().name() : accessor.getState();
+            String state = event.getState() != null ? event.getState() : accessor.getState();
 
             if (state == null) {
                 log.error("Missing or invalid state");

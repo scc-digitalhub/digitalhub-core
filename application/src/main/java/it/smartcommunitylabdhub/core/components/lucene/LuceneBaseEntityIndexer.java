@@ -34,7 +34,6 @@ import it.smartcommunitylabdhub.commons.models.metadata.VersioningMetadata;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.core.indexers.EntityIndexer;
 import it.smartcommunitylabdhub.core.indexers.IndexField;
-import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.core.utils.EntityUtils;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -54,13 +53,11 @@ import org.apache.lucene.document.TextField;
 import org.apache.lucene.util.BytesRef;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.convert.converter.Converter;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 @Slf4j
-public abstract class LuceneBaseEntityIndexer<E extends BaseEntity, D extends BaseDTO>
-    implements EntityIndexer<E>, InitializingBean {
+public abstract class LuceneBaseEntityIndexer<D extends BaseDTO> implements EntityIndexer<D>, InitializingBean {
 
     public static final int PAGE_MAX_SIZE = 100;
 
@@ -68,12 +65,10 @@ public abstract class LuceneBaseEntityIndexer<E extends BaseEntity, D extends Ba
 
     protected LuceneComponent lucene;
 
-    protected Converter<E, D> converter;
-
     @SuppressWarnings("unchecked")
     public LuceneBaseEntityIndexer() {
         // resolve generics type via subclass trick
-        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
         this.type = EntityUtils.getEntityName((Class<D>) t);
     }
 
@@ -82,7 +77,7 @@ public abstract class LuceneBaseEntityIndexer<E extends BaseEntity, D extends Ba
         Assert.notNull(lucene, "lucene can not be null");
         this.lucene = lucene;
         // resolve generics type via subclass trick
-        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
         this.type = EntityUtils.getEntityName((Class<D>) t);
     }
 
@@ -91,15 +86,9 @@ public abstract class LuceneBaseEntityIndexer<E extends BaseEntity, D extends Ba
         this.lucene = lucene;
     }
 
-    @Autowired
-    public void setConverter(Converter<E, D> converter) {
-        this.converter = converter;
-    }
-
     @Override
     public void afterPropertiesSet() throws Exception {
         Assert.notNull(lucene, "lucene can not be null");
-        Assert.notNull(converter, "converter can not be null");
     }
 
     protected String buildKeyGroup(String kind, String project, String name) {
@@ -231,22 +220,17 @@ public abstract class LuceneBaseEntityIndexer<E extends BaseEntity, D extends Ba
     }
 
     @Override
-    public void index(E entity) {
-        Assert.notNull(entity, "entity can not be null");
+    public void index(D item) {
+        Assert.notNull(item, "entity can not be null");
 
         try {
-            log.debug("lucene index {}: {}", type, entity.getId());
-            D item = converter.convert(entity);
-
-            if (log.isTraceEnabled()) {
-                log.trace("item: {}", item);
-            }
+            log.debug("lucene index {}: {}", type, item.getId());
 
             Document doc = parse(item);
             if (log.isTraceEnabled()) {
                 log.trace("doc: {}", doc);
             }
-            
+
             // index
             lucene.indexDoc(doc);
         } catch (StoreException e) {
@@ -255,12 +239,12 @@ public abstract class LuceneBaseEntityIndexer<E extends BaseEntity, D extends Ba
     }
 
     @Override
-    public void indexAll(Collection<E> entities) {
-        Assert.notNull(entities, "entities can not be null");
-        log.debug("index {} {}", entities.size(), type);
+    public void indexAll(Collection<D> items) {
+        Assert.notNull(items, "entities can not be null");
+        log.debug("index {} {}", items.size(), type);
 
         try {
-            List<Document> docs = entities.stream().map(e -> parse(converter.convert(e))).collect(Collectors.toList());
+            List<Document> docs = items.stream().map(e -> parse(e)).collect(Collectors.toList());
             lucene.indexBounce(docs);
         } catch (StoreException e) {
             log.error("error with solr: {}", e.getMessage());
@@ -278,11 +262,11 @@ public abstract class LuceneBaseEntityIndexer<E extends BaseEntity, D extends Ba
     }
 
     @Override
-    public void remove(E entity) {
-        Assert.notNull(entity, "entity can not be null");
+    public void remove(D item) {
+        Assert.notNull(item, "entity can not be null");
         try {
-            log.debug("lucene remove index {}: {}", type, entity.getId());
-            lucene.removeDoc(entity.getId());
+            log.debug("lucene remove index {}: {}", type, item.getId());
+            lucene.removeDoc(item.getId());
         } catch (StoreException e) {
             log.error("error with lucene: {}", e.getMessage());
         }

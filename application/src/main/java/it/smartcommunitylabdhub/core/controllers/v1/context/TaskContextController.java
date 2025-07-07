@@ -32,12 +32,11 @@ import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
-import it.smartcommunitylabdhub.commons.services.RunService;
+import it.smartcommunitylabdhub.commons.services.RunManager;
+import it.smartcommunitylabdhub.commons.services.TaskService;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.core.tasks.filters.TaskEntityFilter;
-import it.smartcommunitylabdhub.core.tasks.persistence.TaskEntity;
-import it.smartcommunitylabdhub.core.tasks.service.SearchableTaskService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -77,10 +76,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class TaskContextController {
 
     @Autowired
-    SearchableTaskService taskService;
+    TaskService taskService;
 
     @Autowired
-    RunService runService;
+    RunManager runService;
 
     @Operation(summary = "Create a task in a project context")
     @PostMapping(
@@ -108,7 +107,7 @@ public class TaskContextController {
             { @SortDefault(sort = "created", direction = Direction.DESC) }
         ) Pageable pageable
     ) {
-        SearchFilter<TaskEntity> sf = null;
+        SearchFilter<Task> sf = null;
         if (filter != null) {
             sf = filter.toSearchFilter();
         }

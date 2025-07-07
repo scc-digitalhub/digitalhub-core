@@ -24,7 +24,6 @@
 package it.smartcommunitylabdhub.core.artifacts.services;
 
 import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
-import it.smartcommunitylabdhub.core.artifacts.persistence.ArtifactEntity;
 import it.smartcommunitylabdhub.core.files.service.BaseFilesService;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -33,4 +32,4 @@ import org.springframework.stereotype.Service;
 @Service
 @Transactional
 @Slf4j
-public class ArtifactFilesServiceImpl extends BaseFilesService<ArtifactEntity, Artifact> {}
+public class ArtifactFilesServiceImpl extends BaseFilesService<Artifact> {}

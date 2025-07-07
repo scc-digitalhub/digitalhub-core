@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.core.controllers.v1.base;
@@ -31,11 +31,10 @@ import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
+import it.smartcommunitylabdhub.commons.services.DataItemManager;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.core.dataitems.filters.DataItemEntityFilter;
-import it.smartcommunitylabdhub.core.dataitems.persistence.DataItemEntity;
-import it.smartcommunitylabdhub.core.dataitems.services.SearchableDataItemService;
 import it.smartcommunitylabdhub.core.indexers.IndexableEntityService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -74,10 +73,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class DataItemController {
 
     @Autowired
-    SearchableDataItemService dataItemService;
+    DataItemManager dataItemManager;
 
     @Autowired
-    IndexableEntityService<DataItemEntity> indexService;
+    IndexableEntityService<DataItem> indexService;
 
     @Operation(summary = "Create dataItem", description = "Create a dataItem and return")
     @PostMapping(
@@ -87,7 +86,7 @@ public class DataItemController {
     )
     public DataItem createDataItem(@RequestBody @Valid @NotNull DataItem dto)
         throws DuplicatedEntityException, IllegalArgumentException, SystemException, BindException {
-        return dataItemService.createDataItem(dto);
+        return dataItemManager.createDataItem(dto);
     }
 
     @Operation(summary = "List dataItems", description = "Return a list of all dataItems")
@@ -99,14 +98,14 @@ public class DataItemController {
             { @SortDefault(sort = "created", direction = Direction.DESC) }
         ) Pageable pageable
     ) {
-        SearchFilter<DataItemEntity> sf = null;
+        SearchFilter<DataItem> sf = null;
         if (filter != null) {
             sf = filter.toSearchFilter();
         }
         if ("latest".equals(versions)) {
-            return dataItemService.searchLatestDataItems(pageable, sf);
+            return dataItemManager.searchLatestDataItems(pageable, sf);
         } else {
-            return dataItemService.searchDataItems(pageable, sf);
+            return dataItemManager.searchDataItems(pageable, sf);
         }
     }
 
@@ -114,7 +113,7 @@ public class DataItemController {
     @GetMapping(path = "/{id}", produces = "application/json; charset=UTF-8")
     public DataItem getDataItem(@PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id)
         throws NoSuchEntityException {
-        return dataItemService.getDataItem(id);
+        return dataItemManager.getDataItem(id);
     }
 
     @Operation(summary = "Update specific dataItem", description = "Update and return the dataItem")
@@ -127,7 +126,7 @@ public class DataItemController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestBody @Valid @NotNull DataItem dto
     ) throws NoSuchEntityException, IllegalArgumentException, SystemException, BindException {
-        return dataItemService.updateDataItem(id, dto);
+        return dataItemManager.updateDataItem(id, dto);
     }
 
     @Operation(summary = "Delete a dataItem", description = "Delete a specific dataItem")
@@ -136,7 +135,7 @@ public class DataItemController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestParam(required = false) Boolean cascade
     ) {
-        dataItemService.deleteDataItem(id, cascade);
+        dataItemManager.deleteDataItem(id, cascade);
     }
 
     /*

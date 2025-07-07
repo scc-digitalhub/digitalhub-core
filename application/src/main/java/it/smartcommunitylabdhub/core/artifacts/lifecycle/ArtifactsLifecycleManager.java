@@ -25,7 +25,6 @@ package it.smartcommunitylabdhub.core.artifacts.lifecycle;
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvents;
 import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
 import it.smartcommunitylabdhub.commons.models.enums.State;
-import it.smartcommunitylabdhub.core.artifacts.persistence.ArtifactEntity;
 import it.smartcommunitylabdhub.core.artifacts.specs.ArtifactBaseStatus;
 import it.smartcommunitylabdhub.core.lifecycle.BaseLifecycleManager;
 import jakarta.validation.constraints.NotNull;
@@ -34,22 +33,22 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-public class ArtifactsLifecycleManager extends BaseLifecycleManager<Artifact, ArtifactEntity, ArtifactBaseStatus> {
+public class ArtifactsLifecycleManager extends BaseLifecycleManager<Artifact, ArtifactBaseStatus> {
 
     /*
      * Actions: ask to perform
      */
 
     public Artifact upload(@NotNull Artifact artifact) {
-        return perform(artifact, LifecycleEvents.UPLOAD);
+        return perform(artifact, LifecycleEvents.UPLOAD.name());
     }
 
     public Artifact delete(@NotNull Artifact artifact) {
-        return perform(artifact, LifecycleEvents.DELETE);
+        return perform(artifact, LifecycleEvents.DELETE.name());
     }
 
     public Artifact update(@NotNull Artifact artifact) {
-        return perform(artifact, LifecycleEvents.UPDATE);
+        return perform(artifact, LifecycleEvents.UPDATE.name());
     }
 
     /*
@@ -62,14 +61,14 @@ public class ArtifactsLifecycleManager extends BaseLifecycleManager<Artifact, Ar
     // }
 
     public Artifact onUploading(@NotNull Artifact artifact) {
-        return handle(artifact, State.UPLOADING);
+        return handle(artifact, State.UPLOADING.name());
     }
 
     public Artifact onReady(@NotNull Artifact artifact) {
-        return handle(artifact, State.READY);
+        return handle(artifact, State.READY.name());
     }
 
     public Artifact onError(@NotNull Artifact artifact) {
-        return handle(artifact, State.ERROR);
+        return handle(artifact, State.ERROR.name());
     }
 }

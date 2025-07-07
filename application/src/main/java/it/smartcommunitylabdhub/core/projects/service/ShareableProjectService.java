@@ -30,8 +30,7 @@ import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.project.Project;
-import it.smartcommunitylabdhub.core.projects.persistence.ProjectEntity;
-import it.smartcommunitylabdhub.core.services.EntityService;
+import it.smartcommunitylabdhub.core.repositories.EntityRepository;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
@@ -46,7 +45,7 @@ import org.springframework.stereotype.Service;
 public class ShareableProjectService implements ShareableAwareEntityService<Project> {
 
     @Autowired
-    private EntityService<Project, ProjectEntity> entityService;
+    private EntityRepository<Project> entityService;
 
     @Autowired
     private ResourceSharingService sharingService;

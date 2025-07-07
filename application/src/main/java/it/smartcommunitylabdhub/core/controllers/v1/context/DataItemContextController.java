@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.core.controllers.v1.context;
@@ -33,12 +33,11 @@ import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
 import it.smartcommunitylabdhub.commons.models.files.FileInfo;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
+import it.smartcommunitylabdhub.commons.services.DataItemManager;
 import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.core.dataitems.filters.DataItemEntityFilter;
-import it.smartcommunitylabdhub.core.dataitems.persistence.DataItemEntity;
-import it.smartcommunitylabdhub.core.dataitems.services.SearchableDataItemService;
 import it.smartcommunitylabdhub.files.models.DownloadInfo;
 import it.smartcommunitylabdhub.files.models.UploadInfo;
 import it.smartcommunitylabdhub.files.service.EntityFilesService;
@@ -82,7 +81,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class DataItemContextController {
 
     @Autowired
-    SearchableDataItemService dataItemService;
+    DataItemManager dataItemManager;
 
     @Autowired
     EntityFilesService<DataItem> filesService;
@@ -104,7 +103,7 @@ public class DataItemContextController {
         dto.setProject(project);
 
         //create as new
-        return dataItemService.createDataItem(dto);
+        return dataItemManager.createDataItem(dto);
     }
 
     @Operation(summary = "Search dataItems")
@@ -117,15 +116,15 @@ public class DataItemContextController {
             { @SortDefault(sort = "created", direction = Direction.DESC) }
         ) Pageable pageable
     ) {
-        SearchFilter<DataItemEntity> sf = null;
+        SearchFilter<DataItem> sf = null;
         if (filter != null) {
             sf = filter.toSearchFilter();
         }
 
         if ("all".equals(versions)) {
-            return dataItemService.searchDataItemsByProject(project, pageable, sf);
+            return dataItemManager.searchDataItemsByProject(project, pageable, sf);
         } else {
-            return dataItemService.searchLatestDataItemsByProject(project, pageable, sf);
+            return dataItemManager.searchLatestDataItemsByProject(project, pageable, sf);
         }
     }
 
@@ -136,7 +135,7 @@ public class DataItemContextController {
         @ParameterObject @RequestParam @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String name,
         @RequestParam(required = false) Boolean cascade
     ) {
-        dataItemService.deleteDataItems(project, name, cascade);
+        dataItemManager.deleteDataItems(project, name, cascade);
     }
 
     /*
@@ -149,7 +148,7 @@ public class DataItemContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        DataItem dataItem = dataItemService.getDataItem(id);
+        DataItem dataItem = dataItemManager.getDataItem(id);
 
         //check for project and name match
         if (!dataItem.getProject().equals(project)) {
@@ -170,14 +169,14 @@ public class DataItemContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestBody @Valid @NotNull DataItem dataItemDTO
     ) throws NoSuchEntityException, IllegalArgumentException, SystemException, BindException {
-        DataItem dataItem = dataItemService.getDataItem(id);
+        DataItem dataItem = dataItemManager.getDataItem(id);
 
         //check for project and name match
         if (!dataItem.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
 
-        return dataItemService.updateDataItem(id, dataItemDTO);
+        return dataItemManager.updateDataItem(id, dataItemDTO);
     }
 
     @Operation(
@@ -190,14 +189,14 @@ public class DataItemContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestParam(required = false) Boolean cascade
     ) throws NoSuchEntityException {
-        DataItem dataItem = dataItemService.getDataItem(id);
+        DataItem dataItem = dataItemManager.getDataItem(id);
 
         //check for project and name match
         if (!dataItem.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
 
-        dataItemService.deleteDataItem(id, cascade);
+        dataItemManager.deleteDataItem(id, cascade);
     }
 
     /*
@@ -210,7 +209,7 @@ public class DataItemContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @ParameterObject @RequestParam(required = false) String sub
     ) throws NoSuchEntityException {
-        DataItem entity = dataItemService.getDataItem(id);
+        DataItem entity = dataItemManager.getDataItem(id);
 
         //check for project and name match
         if (!entity.getProject().equals(project)) {
@@ -230,7 +229,7 @@ public class DataItemContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         HttpServletRequest request
     ) throws NoSuchEntityException {
-        DataItem dataItem = dataItemService.getDataItem(id);
+        DataItem dataItem = dataItemManager.getDataItem(id);
 
         //check for project and name match
         if (!dataItem.getProject().equals(project)) {
@@ -248,7 +247,7 @@ public class DataItemContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestParam @NotNull String filename
     ) throws NoSuchEntityException {
-        DataItem entity = dataItemService.findDataItem(id);
+        DataItem entity = dataItemManager.findDataItem(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {
@@ -265,7 +264,7 @@ public class DataItemContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestParam @NotNull String filename
     ) throws NoSuchEntityException {
-        DataItem entity = dataItemService.findDataItem(id);
+        DataItem entity = dataItemManager.findDataItem(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {
@@ -284,7 +283,7 @@ public class DataItemContextController {
         @RequestParam @NotNull String uploadId,
         @RequestParam @NotNull Integer partNumber
     ) throws NoSuchEntityException {
-        DataItem entity = dataItemService.findDataItem(id);
+        DataItem entity = dataItemManager.findDataItem(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {
@@ -303,7 +302,7 @@ public class DataItemContextController {
         @RequestParam @NotNull String uploadId,
         @RequestParam @NotNull List<String> partList
     ) throws NoSuchEntityException {
-        DataItem entity = dataItemService.findDataItem(id);
+        DataItem entity = dataItemManager.findDataItem(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {
@@ -319,7 +318,7 @@ public class DataItemContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        DataItem entity = dataItemService.getDataItem(id);
+        DataItem entity = dataItemManager.getDataItem(id);
 
         //check for project and name match
         if (!entity.getProject().equals(project)) {
@@ -336,7 +335,7 @@ public class DataItemContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestBody List<FileInfo> files
     ) throws NoSuchEntityException {
-        DataItem entity = dataItemService.getDataItem(id);
+        DataItem entity = dataItemManager.getDataItem(id);
 
         //check for project and name match
         if (!entity.getProject().equals(project)) {
@@ -352,7 +351,7 @@ public class DataItemContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        DataItem entity = dataItemService.getDataItem(id);
+        DataItem entity = dataItemManager.getDataItem(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {

@@ -30,11 +30,10 @@ import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.metrics.Metrics;
 import it.smartcommunitylabdhub.commons.models.metrics.NumberOrNumberArray;
 import it.smartcommunitylabdhub.commons.models.model.Model;
+import it.smartcommunitylabdhub.commons.services.EntityService;
 import it.smartcommunitylabdhub.commons.services.MetricsService;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.metrics.MetricsManager;
-import it.smartcommunitylabdhub.core.models.persistence.ModelEntity;
-import it.smartcommunitylabdhub.core.services.EntityService;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.util.Map;
@@ -48,7 +47,7 @@ import org.springframework.stereotype.Service;
 public class ModelMetricsServiceImpl implements MetricsService<Model> {
 
     @Autowired
-    private EntityService<Model, ModelEntity> entityService;
+    private EntityService<Model> entityService;
 
     @Autowired
     private MetricsManager metricsManager;

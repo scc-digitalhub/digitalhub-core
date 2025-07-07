@@ -29,7 +29,6 @@ import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
 import it.smartcommunitylabdhub.commons.models.metadata.RelationshipsMetadata;
 import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
-import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.core.relationships.persistence.RelationshipEntity;
 import it.smartcommunitylabdhub.core.utils.EntityUtils;
 import java.lang.reflect.ParameterizedType;
@@ -38,22 +37,14 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.convert.converter.Converter;
 import org.springframework.util.Assert;
 
 @Slf4j
-public class BaseEntityRelationshipsManager<E extends BaseEntity, D extends BaseDTO & MetadataDTO>
-    implements EntityRelationshipsManager<E>, InitializingBean {
+public class BaseEntityRelationshipsManager<D extends BaseDTO & MetadataDTO>
+    implements EntityRelationshipsManager<D>, InitializingBean {
 
     protected final EntityName type;
-
-    protected Converter<E, D> converter;
     protected EntityRelationshipsService service;
-
-    @Autowired
-    public void setConverter(Converter<E, D> converter) {
-        this.converter = converter;
-    }
 
     @Autowired
     public void setService(EntityRelationshipsService service) {
@@ -63,26 +54,28 @@ public class BaseEntityRelationshipsManager<E extends BaseEntity, D extends Base
     @SuppressWarnings("unchecked")
     public BaseEntityRelationshipsManager() {
         // resolve generics type via subclass trick
-        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
         this.type = EntityUtils.getEntityName((Class<D>) t);
     }
 
     @SuppressWarnings("unchecked")
-    public BaseEntityRelationshipsManager(EntityRelationshipsService service, Converter<E, D> converter) {
-        Assert.notNull(converter, "converter can not be null");
+    public BaseEntityRelationshipsManager(EntityRelationshipsService service) {
         Assert.notNull(service, "relationship service can not be null");
 
         // resolve generics type via subclass trick
-        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
         this.type = EntityUtils.getEntityName((Class<D>) t);
-        this.converter = converter;
         this.service = service;
     }
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        Assert.notNull(converter, "converter can not be null");
         Assert.notNull(service, "relationships service can not be null");
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s[type=%s]", this.getClass().getSimpleName(), type);
     }
 
     protected EntityName getType() {
@@ -90,15 +83,11 @@ public class BaseEntityRelationshipsManager<E extends BaseEntity, D extends Base
     }
 
     @Override
-    public void register(E entity) {
-        Assert.notNull(entity, "entity can not be null");
+    public void register(D item) {
+        Assert.notNull(item, "entity can not be null");
 
-        D item = converter.convert(entity);
-        if (item == null) {
-            throw new IllegalArgumentException("invalid or null entity");
-        }
         try {
-            log.debug("register for {}: {}", getType(), entity.getId());
+            log.debug("register for {}: {}", getType(), item.getId());
 
             RelationshipsMetadata relationships = RelationshipsMetadata.from(item.getMetadata());
             service.register(
@@ -114,15 +103,11 @@ public class BaseEntityRelationshipsManager<E extends BaseEntity, D extends Base
     }
 
     @Override
-    public void clear(E entity) {
-        Assert.notNull(entity, "entity can not be null");
+    public void clear(D item) {
+        Assert.notNull(item, "entity can not be null");
 
-        D item = converter.convert(entity);
-        if (item == null) {
-            throw new IllegalArgumentException("invalid or null entity");
-        }
         try {
-            log.debug("clear for {}: {}", getType(), entity.getId());
+            log.debug("clear for {}: {}", getType(), item.getId());
 
             service.clear(item.getProject(), getType(), item.getId());
         } catch (StoreException e) {
@@ -131,12 +116,12 @@ public class BaseEntityRelationshipsManager<E extends BaseEntity, D extends Base
     }
 
     @Override
-    public List<RelationshipDetail> getRelationships(E entity) throws StoreException {
-        Assert.notNull(entity, "entity can not be null");
+    public List<RelationshipDetail> getRelationships(D item) throws StoreException {
+        Assert.notNull(item, "entity can not be null");
 
-        log.debug("get for {}: {}", getType(), entity.getId());
+        log.debug("get for {}: {}", getType(), item.getId());
 
-        List<RelationshipEntity> entries = service.listByEntity(entity.getProject(), getType(), entity.getId());
+        List<RelationshipEntity> entries = service.listByEntity(item.getProject(), getType(), item.getId());
         return entries
             .stream()
             .map(e -> new RelationshipDetail(e.getRelationship(), e.getSourceKey(), e.getDestKey()))

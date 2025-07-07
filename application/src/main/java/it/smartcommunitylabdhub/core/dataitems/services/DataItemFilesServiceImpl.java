@@ -24,7 +24,6 @@
 package it.smartcommunitylabdhub.core.dataitems.services;
 
 import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
-import it.smartcommunitylabdhub.core.dataitems.persistence.DataItemEntity;
 import it.smartcommunitylabdhub.core.files.service.BaseFilesService;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -33,4 +32,4 @@ import org.springframework.stereotype.Service;
 @Service
 @Transactional
 @Slf4j
-public class DataItemFilesServiceImpl extends BaseFilesService<DataItemEntity, DataItem> {}
+public class DataItemFilesServiceImpl extends BaseFilesService<DataItem> {}

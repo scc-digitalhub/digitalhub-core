@@ -27,7 +27,7 @@ import it.smartcommunitylabdhub.authorization.services.CredentialsService;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
-import it.smartcommunitylabdhub.commons.services.ModelService;
+import it.smartcommunitylabdhub.commons.services.ModelManager;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sSecretHelper;
@@ -53,7 +53,7 @@ public abstract class KubeAIRuntime<F extends KubeAIServeFunctionSpec, R extends
     protected String kubeAiEndpoint;
 
     @Autowired
-    protected ModelService modelService;
+    protected ModelManager modelService;
 
     @Autowired
     protected SecretService secretService;

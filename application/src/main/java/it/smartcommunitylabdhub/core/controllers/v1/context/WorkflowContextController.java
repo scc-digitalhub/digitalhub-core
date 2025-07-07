@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.core.controllers.v1.context;
@@ -34,11 +34,10 @@ import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
+import it.smartcommunitylabdhub.commons.services.WorkflowManager;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.core.workflows.filter.WorkflowEntityFilter;
-import it.smartcommunitylabdhub.core.workflows.persistence.WorkflowEntity;
-import it.smartcommunitylabdhub.core.workflows.service.SearchableWorkflowService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -78,7 +77,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class WorkflowContextController {
 
     @Autowired
-    SearchableWorkflowService workflowService;
+    WorkflowManager workflowManager;
 
     @Autowired
     RelationshipsAwareEntityService<Workflow> relationshipsService;
@@ -100,7 +99,7 @@ public class WorkflowContextController {
         dto.setProject(project);
 
         //create as new
-        return workflowService.createWorkflow(dto);
+        return workflowManager.createWorkflow(dto);
     }
 
     @Operation(summary = "Search workflows")
@@ -113,14 +112,14 @@ public class WorkflowContextController {
             { @SortDefault(sort = "created", direction = Direction.DESC) }
         ) Pageable pageable
     ) {
-        SearchFilter<WorkflowEntity> sf = null;
+        SearchFilter<Workflow> sf = null;
         if (filter != null) {
             sf = filter.toSearchFilter();
         }
         if ("all".equals(versions)) {
-            return workflowService.searchWorkflowsByProject(project, pageable, sf);
+            return workflowManager.searchWorkflowsByProject(project, pageable, sf);
         } else {
-            return workflowService.searchLatestWorkflowsByProject(project, pageable, sf);
+            return workflowManager.searchLatestWorkflowsByProject(project, pageable, sf);
         }
     }
 
@@ -133,7 +132,7 @@ public class WorkflowContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @ParameterObject @RequestParam @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String name
     ) {
-        workflowService.deleteWorkflows(project, name);
+        workflowManager.deleteWorkflows(project, name);
     }
 
     /*
@@ -146,7 +145,7 @@ public class WorkflowContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Workflow workflow = workflowService.getWorkflow(id);
+        Workflow workflow = workflowManager.getWorkflow(id);
 
         //check for project and name match
         if (!workflow.getProject().equals(project)) {
@@ -167,14 +166,14 @@ public class WorkflowContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestBody @Valid @NotNull Workflow workflowDTO
     ) throws NoSuchEntityException, IllegalArgumentException, SystemException, BindException {
-        Workflow workflow = workflowService.getWorkflow(id);
+        Workflow workflow = workflowManager.getWorkflow(id);
 
         //check for project and name match
         if (!workflow.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
 
-        return workflowService.updateWorkflow(id, workflowDTO);
+        return workflowManager.updateWorkflow(id, workflowDTO);
     }
 
     @Operation(summary = "Delete a specific workflow version, with optional cascade")
@@ -184,14 +183,14 @@ public class WorkflowContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestParam(required = false) Boolean cascade
     ) throws NoSuchEntityException {
-        Workflow workflow = workflowService.getWorkflow(id);
+        Workflow workflow = workflowManager.getWorkflow(id);
 
         //check for project and name match
         if (!workflow.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project or name");
         }
 
-        workflowService.deleteWorkflow(id, cascade);
+        workflowManager.deleteWorkflow(id, cascade);
     }
 
     /*
@@ -204,14 +203,14 @@ public class WorkflowContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Workflow workflow = workflowService.getWorkflow(id);
+        Workflow workflow = workflowManager.getWorkflow(id);
 
         //check for project and name match
         if (!workflow.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project or name");
         }
 
-        return workflowService.getTasksByWorkflowId(id);
+        return workflowManager.getTasksByWorkflowId(id);
     }
 
     /*
@@ -224,7 +223,7 @@ public class WorkflowContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Workflow entity = workflowService.getWorkflow(id);
+        Workflow entity = workflowManager.getWorkflow(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {

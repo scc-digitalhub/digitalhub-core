@@ -35,12 +35,11 @@ import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.files.FileInfo;
 import it.smartcommunitylabdhub.commons.models.files.FilesInfo;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
+import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.commons.services.FilesInfoService;
-import it.smartcommunitylabdhub.commons.services.ProjectService;
-import it.smartcommunitylabdhub.core.persistence.BaseEntity;
-import it.smartcommunitylabdhub.core.services.EntityService;
+import it.smartcommunitylabdhub.core.repositories.EntityRepository;
 import it.smartcommunitylabdhub.core.utils.EntityUtils;
 import it.smartcommunitylabdhub.files.models.DownloadInfo;
 import it.smartcommunitylabdhub.files.models.FileInfoFieldAccessor;
@@ -64,14 +63,14 @@ import org.springframework.util.StringUtils;
 
 @Transactional
 @Slf4j
-public class BaseFilesService<E extends BaseEntity, D extends BaseDTO & MetadataDTO & SpecDTO & StatusDTO>
+public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & StatusDTO>
     implements EntityFilesService<D>, InitializingBean {
 
     protected final EntityName type;
 
-    protected EntityService<D, E> entityService;
+    protected EntityRepository<D> entityService;
 
-    private ProjectService projectService;
+    private EntityRepository<Project> projectService;
     private FilesService filesService;
     private FilesInfoService filesInfoService;
     private CredentialsService credentialsService;
@@ -79,17 +78,17 @@ public class BaseFilesService<E extends BaseEntity, D extends BaseDTO & Metadata
     @SuppressWarnings("unchecked")
     public BaseFilesService() {
         // resolve generics type via subclass trick
-        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
         this.type = EntityUtils.getEntityName((Class<D>) t);
     }
 
     @Autowired
-    public void setEntityService(EntityService<D, E> entityService) {
+    public void setEntityService(EntityRepository<D> entityService) {
         this.entityService = entityService;
     }
 
     @Autowired
-    public void setProjectService(ProjectService projectService) {
+    public void setProjectService(EntityRepository<Project> projectService) {
         this.projectService = projectService;
     }
 
@@ -274,7 +273,7 @@ public class BaseFilesService<E extends BaseEntity, D extends BaseDTO & Metadata
 
         try {
             String path =
-                filesService.getDefaultStore(projectService.getProject(project)) +
+                filesService.getDefaultStore(projectService.get(project)) +
                 "/" +
                 project +
                 "/" +
@@ -320,7 +319,7 @@ public class BaseFilesService<E extends BaseEntity, D extends BaseDTO & Metadata
 
         try {
             String path =
-                filesService.getDefaultStore(projectService.getProject(project)) +
+                filesService.getDefaultStore(projectService.get(project)) +
                 "/" +
                 project +
                 "/" +
@@ -371,7 +370,7 @@ public class BaseFilesService<E extends BaseEntity, D extends BaseDTO & Metadata
         log.debug("upload part url for model {}: {}", String.valueOf(id), filename);
         try {
             String path =
-                filesService.getDefaultStore(projectService.getProject(project)) +
+                filesService.getDefaultStore(projectService.get(project)) +
                 "/" +
                 project +
                 "/" +
@@ -422,7 +421,7 @@ public class BaseFilesService<E extends BaseEntity, D extends BaseDTO & Metadata
         log.debug("complete upload url for model {}: {}", String.valueOf(id), filename);
         try {
             String path =
-                filesService.getDefaultStore(projectService.getProject(project)) +
+                filesService.getDefaultStore(projectService.get(project)) +
                 "/" +
                 project +
                 "/" +
