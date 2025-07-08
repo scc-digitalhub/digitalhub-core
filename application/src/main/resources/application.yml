@@ -1,16 +1,16 @@
 # server config
 server:
-   host: ${SERVER_HOST:localhost}
-   port: ${SERVER_PORT:8080}
-   servlet:
-     context-path: ${SERVER_CONTEXT:/}
-   tomcat:
-     remoteip:
+  host: ${SERVER_HOST:localhost}
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: ${SERVER_CONTEXT:/}
+  tomcat:
+    remoteip:
       remote_ip_header: ${SERVER_TOMCAT_REMOTE_IP_HEADER:x-forwarded-for}
       protocol_header: ${SERVER_TOMCAT_PROTOCOL_HEADER:x-forwarded-proto}
-   max-http-request-header-size: 32000
-   error:
-      include-stacktrace: never
+  max-http-request-header-size: 32000
+  error:
+    include-stacktrace: never
 
 # Spring configuration
 spring:
@@ -34,27 +34,34 @@ spring:
     password: ${JDBC_PASS:password}
     username: ${JDBC_USER:sa}
     url: ${JDBC_URL:jdbc:h2:file:./data/db}
-
+  quartz:
+    job-store-type: jdbc
+    jdbc:
+      initialize-schema: never
   h2:
     console:
       enabled: ${H2_CONSOLE:false}
 
+# patch loader for quartz
+spring.org.quartz.scheduler.classLoadHelper.class: org.quartz.simpl.ThreadContextClassLoadHelper
+# fix driver for postgres
+# NOTE: we do NOT support h2 with quartz this way..
+#spring.quartz.properties.org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
 
 # Management Endpoints
 management:
-    server:
-      port: ${MANAGEMENT_PORT:8081}
-    endpoints:
-      enabled-by-default: false
-      web:
-        base-path:
-        exposure.include: "health,info,metrics"
-    endpoint:
-      info:
-        enabled: true
-      health:
-        enabled: true
-
+  server:
+    port: ${MANAGEMENT_PORT:8081}
+  endpoints:
+    enabled-by-default: false
+    web:
+      base-path:
+      exposure.include: "health,info,metrics"
+  endpoint:
+    info:
+      enabled: true
+    health:
+      enabled: true
 
 # Runtimes
 runtime:
@@ -62,17 +69,28 @@ runtime:
     image: ${RUNTIME_DBT_IMAGE:ghcr.io/scc-digitalhub/digitalhub-sdk/wrapper-dbt:latest}
   kfp:
     image: ${RUNTIME_KFP_IMAGE:ghcr.io/scc-digitalhub/digitalhub-sdk/wrapper-kfp:latest}
+    duration: ${RUNTIME_KFP_DURATION:${jwt.refresh-token.duration}}
   python:
     images:
       PYTHON3_9: ${RUNTIME_PYTHON_IMAGE_3_9:ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.9-latest}
       PYTHON3_10: ${RUNTIME_PYTHON_IMAGE_3_10:ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.10-latest}
+    user-id: ${RUNTIME_PYTHON_USER_ID:${kubernetes.security.user}}
+    group-id: ${RUNTIME_PYTHON_GROUP_ID:${kubernetes.security.group}}
     command: /usr/local/bin/processor
   sklearnserve:
     image: ${RUNTIME_SKLEARN_SERVE_IMAGE:seldonio/mlserver:1.6.0-sklearn}
+    user-id: ${RUNTIME_SKLEARN_SERVE_USER_ID:${kubernetes.security.user}}
+    group-id: ${RUNTIME_SKLEARN_SERVE_GROUP_ID:${kubernetes.security.group}}
   mlflowserve:
     image: ${RUNTIME_MLFLOW_SERVE_IMAGE:seldonio/mlserver:1.6.0-mlflow}
+    user-id: ${RUNTIME_MLFLOW_SERVE_USER_ID:${kubernetes.security.user}}
+    group-id: ${RUNTIME_MLFLOW_SERVE_GROUP_ID:${kubernetes.security.group}}
   huggingfaceserve:
     image: ${RUNTIME_HUGGINGFACE_SERVE_IMAGE:kserve/huggingfaceserver:latest}
+    user-id: ${RUNTIME_HUGGINGFACE_USER_ID:${kubernetes.security.user}}
+    group-id: ${RUNTIME_HUGGINGFACE_GROUP_ID:${kubernetes.security.group}}
+  kubeai:
+    endpoint: ${RUNTIME_KUBEAI_ENDPOINT:}
 
 # Spring Docs
 springdoc:
@@ -85,7 +103,7 @@ kaniko:
   image-prefix: ${KANIKO_IMAGE_PREFIX:dhcore}
   image-registry: ${KANIKO_IMAGE_REGISTRY:${registry.name}}
   secret: ${KANIKO_SECRET:${registry.secret}}
-  args: ${KANIKO_ARGS:}    
+  args: ${KANIKO_ARGS:}
 
 # MLRun config
 mlrun:
@@ -94,7 +112,7 @@ mlrun:
   image-registry: ${MLRUN_IMAGE_REGISTRY:}
 
 # registry
-registry:  
+registry:
   name: ${DOCKER_REGISTRY:}
   secret: ${DOCKER_REGISTRY_SECRET:}
 
@@ -112,10 +130,10 @@ kubernetes:
   metrics: ${K8S_ENABLE_METRICS:true}
   # supported values for results: default,keep,disable
   results: ${K8S_ENABLE_RESULTS:default}
-  security: 
+  security:
     disable-root: ${K8S_SEC_DISABLE_ROOT:false}
-  envs:
-    prefix: ${K8S_ENVS_PREFIX:}    
+    user: ${K8S_SEC_USER:}
+    group: ${K8S_SEC_GROUP:}
   image-pull-policy: ${K8S_IMAGE_PULL_POLICY:IfNotPresent}
   init:
     image: ${K8S_INIT_IMAGE:ghcr.io/scc-digitalhub/digitalhub-core-builder-tool:latest}
@@ -134,9 +152,13 @@ kubernetes:
       limits: ${K8S_RESOURCE_CPU_LIMIT:}
     mem:
       requests: ${K8S_RESOURCE_MEM_DEFAULT:64m}
-      limits: ${K8S_RESOURCE_MEM_LIMIT:}      
+      limits: ${K8S_RESOURCE_MEM_LIMIT:}
     gpu:
       key: ${K8S_RESOURCE_GPU_KEY:nvidia.com/gpu}
+    pvc:
+      requests: ${K8S_RESOURCE_PVC_DEFAULT:2Gi}
+      limits: ${K8S_RESOURCE_PVC_LIMIT:}
+      storage-class: ${K8S_RESOURCE_PVC_STORAGE_CLASS:}
   config:
     config-map: ${DH_CONFIG_COMMON_MAPS:}
     secret: ${DH_CONFIG_COMMON_SECRETS:}
@@ -144,22 +166,27 @@ kubernetes:
   jobs:
     activeDeadlineSeconds: ${K8S_JOB_DEADLINE:259200}
     suspend: ${K8S_JOB_SUSPEND:false}
+  crds:
+    api-groups: ${K8S_CUSTOM_API_GROUPS:kubeai.org/v1}
 
 # Application endpoint
 application:
   endpoint: ${DH_ENDPOINT:http://localhost:8080}
   name: ${DH_NAME:@project.name@}
-  description: @project.description@
-  version: @project.version@
+  contacts-email: ${DH_CONTACTS_EMAIL:}
+  contacts-name: ${DH_CONTACTS_NAME:@project.name@}
+  contacts-link: ${DH_CONTACTS_LINK:https://github.com/scc-digitalhub/digitalhub-core}
+  description: "@project.description@"
+  version: "@project.version@"
   level: ${DH_API_LEVEL:}
   api: v1
   profiles: ${spring.profiles.active:default}
 
-
 logging:
-   level:
-      ROOT: INFO
-      it.smartcommunitylabdhub: ${LOG_LEVEL:INFO}
+  level:
+    ROOT: INFO
+    it.smartcommunitylabdhub: ${LOG_LEVEL:INFO}
+    it.smartcommunitylabdhub.framework.k8s: ${LOG_LEVEL_K8S:INFO}
 
 security:
   api:
@@ -172,17 +199,15 @@ security:
     issuer-uri: ${DH_AUTH_JWT_ISSUER_URI:${security.oidc.issuer-uri}}
     audience: ${DH_AUTH_JWT_AUDIENCE:${security.oidc.client-id}}
     claim: ${DH_AUTH_JWT_CLAIM:roles}
-    username: ${DH_AUTH_JWT_USERNAME:preferred_username}    
-  oidc:    
+    username: ${DH_AUTH_JWT_USERNAME:preferred_username}
+  oidc:
     issuer-uri: ${DH_AUTH_OIDC_ISSUER_URI:}
     client-name: ${DH_AUTH_OIDC_CLIENT_NAME:${application.name}}
     client-id: ${DH_AUTH_OIDC_CLIENT_ID:}
-    client-secret: ${DH_AUTH_OIDC_CLIENT_SECRET:}    
+    client-secret: ${DH_AUTH_OIDC_CLIENT_SECRET:}
     claim: ${DH_AUTH_OIDC_CLAIM:${security.jwt.claim}}
-    username-attribute-name: ${DH_AUTH_OIDC_USERNAME:preferred_username} 
+    username-attribute-name: ${DH_AUTH_OIDC_USERNAME:preferred_username}
     scope: ${DH_AUTH_OIDC_SCOPE:openid,email,profile}
-
-
 
 # Conditional Configuration Cloud
 event-queue:
@@ -199,7 +224,6 @@ event-queue:
       entity-topic: ${RABBITMQ_TOPIC:entityTopic}
       entity-routing-key: ${RABBITMQ_ROUTING_KEY:entityRoutingKey}
       enabled: ${RABBITMQ_ENABLE:false}
-
 
 # Managing monitors delay and other information
 monitors:
@@ -220,20 +244,14 @@ solr:
   reindex: ${SOLR_REINDEX:never}
 
 lucene:
-  index-path: ${LUCENE_INDEX_PATH:false}
+  index-path: ${LUCENE_INDEX_PATH:./data/index}
   reindex: ${LUCENE_REINDEX:never}
 
 # files support
 files:
-  store:
-    s3:
-      access-key: ${AWS_ACCESS_KEY:}
-      secret-key: ${AWS_SECRET_KEY:}
-      endpoint: ${S3_ENDPOINT_URL:}
-      bucket: ${S3_BUCKET:}
-      signature-version: s3v4
-      region: ${S3_REGION:us-east-1}
-  max-column-size: ${FILES_MAX_COLUMN_SIZE:2097152}      
+  max-column-size: ${FILES_MAX_COLUMN_SIZE:2097152}
+  default:
+    store: ${FILES_DEFAULT_STORE:s3://${application.name}}
 
 # JWT configuration
 jwt:
@@ -243,39 +261,47 @@ jwt:
   access-token:
     duration: ${JWT_ACCESS_TOKEN_DURATION:}
   refresh-token:
-    duration: ${JWT_REFRESH_TOKEN_DURATION:}    
+    duration: ${JWT_REFRESH_TOKEN_DURATION:}
   client-id: ${JWT_CLIENT_ID:${security.basic.username}}
   client-secret: ${JWT_CLIENT_SECRET:${security.basic.password}}
   redirect-uris: ${JWT_REDIRECT_URIS:http://localhost:*,${application.endpoint}/console/auth-callback}
-  cache-control: ${JWKS_CACHE_CONTROL:public, max-age=900, must-revalidate, no-transform}      
-
+  cache-control: ${JWKS_CACHE_CONTROL:public, max-age=900, must-revalidate, no-transform}
 
 # Credentials
 credentials:
   provider:
     s3:
       enable: ${S3_CREDENTIALS_PROVIDER:false}
+      endpoint: ${S3_ENDPOINT_URL:}
+      bucket: ${S3_BUCKET:}
+      signature-version: s3v4
+      region: ${AWS_DEFAULT_REGION:}
+      access-key: ${AWS_ACCESS_KEY:}
+      secret-key: ${AWS_SECRET_KEY:}
+      path-style-access: ${S3_PATH_STYLE_ACCESS:}
     db:
       enable: ${DB_CREDENTIALS_PROVIDER:false}
       database: ${DB_CREDENTIALS_DATABASE:}
-      endpoint:  ${DB_CREDENTIALS_ENDPOINT:}
-      claim:  ${DB_CREDENTIALS_CLAIM:db/role}
-      role:  ${DB_CREDENTIALS_ROLE:}
-      duration:  ${DB_CREDENTIALS_DURATION:86400}
+      endpoint: ${DB_CREDENTIALS_ENDPOINT:}
+      claim: ${DB_CREDENTIALS_CLAIM:db/role}
+      role: ${DB_CREDENTIALS_ROLE:}
       user: ${DB_CREDENTIALS_USER:}
       password: ${DB_CREDENTIALS_PASSWORD:}
     minio:
-      enable: ${MINIO_CREDENTIALS_PROVIDER:false}      
-      endpoint:  ${MINIO_CREDENTIALS_ENDPOINT:${files.store.s3.endpoint}}
-      region: ${MINIO_CREDENTIALS_REGION:${files.store.s3.region}}
-      bucket: ${MINIO_CREDENTIALS_REGION:${files.store.s3.bucket}}
-      claim:  ${MINIO_CREDENTIALS_CLAIM:minio/policy}
-      policy:  ${MINIO_CREDENTIALS_POLICY:readwrite}
-      duration:  ${MINIO_CREDENTIALS_DURATION:86400}
-      access-key: ${MINIO_CREDENTIALS_ACCESS_KEY:${files.store.s3.access-key}}
-      secret-key: ${MINIO_CREDENTIALS_SECRET_KEY:${files.store.s3.secret-key}}      
-
+      enable: ${MINIO_CREDENTIALS_PROVIDER:false}
+      endpoint: ${MINIO_CREDENTIALS_ENDPOINT:}
+      region: ${MINIO_CREDENTIALS_REGION:us-east-1}
+      bucket: ${MINIO_CREDENTIALS_BUCKET:}
+      claim: ${MINIO_CREDENTIALS_CLAIM:minio/policy}
+      policy: ${MINIO_CREDENTIALS_POLICY:readwrite}
+      access-key: ${MINIO_CREDENTIALS_ACCESS_KEY:}
+      secret-key: ${MINIO_CREDENTIALS_SECRET_KEY:}
 
 # Templates
 templates:
   path: ${TEMPLATES_PATH:classpath:/templates}
+
+# Triggers
+triggers:
+  lifecycle:
+    store: jdbc

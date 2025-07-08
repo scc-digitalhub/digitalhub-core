@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package it.smartcommunitylabdhub.framework.argo.runnables;
 
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RunnableComponent;
@@ -12,12 +18,12 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 @RunnableComponent(framework = K8sArgoWorkflowFramework.FRAMEWORK)
-@SuperBuilder
+@SuperBuilder(toBuilder = true)
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class K8sArgoWorkflowRunnable extends K8sRunnable {
+public final class K8sArgoWorkflowRunnable extends K8sRunnable {
 
     private String workflowSpec;
 

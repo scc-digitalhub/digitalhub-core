@@ -87,13 +87,13 @@ destination_dir="/shared"
 tmp_dir="/tmp/shared"
 
 # set minio alias for mc
-if [[ ! -z "${AWS_SESSION_TOKEN}" && ! -z "${S3_ENDPOINT_URL}"  ]]; then
-    PARTS=($(urlparse $S3_ENDPOINT_URL))
+if [[ ! -z "${AWS_SESSION_TOKEN}" && ! -z "${AWS_ENDPOINT_URL}"  ]]; then
+    PARTS=($(urlparse $AWS_ENDPOINT_URL))
     S3_ENDPOINT="${PARTS[1]}"
     S3_SCHEME="${PARTS[0]}"
     MC_HOST="${S3_SCHEME}://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}:${AWS_SESSION_TOKEN}@${S3_ENDPOINT}"
-elif [[ -z "${AWS_SESSION_TOKEN}" && ! -z "${S3_ENDPOINT_URL}"  ]]; then
-    PARTS=($(urlparse $S3_ENDPOINT_URL))
+elif [[ -z "${AWS_SESSION_TOKEN}" && ! -z "${AWS_ENDPOINT_URL}"  ]]; then
+    PARTS=($(urlparse $AWS_ENDPOINT_URL))
     S3_ENDPOINT="${PARTS[1]}"
     S3_SCHEME="${PARTS[0]}"
     MC_HOST="${S3_SCHEME}://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@${S3_ENDPOINT}"
@@ -274,7 +274,7 @@ if [ -f "$source_dir/context-refs.txt" ]; then
                 echo "Protocol: $protocol"
                 echo "Downloading s3/$rebuilt_url"
                 echo "to $destination_dir/$destination"
-                env MC_HOST_s3="$MC_HOST" mc cp --recursive "s3/$rebuilt_url" "$destination_dir/$destination"
+                env MC_HOST_s3="$MC_HOST" mc cp --recursive --debug "s3/$rebuilt_url" "$destination_dir/$destination"
                 ;;
             # Add more cases for other protocols as needed
             *)
@@ -285,5 +285,4 @@ if [ -f "$source_dir/context-refs.txt" ]; then
     done < "$source_dir/context-refs.txt"
 fi
 
-chmod -R 655 "$destination_dir/*" || true
 ls -1l "$destination_dir"

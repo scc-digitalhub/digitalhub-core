@@ -1,0 +1,29 @@
+FROM maven:3-eclipse-temurin-21-alpine AS build
+ARG VER=SNAPSHOT
+COPY application /tmp/application
+COPY frontend /tmp/frontend
+COPY modules /tmp/modules
+COPY pom.xml /tmp/pom.xml
+COPY templates /tmp/templates
+WORKDIR /tmp
+RUN mvn -Drevision=${VER} clean install -pl modules/commons
+RUN mvn -Drevision=${VER} clean install -pl '!application' -pl '!frontend'
+RUN mvn -Drevision=${VER} install -pl 'frontend'
+RUN mvn -Drevision=${VER} package -pl 'application'
+
+FROM maven:3-eclipse-temurin-21-alpine as builder
+WORKDIR /tmp
+COPY --from=build /tmp/application/target/*.jar /tmp/
+RUN java -Djarmode=layertools -jar *.jar extract
+
+FROM gcr.io/distroless/java21-debian12:nonroot
+ENV APP=core.jar
+WORKDIR /app
+LABEL org.opencontainers.image.source=https://github.com/scc-digitalhub/digitalhub-core
+COPY --from=builder /tmp/dependencies/ ./
+COPY --from=builder /tmp/snapshot-dependencies/ ./
+COPY --from=builder /tmp/spring-boot-loader/ ./
+COPY --from=builder /tmp/dh-dependencies/ ./
+COPY --from=builder /tmp/application/ ./
+EXPOSE 8080
+ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]

@@ -1,10 +1,57 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Copyright 2025 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package it.smartcommunitylabdhub.core.controllers.v1.context;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import it.smartcommunitylabdhub.commons.Keys;
+import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
+import it.smartcommunitylabdhub.commons.exceptions.SystemException;
+import it.smartcommunitylabdhub.commons.models.files.FileInfo;
+import it.smartcommunitylabdhub.commons.models.metrics.NumberOrNumberArray;
+import it.smartcommunitylabdhub.commons.models.model.Model;
+import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
+import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
+import it.smartcommunitylabdhub.commons.services.MetricsService;
+import it.smartcommunitylabdhub.commons.services.ModelManager;
+import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
+import it.smartcommunitylabdhub.core.ApplicationKeys;
+import it.smartcommunitylabdhub.core.annotations.ApiVersion;
+import it.smartcommunitylabdhub.core.models.filters.ModelEntityFilter;
+import it.smartcommunitylabdhub.files.models.DownloadInfo;
+import it.smartcommunitylabdhub.files.models.UploadInfo;
+import it.smartcommunitylabdhub.files.service.EntityFilesService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import java.util.List;
 import java.util.Map;
-
 import javax.annotation.Nullable;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -26,34 +73,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import it.smartcommunitylabdhub.commons.Keys;
-import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
-import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
-import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.models.files.FileInfo;
-import it.smartcommunitylabdhub.commons.models.metrics.NumberOrNumberArray;
-import it.smartcommunitylabdhub.commons.models.model.Model;
-import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
-import it.smartcommunitylabdhub.commons.services.MetricsService;
-import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
-import it.smartcommunitylabdhub.core.ApplicationKeys;
-import it.smartcommunitylabdhub.core.annotations.ApiVersion;
-import it.smartcommunitylabdhub.core.models.entities.ModelEntity;
-import it.smartcommunitylabdhub.core.models.queries.filters.entities.ModelEntityFilter;
-import it.smartcommunitylabdhub.core.models.queries.services.SearchableModelService;
-import it.smartcommunitylabdhub.files.models.DownloadInfo;
-import it.smartcommunitylabdhub.files.models.UploadInfo;
-import it.smartcommunitylabdhub.files.service.EntityFilesService;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import lombok.extern.slf4j.Slf4j;
-
 @RestController
 @ApiVersion("v1")
 @RequestMapping("/-/{project}/models")
@@ -66,14 +85,14 @@ import lombok.extern.slf4j.Slf4j;
 public class ModelContextController {
 
     @Autowired
-    SearchableModelService modelService;
+    ModelManager modelManager;
 
     @Autowired
     EntityFilesService<Model> filesService;
 
     @Autowired
     RelationshipsAwareEntityService<Model> relationshipsService;
-    
+
     @Autowired
     MetricsService<Model> metricsService;
 
@@ -91,7 +110,7 @@ public class ModelContextController {
         dto.setProject(project);
 
         //create as new
-        return modelService.createModel(dto);
+        return modelManager.createModel(dto);
     }
 
     @Operation(summary = "Search models")
@@ -104,15 +123,15 @@ public class ModelContextController {
             { @SortDefault(sort = "created", direction = Direction.DESC) }
         ) Pageable pageable
     ) {
-        SearchFilter<ModelEntity> sf = null;
+        SearchFilter<Model> sf = null;
         if (filter != null) {
             sf = filter.toSearchFilter();
         }
 
         if ("all".equals(versions)) {
-            return modelService.searchModelsByProject(project, pageable, sf);
+            return modelManager.searchModelsByProject(project, pageable, sf);
         } else {
-            return modelService.searchLatestModelsByProject(project, pageable, sf);
+            return modelManager.searchLatestModelsByProject(project, pageable, sf);
         }
     }
 
@@ -120,9 +139,10 @@ public class ModelContextController {
     @DeleteMapping(path = "")
     public void deleteAllModel(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @ParameterObject @RequestParam @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String name
+        @ParameterObject @RequestParam @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String name,
+        @RequestParam(required = false) Boolean cascade
     ) {
-        modelService.deleteModels(project, name);
+        modelManager.deleteModels(project, name, cascade);
     }
 
     /*
@@ -135,7 +155,7 @@ public class ModelContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Model model = modelService.getModel(id);
+        Model model = modelManager.getModel(id);
 
         //check for project and name match
         if (!model.getProject().equals(project)) {
@@ -156,14 +176,14 @@ public class ModelContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestBody @Valid @NotNull Model modelDTO
     ) throws NoSuchEntityException, SystemException, IllegalArgumentException, BindException {
-        Model model = modelService.getModel(id);
+        Model model = modelManager.getModel(id);
 
         //check for project and name match
         if (!model.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
 
-        return modelService.updateModel(id, modelDTO);
+        return modelManager.updateModel(id, modelDTO);
     }
 
     @Operation(
@@ -173,16 +193,17 @@ public class ModelContextController {
     @DeleteMapping(path = "/{id}")
     public void deleteModelById(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
+        @RequestParam(required = false) Boolean cascade
     ) throws NoSuchEntityException {
-        Model model = modelService.getModel(id);
+        Model model = modelManager.getModel(id);
 
         //check for project and name match
         if (!model.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
 
-        modelService.deleteModel(id);
+        modelManager.deleteModel(id, cascade);
     }
 
     /*
@@ -195,7 +216,7 @@ public class ModelContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @ParameterObject @RequestParam(required = false) String sub
     ) throws NoSuchEntityException {
-        Model entity = modelService.getModel(id);
+        Model entity = modelManager.getModel(id);
 
         //check for project and name match
         if (!entity.getProject().equals(project)) {
@@ -216,7 +237,7 @@ public class ModelContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         HttpServletRequest request
     ) throws NoSuchEntityException {
-        Model model = modelService.getModel(id);
+        Model model = modelManager.getModel(id);
 
         //check for project and name match
         if (!model.getProject().equals(project)) {
@@ -233,14 +254,14 @@ public class ModelContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestParam @NotNull String filename
     ) throws NoSuchEntityException {
-        Model entity = modelService.findModel(id);
+        Model entity = modelManager.findModel(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
 
-        return filesService.uploadFileAsUrl(id, filename);
+        return filesService.uploadFileAsUrl(project, id, filename);
     }
 
     @Operation(summary = "Create a starting multipart upload url for a given entity, if available")
@@ -250,14 +271,14 @@ public class ModelContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestParam @NotNull String filename
     ) throws NoSuchEntityException {
-        Model entity = modelService.findModel(id);
+        Model entity = modelManager.findModel(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
 
-        return filesService.startMultiPartUpload(id, filename);
+        return filesService.startMultiPartUpload(project, id, filename);
     }
 
     @Operation(summary = "Create a multipart upload url for a given entity, if available")
@@ -269,14 +290,14 @@ public class ModelContextController {
         @RequestParam @NotNull String uploadId,
         @RequestParam @NotNull Integer partNumber
     ) throws NoSuchEntityException {
-        Model entity = modelService.findModel(id);
+        Model entity = modelManager.findModel(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
 
-        return filesService.uploadMultiPart(id, filename, uploadId, partNumber);
+        return filesService.uploadMultiPart(project, id, filename, uploadId, partNumber);
     }
 
     @Operation(summary = "Create a completing multipart upload url for a given entity, if available")
@@ -288,14 +309,14 @@ public class ModelContextController {
         @RequestParam @NotNull String uploadId,
         @RequestParam @NotNull List<String> partList
     ) throws NoSuchEntityException {
-        Model entity = modelService.findModel(id);
+        Model entity = modelManager.findModel(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
 
-        return filesService.completeMultiPartUpload(id, filename, uploadId, partList);
+        return filesService.completeMultiPartUpload(project, id, filename, uploadId, partList);
     }
 
     @Operation(summary = "Get file info for a given entity, if available")
@@ -304,7 +325,7 @@ public class ModelContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Model entity = modelService.getModel(id);
+        Model entity = modelManager.getModel(id);
 
         //check for project and name match
         if (!entity.getProject().equals(project)) {
@@ -321,7 +342,7 @@ public class ModelContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestBody List<FileInfo> files
     ) throws NoSuchEntityException {
-        Model entity = modelService.getModel(id);
+        Model entity = modelManager.getModel(id);
 
         //check for project and name match
         if (!entity.getProject().equals(project)) {
@@ -337,7 +358,7 @@ public class ModelContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Model entity = modelService.findModel(id);
+        Model entity = modelManager.findModel(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {
@@ -350,52 +371,51 @@ public class ModelContextController {
     @Operation(summary = "Get metrics info for a given entity, if available")
     @GetMapping(path = "/{id}/metrics", produces = "application/json; charset=UTF-8")
     public Map<String, NumberOrNumberArray> getMetrics(
-            @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-            @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws StoreException, SystemException {
-        Model entity = modelService.getModel(id);
+        Model entity = modelManager.getModel(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
-    	
-    	return  metricsService.getMetrics(id);
+
+        return metricsService.getMetrics(id);
     }
-    
+
     @Operation(summary = "Get metrics info for a given entity and metric, if available")
     @GetMapping(path = "/{id}/metrics/{name}", produces = "application/json; charset=UTF-8")
     public NumberOrNumberArray getMetricsByName(
-            @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-            @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-            @PathVariable String name
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
+        @PathVariable String name
     ) throws StoreException, SystemException {
-    	Model entity = modelService.getModel(id);
+        Model entity = modelManager.getModel(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
-        
-    	return metricsService.getMetrics(id, name);
+
+        return metricsService.getMetrics(id, name);
     }
 
     @Operation(summary = "Store metrics info for a given entity")
     @PutMapping(path = "/{id}/metrics/{name}", produces = "application/json; charset=UTF-8")
     public void storeMetrics(
-            @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-            @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-            @PathVariable String name,
-            @RequestBody NumberOrNumberArray data
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
+        @PathVariable String name,
+        @RequestBody NumberOrNumberArray data
     ) throws StoreException, SystemException {
-        Model entity = modelService.getModel(id);
+        Model entity = modelManager.getModel(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
-    	
+
         metricsService.saveMetrics(id, name, data);
     }
-
 }

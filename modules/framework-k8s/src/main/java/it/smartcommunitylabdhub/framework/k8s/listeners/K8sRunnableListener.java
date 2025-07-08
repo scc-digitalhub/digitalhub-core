@@ -1,3 +1,26 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Copyright 2025 the original author or authors.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * https://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
+
 package it.smartcommunitylabdhub.framework.k8s.listeners;
 
 import it.smartcommunitylabdhub.commons.exceptions.FrameworkException;
@@ -51,6 +74,8 @@ public abstract class K8sRunnableListener<R extends K8sRunnable> {
             log.trace("runnable {}: {}", clazz.getSimpleName(), runnable);
         }
 
+        String id = runnable.getId();
+        String framework = runnable.getFramework();
         String state = runnable.getState();
 
         try {
@@ -82,44 +107,51 @@ public abstract class K8sRunnableListener<R extends K8sRunnable> {
                 };
 
             if (runnable != null) {
-                if (log.isTraceEnabled()) {
-                    log.trace("runnable result from framework {}: {}", clazz.getSimpleName(), runnable);
+                //sanity check: id+framework can not change
+                if (!id.equals(runnable.getId()) || !framework.equals(runnable.getFramework())) {
+                    throw new IllegalArgumentException("id mismatch");
                 }
 
-                try {
-                    log.debug("update runnable {} {} in store", clazz.getSimpleName(), runnable.getId());
-                    runnableStore.store(runnable.getId(), runnable);
-                } catch (StoreException e) {
-                    log.error("Error with store: {}", e.getMessage());
+                if (log.isTraceEnabled()) {
+                    log.trace("runnable result from framework {}: {}", clazz.getSimpleName(), runnable);
                 }
             }
         } catch (FrameworkException e) {
             // Set runnable to error state send event
-            log.error("Error with k8s for runnable {} {}: {}", clazz.getSimpleName(), runnable.getId(), e.getMessage());
-            runnable.setState(State.ERROR.name());
-            runnable.setError(clazz.getSimpleName() + ":" + String.valueOf(e.getMessage()));
+            log.error("Error with k8s for runnable {} {}: {}", clazz.getSimpleName(), id, e.getMessage());
+            if (runnable != null) {
+                runnable.setState(State.ERROR.name());
+                runnable.setError(clazz.getSimpleName() + ":" + String.valueOf(e.getMessage()));
 
-            if (e instanceof K8sFrameworkException) {
-                runnable.setError(((K8sFrameworkException) e).toError());
+                if (e instanceof K8sFrameworkException) {
+                    runnable.setError(((K8sFrameworkException) e).toError());
+                }
             }
-
-            try {
-                log.debug("update runnable {} {} in store", clazz.getSimpleName(), runnable.getId());
-                runnableStore.store(runnable.getId(), runnable);
-            } catch (StoreException se) {
-                log.error("Error with store: {}", se.getMessage());
+        } catch (RuntimeException e) {
+            // Set runnable to error state send event
+            log.error("Error for runnable {} {}: {}", clazz.getSimpleName(), id, e.getMessage());
+            if (runnable != null) {
+                runnable.setState(State.ERROR.name());
+                runnable.setError(String.valueOf(e.getMessage()));
             }
         } finally {
             if (runnable != null) {
-                log.debug("Processed runnable {} {}", clazz.getSimpleName(), runnable.getId());
+                try {
+                    log.debug("update runnable {} {} in store", clazz.getSimpleName(), id);
+                    runnableStore.store(id, runnable);
+                } catch (StoreException se) {
+                    log.error("Error with store: {}", se.getMessage());
+                }
+
+                log.debug("Processed runnable {} {}", clazz.getSimpleName(), id);
 
                 if (eventPublisher != null) {
-                    log.debug("Publish runnable {} {}", clazz.getSimpleName(), runnable.getId());
+                    log.debug("Publish runnable {} {}", clazz.getSimpleName(), id);
 
                     RunnableChangedEvent<RunRunnable> event = RunnableChangedEvent.build(runnable, state);
 
                     if (log.isTraceEnabled()) {
-                        log.trace("runnable {} {} event {}", clazz.getSimpleName(), runnable.getId(), event);
+                        log.trace("runnable {} {} event {}", clazz.getSimpleName(), id, event);
                     }
 
                     // Publish event to Run Manager

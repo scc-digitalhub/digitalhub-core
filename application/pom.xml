@@ -12,7 +12,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.5</version>
+        <version>3.3.12</version>
         <relativePath>../</relativePath>
     </parent>
     <groupId>it.smartcommunitylabdhub</groupId>
@@ -21,15 +21,14 @@
     <version>${revision}</version>
     <description>Digital Hub Core</description>
     <properties>
-        <revision>0.10.0-SNAPSHOT</revision>
+        <revision>0.12.0-SNAPSHOT</revision>
         <java.version>21</java.version>
-        <spring-security.version>6.3.1</spring-security.version>
+        <spring-security.version>6.3.9</spring-security.version>
         <springdoc.version>2.2.0</springdoc.version>
 
         <!-- <jackson.version>2.15.3</jackson.version> -->
-        <kubernetes.version>21.0.0-legacy</kubernetes.version>
+        <kubernetes.version>21.0.2-legacy</kubernetes.version>
         <postgresql.version>42.7.2</postgresql.version>
-        <mysql.version>8.0.33</mysql.version>
         <!-- note: jetty locked to 10 due to solr 9.x incompatibility -->
         <!-- note: do NOT set jetty.version because spring bom defines it for jetty 12 -->
         <jetty4solr.version>10.0.24</jetty4solr.version>
@@ -156,11 +155,7 @@
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.mysql</groupId>
-            <artifactId>mysql-connector-j</artifactId>
-            <version>${mysql.version}</version>
-        </dependency>
+
 
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -199,7 +194,7 @@
             <artifactId>jetty-http</artifactId>
             <version>${jetty4solr.version}</version>
         </dependency>
-        
+
         <!-- LUCENE -->
         <dependency>
             <groupId>org.apache.lucene</groupId>
@@ -220,6 +215,13 @@
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-grouping</artifactId>
             <version>${lucene.version}</version>
+        </dependency>
+
+        <!-- TEMPLATING -->
+        <dependency>
+            <groupId>com.github.spullara.mustache.java</groupId>
+            <artifactId>compiler</artifactId>
+            <version>0.9.10</version>
         </dependency>
 
         <!-- DH MODULES -->
@@ -255,6 +257,16 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-trigger-scheduler</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-trigger-lifecycle</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-runtime-container</artifactId>
             <version>${revision}</version>
         </dependency>
@@ -276,6 +288,11 @@
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-runtime-model-serve</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-runtime-kubeai</artifactId>
             <version>${revision}</version>
         </dependency>
         <dependency>

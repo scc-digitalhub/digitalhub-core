@@ -10,14 +10,14 @@
     <packaging>pom</packaging>
 
     <properties>
-        <revision>0.10.0-SNAPSHOT</revision>
+        <revision>0.12.0-SNAPSHOT</revision>
         <java.version>21</java.version>
-        <spring-boot.version>3.3.5</spring-boot.version>
-        <spring-security.version>6.3.4</spring-security.version>
+        <spring-boot.version>3.3.12</spring-boot.version>
+        <spring-security.version>6.3.9</spring-security.version>
         <springdoc.version>2.2.0</springdoc.version>
         <jackson.version>2.16.2</jackson.version>
         <slf4j.version>2.0.9</slf4j.version>
-        <kubernetes.version>21.0.0-legacy</kubernetes.version>
+        <kubernetes.version>21.0.2-legacy</kubernetes.version>
         <maven.compiler.release>21</maven.compiler.release>
         <lombok.version>1.18.34</lombok.version>
         <guava.version>33.3.1-jre</guava.version>
@@ -34,12 +34,15 @@
         <module>modules/framework-k8s</module>
         <module>modules/framework-argo</module>
         <module>modules/framework-kaniko</module>
+        <module>modules/trigger-scheduler</module>
+        <module>modules/trigger-lifecycle</module>
         <module>modules/runtime-container</module>
         <module>modules/runtime-dbt</module>
         <module>modules/runtime-kfp</module>
         <module>modules/runtime-python</module>
         <module>modules/runtime-model-serve</module>
         <module>modules/runtime-hpc-dl</module>
+        <module>modules/runtime-kubeai</module>
         <module>modules/openmetadata-integration</module>
         <module>modules/files</module>
         <module>modules/credentials-provider-db</module>
@@ -91,7 +94,7 @@
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>3.3.1</version>
             </plugin>
-        </plugins>
+        </plugins>        
     </reporting>
 
     <!-- TODO remove when sonata repo is sync

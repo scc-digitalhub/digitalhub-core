@@ -1,3 +1,26 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Copyright 2025 the original author or authors.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * https://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
+
 package it.smartcommunitylabdhub.framework.k8s.kubernetes;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -7,17 +30,22 @@ import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1DeleteOptions;
+import io.kubernetes.client.openapi.models.V1EnvVar;
+import io.kubernetes.client.openapi.models.V1EnvVarSource;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.kubernetes.client.openapi.models.V1Secret;
+import io.kubernetes.client.openapi.models.V1SecretKeySelector;
 import io.kubernetes.client.util.PatchUtils;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -42,15 +70,47 @@ public class K8sSecretHelper {
     @Value("${kubernetes.namespace}")
     private String namespace;
 
-    @Value("${kubernetes.envs.prefix}")
-    private String envsPrefix;
+    @Value("${kubernetes.config.secret}")
+    private List<String> sharedSecrets;
 
     public K8sSecretHelper(ApiClient client) {
         api = new CoreV1Api(client);
     }
 
-    public String getEnvsPrefix() {
-        return envsPrefix;
+    public List<V1EnvVar> getV1EnvVar() {
+        List<V1EnvVar> vars = new ArrayList<>();
+
+        //add shared secrets
+        if (sharedSecrets != null) {
+            sharedSecrets
+                .stream()
+                .forEach(s -> {
+                    try {
+                        Map<String, String> data = getSecretData(s);
+                        if (data != null) {
+                            data.forEach((key, v) ->
+                                vars.add(
+                                    //add as reference
+                                    new V1EnvVar()
+                                        .name(key)
+                                        .valueFrom(
+                                            new V1EnvVarSource()
+                                                .secretKeyRef(new V1SecretKeySelector().name(s).key(key))
+                                        )
+                                )
+                            );
+                        }
+                    } catch (ApiException e) {
+                        //catch and skip this container's logs
+                        log.error("Error with k8s: {}", e.getMessage());
+                        if (log.isTraceEnabled()) {
+                            log.trace("k8s api response: {}", e.getResponseBody());
+                        }
+                    }
+                });
+        }
+
+        return vars;
     }
 
     public Map<String, String> getSecretData(String secretName) throws ApiException {

@@ -692,7 +692,7 @@
         "$ref" : "#/$defs/CoreServiceType",
         "title" : "fields.serviceType.title",
         "description" : "fields.serviceType.description",
-        "default" : "NodePort"
+        "default" : "ClusterIP"
       },
       "tolerations" : {
         "title" : "fields.tolerations.title",

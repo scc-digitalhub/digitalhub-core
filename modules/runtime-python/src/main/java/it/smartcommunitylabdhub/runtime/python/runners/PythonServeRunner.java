@@ -1,3 +1,26 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Copyright 2025 the original author or authors.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * https://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
+
 package it.smartcommunitylabdhub.runtime.python.runners;
 
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
@@ -10,7 +33,6 @@ import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
-import it.smartcommunitylabdhub.framework.k8s.objects.CoreServiceType;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
 import it.smartcommunitylabdhub.runtime.python.PythonRuntime;
@@ -38,10 +60,13 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 public class PythonServeRunner {
 
-    private static final int DEFAULT_GROUP_ID = 1000;
+    private static final int UID = 1000;
+    private static final int GID = 1000;
     private static final int HTTP_PORT = 8080;
 
     private final String image;
+    private final int userId;
+    private final int groupId;
     private final String command;
     private final PythonFunctionSpec functionSpec;
     private final Map<String, String> secretData;
@@ -51,6 +76,8 @@ public class PythonServeRunner {
 
     public PythonServeRunner(
         String image,
+        Integer userId,
+        Integer groupId,
         String command,
         PythonFunctionSpec functionPythonSpec,
         Map<String, String> secretData,
@@ -61,6 +88,9 @@ public class PythonServeRunner {
         this.functionSpec = functionPythonSpec;
         this.secretData = secretData;
         this.k8sBuilderHelper = k8sBuilderHelper;
+
+        this.userId = userId != null ? userId : UID;
+        this.groupId = groupId != null ? groupId : GID;
     }
 
     public K8sRunnable produce(Run run) {
@@ -217,11 +247,13 @@ public class PythonServeRunner {
             .priorityClass(taskSpec.getPriorityClass())
             .template(taskSpec.getProfile())
             //securityContext
-            .fsGroup(DEFAULT_GROUP_ID)
+            .fsGroup(groupId)
+            .runAsGroup(groupId)
+            .runAsUser(userId)
             //specific
             .replicas(taskSpec.getReplicas())
             .servicePorts(List.of(servicePort))
-            .serviceType(taskSpec.getServiceType() != null ? taskSpec.getServiceType() : CoreServiceType.NodePort)
+            .serviceType(taskSpec.getServiceType())
             .build();
 
         k8sServeRunnable.setId(run.getId());

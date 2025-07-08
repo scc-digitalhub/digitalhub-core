@@ -11,7 +11,7 @@
     </parent>
     <groupId>it.smartcommunitylabdhub</groupId>
     <artifactId>dh-runtime-model-serve</artifactId>
-    <name>runtime-python</name>
+    <name>runtime-model-serve</name>
     <description>DHCore runtime-model-serve</description>
 
     <dependencies>
@@ -28,6 +28,11 @@
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-framework-kaniko</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-authorization</artifactId>
             <version>${revision}</version>
         </dependency>
 

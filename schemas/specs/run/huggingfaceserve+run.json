@@ -587,7 +587,7 @@
         "$ref" : "#/$defs/CoreServiceType",
         "title" : "fields.serviceType.title",
         "description" : "fields.serviceType.description",
-        "default" : "NodePort"
+        "default" : "ClusterIP"
       },
       "tensor_input_names" : {
         "title" : "fields.huggingface.tensorinputnames.title",

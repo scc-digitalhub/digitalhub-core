@@ -1,0 +1,16 @@
+name: llama3.2-1b
+kind: kubeai-text
+metadata:
+  description: Deploy an LLM via OLlama - llama3.2:1b.
+  version: d4890babf9a1461cb7f366fb69cdda17
+  labels:
+    - openai
+    - kubeai
+    - llm
+    - ollama
+spec:
+  features:
+    - TextGeneration
+  model_name: model
+  engine: OLlama
+  url: ollama://llama3.2:1b

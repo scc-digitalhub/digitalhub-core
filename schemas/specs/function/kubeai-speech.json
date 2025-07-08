@@ -1,0 +1,54 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "$defs" : {
+    "KubeAIAdapter" : {
+      "type" : "object",
+      "properties" : {
+        "name" : {
+          "type" : "string",
+          "title" : "fields.modelserve.modelname.title",
+          "description" : "fields.modelserve.modelname.description",
+          "default" : "model"
+        },
+        "url" : {
+          "type" : "string",
+          "title" : "fields.kubeai.url.title",
+          "description" : "fields.kubeai.url.description"
+        }
+      }
+    }
+  },
+  "type" : "object",
+  "properties" : {
+    "adapters" : {
+      "title" : "fields.kubeai.adapters.title",
+      "description" : "fields.kubeai.adapters.description",
+      "type" : "array",
+      "items" : {
+        "$ref" : "#/$defs/KubeAIAdapter",
+        "title" : "fields.adapters.item.title",
+        "description" : "fields.adapters.item.description"
+      }
+    },
+    "image" : {
+      "type" : "string",
+      "title" : "fields.kubeai.image.title",
+      "description" : "fields.kubeai.image.description"
+    },
+    "model_name" : {
+      "type" : "string",
+      "title" : "fields.modelserve.modelname.title",
+      "description" : "fields.modelserve.modelname.description",
+      "default" : "model"
+    },
+    "url" : {
+      "type" : "string",
+      "title" : "fields.kubeai.url.title",
+      "description" : "fields.kubeai.url.description",
+      "pattern" : "^(store://([^/]+)/model/huggingface/.*)|^pvc?://.*$|^s3?://.*$|^ollama?://.*$|^hf?://.*$"
+    }
+  },
+  "required" : [ "url" ],
+  "title" : "specs.kubeai-speech.title",
+  "description" : "specs.kubeai-speech.description"
+}

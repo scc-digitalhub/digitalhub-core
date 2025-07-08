@@ -1,3 +1,26 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Copyright 2025 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package it.smartcommunitylabdhub.core.controllers.v1.base;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -8,12 +31,11 @@ import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.model.Model;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
+import it.smartcommunitylabdhub.commons.services.ModelManager;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
-import it.smartcommunitylabdhub.core.models.entities.ModelEntity;
-import it.smartcommunitylabdhub.core.models.indexers.IndexableEntityService;
-import it.smartcommunitylabdhub.core.models.queries.filters.entities.ModelEntityFilter;
-import it.smartcommunitylabdhub.core.models.queries.services.SearchableModelService;
+import it.smartcommunitylabdhub.core.indexers.IndexableEntityService;
+import it.smartcommunitylabdhub.core.models.filters.ModelEntityFilter;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -51,10 +73,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class ModelController {
 
     @Autowired
-    SearchableModelService modelService;
+    ModelManager modelManager;
 
     @Autowired
-    IndexableEntityService<ModelEntity> indexService;
+    IndexableEntityService<Model> indexService;
 
     @Operation(summary = "Create model", description = "Create a model and return")
     @PostMapping(
@@ -64,7 +86,7 @@ public class ModelController {
     )
     public Model createModel(@RequestBody @Valid @NotNull Model dto)
         throws DuplicatedEntityException, SystemException, IllegalArgumentException, BindException {
-        return modelService.createModel(dto);
+        return modelManager.createModel(dto);
     }
 
     @Operation(summary = "List models", description = "Return a list of all models")
@@ -76,14 +98,14 @@ public class ModelController {
             { @SortDefault(sort = "created", direction = Direction.DESC) }
         ) Pageable pageable
     ) {
-        SearchFilter<ModelEntity> sf = null;
+        SearchFilter<Model> sf = null;
         if (filter != null) {
             sf = filter.toSearchFilter();
         }
         if ("latest".equals(versions)) {
-            return modelService.searchLatestModels(pageable, sf);
+            return modelManager.searchLatestModels(pageable, sf);
         } else {
-            return modelService.searchModels(pageable, sf);
+            return modelManager.searchModels(pageable, sf);
         }
     }
 
@@ -91,7 +113,7 @@ public class ModelController {
     @GetMapping(path = "/{id}", produces = "application/json; charset=UTF-8")
     public Model getModel(@PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id)
         throws NoSuchEntityException {
-        return modelService.getModel(id);
+        return modelManager.getModel(id);
     }
 
     @Operation(summary = "Update specific model", description = "Update and return the model")
@@ -104,13 +126,16 @@ public class ModelController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestBody @Valid @NotNull Model dto
     ) throws NoSuchEntityException, SystemException, IllegalArgumentException, BindException {
-        return modelService.updateModel(id, dto);
+        return modelManager.updateModel(id, dto);
     }
 
     @Operation(summary = "Delete a model", description = "Delete a specific model")
     @DeleteMapping(path = "/{id}")
-    public void deleteModel(@PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id) {
-        modelService.deleteModel(id);
+    public void deleteModel(
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
+        @RequestParam(required = false) Boolean cascade
+    ) {
+        modelManager.deleteModel(id, cascade);
     }
 
     /*

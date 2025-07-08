@@ -1,3 +1,26 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Copyright 2025 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package it.smartcommunitylabdhub.authorization.services;
 
 import com.nimbusds.jose.JOSEException;
@@ -19,21 +42,27 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import it.smartcommunitylabdhub.authorization.components.JWKSetKeyStore;
 import it.smartcommunitylabdhub.authorization.exceptions.JwtTokenServiceException;
-import it.smartcommunitylabdhub.authorization.model.RefreshTokenEntity;
+import it.smartcommunitylabdhub.authorization.model.PersonalAccessToken;
+import it.smartcommunitylabdhub.authorization.model.RefreshToken;
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
+import it.smartcommunitylabdhub.authorization.repositories.PersonalAccessTokenRepository;
 import it.smartcommunitylabdhub.authorization.repositories.RefreshTokenRepository;
 import it.smartcommunitylabdhub.authorization.utils.SecureKeyGenerator;
 import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
+import jakarta.annotation.Nullable;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.sql.SQLTimeoutException;
 import java.time.Instant;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,7 +73,11 @@ import org.springframework.security.core.CredentialsContainer;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.keygen.StringKeyGenerator;
+import org.springframework.security.oauth2.core.DefaultOAuth2AuthenticatedPrincipal;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2AccessToken;
+import org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal;
+import org.springframework.security.oauth2.core.OAuth2TokenIntrospectionClaimNames;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.core.oidc.StandardClaimNames;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -53,7 +86,11 @@ import org.springframework.security.oauth2.jwt.JwtClaimValidator;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.introspection.OpaqueTokenAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.introspection.OpaqueTokenIntrospector;
+import org.springframework.security.web.authentication.WebAuthenticationDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -63,15 +100,20 @@ import org.springframework.util.StringUtils;
 //TODO extract an interface
 public class JwtTokenService implements InitializingBean {
 
-    private static final int DEFAULT_ACCESS_TOKEN_DURATION = 3600 * 8; //8 hours
-    private static final int DEFAULT_REFRESH_TOKEN_DURATION = 3600 * 24 * 30; //30 days
-    private static final int DEFAULT_KEY_LENGTH = 54;
+    public static final int DEFAULT_ACCESS_TOKEN_DURATION = 3600 * 8; //8 hours
+    public static final int DEFAULT_REFRESH_TOKEN_DURATION = 3600 * 24 * 30; //30 days
+    public static final int DEFAULT_PERSONAL_TOKEN_DURATION = 3600 * 24 * 365; //1 year
 
-    private static final String CLAIM_AUTHORITIES = "authorities";
+    public static final int DEFAULT_KEY_LENGTH = 54;
+
+    public static final String CLAIM_AUTHORITIES = "authorities";
 
     @Autowired
     //TODO move to JDBC!
     private RefreshTokenRepository refreshTokenRepository;
+
+    @Autowired
+    private PersonalAccessTokenRepository personalAccessTokenRepository;
 
     @Autowired
     private JWKSetKeyStore keyStore;
@@ -84,6 +126,7 @@ public class JwtTokenService implements InitializingBean {
 
     private int accessTokenDuration = DEFAULT_ACCESS_TOKEN_DURATION;
     private int refreshTokenDuration = DEFAULT_REFRESH_TOKEN_DURATION;
+    private int personalTokenDuration = DEFAULT_PERSONAL_TOKEN_DURATION;
 
     //we need to keep the key along with singer/verifier
     private JWK jwk;
@@ -116,6 +159,12 @@ public class JwtTokenService implements InitializingBean {
     public void setRefreshTokenDuration(@Value("${jwt.refresh-token.duration}") Integer refreshTokenDuration) {
         if (refreshTokenDuration != null) {
             this.refreshTokenDuration = refreshTokenDuration.intValue();
+        }
+    }
+
+    public void setPersonalTokenDuration(@Value("${jwt.personal-token.duration}") Integer personalTokenDuration) {
+        if (personalTokenDuration != null) {
+            this.personalTokenDuration = personalTokenDuration;
         }
     }
 
@@ -160,12 +209,20 @@ public class JwtTokenService implements InitializingBean {
         return refreshTokenDuration;
     }
 
+    public int getPersonalTokenDuration() {
+        return personalTokenDuration;
+    }
+
     public String getIssuer() {
         return issuer;
     }
 
     public String getAudience() {
         return audience;
+    }
+
+    public String getExchangeAudience() {
+        return audience + "/exchange";
     }
 
     public String getClientId() {
@@ -182,6 +239,92 @@ public class JwtTokenService implements InitializingBean {
 
     public JwtAuthenticationConverter getAuthenticationConverter() {
         return authenticationConverter;
+    }
+
+    public OpaqueTokenIntrospector getPersonalAccessTokenIntrospector() {
+        return new OpaqueTokenIntrospector() {
+            @Override
+            public OAuth2AuthenticatedPrincipal introspect(String token) {
+                try {
+                    // Find the token
+                    PersonalAccessToken pat = personalAccessTokenRepository.consume(token);
+                    if (pat == null) {
+                        return null;
+                    }
+
+                    if (log.isTraceEnabled()) {
+                        log.trace("token: {}", pat);
+                    }
+
+                    // Check expiration
+                    if (pat.getExpiresAt().before(Date.from(Instant.now()))) {
+                        throw new JwtTokenServiceException("Personal access token is expired");
+                    }
+
+                    //deserialize authentication
+                    byte[] bytes = pat.getAuth();
+                    if (bytes == null || bytes.length == 0) {
+                        throw new JwtTokenServiceException("Missing authentication for token");
+                    }
+
+                    UserAuthentication<?> user = (UserAuthentication<?>) serializer.deserializeFromByteArray(bytes);
+
+                    log.debug("Personal access token successfully restored");
+
+                    //map attributes
+                    Instant now = Instant.now();
+
+                    Map<String, Object> attributes = new HashMap<>();
+                    attributes.put("sub", user.getName());
+                    attributes.put("preferred_username", user.getUsername());
+                    attributes.put("client_id", clientId);
+                    attributes.put("aud", audience);
+                    attributes.put("iss", issuer);
+                    attributes.put("iat", now);
+                    attributes.put("exp", now.plusSeconds(accessTokenDuration));
+                    attributes.put("scope", StringUtils.collectionToCommaDelimitedString(pat.getScopes()));
+
+                    DefaultOAuth2AuthenticatedPrincipal principal = new DefaultOAuth2AuthenticatedPrincipal(
+                        user.getName(),
+                        attributes,
+                        user.getAuthorities()
+                    );
+
+                    return principal;
+                } catch (IOException | StoreException | JwtTokenServiceException e) {
+                    log.debug("error introspecting personal access token", e);
+                    throw new JwtTokenServiceException(e.getMessage());
+                }
+            }
+        };
+    }
+
+    public OpaqueTokenAuthenticationConverter getPersonalAccessTokenConverter() {
+        return new OpaqueTokenAuthenticationConverter() {
+            @Override
+            public BearerTokenAuthentication convert(
+                String introspectedToken,
+                OAuth2AuthenticatedPrincipal authenticatedPrincipal
+            ) {
+                if (authenticatedPrincipal == null) {
+                    return null;
+                }
+
+                Instant iat = authenticatedPrincipal.getAttribute(OAuth2TokenIntrospectionClaimNames.IAT);
+                Instant exp = authenticatedPrincipal.getAttribute(OAuth2TokenIntrospectionClaimNames.EXP);
+                OAuth2AccessToken accessToken = new OAuth2AccessToken(
+                    OAuth2AccessToken.TokenType.BEARER,
+                    introspectedToken,
+                    iat,
+                    exp
+                );
+                return new BearerTokenAuthentication(
+                    authenticatedPrincipal,
+                    accessToken,
+                    authenticatedPrincipal.getAuthorities()
+                );
+            }
+        };
     }
 
     /*
@@ -202,6 +345,19 @@ public class JwtTokenService implements InitializingBean {
 
     public SignedJWT generateAccessToken(@NotNull UserAuthentication<?> authentication)
         throws JwtTokenServiceException {
+        return generateAccessToken(authentication, List.of(audience));
+    }
+
+    public SignedJWT generateAccessToken(@NotNull UserAuthentication<?> authentication, List<String> audiences)
+        throws JwtTokenServiceException {
+        return generateAccessToken(authentication, List.of(audience), accessTokenDuration);
+    }
+
+    public SignedJWT generateAccessToken(
+        @NotNull UserAuthentication<?> authentication,
+        List<String> audiences,
+        int duration
+    ) throws JwtTokenServiceException {
         if (signer == null) {
             throw new UnsupportedOperationException("signer not available");
         }
@@ -216,9 +372,9 @@ public class JwtTokenService implements InitializingBean {
                 .subject(authentication.getName())
                 .issuer(issuer)
                 .issueTime(Date.from(now))
-                .audience(audience)
+                .audience(audiences)
                 .jwtID(keyGenerator.generateKey())
-                .expirationTime(Date.from(now.plusSeconds(accessTokenDuration)));
+                .expirationTime(Date.from(now.plusSeconds(duration)));
             claims.claim(StandardClaimNames.PREFERRED_USERNAME, authentication.getUsername());
 
             //define authorities as claims
@@ -275,20 +431,18 @@ public class JwtTokenService implements InitializingBean {
             log.trace("access token: {}", accessToken.serialize());
         }
 
+        String id = UUID.randomUUID().toString();
+
         //refresh tokens are opaque
-        //use UUID as secret value
         String jti = keyGenerator.generateKey();
         Instant now = Instant.now();
 
-        // //derive a new access token with different expiration
-        // JWTClaimsSet.Builder claims = new JWTClaimsSet.Builder(
-        //     JWTClaimsSet.parse(accessToken.getPayload().toJSONObject())
-        // );
-        // claims.expirationTime(Date.from(now.plusSeconds(refreshTokenDuration)));
-        // JWSAlgorithm jwsAlgorithm = JWSAlgorithm.parse(jwk.getAlgorithm().getName());
-        // JWSHeader header = new JWSHeader.Builder(jwsAlgorithm).keyID(jwk.getKeyID()).build();
-        // SignedJWT jwt = new SignedJWT(header, claims.build());
-        // jwt.sign(signer);
+        //fetch ip address if available
+        String ipAddress = null;
+        Object details = authentication.getToken().getDetails();
+        if (details instanceof WebAuthenticationDetails) {
+            ipAddress = ((WebAuthenticationDetails) details).getRemoteAddress();
+        }
 
         //store auth object serialized
         // byte[] auth = SerializationUtils.serialize(authentication);
@@ -298,21 +452,22 @@ public class JwtTokenService implements InitializingBean {
             log.debug("store refresh token for {} with id {}", authentication.getName(), jti);
 
             // store Refresh Token into db
-            RefreshTokenEntity refreshToken = RefreshTokenEntity
+            RefreshToken refreshToken = RefreshToken
                 .builder()
-                .id(jti)
-                .subject(authentication.getName())
-                .authentication(auth)
-                .issuedTime(Date.from(now))
-                .expirationTime(Date.from(now.plusSeconds(refreshTokenDuration)))
+                .id(id)
+                .token(jti)
+                .user(authentication.getName())
+                .auth(auth)
+                .issuedAt(Date.from(now))
+                .expiresAt(Date.from(now.plusSeconds(refreshTokenDuration)))
+                .ipAddress(ipAddress)
                 .build();
 
             //save
-            refreshToken = refreshTokenRepository.saveAndFlush(refreshToken);
+            refreshTokenRepository.store(id, refreshToken);
 
-            //id is the token value
-            return refreshToken.getId();
-        } catch (IOException e) {
+            return refreshToken.getToken();
+        } catch (IOException | StoreException e) {
             throw new JwtTokenServiceException(e.getMessage());
         }
     }
@@ -326,46 +481,25 @@ public class JwtTokenService implements InitializingBean {
 
         log.debug("consume refresh token: {}", refreshToken);
 
-        //value is the ID for the table
-        String id = refreshToken;
-
-        // Lock the token
-        Optional<RefreshTokenEntity> tokenEntity = refreshTokenRepository.findByIdForUpdate(id);
-        if (tokenEntity.isEmpty()) {
-            log.debug("refresh token does not exists: {} id {}", refreshToken, id);
-            throw new JwtTokenServiceException("Refresh token does not exist");
-        }
-
-        RefreshTokenEntity token = tokenEntity.get();
-
-        if (log.isTraceEnabled()) {
-            log.trace("token: {}", token);
-        }
-
-        // // Parse the access token
-        // String accessToken = token.getToken();
-        // if (!StringUtils.hasText(accessToken)) {
-        //     //no access token stored along refresh, nothing to use to rebuild context
-        //     throw new JwtTokenServiceException("Missing access token");
-        // }
-
-        // SignedJWT signedJWT = SignedJWT.parse(accessToken);
-
-        // // Verify the token signature
-        // if (!signedJWT.verify(verifier)) {
-        //     throw new JwtTokenServiceException("Invalid access token");
-        // }
-
-        // Delete the token after usage: it matches the subject and should not be reused
-        refreshTokenRepository.deleteById(token.getId());
-
-        // Check expiration
-        if (token.getExpirationTime().before(Date.from(Instant.now()))) {
-            throw new JwtTokenServiceException("Refresh token has expired");
-        }
         try {
+            // consume the token
+            RefreshToken token = refreshTokenRepository.consume(refreshToken);
+            if (token == null) {
+                log.debug("refresh token does not exists: {} ", refreshToken);
+                throw new JwtTokenServiceException("Refresh token does not exist");
+            }
+
+            if (log.isTraceEnabled()) {
+                log.trace("token: {}", token);
+            }
+
+            // Check expiration
+            if (token.getExpiresAt().before(Date.from(Instant.now()))) {
+                throw new JwtTokenServiceException("Refresh token has expired");
+            }
+
             //deserialize authentication
-            byte[] bytes = token.getAuthentication();
+            byte[] bytes = token.getAuth();
             if (bytes == null || bytes.length == 0) {
                 throw new JwtTokenServiceException("Missing authentication for token");
             }
@@ -383,7 +517,200 @@ public class JwtTokenService implements InitializingBean {
             //     throw new JwtTokenServiceException("Error verifying JWT token", e);
             // }
 
-        } catch (IOException e) {
+        } catch (IOException | StoreException e) {
+            throw new JwtTokenServiceException(e.getMessage());
+        }
+    }
+
+    public List<RefreshToken> findRefreshTokens(@NotNull String user) {
+        log.debug("find all refresh tokens for {}", user);
+        try {
+            return refreshTokenRepository
+                .findByUser(user)
+                .stream()
+                .map(t -> {
+                    //erase token
+                    t.setToken(null);
+
+                    //erase auth to avoid leaking authentication data
+                    t.setAuth(null);
+                    return t;
+                })
+                .toList();
+        } catch (StoreException e) {
+            throw new JwtTokenServiceException(e.getMessage());
+        }
+    }
+
+    public void deleteRefreshToken(@NotNull String user, @NotNull String id) {
+        log.debug("delete refresh token {} for {}", id, user);
+        try {
+            RefreshToken token = refreshTokenRepository.find(id);
+            if (token == null) {
+                //nothing to do
+                return;
+            }
+
+            //check user matches
+            if (!user.equals(token.getUser())) {
+                throw new JwtTokenServiceException("Invalid user for refresh token");
+            }
+
+            //remove
+            refreshTokenRepository.remove(id);
+        } catch (StoreException e) {
+            throw new JwtTokenServiceException(e.getMessage());
+        }
+    }
+
+    public RefreshToken findRefreshToken(@NotNull String user, @NotNull String id) {
+        log.debug("find refresh token {} for {}", id, user);
+        try {
+            RefreshToken token = refreshTokenRepository.find(id);
+            if (token == null) {
+                //nothing to do
+                return null;
+            }
+
+            //check user matches
+            if (!user.equals(token.getUser())) {
+                throw new JwtTokenServiceException("Invalid user for refresh token");
+            }
+
+            //erase token
+            token.setToken(null);
+
+            //erase auth to avoid leaking authentication data
+            token.setAuth(null);
+
+            return token;
+        } catch (StoreException e) {
+            throw new JwtTokenServiceException(e.getMessage());
+        }
+    }
+
+    // public List<RefreshTokenEntity> findRefreshTokens(@NotNull String subject) {
+    //     log.debug("find refresh tokens for {}", subject);
+    //     return refreshTokenRepository.findBy(null, null)
+    // }
+
+    /*
+     * Personal access tokens
+     */
+    public String generatePersonalAccessToken(
+        @NotNull UserAuthentication<?> authentication,
+        @Nullable String name,
+        @Nullable Set<String> scopes
+    ) throws JwtTokenServiceException {
+        log.debug("generate personal access token for {}", authentication.getName());
+
+        String id = UUID.randomUUID().toString();
+        if (!StringUtils.hasText(name)) {
+            name = keyGenerator.generateKey();
+        }
+
+        //PAT tokens are opaque
+        String jti = keyGenerator.generateKey();
+        Instant now = Instant.now();
+        Date expires = Date.from(now.plusSeconds(personalTokenDuration));
+
+        //fetch ip address if available
+        String ipAddress = null;
+        Object details = authentication.getToken().getDetails();
+        if (details instanceof WebAuthenticationDetails) {
+            ipAddress = ((WebAuthenticationDetails) details).getRemoteAddress();
+        }
+
+        try {
+            //serialize auth to keep authentication context
+            byte[] auth = serializer.serializeToByteArray(authentication);
+
+            log.debug("store personal access token for {} with id {}", authentication.getName(), jti);
+            PersonalAccessToken personalAccessToken = PersonalAccessToken
+                .builder()
+                .id(id)
+                .name(name)
+                .token(jti)
+                .user(authentication.getName())
+                .issuedAt(Date.from(now))
+                .expiresAt(expires)
+                .scopes(scopes)
+                .ipAddress(ipAddress)
+                .auth(auth)
+                .build();
+
+            //save
+            personalAccessTokenRepository.store(id, personalAccessToken);
+
+            return personalAccessToken.getToken();
+        } catch (IOException | StoreException e) {
+            throw new JwtTokenServiceException(e.getMessage());
+        }
+    }
+
+    public List<PersonalAccessToken> findPersonalAccessTokens(@NotNull String user) {
+        log.debug("find all personal access tokens for {}", user);
+        try {
+            return personalAccessTokenRepository
+                .findByUser(user)
+                .stream()
+                .map(t -> {
+                    //erase token
+                    t.setToken(null);
+
+                    //erase auth to avoid leaking authentication data
+                    t.setAuth(null);
+                    return t;
+                })
+                .toList();
+        } catch (StoreException e) {
+            throw new JwtTokenServiceException(e.getMessage());
+        }
+    }
+
+    public PersonalAccessToken findPersonalAccessToken(@NotNull String user, @NotNull String personalAccessToken) {
+        log.debug("find personal access token {} for {}", personalAccessToken, user);
+        try {
+            PersonalAccessToken token = personalAccessTokenRepository.find(personalAccessToken);
+            if (token == null) {
+                //nothing to do
+                return null;
+            }
+
+            //check user matches
+            if (!user.equals(token.getUser())) {
+                throw new JwtTokenServiceException("Invalid user for personal access token");
+            }
+
+            //erase token
+            token.setToken(null);
+
+            //erase auth to avoid leaking authentication data
+            token.setAuth(null);
+
+            return token;
+        } catch (StoreException e) {
+            throw new JwtTokenServiceException(e.getMessage());
+        }
+    }
+
+    public void deletePersonalAccessToken(@NotNull String user, @NotNull String personalAccessToken) {
+        log.debug("delete personal access token {} for {}", personalAccessToken, user);
+        try {
+            PersonalAccessToken token = personalAccessTokenRepository.find(personalAccessToken);
+            if (token == null) {
+                //nothing to do
+                return;
+            }
+
+            //check user matches
+            if (!user.equals(token.getUser())) {
+                throw new JwtTokenServiceException("Invalid user for personal access token");
+            }
+
+            //remove
+            personalAccessTokenRepository.remove(personalAccessToken);
+        } catch (StoreException e) {
             throw new JwtTokenServiceException(e.getMessage());
         }
     }

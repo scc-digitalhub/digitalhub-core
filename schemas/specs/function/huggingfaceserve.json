@@ -18,7 +18,7 @@
       "type" : "string",
       "title" : "fields.path.title",
       "description" : "fields.huggingface.path.description",
-      "pattern" : "^(store://([^/]+)/model/huggingface/.*)|.*\\/$|.*\\.zip$|^huggingface?://.*$"
+      "pattern" : "^(store://([^/]+)/model/huggingface/.*)|.*\\/$|.*\\.zip$|^huggingface?://.*$|^hf?://.*$"
     }
   },
   "required" : [ "path" ],

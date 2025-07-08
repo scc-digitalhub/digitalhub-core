@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "prettier": "prettier --config ./.prettierrc.yml --write --list-different \"modules/*/src/**/*.java\"  \"application/src/**/*.java\"",
-    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s -r 1 --skip-unstable"
+    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s -r 1 --skip-unstable",
+    "envvars": "cat application/src/main/resources/application.yml  | grep '${' | awk -F ':' '{print $2}' | awk -F '{' '{print $2}' |  grep '^[[:upper:]]' | sort -u > ENV_VARS.txt",
+    "i18n": "find ./schemas -name '*.json' | xargs -i cat {} | grep -e \"title\" -e \"description\" | grep \"\\.\" | tr -d \\\" | tr -d \\, | awk -F ':' '{print $2}' | awk '{$1=$1};1' | sort -u > I18N_KEYS.txt"
   },
   "devDependencies": {
     "conventional-changelog-cli": "^5.0.0",

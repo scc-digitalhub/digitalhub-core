@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /**
  * Copyright 2025 the original author or authors
  *
@@ -16,9 +22,11 @@
 
 package it.smartcommunitylabdhub.files.provider;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import it.smartcommunitylabdhub.authorization.model.AbstractCredentials;
+import java.time.ZonedDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -35,16 +43,42 @@ import lombok.ToString;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class S3Credentials extends AbstractCredentials {
 
+    //NOTE: align names with
+    //ref https://docs.aws.amazon.com/sdkref/latest/guide/settings-reference.html#EVarSettings
+    //
     @JsonProperty("aws_access_key_id")
     private String accessKey;
 
     @JsonProperty("aws_secret_access_key")
     private String secretKey;
 
+    @JsonProperty("aws_session_token")
+    private String sessionToken;
+
+    @JsonProperty("aws_endpoint_url")
+    private String endpoint;
+
+    @JsonProperty("aws_region")
+    private String region;
+
+    @JsonProperty("aws_credentials_expiration")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH':'mm':'ss'Z'")
+    private ZonedDateTime expiration;
+
+    @JsonProperty("s3_signature_version")
+    private String signatureVersion;
+
+    @JsonProperty("s3_bucket")
+    private String bucket;
+
+    @JsonProperty("s3_path_style")
+    private Boolean pathStyle;
+
     @Override
     public void eraseCredentials() {
         //clear credentials
         this.accessKey = null;
         this.secretKey = null;
+        this.sessionToken = null;
     }
 }

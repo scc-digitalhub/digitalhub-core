@@ -1,3 +1,26 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Copyright 2025 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package it.smartcommunitylabdhub.core.controllers.v1.context;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,12 +33,11 @@ import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
 import it.smartcommunitylabdhub.commons.models.files.FileInfo;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
+import it.smartcommunitylabdhub.commons.services.ArtifactManager;
 import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
-import it.smartcommunitylabdhub.core.models.entities.ArtifactEntity;
-import it.smartcommunitylabdhub.core.models.queries.filters.entities.ArtifactEntityFilter;
-import it.smartcommunitylabdhub.core.models.queries.services.SearchableArtifactService;
+import it.smartcommunitylabdhub.core.artifacts.filters.ArtifactEntityFilter;
 import it.smartcommunitylabdhub.files.models.DownloadInfo;
 import it.smartcommunitylabdhub.files.models.UploadInfo;
 import it.smartcommunitylabdhub.files.service.EntityFilesService;
@@ -59,7 +81,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ArtifactContextController {
 
     @Autowired
-    SearchableArtifactService artifactService;
+    ArtifactManager artifactManager;
 
     @Autowired
     EntityFilesService<Artifact> filesService;
@@ -81,7 +103,7 @@ public class ArtifactContextController {
         dto.setProject(project);
 
         //create as new
-        return artifactService.createArtifact(dto);
+        return artifactManager.createArtifact(dto);
     }
 
     @Operation(summary = "Search artifacts")
@@ -94,14 +116,14 @@ public class ArtifactContextController {
             { @SortDefault(sort = "created", direction = Direction.DESC) }
         ) Pageable pageable
     ) {
-        SearchFilter<ArtifactEntity> sf = null;
+        SearchFilter<Artifact> sf = null;
         if (filter != null) {
             sf = filter.toSearchFilter();
         }
         if ("all".equals(versions)) {
-            return artifactService.searchArtifactsByProject(project, pageable, sf);
+            return artifactManager.searchArtifactsByProject(project, pageable, sf);
         } else {
-            return artifactService.searchLatestArtifactsByProject(project, pageable, sf);
+            return artifactManager.searchLatestArtifactsByProject(project, pageable, sf);
         }
     }
 
@@ -109,9 +131,10 @@ public class ArtifactContextController {
     @DeleteMapping(path = "")
     public void deleteAllArtifacts(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @ParameterObject @RequestParam @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String name
+        @ParameterObject @RequestParam @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String name,
+        @RequestParam(required = false) Boolean cascade
     ) {
-        artifactService.deleteArtifacts(project, name);
+        artifactManager.deleteArtifacts(project, name, cascade);
     }
 
     /*
@@ -124,7 +147,7 @@ public class ArtifactContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Artifact artifact = artifactService.getArtifact(id);
+        Artifact artifact = artifactManager.getArtifact(id);
 
         //check for project and name match
         if (!artifact.getProject().equals(project)) {
@@ -145,30 +168,31 @@ public class ArtifactContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestBody @Valid @NotNull Artifact artifactDTO
     ) throws NoSuchEntityException, IllegalArgumentException, SystemException, BindException {
-        Artifact artifact = artifactService.getArtifact(id);
+        Artifact artifact = artifactManager.getArtifact(id);
 
         //check for project and name match
         if (!artifact.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
 
-        return artifactService.updateArtifact(id, artifactDTO);
+        return artifactManager.updateArtifact(id, artifactDTO);
     }
 
     @Operation(summary = "Delete a specific artifact version")
     @DeleteMapping(path = "/{id}")
     public void deleteArtifactById(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
+        @RequestParam(required = false) Boolean cascade
     ) throws NoSuchEntityException {
-        Artifact artifact = artifactService.getArtifact(id);
+        Artifact artifact = artifactManager.getArtifact(id);
 
         //check for project and name match
         if (!artifact.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
 
-        artifactService.deleteArtifact(id);
+        artifactManager.deleteArtifact(id, cascade);
     }
 
     /*
@@ -181,7 +205,7 @@ public class ArtifactContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @ParameterObject @RequestParam(required = false) String sub
     ) throws NoSuchEntityException {
-        Artifact artifact = artifactService.getArtifact(id);
+        Artifact artifact = artifactManager.getArtifact(id);
 
         //check for project and name match
         if (!artifact.getProject().equals(project)) {
@@ -202,7 +226,7 @@ public class ArtifactContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         HttpServletRequest request
     ) throws NoSuchEntityException {
-        Artifact artifact = artifactService.getArtifact(id);
+        Artifact artifact = artifactManager.getArtifact(id);
 
         //check for project and name match
         if (!artifact.getProject().equals(project)) {
@@ -219,14 +243,14 @@ public class ArtifactContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestParam @NotNull String filename
     ) throws NoSuchEntityException {
-        Artifact artifact = artifactService.findArtifact(id);
+        Artifact artifact = artifactManager.findArtifact(id);
 
         //check for project and name match
         if ((artifact != null) && !artifact.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
 
-        return filesService.uploadFileAsUrl(id, filename);
+        return filesService.uploadFileAsUrl(project, id, filename);
     }
 
     @Operation(summary = "Start a multipart upload for a given artifact, if available")
@@ -236,14 +260,14 @@ public class ArtifactContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestParam @NotNull String filename
     ) throws NoSuchEntityException {
-        Artifact artifact = artifactService.findArtifact(id);
+        Artifact artifact = artifactManager.findArtifact(id);
 
         //check for project and name match
         if ((artifact != null) && !artifact.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
 
-        return filesService.startMultiPartUpload(id, filename);
+        return filesService.startMultiPartUpload(project, id, filename);
     }
 
     @Operation(
@@ -257,14 +281,14 @@ public class ArtifactContextController {
         @RequestParam @NotNull String uploadId,
         @RequestParam @NotNull Integer partNumber
     ) throws NoSuchEntityException {
-        Artifact artifact = artifactService.findArtifact(id);
+        Artifact artifact = artifactManager.findArtifact(id);
 
         //check for project and name match
         if ((artifact != null) && !artifact.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
 
-        return filesService.uploadMultiPart(id, filename, uploadId, partNumber);
+        return filesService.uploadMultiPart(project, id, filename, uploadId, partNumber);
     }
 
     @Operation(summary = "Complete a multipart upload for a given artifact, if available")
@@ -276,14 +300,14 @@ public class ArtifactContextController {
         @RequestParam @NotNull String uploadId,
         @RequestParam @NotNull List<String> partList
     ) throws NoSuchEntityException {
-        Artifact artifact = artifactService.findArtifact(id);
+        Artifact artifact = artifactManager.findArtifact(id);
 
         //check for project and name match
         if ((artifact != null) && !artifact.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
 
-        return filesService.completeMultiPartUpload(id, filename, uploadId, partList);
+        return filesService.completeMultiPartUpload(project, id, filename, uploadId, partList);
     }
 
     @Operation(summary = "Get file info for a given artifact, if available")
@@ -292,7 +316,7 @@ public class ArtifactContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Artifact artifact = artifactService.getArtifact(id);
+        Artifact artifact = artifactManager.getArtifact(id);
 
         //check for project and name match
         if (!artifact.getProject().equals(project)) {
@@ -309,7 +333,7 @@ public class ArtifactContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestBody List<FileInfo> files
     ) throws NoSuchEntityException {
-        Artifact entity = artifactService.getArtifact(id);
+        Artifact entity = artifactManager.getArtifact(id);
 
         //check for project and name match
         if (!entity.getProject().equals(project)) {
@@ -325,7 +349,7 @@ public class ArtifactContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Artifact entity = artifactService.getArtifact(id);
+        Artifact entity = artifactManager.getArtifact(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {

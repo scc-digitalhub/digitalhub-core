@@ -1,0 +1,21 @@
+name: validate-table
+kind: python
+metadata:
+  description: A validation procedure in Python that accepts a dataitem:table (csv file) and then
+    validates the table via frictionless library, producing a detailed report. Additionally, the
+    function will append a VALID/INVALID label to the input to mark the validation result. The function 
+    can be triggered to automatically validate every table by defining a job trigger on READY state 
+    matching store://[project]/dataitem/table as key.
+  version: ee71f2a4da33473d80f07b9877989dcd
+  labels:
+    - python
+    - validation
+spec:
+  python_version: PYTHON3_10
+  requirements:
+    - frictionless  
+  source:
+    source: main.py
+    handler: main
+    base64: aW1wb3J0IGRpZ2l0YWxodWIgYXMgZGgKZnJvbSBkaWdpdGFsaHViX3J1bnRpbWVfcHl0aG9uIGltcG9ydCBoYW5kbGVyCmZyb20gZnJpY3Rpb25sZXNzIGltcG9ydCBDaGVja2xpc3QsIHZhbGlkYXRlCmltcG9ydCBvcwoKQGhhbmRsZXIob3V0cHV0cz1bInJlcG9ydCJdKQpkZWYgbWFpbihwcm9qZWN0LCBkaSk6CiAgICAjIGRvd25sb2FkIGFzIGxvY2FsIGZpbGUKICAgIHBhdGggPSBkaS5kb3dubG9hZChvdmVyd3JpdGU9VHJ1ZSkKICAgICMgdmFsaWRhdGUKICAgIHJlcG9ydCA9IHZhbGlkYXRlKHBhdGgpCiAgICAjIHVwZGF0ZSBhcnRpZmFjdCB3aXRoIGxhYmVsICAgIAogICAgbGFiZWwgPSAiVkFMSUQiIGlmIHJlcG9ydC52YWxpZCBlbHNlICJJTlZBTElEIgogICAgZGkubWV0YWRhdGEubGFiZWxzID0gZGkubWV0YWRhdGEubGFiZWxzLmFwcGVuZChsYWJlbCkgaWYgZGkubWV0YWRhdGEubGFiZWxzIGVsc2UgW2xhYmVsXQogICAgZGkuc2F2ZSh1cGRhdGU9VHJ1ZSkgICAgCiAgICAjY2xlYW51cAogICAgb3MucmVtb3ZlKHBhdGgpIAoKICAgIHdpdGggb3BlbigicmVwb3J0Lmpzb24iLCAidyIpIGFzIGY6CiAgICAgIGYud3JpdGUocmVwb3J0LnRvX2pzb24oKSkKCiAgICBwcm9qZWN0LmxvZ19hcnRpZmFjdChraW5kPSJhcnRpZmFjdCIsIG5hbWU9ZiJ7ZGkubmFtZX1fdmFsaWRhdGlvbi1yZXBvcnQuanNvbiIsIHNvdXJjZT0icmVwb3J0Lmpzb24iKQogICAgICAgIAogICAgIyBwZXJzaXN0IHJlcG9ydAogICAgcmV0dXJuIHJlcG9ydC50b19qc29uKCk=
+    lang: python

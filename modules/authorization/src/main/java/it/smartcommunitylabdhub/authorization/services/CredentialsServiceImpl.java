@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /**
  * Copyright 2025 the original author or authors
  *
@@ -16,17 +22,21 @@
 
 package it.smartcommunitylabdhub.authorization.services;
 
+import com.nimbusds.jwt.SignedJWT;
+import it.smartcommunitylabdhub.authorization.model.PersonalAccessToken;
+import it.smartcommunitylabdhub.authorization.model.RefreshToken;
 import it.smartcommunitylabdhub.authorization.model.TokenResponse;
 import it.smartcommunitylabdhub.authorization.model.TokenResponse.TokenResponseBuilder;
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
-import it.smartcommunitylabdhub.authorization.providers.AccessCredentials;
 import it.smartcommunitylabdhub.authorization.providers.AccessCredentialsProvider;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
+import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +47,12 @@ import org.springframework.stereotype.Service;
 public class CredentialsServiceImpl implements CredentialsService, TokenService {
 
     private final List<CredentialsProvider> providers;
-    private AccessCredentialsProvider accessProvider;
+    private JwtTokenService jwtTokenService;
+
+    @Autowired(required = false)
+    public void setJwtTokenService(JwtTokenService jwtTokenService) {
+        this.jwtTokenService = jwtTokenService;
+    }
 
     public CredentialsServiceImpl(Collection<CredentialsProvider> providers) {
         log.debug("Initialize service with providers");
@@ -51,11 +66,6 @@ public class CredentialsServiceImpl implements CredentialsService, TokenService 
         } else {
             this.providers = Collections.emptyList();
         }
-    }
-
-    @Autowired
-    public void setAccessProvider(AccessCredentialsProvider credentialsProvider) {
-        this.accessProvider = credentialsProvider;
     }
 
     public List<Credentials> getCredentials(@NotNull UserAuthentication<?> auth) {
@@ -88,15 +98,27 @@ public class CredentialsServiceImpl implements CredentialsService, TokenService 
     //     return auth.getCredentials();
     // }
 
-    public TokenResponse generateToken(
+    @Override
+    public TokenResponse generateAccessToken(
         @NotNull UserAuthentication<?> authentication,
         boolean withCredentials,
         boolean withRefresh
+    ) { //by default tokens are  invalid for exchange
+        return generateAccessToken(authentication, withCredentials, withRefresh, false);
+    }
+
+    @Override
+    public TokenResponse generateAccessToken(
+        @NotNull UserAuthentication<?> authentication,
+        boolean withCredentials,
+        boolean withRefresh,
+        boolean withExchange
     ) {
         log.info("generate credentials for user {}", authentication.getName());
 
         List<CredentialsProvider> credentialsProviders = providers
             .stream()
+            //skip access credentials, we generate tokens separately
             .filter(p -> !(p instanceof AccessCredentialsProvider))
             .toList();
 
@@ -113,19 +135,22 @@ public class CredentialsServiceImpl implements CredentialsService, TokenService 
         //response
         TokenResponseBuilder response = TokenResponse.builder();
 
-        if (accessProvider != null) {
-            AccessCredentials c = accessProvider.get(authentication);
-            if (c != null) {
-                //copy credential as token response
-                response.accessToken(c.getAccessTokenAsString());
-                response.idToken(c.getIdTokenAsString());
-                response.clientId(c.getClientId());
-                response.expiration(c.getExpiration());
-                response.issuer(c.getIssuer());
+        if (jwtTokenService != null) {
+            List<String> audiences = withExchange
+                ? List.of(jwtTokenService.getAudience(), jwtTokenService.getExchangeAudience())
+                : List.of(jwtTokenService.getAudience());
+            SignedJWT accessToken = jwtTokenService.generateAccessToken(authentication, audiences);
 
-                if (withRefresh) {
-                    response.refreshToken(c.getRefreshToken());
-                }
+            //build token response
+            response.accessToken(accessToken.serialize());
+            response.idToken(accessToken.serialize());
+            response.clientId(jwtTokenService.getClientId());
+            response.expiration(jwtTokenService.getAccessTokenDuration());
+            response.issuer(jwtTokenService.getIssuer());
+
+            if (withRefresh) {
+                String refreshToken = jwtTokenService.generateRefreshToken(authentication, accessToken);
+                response.refreshToken(refreshToken);
             }
         }
 
@@ -144,7 +169,90 @@ public class CredentialsServiceImpl implements CredentialsService, TokenService 
         return response.build();
     }
 
-    public TokenResponse generateToken(@NotNull UserAuthentication<?> authentication) {
-        return generateToken(authentication, true, true);
+    @Override
+    public TokenResponse generatePersonalAccessToken(
+        @NotNull UserAuthentication<?> authentication,
+        @Nullable List<String> scopes
+    ) {
+        return generatePersonalAccessToken(authentication, null, scopes);
+    }
+
+    @Override
+    public TokenResponse generatePersonalAccessToken(
+        @NotNull UserAuthentication<?> authentication,
+        @Nullable String name,
+        @Nullable List<String> scopes
+    ) {
+        //response
+        TokenResponseBuilder response = TokenResponse.builder();
+
+        if (jwtTokenService != null) {
+            String accessToken = jwtTokenService.generatePersonalAccessToken(
+                authentication,
+                name,
+                scopes != null ? Set.copyOf(scopes) : null
+            );
+
+            //build token response
+            response.accessToken(accessToken);
+            response.clientId(jwtTokenService.getClientId());
+            response.expiration(jwtTokenService.getPersonalTokenDuration());
+            response.issuer(jwtTokenService.getIssuer());
+        }
+
+        return response.build();
+    }
+
+    @Override
+    public PersonalAccessToken getPersonalAccessToken(
+        @NotNull UserAuthentication<?> authentication,
+        @NotNull String tokenId
+    ) {
+        if (jwtTokenService == null) {
+            return null;
+        }
+
+        return jwtTokenService.findPersonalAccessToken(authentication.getName(), tokenId);
+    }
+
+    @Override
+    public List<PersonalAccessToken> getPersonalAccessTokens(@NotNull UserAuthentication<?> authentication) {
+        if (jwtTokenService == null) {
+            return Collections.emptyList();
+        }
+
+        return jwtTokenService.findPersonalAccessTokens(authentication.getName());
+    }
+
+    @Override
+    public void revokePersonalAccessToken(@NotNull UserAuthentication<?> authentication, @NotNull String tokenId) {
+        if (jwtTokenService != null) {
+            jwtTokenService.deletePersonalAccessToken(authentication.getName(), tokenId);
+        }
+    }
+
+    @Override
+    public RefreshToken getRefreshToken(@NotNull UserAuthentication<?> authentication, @NotNull String tokenId) {
+        if (jwtTokenService == null) {
+            return null;
+        }
+
+        return jwtTokenService.findRefreshToken(authentication.getName(), tokenId);
+    }
+
+    @Override
+    public List<RefreshToken> getRefreshTokens(@NotNull UserAuthentication<?> authentication) {
+        if (jwtTokenService == null) {
+            return Collections.emptyList();
+        }
+
+        return jwtTokenService.findRefreshTokens(authentication.getName());
+    }
+
+    @Override
+    public void revokeRefreshToken(@NotNull UserAuthentication<?> authentication, @NotNull String tokenId) {
+        if (jwtTokenService != null) {
+            jwtTokenService.deleteRefreshToken(authentication.getName(), tokenId);
+        }
     }
 }

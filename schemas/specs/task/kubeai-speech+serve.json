@@ -1,0 +1,15 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "type" : "object",
+  "properties" : {
+    "function" : {
+      "type" : "string",
+      "title" : "fields.function.title",
+      "description" : "fields.function.description",
+      "minLength" : 1
+    }
+  },
+  "required" : [ "function" ],
+  "title" : "specs.kubeai-speech+serve.title",
+  "description" : "specs.kubeai-speech+serve.description"
+}

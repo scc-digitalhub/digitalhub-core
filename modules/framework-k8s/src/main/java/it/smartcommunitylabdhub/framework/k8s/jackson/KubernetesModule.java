@@ -1,3 +1,26 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Copyright 2025 the original author or authors.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * https://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
+
 package it.smartcommunitylabdhub.framework.k8s.jackson;
 
 import com.fasterxml.classmate.ResolvedType;
@@ -11,7 +34,7 @@ import com.github.victools.jsonschema.generator.SchemaGeneratorConfig;
 import com.github.victools.jsonschema.generator.SchemaGeneratorConfigBuilder;
 import com.github.victools.jsonschema.generator.SchemaKeyword;
 import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
-import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sResourceProfileAware;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sTemplate;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import java.io.IOException;
@@ -108,7 +131,7 @@ public class KubernetesModule implements com.github.victools.jsonschema.generato
         public CustomDefinition provideCustomSchemaDefinition(ResolvedType javaType, SchemaGenerationContext context) {
             SchemaGeneratorConfig config = context.getGeneratorConfig();
 
-            if (templates != null && javaType.isInstanceOf(K8sFunctionTaskBaseSpec.class)) {
+            if (templates != null && javaType.isInstanceOf(K8sResourceProfileAware.class)) {
                 ObjectNode def = context.createStandardDefinition(javaType, this);
                 JsonNode node = Optional
                     .ofNullable(def.get(config.getKeyword(SchemaKeyword.TAG_PROPERTIES)))

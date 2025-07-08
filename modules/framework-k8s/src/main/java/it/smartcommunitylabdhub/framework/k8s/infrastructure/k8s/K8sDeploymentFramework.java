@@ -1,3 +1,26 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Copyright 2025 the original author or authors.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * https://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
+
 package it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -13,6 +36,7 @@ import io.kubernetes.client.openapi.models.V1EnvFromSource;
 import io.kubernetes.client.openapi.models.V1EnvVar;
 import io.kubernetes.client.openapi.models.V1LabelSelector;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
+import io.kubernetes.client.openapi.models.V1PersistentVolumeClaim;
 import io.kubernetes.client.openapi.models.V1PodSpec;
 import io.kubernetes.client.openapi.models.V1PodTemplateSpec;
 import io.kubernetes.client.openapi.models.V1ResourceRequirements;
@@ -111,6 +135,7 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
             results.put("secret", secret.stringData(Collections.emptyMap()).data(Collections.emptyMap()));
         }
 
+        //configmap
         try {
             V1ConfigMap initConfigMap = buildInitConfigMap(runnable);
             if (initConfigMap != null) {
@@ -126,6 +151,26 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
             }
 
             throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+        }
+
+        //pvcs
+        List<V1PersistentVolumeClaim> pvcs = buildPersistentVolumeClaims(runnable);
+        if (pvcs != null) {
+            for (V1PersistentVolumeClaim pvc : pvcs) {
+                log.info("create pvc for {}", String.valueOf(pvc.getMetadata().getName()));
+                try {
+                    coreV1Api.createNamespacedPersistentVolumeClaim(namespace, pvc, null, null, null, null);
+                    //store
+                    results.put("pvc", pvc);
+                } catch (ApiException e) {
+                    log.error("Error with k8s: {}", e.getMessage());
+                    if (log.isTraceEnabled()) {
+                        log.trace("k8s api response: {}", e.getResponseBody());
+                    }
+
+                    throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+                }
+            }
         }
 
         log.info("create deployment for {}", String.valueOf(deployment.getMetadata().getName()));
@@ -172,7 +217,7 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
         V1Deployment deployment;
         try {
             deployment = get(build(runnable));
-        } catch (K8sFrameworkException e) {
+        } catch (K8sFrameworkException | IllegalArgumentException e) {
             runnable.setState(State.DELETED.name());
             return runnable;
         }
@@ -194,6 +239,47 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
             }
         } catch (ApiException | NullPointerException e) {
             //ignore, not existing or error
+        }
+
+        try {
+            List<V1PersistentVolumeClaim> pvcs = buildPersistentVolumeClaims(runnable);
+            if (pvcs != null) {
+                for (V1PersistentVolumeClaim pvc : pvcs) {
+                    String pvcName = pvc.getMetadata().getName();
+                    try {
+                        V1PersistentVolumeClaim v = coreV1Api.readNamespacedPersistentVolumeClaim(
+                            pvcName,
+                            namespace,
+                            null
+                        );
+                        if (v != null) {
+                            log.info("delete pvc for {}", String.valueOf(pvcName));
+
+                            coreV1Api.deleteNamespacedPersistentVolumeClaim(
+                                pvcName,
+                                namespace,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null
+                            );
+                            messages.add(String.format("pvc %s deleted", pvcName));
+                        }
+                    } catch (ApiException e) {
+                        log.error("Error with k8s: {}", e.getMessage());
+                        if (log.isTraceEnabled()) {
+                            log.trace("k8s api response: {}", e.getResponseBody());
+                        }
+                        //don't propagate
+                        // throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+                    }
+                }
+            }
+        } catch (IllegalArgumentException re) {
+            //don't propagate
+            log.error("Error with k8s: {}", re.getMessage());
         }
 
         if (!"keep".equals(collectResults)) {
@@ -403,7 +489,15 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
             V1Container initContainer = new V1Container()
                 .name("init-container-" + runnable.getId())
                 .image(initImage)
-                .volumeMounts(volumeMounts)
+                .volumeMounts(
+                    volumeMounts
+                        .stream()
+                        .filter(v ->
+                            k8sProperties.getSharedVolume().getMountPath().equals(v.getMountPath()) ||
+                            "/init-config-map".equals(v.getMountPath())
+                        )
+                        .collect(Collectors.toList())
+                )
                 .resources(resources)
                 .env(env)
                 .envFrom(envFrom)
@@ -419,6 +513,11 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
         if (template != null && template.getProfile().getReplicas() != null) {
             //override with template
             replicas = template.getProfile().getReplicas().intValue();
+        }
+
+        //sanity check: replicas should be > 0
+        if (replicas <= 0) {
+            throw new K8sFrameworkException("replicas should be > 0");
         }
 
         // Create the deploymentSpec with the PodTemplateSpec, leveraging template
@@ -497,7 +596,7 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
             String deploymentName = deployment.getMetadata().getName();
             log.debug("delete k8s deployment for {}", deploymentName);
 
-            appsV1Api.deleteNamespacedDeployment(deploymentName, namespace, null, null, null, null, null, null);
+            appsV1Api.deleteNamespacedDeployment(deploymentName, namespace, null, null, null, null, "Foreground", null);
         } catch (ApiException e) {
             log.error("Error with k8s: {}", e.getResponseBody());
             if (log.isTraceEnabled()) {

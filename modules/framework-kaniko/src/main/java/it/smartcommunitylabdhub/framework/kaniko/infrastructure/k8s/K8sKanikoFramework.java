@@ -1,3 +1,26 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Copyright 2025 the original author or authors.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * https://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
+
 package it.smartcommunitylabdhub.framework.kaniko.infrastructure.k8s;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -251,14 +274,33 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sKanikoRunnable, V1Jo
             log.trace("runnable: {}", runnable);
         }
 
+        List<String> messages = new ArrayList<>();
+
         V1Job job = get(build(runnable));
 
         //stop by deleting
         log.info("delete job for {}", String.valueOf(job.getMetadata().getName()));
         delete(job);
+        messages.add(String.format("job %s deleted", job.getMetadata().getName()));
+
+        //secrets
+        cleanRunSecret(runnable);
+
+        //init config map
+        try {
+            String configMapName = "init-config-map-" + runnable.getId();
+            V1ConfigMap initConfigMap = coreV1Api.readNamespacedConfigMap(configMapName, namespace, null);
+            if (initConfigMap != null) {
+                coreV1Api.deleteNamespacedConfigMap(configMapName, namespace, null, null, null, null, null, null);
+                messages.add(String.format("configMap %s deleted", configMapName));
+            }
+        } catch (ApiException | NullPointerException e) {
+            //ignore, not existing or error
+        }
 
         //update state
         runnable.setState(State.STOPPED.name());
+        runnable.setMessage(String.join(", ", messages));
 
         if (log.isTraceEnabled()) {
             log.trace("result: {}", runnable);
@@ -282,14 +324,29 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sKanikoRunnable, V1Jo
             return runnable;
         }
 
+        List<String> messages = new ArrayList<>();
+        log.info("delete job for {}", String.valueOf(job.getMetadata().getName()));
+        delete(job);
+        messages.add(String.format("job %s deleted", job.getMetadata().getName()));
+
         //secrets
         cleanRunSecret(runnable);
 
-        log.info("delete job for {}", String.valueOf(job.getMetadata().getName()));
-        delete(job);
+        //init config map
+        try {
+            String configMapName = "init-config-map-" + runnable.getId();
+            V1ConfigMap initConfigMap = coreV1Api.readNamespacedConfigMap(configMapName, namespace, null);
+            if (initConfigMap != null) {
+                coreV1Api.deleteNamespacedConfigMap(configMapName, namespace, null, null, null, null, null, null);
+                messages.add(String.format("configMap %s deleted", configMapName));
+            }
+        } catch (ApiException | NullPointerException e) {
+            //ignore, not existing or error
+        }
 
         //update state
         runnable.setState(State.DELETED.name());
+        runnable.setMessage(String.join(", ", messages));
 
         if (log.isTraceEnabled()) {
             log.trace("result: {}", runnable);
@@ -363,7 +420,7 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sKanikoRunnable, V1Jo
                 .noneMatch(v -> k8sProperties.getSharedVolume().getMountPath().equals(v.getMountPath()))
         ) {
             //use framework definition
-            V1Volume sharedVolume = k8sBuilderHelper.getVolume(k8sProperties.getSharedVolume());
+            V1Volume sharedVolume = k8sBuilderHelper.getVolume(runnable.getId(), k8sProperties.getSharedVolume());
             volumes.add(sharedVolume);
 
             V1VolumeMount sharedVolumeMount = k8sBuilderHelper.getVolumeMount(k8sProperties.getSharedVolume());
@@ -427,6 +484,8 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sKanikoRunnable, V1Jo
             .tolerations(buildTolerations(runnable))
             .volumes(volumes)
             .restartPolicy("Never");
+        //DISABLED: kaniko needs to run as root!
+        // .securityContext(buildPodSecurityContext(runnable));
 
         // Create a PodTemplateSpec with the PodSpec
         V1PodTemplateSpec podTemplateSpec = new V1PodTemplateSpec().metadata(metadata).spec(podSpec);
@@ -516,7 +575,7 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sKanikoRunnable, V1Jo
             String jobName = job.getMetadata().getName();
             log.debug("delete k8s job for {}", jobName);
 
-            batchV1Api.deleteNamespacedJob(jobName, namespace, null, null, null, null, null, null);
+            batchV1Api.deleteNamespacedJob(jobName, namespace, null, null, null, null, "Foreground", null);
         } catch (ApiException e) {
             log.error("Error with k8s: {}", e.getResponseBody());
             if (log.isDebugEnabled()) {

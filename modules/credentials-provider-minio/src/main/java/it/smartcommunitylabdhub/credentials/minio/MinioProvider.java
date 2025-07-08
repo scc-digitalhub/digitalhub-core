@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /**
  * Copyright 2025 the original author or authors
  *
@@ -20,32 +26,48 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import io.minio.credentials.AssumeRoleProvider;
+import io.minio.messages.ResponseDate;
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.CredentialsProvider;
+import it.smartcommunitylabdhub.authorization.services.JwtTokenService;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
+import it.smartcommunitylabdhub.commons.infrastructure.ConfigurationProvider;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
+import it.smartcommunitylabdhub.files.provider.S3Config;
+import it.smartcommunitylabdhub.files.provider.S3Config.S3ConfigBuilder;
+import it.smartcommunitylabdhub.files.provider.S3Credentials;
+import it.smartcommunitylabdhub.files.s3.S3FilesStore;
+import it.smartcommunitylabdhub.files.service.FilesService;
 import jakarta.validation.constraints.NotNull;
+import java.lang.reflect.Field;
 import java.security.NoSuchAlgorithmException;
 import java.security.ProviderException;
+import java.time.Duration;
+import java.time.ZonedDateTime;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.util.Pair;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
+import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 
 @Service
+@ConditionalOnProperty(name = "credentials.provider.minio.enable", havingValue = "true", matchIfMissing = false)
 @Slf4j
-public class MinioProvider implements CredentialsProvider, InitializingBean {
+public class MinioProvider implements ConfigurationProvider, CredentialsProvider, InitializingBean {
 
-    private static final Integer DEFAULT_DURATION = 24 * 3600; //24 hour
-    private static final Integer MIN_DURATION = 300; //5 min
+    private static final int DEFAULT_DURATION = 24 * 3600; //24 hour
+    private static final int MIN_DURATION = 300; //5 min
 
     @Value("${credentials.provider.minio.access-key}")
     private String accessKey;
@@ -59,38 +81,60 @@ public class MinioProvider implements CredentialsProvider, InitializingBean {
     @Value("${credentials.provider.minio.policy}")
     private String defaultPolicy;
 
-    @Value("${credentials.provider.minio.duration}")
-    private Integer duration = DEFAULT_DURATION;
-
     @Value("${credentials.provider.minio.endpoint}")
     private String endpointUrl;
 
     @Value("${credentials.provider.minio.region}")
     private String region;
 
-    @Value("${credentials.provider.minio.bucket}")
-    private String bucket;
-
     @Value("${credentials.provider.minio.enable}")
     private Boolean enabled;
 
-    // cache credentials for up to DURATION
-    LoadingCache<Pair<String, String>, MinioSessionCredentials> cache;
+    private String bucket;
 
-    public MinioProvider() {
+    private int duration = DEFAULT_DURATION;
+    private int accessTokenDuration = JwtTokenService.DEFAULT_ACCESS_TOKEN_DURATION;
+
+    private final FilesService filesService;
+    private S3Config config;
+
+    // cache credentials for up to DURATION
+    LoadingCache<Pair<String, String>, S3Credentials> cache;
+
+    public MinioProvider(FilesService filesService) {
+        Assert.notNull(filesService, "files service is required");
+        this.filesService = filesService;
         //TODO define a property bean
+    }
+
+    @Autowired(required = false)
+    public void setBucket(@Value("${credentials.provider.minio.bucket}") String bucket) {
+        //sanity check
+        if (StringUtils.hasText(bucket)) {
+            this.bucket = bucket;
+        } else {
+            this.bucket = null;
+        }
+    }
+
+    @Autowired
+    public void setAccessTokenDuration(@Value("${jwt.access-token.duration}") Integer accessTokenDuration) {
+        if (accessTokenDuration != null) {
+            this.accessTokenDuration = accessTokenDuration.intValue();
+        }
     }
 
     @Override
     public void afterPropertiesSet() throws Exception {
         if (Boolean.TRUE.equals(enabled)) {
-            //check config
-            enabled =
-                StringUtils.hasText(accessKey) && StringUtils.hasText(secretKey) && StringUtils.hasText(endpointUrl);
+            //check config and override if needed
+            //TODO raise an error
+            enabled = StringUtils.hasText(endpointUrl);
         }
 
-        if (duration == null || duration < MIN_DURATION) {
-            duration = DEFAULT_DURATION;
+        //set duration to 2x access token duration to ensure we have valid credentials for a full cycle
+        if (accessTokenDuration * 2 > duration || accessTokenDuration * 3 < duration) {
+            duration = accessTokenDuration * 2;
         }
 
         //keep cache shorter than token duration to avoid releasing soon to be expired keys
@@ -102,17 +146,44 @@ public class MinioProvider implements CredentialsProvider, InitializingBean {
                 .newBuilder()
                 .expireAfterWrite(cacheDuration, TimeUnit.SECONDS)
                 .build(
-                    new CacheLoader<Pair<String, String>, MinioSessionCredentials>() {
+                    new CacheLoader<Pair<String, String>, S3Credentials>() {
                         @Override
-                        public MinioSessionCredentials load(@Nonnull Pair<String, String> key) throws Exception {
+                        public S3Credentials load(@Nonnull Pair<String, String> key) throws Exception {
                             log.debug("load credentials for {} policy {}", key.getFirst(), key.getSecond());
                             return generate(key.getFirst(), key.getSecond());
                         }
                     }
                 );
+
+        //build config
+        S3ConfigBuilder builder = S3Config
+            .builder()
+            .endpoint(endpointUrl)
+            .bucket(bucket)
+            .region(region)
+            .signatureVersion("s3v4")
+            .pathStyle(true);
+
+        this.config = builder.build();
+
+        if (log.isTraceEnabled()) {
+            log.trace("config: {}", config.toJson());
+        }
+
+        //build a file store
+        S3FilesStore store = new S3FilesStore(config);
+
+        //register with service
+        if (StringUtils.hasText(bucket)) {
+            filesService.registerStore("s3://" + bucket, store);
+            filesService.registerStore("zip+s3://" + bucket, store);
+        } else {
+            filesService.registerStore("s3://", store);
+            filesService.registerStore("zip+s3://", store);
+        }
     }
 
-    private MinioSessionCredentials generate(@NotNull String username, @NotNull String policy) throws StoreException {
+    private S3Credentials generate(@NotNull String username, @NotNull String policy) throws StoreException {
         log.debug("generate credentials for user authentication {} policy {} via STS service", username, policy);
 
         try {
@@ -134,11 +205,26 @@ public class MinioProvider implements CredentialsProvider, InitializingBean {
 
             io.minio.credentials.Credentials response = provider.fetch();
 
-            return MinioSessionCredentials
+            //extract private field because minio obj has no getter for expiration...
+            ZonedDateTime exp = ZonedDateTime.now().plus(Duration.ofSeconds(duration - MIN_DURATION));
+            try {
+                Field field = io.minio.credentials.Credentials.class.getDeclaredField("expiration");
+                field.setAccessible(true);
+
+                ResponseDate rd = (ResponseDate) ReflectionUtils.getField(field, response);
+                if (rd != null) {
+                    exp = rd.zonedDateTime();
+                }
+            } catch (NoSuchFieldException | SecurityException e) {
+                //no expiration, assume duration is valid
+            }
+
+            return S3Credentials
                 .builder()
                 .accessKey(response.accessKey())
                 .secretKey(response.secretKey())
                 .sessionToken(response.sessionToken())
+                .expiration(exp)
                 .endpoint(endpointUrl)
                 .region(region)
                 .bucket(bucket)
@@ -171,7 +257,29 @@ public class MinioProvider implements CredentialsProvider, InitializingBean {
                 String username = auth.getName();
                 log.debug("get credentials for user authentication {} from cache", username);
                 try {
-                    return cache.get(Pair.of(username, policy.getPolicy()));
+                    Pair<String, String> key = Pair.of(username, policy.getPolicy());
+                    S3Credentials credentials = cache.get(key);
+                    if (credentials == null) {
+                        return null;
+                    }
+
+                    //check remaining duration against access token
+                    if (
+                        credentials.getExpiration() != null &&
+                        ZonedDateTime
+                            .now()
+                            .plus(Duration.ofSeconds(accessTokenDuration + MIN_DURATION))
+                            .isAfter(credentials.getExpiration())
+                    ) {
+                        //invalidate cache and re-fetch as new
+                        log.debug("refresh credentials for user authentication {} via STS service", username);
+                        cache.invalidate(key);
+
+                        //direct cache load, if it fails we don't want to retry
+                        return cache.get(key);
+                    }
+
+                    return credentials;
                 } catch (ExecutionException e) {
                     //error, no recovery
                     log.error("Error with provider {}", e);
@@ -195,7 +303,7 @@ public class MinioProvider implements CredentialsProvider, InitializingBean {
 
                 //     io.minio.credentials.Credentials response = provider.fetch();
 
-                //     return MinioSessionCredentials
+                //     return S3Credentials
                 //         .builder()
                 //         .accessKey(response.accessKey())
                 //         .secretKey(response.secretKey())
@@ -212,6 +320,11 @@ public class MinioProvider implements CredentialsProvider, InitializingBean {
         }
 
         return null;
+    }
+
+    @Override
+    public S3Config getConfig() {
+        return config;
     }
 
     @Override

@@ -1,3 +1,26 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Copyright 2025 the original author or authors.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * https://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
+
 package it.smartcommunitylabdhub.runtime.python.runners;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -42,7 +65,12 @@ public class PythonJobRunner {
 
     private static ObjectMapper jsonMapper = JacksonMapper.CUSTOM_OBJECT_MAPPER;
 
+    private static final int UID = 1000;
+    private static final int GID = 100;
+
     private final String image;
+    private final int userId;
+    private final int groupId;
     private final String command;
     private final PythonFunctionSpec functionSpec;
     private final Map<String, String> secretData;
@@ -52,6 +80,8 @@ public class PythonJobRunner {
 
     public PythonJobRunner(
         String image,
+        Integer userId,
+        Integer groupId,
         String command,
         PythonFunctionSpec functionPythonSpec,
         Map<String, String> secretData,
@@ -62,6 +92,9 @@ public class PythonJobRunner {
         this.functionSpec = functionPythonSpec;
         this.secretData = secretData;
         this.k8sBuilderHelper = k8sBuilderHelper;
+
+        this.userId = userId != null ? userId : UID;
+        this.groupId = groupId != null ? groupId : GID;
     }
 
     public K8sRunnable produce(Run run) {
@@ -209,7 +242,9 @@ public class PythonJobRunner {
                 .priorityClass(taskSpec.getPriorityClass())
                 .template(taskSpec.getProfile())
                 //securityContext
-                .fsGroup(1000)
+                .fsGroup(groupId)
+                .runAsGroup(groupId)
+                .runAsUser(userId)
                 .build();
 
             if (StringUtils.hasText(taskSpec.getSchedule())) {
@@ -243,6 +278,10 @@ public class PythonJobRunner {
                         .runtimeClass(taskSpec.getRuntimeClass())
                         .priorityClass(taskSpec.getPriorityClass())
                         .template(taskSpec.getProfile())
+                        //securityContext
+                        .fsGroup(groupId)
+                        .runAsGroup(groupId)
+                        .runAsUser(userId)
                         //specific
                         .schedule(taskSpec.getSchedule())
                         .build();

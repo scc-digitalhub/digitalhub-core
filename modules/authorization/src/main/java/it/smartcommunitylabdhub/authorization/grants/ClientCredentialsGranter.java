@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /**
  * Copyright 2025 the original author or authors
  *
@@ -117,7 +123,7 @@ public class ClientCredentialsGranter implements TokenGranter {
         );
 
         //full credentials without refresh
-        return tokenService.generateToken(user, withCredentials, false);
+        return tokenService.generateAccessToken(user, withCredentials, false, false);
     }
 
     @Override

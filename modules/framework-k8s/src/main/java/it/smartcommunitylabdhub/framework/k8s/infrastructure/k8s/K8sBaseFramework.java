@@ -1,3 +1,26 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Copyright 2025 the original author or authors.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * https://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
+
 package it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -16,15 +39,19 @@ import io.kubernetes.client.openapi.models.V1EnvFromSource;
 import io.kubernetes.client.openapi.models.V1EnvVar;
 import io.kubernetes.client.openapi.models.V1LocalObjectReference;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
+import io.kubernetes.client.openapi.models.V1PersistentVolumeClaim;
+import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimSpec;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
 import io.kubernetes.client.openapi.models.V1PodSecurityContext;
 import io.kubernetes.client.openapi.models.V1ResourceRequirements;
 import io.kubernetes.client.openapi.models.V1Secret;
+import io.kubernetes.client.openapi.models.V1SecretEnvSource;
 import io.kubernetes.client.openapi.models.V1SecurityContext;
 import io.kubernetes.client.openapi.models.V1Toleration;
 import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;
+import io.kubernetes.client.openapi.models.V1VolumeResourceRequirements;
 import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
 import it.smartcommunitylabdhub.commons.infrastructure.Framework;
 import it.smartcommunitylabdhub.commons.models.enums.State;
@@ -33,6 +60,7 @@ import it.smartcommunitylabdhub.framework.k8s.config.KubernetesProperties;
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.jackson.KubernetesMapper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sSecretHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
@@ -43,6 +71,7 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreMetric;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreNodeSelector;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreResource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreResourceDefinition;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -55,7 +84,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
@@ -94,6 +122,9 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
     protected String gpuResourceKey;
     protected CoreResourceDefinition cpuResourceDefinition = new CoreResourceDefinition();
     protected CoreResourceDefinition memResourceDefinition = new CoreResourceDefinition();
+    protected CoreResourceDefinition pvcResourceDefinition = new CoreResourceDefinition();
+    protected String pvcStorageClass;
+
     protected List<String> templateKeys = Collections.emptyList();
 
     protected Map<String, K8sTemplate<T>> templates = Collections.emptyMap();
@@ -105,6 +136,7 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
     protected String version;
     protected K8sBuilderHelper k8sBuilderHelper;
     protected K8sSecretHelper k8sSecretHelper;
+    protected K8sLabelHelper k8sLabelHelper;
 
     protected K8sBaseFramework(ApiClient apiClient) {
         Assert.notNull(apiClient, "k8s api client is required");
@@ -198,6 +230,35 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
         }
     }
 
+    public void setPvcResourceDefinition(CoreResourceDefinition pvcResourceDefinition) {
+        this.pvcResourceDefinition = pvcResourceDefinition;
+    }
+
+    @Autowired
+    public void setPvcRequestsResourceDefinition(
+        @Value("${kubernetes.resources.pvc.requests}") String pvcResourceDefinition
+    ) {
+        if (StringUtils.hasText(pvcResourceDefinition)) {
+            this.pvcResourceDefinition.setRequests(pvcResourceDefinition);
+        }
+    }
+
+    @Autowired
+    public void setPvcLimitsResourceDefinition(
+        @Value("${kubernetes.resources.pvc.limits}") String pvcResourceDefinition
+    ) {
+        if (StringUtils.hasText(pvcResourceDefinition)) {
+            this.pvcResourceDefinition.setLimits(pvcResourceDefinition);
+        }
+    }
+
+    @Autowired
+    public void setPvcStorageClass(@Value("${kubernetes.resources.pvc.storage-class}") String pvcStorageClass) {
+        if (StringUtils.hasText(pvcStorageClass)) {
+            this.pvcStorageClass = pvcStorageClass;
+        }
+    }
+
     @Autowired
     public void setGpuResourceKey(@Value("${kubernetes.resources.gpu.key}") String gpuResourceKey) {
         if (StringUtils.hasText(gpuResourceKey)) {
@@ -235,10 +296,16 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
         this.k8sSecretHelper = k8sSecretHelper;
     }
 
+    @Autowired
+    public void setK8sLabelHelper(K8sLabelHelper k8sLabelHelper) {
+        this.k8sLabelHelper = k8sLabelHelper;
+    }
+
     @Override
     public void afterPropertiesSet() throws Exception {
         Assert.notNull(k8sBuilderHelper, "k8s helper is required");
         Assert.notNull(k8sSecretHelper, "k8s secret helper is required");
+        Assert.notNull(k8sLabelHelper, "k8s label helper is required");
         Assert.notNull(k8sProperties, "k8s properties required");
         Assert.notNull(namespace, "k8s namespace required");
         Assert.notNull(version, "k8s version required");
@@ -500,27 +567,10 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
      * TODO move to a base builder class
      */
     protected Map<String, String> buildLabels(T runnable) {
-        // Create labels for job
-        Map<String, String> appLabels = Map.of(
-            "app.kubernetes.io/instance",
-            K8sBuilderHelper.sanitizeNames(applicationProperties.getName() + "-" + runnable.getId()),
-            "app.kubernetes.io/version",
-            runnable.getId(),
-            "app.kubernetes.io/part-of",
-            K8sBuilderHelper.sanitizeNames(applicationProperties.getName() + "-" + runnable.getProject()),
-            "app.kubernetes.io/managed-by",
-            K8sBuilderHelper.sanitizeNames(applicationProperties.getName())
-        );
+        // Create base labels
+        Map<String, String> baseLabels = k8sLabelHelper.buildBaseLabels(runnable);
 
-        Map<String, String> coreLabels = Map.of(
-            K8sBuilderHelper.sanitizeNames(applicationProperties.getName()) + "/project",
-            K8sBuilderHelper.sanitizeNames(runnable.getProject()),
-            K8sBuilderHelper.sanitizeNames(applicationProperties.getName()) + "/framework",
-            K8sBuilderHelper.sanitizeNames(runnable.getFramework()),
-            K8sBuilderHelper.sanitizeNames(applicationProperties.getName()) + "/runtime",
-            K8sBuilderHelper.sanitizeNames(runnable.getRuntime())
-        );
-
+        //build template labels when defined
         Map<String, String> templateLabels = new HashMap<>();
         if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
             //add template
@@ -537,8 +587,9 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
             }
         }
 
-        Map<String, String> labels = MapUtils.mergeMultipleMaps(templateLabels, appLabels, coreLabels);
+        Map<String, String> labels = MapUtils.mergeMultipleMaps(templateLabels, baseLabels);
 
+        //append user-defined labels with no override
         if (runnable.getLabels() != null && !runnable.getLabels().isEmpty()) {
             labels = new HashMap<>(labels);
             for (CoreLabel l : runnable.getLabels()) {
@@ -554,19 +605,11 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
         //shared envs
         List<V1EnvVar> sharedEnvs = k8sBuilderHelper.getV1EnvVar();
 
-        //secrets
-        V1Secret secret = buildRunSecret(runnable);
-        List<V1EnvVar> runSecretEnvs = new LinkedList<>();
-        if (secret != null && secret.getStringData() != null && !secret.getStringData().isEmpty()) {
-            Map<String, Set<String>> runSecretKeys = Collections.singletonMap(
-                secret.getMetadata().getName(),
-                secret.getStringData().keySet()
-            );
-            runSecretEnvs.addAll(k8sBuilderHelper.getEnvVarsFromSecrets(runSecretKeys));
-            runSecretEnvs.add(new V1EnvVar().name("DH_RUN_SECRET_NAME").value(secret.getMetadata().getName()));
-        }
+        //shared secrets
+        List<V1EnvVar> secretEnvs = k8sSecretHelper.getV1EnvVar();
 
         // function specific envs
+        // NOTE: we let users override core envs and secrets at their risk
         List<V1EnvVar> functionEnvs = runnable
             .getEnvs()
             .stream()
@@ -575,16 +618,29 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
 
         //merge all avoiding duplicates
         Map<String, V1EnvVar> envs = new HashMap<>();
+        //shared have the priority
         sharedEnvs.forEach(e -> envs.putIfAbsent(e.getName(), e));
+        secretEnvs.forEach(e -> envs.putIfAbsent(e.getName(), e));
         functionEnvs.forEach(e -> envs.putIfAbsent(e.getName(), e));
-        runSecretEnvs.forEach(e -> envs.putIfAbsent(e.getName(), e));
 
         return envs.values().stream().toList();
     }
 
     protected List<V1EnvFromSource> buildEnvFrom(T runnable) {
-        List<V1EnvFromSource> envVarsFromSource = k8sBuilderHelper.getV1EnvFromSource();
-        return envVarsFromSource;
+        //mount configmap and secret as env sources
+        List<V1EnvFromSource> envVarsFrom = new LinkedList<>();
+
+        //secrets
+        V1Secret secret = buildRunSecret(runnable);
+        if (secret != null && secret.getMetadata() != null && secret.getMetadata().getName() != null) {
+            envVarsFrom.add(
+                new V1EnvFromSource().secretRef(new V1SecretEnvSource().name(secret.getMetadata().getName()))
+            );
+        }
+
+        //TODO evaluate configuration into configmap
+
+        return envVarsFrom;
     }
 
     protected List<V1Volume> buildVolumes(T runnable) {
@@ -594,7 +650,7 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
             runnable
                 .getVolumes()
                 .forEach(volumeMap -> {
-                    V1Volume volume = k8sBuilderHelper.getVolume(volumeMap);
+                    V1Volume volume = k8sBuilderHelper.getVolume(runnable.getId(), volumeMap);
                     if (volume != null) {
                         volumes.add(volume);
                     }
@@ -610,7 +666,7 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
                 template
                     .getVolumes()
                     .forEach(volumeMap -> {
-                        V1Volume volume = k8sBuilderHelper.getVolume(volumeMap);
+                        V1Volume volume = k8sBuilderHelper.getVolume(runnable.getId(), volumeMap);
                         if (volume != null) {
                             volumes.add(volume);
                         }
@@ -632,7 +688,7 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
                     .noneMatch(v -> k8sProperties.getSharedVolume().getMountPath().equals(v.getMountPath()))
             ) {
                 //use framework definition
-                V1Volume volume = k8sBuilderHelper.getVolume(k8sProperties.getSharedVolume());
+                V1Volume volume = k8sBuilderHelper.getVolume(runnable.getId(), k8sProperties.getSharedVolume());
                 volumes.add(volume);
             }
 
@@ -916,19 +972,14 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
             runnable.getSecrets().forEach(s -> data.put(s.name(), s.value()));
         }
 
-        //set core credentials as env with prefix (when required)
+        //set core config as env
+        if (runnable.getConfigurationMap() != null) {
+            runnable.getConfigurationMap().entrySet().forEach(e -> data.put(e.getKey().toUpperCase(), e.getValue()));
+        }
+
+        //set core credentials as env
         if (runnable.getCredentialsMap() != null) {
-            String envsPrefix = k8sSecretHelper.getEnvsPrefix();
-            runnable
-                .getCredentialsMap()
-                .entrySet()
-                .forEach(e -> {
-                    if (StringUtils.hasText(envsPrefix)) {
-                        data.put(envsPrefix.toUpperCase() + "_" + e.getKey().toUpperCase(), e.getValue());
-                    } else {
-                        data.put(e.getKey().toUpperCase(), e.getValue());
-                    }
-                });
+            runnable.getCredentialsMap().entrySet().forEach(e -> data.put(e.getKey().toUpperCase(), e.getValue()));
         }
 
         if (!data.isEmpty()) {
@@ -1136,5 +1187,66 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
         }
 
         return runnable.getAffinity();
+    }
+
+    public List<V1PersistentVolumeClaim> buildPersistentVolumeClaims(T runnable) throws K8sFrameworkException {
+        // Volumes to attach to the pod based on the volume spec with the additional volume_type
+        List<V1PersistentVolumeClaim> volumes = new LinkedList<>();
+        if (runnable.getVolumes() != null) {
+            runnable
+                .getVolumes()
+                .stream()
+                .filter(v -> v.getVolumeType() == CoreVolume.VolumeType.persistent_volume_claim)
+                .forEach(v -> {
+                    //build claim
+                    Map<String, String> spec = Optional.ofNullable(v.getSpec()).orElse(Collections.emptyMap());
+                    Quantity quantity = Quantity.fromString(
+                        spec.getOrDefault("size", pvcResourceDefinition.getRequests())
+                    );
+                    V1VolumeResourceRequirements req = new V1VolumeResourceRequirements()
+                        .requests(Map.of("storage", quantity));
+
+                    //enforce limit
+                    //TODO check if valid!
+                    if (pvcResourceDefinition.getLimits() != null) {
+                        Quantity limit = Quantity.fromString(pvcResourceDefinition.getLimits());
+                        req.setLimits(Map.of("storage", limit));
+                    }
+
+                    V1PersistentVolumeClaim claim = new V1PersistentVolumeClaim()
+                        .metadata(
+                            new V1ObjectMeta().name(k8sBuilderHelper.getVolumeName(runnable.getId(), v.getName()))
+                        )
+                        .spec(
+                            new V1PersistentVolumeClaimSpec()
+                                .accessModes(Collections.singletonList("ReadWriteOnce"))
+                                .volumeMode("Filesystem")
+                                .storageClassName(spec.getOrDefault("storage_class", pvcStorageClass))
+                                .resources(req)
+                        );
+
+                    volumes.add(claim);
+                });
+        }
+
+        //volumes defined in template
+        //TODO evaluate support
+        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
+            //add template
+            K8sRunnable template = templates.get(runnable.getTemplate()).getProfile();
+
+            if (template.getVolumes() != null) {
+                template
+                    .getVolumes()
+                    .stream()
+                    .filter(v -> v.getVolumeType() == CoreVolume.VolumeType.persistent_volume_claim)
+                    .forEach(v -> {
+                        //TODO evaluate support
+                        log.warn("Volumes defined in templates are not fully supported");
+                    });
+            }
+        }
+
+        return volumes;
     }
 }

@@ -1,3 +1,26 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Copyright 2025 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package it.smartcommunitylabdhub.core.controllers.v1.base;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,12 +35,11 @@ import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
+import it.smartcommunitylabdhub.commons.services.ProjectManager;
 import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
-import it.smartcommunitylabdhub.core.models.entities.ProjectEntity;
-import it.smartcommunitylabdhub.core.models.queries.filters.entities.ProjectEntityFilter;
-import it.smartcommunitylabdhub.core.models.queries.services.SearchableProjectService;
+import it.smartcommunitylabdhub.core.projects.filters.ProjectEntityFilter;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -58,7 +80,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProjectController {
 
     @Autowired
-    SearchableProjectService projectService;
+    ProjectManager projectManager;
 
     @Autowired
     ShareableAwareEntityService<Project> shareService;
@@ -81,12 +103,12 @@ public class ProjectController {
         ) Pageable pageable,
         Authentication auth
     ) {
-        SearchFilter<ProjectEntity> sf = null;
+        SearchFilter<Project> sf = null;
         if (filter != null) {
             sf = filter.toSearchFilter();
         }
 
-        return projectService.searchProjects(pageable, sf);
+        return projectManager.searchProjects(pageable, sf);
     }
 
     @Operation(summary = "Create project", description = "Create an project and return")
@@ -97,14 +119,14 @@ public class ProjectController {
     )
     public Project createProject(@RequestBody @Valid @NotNull Project dto)
         throws DuplicatedEntityException, IllegalArgumentException, SystemException, BindException {
-        return projectService.createProject(dto);
+        return projectManager.createProject(dto);
     }
 
     @Operation(summary = "Get an project by id", description = "Return an project")
     @GetMapping(path = "/{id}", produces = "application/json; charset=UTF-8")
     public Project getProject(@PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id)
         throws NoSuchEntityException {
-        return projectService.getProject(id);
+        return projectManager.getProject(id);
     }
 
     @Operation(summary = "Update specific project", description = "Update and return the project")
@@ -129,7 +151,7 @@ public class ProjectController {
                 .getCurrentAuditor()
                 .orElseThrow(() -> new InsufficientAuthenticationException("missing valid authentication"));
 
-            Project project = projectService.getProject(id);
+            Project project = projectManager.getProject(id);
             if (
                 auth.getAuthorities().stream().noneMatch(a -> "ROLE_ADMIN".equals(a.getAuthority())) &&
                 auth.getAuthorities().stream().noneMatch(a -> (id + ":ROLE_ADMIN").equals(a.getAuthority())) &&
@@ -139,7 +161,7 @@ public class ProjectController {
             }
         }
 
-        return projectService.updateProject(id, dto);
+        return projectManager.updateProject(id, dto);
     }
 
     @Operation(summary = "Delete a project", description = "Delete a specific project, with optional cascade")
@@ -160,7 +182,7 @@ public class ProjectController {
                 .getCurrentAuditor()
                 .orElseThrow(() -> new InsufficientAuthenticationException("missing valid authentication"));
 
-            Project project = projectService.findProject(id);
+            Project project = projectManager.findProject(id);
 
             if (project != null) {
                 if (
@@ -173,7 +195,7 @@ public class ProjectController {
             }
         }
 
-        projectService.deleteProject(id, cascade);
+        projectManager.deleteProject(id, cascade);
     }
 
     @Operation(summary = "Share a project with a user", description = "Share project")
@@ -244,7 +266,7 @@ public class ProjectController {
                 .getCurrentAuditor()
                 .orElseThrow(() -> new InsufficientAuthenticationException("missing valid authentication"));
 
-            Project project = projectService.findProject(id);
+            Project project = projectManager.findProject(id);
 
             if (project != null) {
                 boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));

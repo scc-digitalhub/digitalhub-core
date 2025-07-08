@@ -1,3 +1,26 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Copyright 2025 the original author or authors.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * https://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
+
 package it.smartcommunitylabdhub.framework.k8s.infrastructure.monitor;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -98,6 +121,30 @@ public abstract class K8sBaseMonitor<T extends K8sRunnable> implements Runnable 
             });
 
         log.debug("monitor completed.");
+    }
+
+    public void monitor(String id) throws StoreException {
+        try {
+            T runnable = store.find(id);
+            if (runnable == null) {
+                //nothing to do
+                log.debug("runnable {} not found", id);
+                return;
+            }
+            runnable = refresh(runnable);
+            if (log.isTraceEnabled()) {
+                log.trace("refreshed: {}", runnable);
+            }
+
+            // Update the runnable
+            log.debug("store run {}", runnable.getId());
+            store.store(runnable.getId(), runnable);
+
+            publish(runnable);
+        } catch (StoreException e) {
+            log.error("Error with runnable store: {}", e.getMessage());
+            throw e;
+        }
     }
 
     public abstract T refresh(T runnable);

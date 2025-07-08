@@ -1,0 +1,16 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/name: core
+    app.kubernetes.io/instance: dhcore
+  name: core
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: core
+subjects:
+- kind: ServiceAccount
+  name: core
+  namespace: default

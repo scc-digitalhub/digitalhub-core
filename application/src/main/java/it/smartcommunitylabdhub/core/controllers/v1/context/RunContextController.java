@@ -1,10 +1,56 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Copyright 2025 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package it.smartcommunitylabdhub.core.controllers.v1.context;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import it.smartcommunitylabdhub.commons.Keys;
+import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
+import it.smartcommunitylabdhub.commons.exceptions.SystemException;
+import it.smartcommunitylabdhub.commons.models.log.Log;
+import it.smartcommunitylabdhub.commons.models.metrics.NumberOrNumberArray;
+import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
+import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
+import it.smartcommunitylabdhub.commons.models.run.Run;
+import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
+import it.smartcommunitylabdhub.commons.services.LogService;
+import it.smartcommunitylabdhub.commons.services.MetricsService;
+import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
+import it.smartcommunitylabdhub.commons.services.RunManager;
+import it.smartcommunitylabdhub.core.ApplicationKeys;
+import it.smartcommunitylabdhub.core.annotations.ApiVersion;
+import it.smartcommunitylabdhub.core.runs.filters.RunEntityFilter;
+import it.smartcommunitylabdhub.core.runs.lifecycle.RunLifecycleManager;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import java.util.List;
 import java.util.Map;
-
 import javax.annotation.Nullable;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -25,33 +71,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import it.smartcommunitylabdhub.commons.Keys;
-import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
-import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
-import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.models.log.Log;
-import it.smartcommunitylabdhub.commons.models.metrics.NumberOrNumberArray;
-import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
-import it.smartcommunitylabdhub.commons.models.run.Run;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
-import it.smartcommunitylabdhub.commons.services.LogService;
-import it.smartcommunitylabdhub.commons.services.MetricsService;
-import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
-import it.smartcommunitylabdhub.core.ApplicationKeys;
-import it.smartcommunitylabdhub.core.annotations.ApiVersion;
-import it.smartcommunitylabdhub.core.components.run.RunLifecycleManager;
-import it.smartcommunitylabdhub.core.models.entities.RunEntity;
-import it.smartcommunitylabdhub.core.models.queries.filters.entities.RunEntityFilter;
-import it.smartcommunitylabdhub.core.models.queries.services.SearchableRunService;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import lombok.extern.slf4j.Slf4j;
-
 @RestController
 @ApiVersion("v1")
 @RequestMapping("/-/{project}/runs")
@@ -64,17 +83,17 @@ import lombok.extern.slf4j.Slf4j;
 public class RunContextController {
 
     @Autowired
-    SearchableRunService runService;
+    RunManager runManager;
 
     @Autowired
-    RunLifecycleManager runManager;
+    RunLifecycleManager lifecycleManager;
 
     @Autowired
     LogService logService;
 
     @Autowired
     RelationshipsAwareEntityService<Run> relationshipsService;
-    
+
     @Autowired
     MetricsService<Run> metricsService;
 
@@ -92,15 +111,15 @@ public class RunContextController {
         dto.setProject(project);
 
         //create as new, will check for duplicated
-        Run run = runService.createRun(dto);
+        Run run = runManager.createRun(dto);
 
         //if !local then also build+run
         RunBaseSpec runBaseSpec = new RunBaseSpec();
         runBaseSpec.configure(run.getSpec());
 
         if (Boolean.FALSE.equals(runBaseSpec.getLocalExecution())) {
-            run = runManager.build(run);
-            run = runManager.run(run);
+            run = lifecycleManager.build(run);
+            run = lifecycleManager.run(run);
         }
 
         return run;
@@ -115,12 +134,12 @@ public class RunContextController {
             { @SortDefault(sort = "created", direction = Direction.DESC) }
         ) Pageable pageable
     ) {
-        SearchFilter<RunEntity> sf = null;
+        SearchFilter<Run> sf = null;
         if (filter != null) {
             sf = filter.toSearchFilter();
         }
 
-        return runService.searchRunsByProject(project, pageable, sf);
+        return runManager.searchRunsByProject(project, pageable, sf);
     }
 
     @Operation(summary = "Retrieve a specific run given the run id")
@@ -129,7 +148,7 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Run run = runService.getRun(id);
+        Run run = runManager.getRun(id);
 
         //check for project match
         if (!run.getProject().equals(project)) {
@@ -150,14 +169,14 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestBody @Valid @NotNull Run runDTO
     ) throws NoSuchEntityException, IllegalArgumentException, SystemException, BindException {
-        Run run = runService.getRun(id);
+        Run run = runManager.getRun(id);
 
         //check for project match
         if (!run.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
 
-        return runService.updateRun(id, runDTO);
+        return runManager.updateRun(id, runDTO);
     }
 
     @Operation(summary = "Delete a specific run, with optional cascade")
@@ -166,7 +185,7 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Run run = runService.getRun(id);
+        Run run = runManager.getRun(id);
 
         //check for project  match
         if (!run.getProject().equals(project)) {
@@ -174,7 +193,7 @@ public class RunContextController {
         }
 
         //delete via manager
-        return runManager.delete(run);
+        return lifecycleManager.delete(run);
     }
 
     /*
@@ -186,7 +205,7 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Run run = runService.getRun(id);
+        Run run = runManager.getRun(id);
 
         //check for project  match
         if (!run.getProject().equals(project)) {
@@ -194,7 +213,7 @@ public class RunContextController {
         }
 
         // via manager
-        return runManager.build(run);
+        return lifecycleManager.build(run);
     }
 
     @Operation(summary = "Execute a specific run")
@@ -203,7 +222,7 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Run run = runService.getRun(id);
+        Run run = runManager.getRun(id);
 
         //check for project  match
         if (!run.getProject().equals(project)) {
@@ -211,7 +230,7 @@ public class RunContextController {
         }
 
         // via manager
-        return runManager.run(run);
+        return lifecycleManager.run(run);
     }
 
     @Operation(summary = "Stop a specific run execution")
@@ -220,7 +239,7 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Run run = runService.getRun(id);
+        Run run = runManager.getRun(id);
 
         //check for project  match
         if (!run.getProject().equals(project)) {
@@ -228,7 +247,7 @@ public class RunContextController {
         }
 
         // via manager
-        return runManager.stop(run);
+        return lifecycleManager.stop(run);
     }
 
     @Operation(summary = "Resume a specific run execution")
@@ -237,7 +256,7 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Run run = runService.getRun(id);
+        Run run = runManager.getRun(id);
 
         //check for project  match
         if (!run.getProject().equals(project)) {
@@ -245,7 +264,7 @@ public class RunContextController {
         }
 
         // via manager
-        return runManager.resume(run);
+        return lifecycleManager.resume(run);
     }
 
     @Operation(summary = "Delete a specific run execution")
@@ -254,7 +273,7 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Run run = runService.getRun(id);
+        Run run = runManager.getRun(id);
 
         //check for project  match
         if (!run.getProject().equals(project)) {
@@ -262,7 +281,7 @@ public class RunContextController {
         }
 
         // via manager
-        return runManager.delete(run);
+        return lifecycleManager.delete(run);
     }
 
     /*
@@ -275,7 +294,7 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Run run = runService.getRun(id);
+        Run run = runManager.getRun(id);
 
         //check for project
         if (!run.getProject().equals(project)) {
@@ -291,7 +310,7 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Run entity = runService.getRun(id);
+        Run entity = runManager.getRun(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {
@@ -300,55 +319,55 @@ public class RunContextController {
 
         return relationshipsService.getRelationships(id);
     }
-    
+
     @Operation(summary = "Get metrics info for a given entity, if available")
     @GetMapping(path = "/{id}/metrics", produces = "application/json; charset=UTF-8")
     public Map<String, NumberOrNumberArray> getMetrics(
-            @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-            @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws StoreException, SystemException {
-        Run entity = runService.getRun(id);
+        Run entity = runManager.getRun(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
-    	
-    	return  metricsService.getMetrics(id);
+
+        return metricsService.getMetrics(id);
     }
-    
+
     @Operation(summary = "Get metrics info for a given entity and metric, if available")
     @GetMapping(path = "/{id}/metrics/{name}", produces = "application/json; charset=UTF-8")
     public NumberOrNumberArray getMetricsByName(
-            @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-            @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-            @PathVariable String name
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
+        @PathVariable String name
     ) throws StoreException, SystemException {
-        Run entity = runService.getRun(id);
+        Run entity = runManager.getRun(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
-        
-    	return metricsService.getMetrics(id, name);
+
+        return metricsService.getMetrics(id, name);
     }
-    
+
     @Operation(summary = "Store metrics info for a given entity")
     @PutMapping(path = "/{id}/metrics/{name}", produces = "application/json; charset=UTF-8")
     public void storeMetrics(
-            @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-            @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-            @PathVariable String name,
-            @RequestBody NumberOrNumberArray data
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
+        @PathVariable String name,
+        @RequestBody NumberOrNumberArray data
     ) throws StoreException, SystemException {
-        Run entity = runService.getRun(id);
+        Run entity = runManager.getRun(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
-    	
+
         metricsService.saveMetrics(id, name, data);
     }
 }

@@ -1,0 +1,197 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "$defs" : {
+    "KubeAIFile" : {
+      "type" : "object",
+      "properties" : {
+        "content" : {
+          "type" : "string",
+          "title" : "fields.kubeai.filecontent.title",
+          "description" : "fields.kubeai.filecontent.description"
+        },
+        "path" : {
+          "type" : "string",
+          "title" : "fields.kubeai.filepath.title",
+          "description" : "fields.kubeai.filepath.description"
+        }
+      }
+    },
+    "KubeAILoadBalancing" : {
+      "type" : "object",
+      "properties" : {
+        "prefix_hash" : {
+          "$ref" : "#/$defs/KubeAIPrefixHash",
+          "title" : "fields.kubeai.prefixhash.title",
+          "description" : "fields.kubeai.prefixhash.description"
+        },
+        "strategy" : {
+          "$ref" : "#/$defs/KubeAILoadBalancingStrategy",
+          "title" : "fields.kubeai.strategy.title",
+          "description" : "fields.kubeai.strategy.description",
+          "default" : "LeastLoad"
+        }
+      }
+    },
+    "KubeAILoadBalancingStrategy" : {
+      "type" : "string",
+      "enum" : [ "LeastLoad", "PrefixHash" ]
+    },
+    "KubeAIPrefixHash" : {
+      "type" : "object",
+      "properties" : {
+        "mean_load_factor" : {
+          "type" : "integer",
+          "title" : "fields.kubeai.meanloadfactor.title",
+          "description" : "fields.kubeai.meanloadfactor.description"
+        },
+        "prefix_char_length" : {
+          "type" : "integer",
+          "title" : "fields.kubeai.prefixcharlength.title",
+          "description" : "fields.kubeai.prefixcharlength.description"
+        },
+        "replication" : {
+          "type" : "integer",
+          "title" : "fields.kubeai.replication.title",
+          "description" : "fields.kubeai.replication.description"
+        }
+      }
+    },
+    "KubeAIScaling" : {
+      "type" : "object",
+      "properties" : {
+        "autoscaling_disabled" : {
+          "type" : "boolean",
+          "title" : "fields.kubeai.autoscalingdisabled.title",
+          "description" : "fields.kubeai.autoscalingdisabled.description"
+        },
+        "load_balancing" : {
+          "$ref" : "#/$defs/KubeAILoadBalancing",
+          "title" : "fields.kubeai.loadbalancing.title",
+          "description" : "fields.kubeai.loadbalancing.description"
+        },
+        "max_replicas" : {
+          "type" : "integer",
+          "title" : "fields.kubeai.maxreplicas.title",
+          "description" : "fields.kubeai.maxreplicas.description"
+        },
+        "min_replicas" : {
+          "type" : "integer",
+          "title" : "fields.kubeai.minreplicas.title",
+          "description" : "fields.kubeai.minreplicas.description"
+        },
+        "replicas" : {
+          "type" : "integer",
+          "title" : "fields.kubeai.replicas.title",
+          "description" : "fields.kubeai.replicas.description"
+        },
+        "scale_down_delay_seconds" : {
+          "type" : "integer",
+          "title" : "fields.kubeai.scaledowndelayseconds.title",
+          "description" : "fields.kubeai.scaledowndelayseconds.description"
+        },
+        "target_requests" : {
+          "type" : "integer",
+          "title" : "fields.kubeai.targetrequests.title",
+          "description" : "fields.kubeai.targetrequests.description"
+        }
+      }
+    },
+    "Map_String.String_" : {
+      "type" : "object",
+      "additionalProperties" : {
+        "type" : "string"
+      }
+    }
+  },
+  "type" : "object",
+  "properties" : {
+    "args" : {
+      "title" : "fields.kubeai.args.title",
+      "description" : "fields.kubeai.args.description",
+      "type" : "array",
+      "items" : {
+        "type" : "string",
+        "title" : "fields.args.item.title",
+        "description" : "fields.args.item.description"
+      }
+    },
+    "cache_profile" : {
+      "type" : "string",
+      "title" : "fields.kubeai.cacheprofile.title",
+      "description" : "fields.kubeai.cacheprofile.description"
+    },
+    "env" : {
+      "$ref" : "#/$defs/Map_String.String_",
+      "title" : "fields.kubeai.env.title",
+      "description" : "fields.kubeai.env.description",
+      "additionalProperties" : {
+        "type" : "string",
+        "title" : "fields.env.item.title",
+        "description" : "fields.env.item.description"
+      }
+    },
+    "files" : {
+      "title" : "fields.kubeai.files.title",
+      "description" : "fields.kubeai.files.description",
+      "type" : "array",
+      "items" : {
+        "$ref" : "#/$defs/KubeAIFile",
+        "title" : "fields.files.item.title",
+        "description" : "fields.files.item.description"
+      }
+    },
+    "local_execution" : {
+      "type" : "boolean",
+      "title" : "fields.localExecution.title",
+      "description" : "fields.localExecution.description"
+    },
+    "processors" : {
+      "type" : "integer",
+      "title" : "fields.kubeai.processors.title",
+      "description" : "fields.kubeai.processors.description"
+    },
+    "profile" : {
+      "type" : "string",
+      "title" : "fields.kubeai.resourceprofile.title",
+      "description" : "fields.kubeai.resourceprofile.description"
+    },
+    "scaling" : {
+      "$ref" : "#/$defs/KubeAIScaling",
+      "title" : "fields.kubeai.scaling.title",
+      "description" : "fields.kubeai.scaling.description"
+    },
+    "secrets" : {
+      "title" : "fields.secrets.title",
+      "description" : "fields.secrets.description",
+      "type" : "array",
+      "items" : {
+        "type" : "string",
+        "title" : "fields.secrets.item.title",
+        "description" : "fields.secrets.item.description"
+      }
+    },
+    "task" : {
+      "type" : "string",
+      "title" : "fields.task.title",
+      "description" : "fields.task.description",
+      "minLength" : 1
+    }
+  },
+  "required" : [ "task" ],
+  "title" : "specs.kubeai-text+run.title",
+  "description" : "specs.kubeai-text+run.description",
+  "allOf" : [ {
+    "type" : "object",
+    "properties" : {
+      "function" : {
+        "type" : "string",
+        "title" : "fields.function.title",
+        "description" : "fields.function.description",
+        "minLength" : 1
+      }
+    },
+    "required" : [ "function" ],
+    "title" : "specs.kubeai-text+serve.title",
+    "description" : "specs.kubeai-text+serve.description"
+  } ]
+}

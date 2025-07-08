@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 TODO: 09/11/2023
 
 - [x] Fix poller scheduler at the moment it recreate a thread every time

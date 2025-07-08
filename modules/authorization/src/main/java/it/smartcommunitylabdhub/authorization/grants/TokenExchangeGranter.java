@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /**
  * Copyright 2025 the original author or authors
  *
@@ -20,10 +26,12 @@ import it.smartcommunitylabdhub.authorization.UserAuthenticationManager;
 import it.smartcommunitylabdhub.authorization.UserAuthenticationManagerBuilder;
 import it.smartcommunitylabdhub.authorization.model.TokenResponse;
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
+import it.smartcommunitylabdhub.authorization.services.JwtTokenService;
 import it.smartcommunitylabdhub.authorization.services.TokenService;
 import it.smartcommunitylabdhub.commons.config.SecurityProperties;
 import it.smartcommunitylabdhub.commons.config.SecurityProperties.JwtAuthenticationProperties;
 import jakarta.validation.constraints.NotNull;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +40,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -40,6 +50,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -51,6 +62,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationProvider;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.oauth2.server.resource.authentication.OpaqueTokenAuthenticationProvider;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -60,12 +72,14 @@ import org.springframework.util.StringUtils;
 public class TokenExchangeGranter implements TokenGranter, InitializingBean {
 
     public static final String ACCESS_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token";
+    public static final String PAT_TYPE = "urn:ietf:params:oauth:token-type:pat";
 
     private String clientId;
     private SecurityProperties securityProperties;
-    private JwtAuthenticationProvider jwtAuthProvider;
     private UserAuthenticationManager authenticationManager;
     private UserAuthenticationManagerBuilder authenticationManagerBuilder;
+
+    private JwtTokenService jwtTokenService;
 
     private final TokenService tokenService;
 
@@ -89,12 +103,33 @@ public class TokenExchangeGranter implements TokenGranter, InitializingBean {
         this.authenticationManagerBuilder = authenticationManagerBuilder;
     }
 
+    @Autowired
+    public void setJwtTokenService(JwtTokenService jwtTokenService) {
+        this.jwtTokenService = jwtTokenService;
+    }
+
     @Override
     public void afterPropertiesSet() throws Exception {
         Assert.notNull(securityProperties, "security properties are required");
         Assert.notNull(authenticationManagerBuilder, "auth manager builder is required");
 
-        //build provider when supported
+        List<AuthenticationProvider> providers = new ArrayList<>();
+
+        //internal provider
+        if (jwtTokenService != null) {
+            JwtAuthenticationProvider coreJwtAuthProvider = new JwtAuthenticationProvider(jwtTokenService.getDecoder());
+            coreJwtAuthProvider.setJwtAuthenticationConverter(jwtTokenService.getAuthenticationConverter());
+            providers.add(coreJwtAuthProvider);
+
+            // enable PAT auth provider
+            OpaqueTokenAuthenticationProvider patAuthProvider = new OpaqueTokenAuthenticationProvider(
+                jwtTokenService.getPersonalAccessTokenIntrospector()
+            );
+            patAuthProvider.setAuthenticationConverter(jwtTokenService.getPersonalAccessTokenConverter());
+            providers.add(patAuthProvider);
+        }
+
+        //build ext provider when supported
         if (securityProperties.isJwtAuthEnabled()) {
             JwtAuthenticationProperties props = securityProperties.getJwt();
 
@@ -131,11 +166,12 @@ public class TokenExchangeGranter implements TokenGranter, InitializingBean {
                 return new JwtAuthenticationToken(jwt, authorities, username);
             });
 
-            this.jwtAuthProvider = provider;
-
-            //build manager
-            this.authenticationManager = authenticationManagerBuilder.build(jwtAuthProvider);
+            providers.add(provider);
         }
+
+        //build manager
+        this.authenticationManager =
+            providers != null && !providers.isEmpty() ? authenticationManagerBuilder.build(providers) : null;
     }
 
     private static JwtDecoder jwtDecoder(String issuer, String audience) {
@@ -155,19 +191,25 @@ public class TokenExchangeGranter implements TokenGranter, InitializingBean {
 
     @Override
     public TokenResponse grant(@NotNull Map<String, String> parameters, Authentication authentication) {
-        if (jwtAuthProvider == null) {
+        if (authenticationManager == null) {
             throw new UnsupportedOperationException();
         }
 
-        //token exchange *requires* basic auth
-        if (authentication == null || !(authentication instanceof UsernamePasswordAuthenticationToken)) {
+        //token exchange *requires* basic auth OR anonymous
+        if (
+            authentication == null ||
+            (!(authentication instanceof UsernamePasswordAuthenticationToken) &&
+                !(authentication instanceof AnonymousAuthenticationToken))
+        ) {
             throw new InsufficientAuthenticationException("Invalid or missing authentication");
         }
 
-        //client *must* match authenticated user
-        UsernamePasswordAuthenticationToken clientAuth = (UsernamePasswordAuthenticationToken) authentication;
-        if (clientId != null && !clientId.equals(clientAuth.getName())) {
-            throw new InsufficientAuthenticationException("Invalid client authentication");
+        if (authentication instanceof UsernamePasswordAuthenticationToken) {
+            //client *must* match authenticated user
+            UsernamePasswordAuthenticationToken clientAuth = (UsernamePasswordAuthenticationToken) authentication;
+            if (clientId != null && !clientId.equals(clientAuth.getName())) {
+                throw new InsufficientAuthenticationException("Invalid client authentication");
+            }
         }
 
         //sanity check
@@ -196,13 +238,22 @@ public class TokenExchangeGranter implements TokenGranter, InitializingBean {
         if (token == null) {
             throw new IllegalArgumentException("invalid or missing subject_token");
         }
-
-        String tokenType = parameters.getOrDefault("subject_token_type", ACCESS_TOKEN_TYPE);
-        if (!ACCESS_TOKEN_TYPE.equals(tokenType)) {
+        String subjectTokenType = parameters.getOrDefault("subject_token_type", ACCESS_TOKEN_TYPE);
+        if (!ACCESS_TOKEN_TYPE.equals(subjectTokenType) && !PAT_TYPE.equals(subjectTokenType)) {
             throw new IllegalArgumentException("invalid or missing subject_token_type");
         }
 
-        log.debug("exchange token request from {}", clientAuth.getName());
+        String tokenType = parameters.getOrDefault("requested_token_type", ACCESS_TOKEN_TYPE);
+        if (!ACCESS_TOKEN_TYPE.equals(tokenType) && !PAT_TYPE.equals(tokenType)) {
+            throw new IllegalArgumentException("invalid or missing requested_token_type");
+        }
+
+        //sanity check: disable refresh token for PAT
+        if (PAT_TYPE.equals(tokenType) && withRefresh) {
+            throw new IllegalArgumentException("offline_access scope not allowed for PAT");
+        }
+
+        log.debug("exchange token request for {}", tokenType);
         if (log.isTraceEnabled()) {
             log.trace("subject token {}", token);
         }
@@ -215,18 +266,82 @@ public class TokenExchangeGranter implements TokenGranter, InitializingBean {
                 throw new IllegalArgumentException("invalid or missing subject_token");
             }
 
-            log.debug(
-                "exchange token request from {} resolved for {} via external provider",
-                clientAuth.getName(),
-                auth.getName()
-            );
+            log.debug("exchange token request resolved for {} via provider", auth.getName());
 
             //token is valid, use as context for generation
             //we expect a UserAuth
             UserAuthentication<?> user = (UserAuthentication<?>) auth;
 
-            //full credentials + refresh
-            return tokenService.generateToken(user, withCredentials, withRefresh);
+            if (ACCESS_TOKEN_TYPE.equals(tokenType)) {
+                //check subject token in detail
+                if (PAT_TYPE.equals(subjectTokenType)) {
+                    //no refresh token for PAT
+                    withRefresh = false;
+                }
+
+                //check token submitted
+                if (
+                    user.getToken() instanceof BearerTokenAuthenticationToken &&
+                    ((BearerTokenAuthenticationToken) user.getToken()) instanceof OAuth2AuthenticatedPrincipal
+                ) {
+                    if (!PAT_TYPE.equals(subjectTokenType)) {
+                        //authenticated with PAT as access token, invalid
+                        throw new IllegalArgumentException("invalid subject token");
+                    }
+
+                    //no refresh token for PAT
+                    withRefresh = false;
+
+                    OAuth2AuthenticatedPrincipal principal =
+                        ((OAuth2AuthenticatedPrincipal) (BearerTokenAuthenticationToken) user.getToken());
+
+                    //grant credentials only if originally authorized
+                    withCredentials =
+                        withCredentials &&
+                        principal.getAttribute(OAuth2ParameterNames.SCOPE) != null &&
+                        StringUtils
+                            .commaDelimitedListToSet(principal.getAttribute(OAuth2ParameterNames.SCOPE))
+                            .contains("credentials");
+                }
+
+                if (
+                    user.getToken() instanceof JwtAuthenticationToken &&
+                    jwtTokenService
+                        .getIssuer()
+                        .equals(((JwtAuthenticationToken) user.getToken()).getToken().getClaim(JwtClaimNames.ISS))
+                ) {
+                    //no exchange for internal token
+                    throw new IllegalArgumentException("invalid subject token");
+                }
+
+                //full credentials + refresh
+                TokenResponse response = tokenService.generateAccessToken(user, withCredentials, withRefresh, false);
+                response.setIssuedTokenType(ACCESS_TOKEN_TYPE);
+
+                return response;
+            }
+            if (PAT_TYPE.equals(tokenType)) {
+                //authorize only internal token with explicit audience
+                if (
+                    user.getToken() instanceof JwtAuthenticationToken &&
+                    jwtTokenService
+                        .getIssuer()
+                        .equals(((JwtAuthenticationToken) user.getToken()).getToken().getClaim(JwtClaimNames.ISS))
+                ) {
+                    Jwt jwt = ((JwtAuthenticationToken) user.getToken()).getToken();
+
+                    if (!jwt.getAudience().contains(jwtTokenService.getExchangeAudience())) {
+                        throw new IllegalArgumentException("invalid subject token");
+                    }
+
+                    //PAT only
+                    TokenResponse response = tokenService.generatePersonalAccessToken(user, List.copyOf(scopes));
+                    response.setIssuedTokenType(PAT_TYPE);
+
+                    return response;
+                }
+            }
+            throw new IllegalArgumentException("invalid or missing subject_token_type");
         } catch (AuthenticationException ae1) {
             throw new IllegalArgumentException("invalid or missing subject_token");
         }

@@ -1,0 +1,102 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "$defs" : {
+    "ArrayField" : {
+      "type" : "array",
+      "items" : {
+        "$ref" : "#/$defs/Serializable"
+      },
+      "title" : "array"
+    },
+    "BooleanField" : {
+      "type" : "boolean",
+      "title" : "boolean"
+    },
+    "LifecycleStates" : {
+      "type" : "string",
+      "enum" : [ "CREATED", "DELETED", "ERROR", "READY", "UPLOADING" ]
+    },
+    "Map_String.Serializable_" : {
+      "type" : "object",
+      "additionalProperties" : {
+        "$ref" : "#/$defs/Serializable"
+      }
+    },
+    "NumberField" : {
+      "type" : "number",
+      "title" : "number"
+    },
+    "ObjectField" : {
+      "type" : "object",
+      "title" : "object"
+    },
+    "Serializable" : {
+      "anyOf" : [ {
+        "$ref" : "#/$defs/StringField"
+      }, {
+        "$ref" : "#/$defs/NumberField"
+      }, {
+        "$ref" : "#/$defs/BooleanField"
+      }, {
+        "$ref" : "#/$defs/ObjectField"
+      }, {
+        "$ref" : "#/$defs/ArrayField"
+      } ],
+      "title" : "object"
+    },
+    "StringField" : {
+      "type" : "string",
+      "title" : "string"
+    }
+  },
+  "type" : "object",
+  "properties" : {
+    "function" : {
+      "type" : "string",
+      "title" : "fields.function.title",
+      "description" : "fields.function.description"
+    },
+    "key" : {
+      "type" : "string",
+      "title" : "fields.key.title",
+      "description" : "fields.key.description",
+      "minLength" : 1,
+      "pattern" : "store://([^/]+)/(.+)"
+    },
+    "states" : {
+      "title" : "fields.states.title",
+      "description" : "fields.states.description",
+      "type" : "array",
+      "items" : {
+        "$ref" : "#/$defs/LifecycleStates",
+        "title" : "fields.states.item.title",
+        "description" : "fields.states.item.description"
+      }
+    },
+    "task" : {
+      "type" : "string",
+      "title" : "fields.task.title",
+      "description" : "fields.task.description",
+      "minLength" : 1
+    },
+    "template" : {
+      "$ref" : "#/$defs/Map_String.Serializable_",
+      "title" : "fields.template.title",
+      "description" : "fields.template.description",
+      "additionalProperties" : {
+        "$ref" : "#/$defs/Serializable",
+        "title" : "fields.template.item.title",
+        "description" : "fields.template.item.description"
+      },
+      "minProperties" : 1
+    },
+    "workflow" : {
+      "type" : "string",
+      "title" : "fields.workflow.title",
+      "description" : "fields.workflow.description"
+    }
+  },
+  "required" : [ "key", "task", "template" ],
+  "title" : "specs.lifecycle.title",
+  "description" : "specs.lifecycle.description"
+}

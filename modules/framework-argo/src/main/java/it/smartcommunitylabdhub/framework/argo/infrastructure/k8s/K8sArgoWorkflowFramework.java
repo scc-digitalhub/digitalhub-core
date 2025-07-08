@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package it.smartcommunitylabdhub.framework.argo.infrastructure.k8s;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -184,7 +190,7 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
         K8sWorkflowObject workflow;
         try {
             workflow = get(build(runnable));
-        } catch (K8sFrameworkException e) {
+        } catch (K8sFrameworkException | IllegalArgumentException e) {
             runnable.setState(State.DELETED.name());
             return runnable;
         }
@@ -490,7 +496,7 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
                 wfName,
                 null,
                 null,
-                null,
+                "Foreground",
                 null,
                 null
             );

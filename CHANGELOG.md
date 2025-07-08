@@ -1,4 +1,131 @@
-# [0.10.0](https://github.com/scc-digitalhub/digitalhub-core/compare/0.10.0-beta7...0.10.0) (2025-03-14)
+# [0.12.0](https://github.com/scc-digitalhub/digitalhub-core/compare/0.11.0...0.12.0) (2025-06-30)
+
+### Features
+
+* k8s templates for deploying core ([81b600e](https://github.com/scc-digitalhub/digitalhub-core/commit/81b600e720803a7d71e39eca85ee838b420699ac))
+* minio credentials expiration handling ([345130d](https://github.com/scc-digitalhub/digitalhub-core/commit/345130dd1f163b6524af7bd67a82ed97d5a58f31))
+* security.txt well-known ([52a5dcf](https://github.com/scc-digitalhub/digitalhub-core/commit/52a5dcf1856e65b39cabba98898e10abaf4ec004))
+
+### Bug Fixes
+
+* add missing processors param to deserde for kubeai spec ([e96fdac](https://github.com/scc-digitalhub/digitalhub-core/commit/e96fdac2e5ce3be4c4a80e12d6c7267373557769))
+* db credentials expiration should be more than access token ([e463938](https://github.com/scc-digitalhub/digitalhub-core/commit/e463938f9f3b756abaf2fa8aa6b20b23630e3f36))
+* remove annotation for k8s watchers ([6488263](https://github.com/scc-digitalhub/digitalhub-core/commit/6488263d4aaa791391fa7563e7c24a5934dadedd))
+* update kfp build env vars to align with sdk ([e6388ac](https://github.com/scc-digitalhub/digitalhub-core/commit/e6388ac18f4f844f741f1d235dd09c84d842a1ac))
+
+**Full Changelog**: https://github.com/scc-digitalhub/digitalhub-core/compare/0.11.0...0.12.0
+
+# [0.11.0](https://github.com/scc-digitalhub/digitalhub-core/compare/0.10.0-...0.11.0) (2025-06-04)
+
+## What's Changed
+* feat: Support for CR runnable in K8s Framework by @kazhamiakin in https://github.com/scc-digitalhub/digitalhub-core/pull/154
+* feat: add watcher for Job, Serve and Deployment. Each watcher has own… by @trubbio in https://github.com/scc-digitalhub/digitalhub-core/pull/155
+* feat: KubeAI Runtime by @kazhamiakin in https://github.com/scc-digitalhub/digitalhub-core/pull/157
+* feat: remove doc from indexer by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/158
+* Remove files by @micnori in https://github.com/scc-digitalhub/digitalhub-core/pull/156
+* feat!: create dedicated pvcs for runs and block usage of user supppli… by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/159
+* Triggers - first impl by @micnori in https://github.com/scc-digitalhub/digitalhub-core/pull/160
+* feat: jdbc for triggers by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/161
+* feat: Entities lifecycle by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/164
+* Trigger lifecycle by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/165
+* feat: Personal access token via exchange by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/166
+* refactor!: use jdbc for refresh tokens repository by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/167
+* feat!: build run envs from configurations by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/168
+* feat: API for trigger relationships by @etomaselli in https://github.com/scc-digitalhub/digitalhub-core/pull/163
+* feat: user management for personal and refresh tokens by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/169
+* -feat!: kubeai to openai run status + fixes + add configurable whitel… by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/170
+* Triggers jdbc factory by @micnori in https://github.com/scc-digitalhub/digitalhub-core/pull/162
+* refactor!: split kubeai runtime in kubeai-speech and kubea-text by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/171
+
+
+### Features
+
+* i18n keys generation ([6f6a99f](https://github.com/scc-digitalhub/digitalhub-core/commit/6f6a99f33e7ca780a79392a696aaeaa794d859aa))
+* let admin configure default pvc storage class ([982f9ff](https://github.com/scc-digitalhub/digitalhub-core/commit/982f9ff55b8ae77eb06407258d26a4d7e20d9728))
+* minio credentials expiration handling ([345130d](https://github.com/scc-digitalhub/digitalhub-core/commit/345130dd1f163b6524af7bd67a82ed97d5a58f31))
+* add user label to k8s resources ([db10aea](https://github.com/scc-digitalhub/digitalhub-core/commit/db10aea4df5bbef94a69e01aa484c1d929785850))
+* bump spring boot version + bump k8s lib version + drop mysql dep ([ca74feb](https://github.com/scc-digitalhub/digitalhub-core/commit/ca74feb0cb663e839ea62f47d96480c731826db0))
+* collect runtime errors for k8s runs ([f84e7a3](https://github.com/scc-digitalhub/digitalhub-core/commit/f84e7a3cfa374310b06888fe8651e66743350f79))
+* kubeai templates ([d318f71](https://github.com/scc-digitalhub/digitalhub-core/commit/d318f7161a3084feb8914d0bd3e7a5a36065efe3))
+* define new logger LOG_LEVEL_K8S to debug k8s ([55c8f02](https://github.com/scc-digitalhub/digitalhub-core/commit/55c8f029afd7bf276cd2214d5573827660e3bf3c))
+* validation function template ([bece039](https://github.com/scc-digitalhub/digitalhub-core/commit/bece0392e32e3773739e8461c1aa9d3ad5d4122c))
+* envs exporter for config and credentials to ENV_VARS ([eaabf2e](https://github.com/scc-digitalhub/digitalhub-core/commit/eaabf2ef97237b2290337a7047bc655a5b518a96))
+* resolve entity names for dtos in cloud messages ([dc04f79](https://github.com/scc-digitalhub/digitalhub-core/commit/dc04f79b5988ff238a1fe05346e302fdae12b18b))
+* trigger lifecycle adds consumes rel to runs ([8460401](https://github.com/scc-digitalhub/digitalhub-core/commit/8460401735cfd919a6b1e61a2e5456f813e3128f))
+* trigger lifecycle define supported states enum ([9f840a1](https://github.com/scc-digitalhub/digitalhub-core/commit/9f840a1734004aa56118715840ed5f0c3f016d3c))
+* triggers support workflow runs ([bf002ea](https://github.com/scc-digitalhub/digitalhub-core/commit/bf002ea85843fb22a40c5fbbea33ad79da48d312))
+* use ClusterIP as default service type ([5a861e0](https://github.com/scc-digitalhub/digitalhub-core/commit/5a861e02124dacb5ae0a7c8c3a7838be3c2c43ff))
+* API for trigger relationships ([6574c43](https://github.com/scc-digitalhub/digitalhub-core/commit/6574c43e4539bc76d8bc633e94eda24f956c036d))
+* artifact lifecycle ([1f2a6b8](https://github.com/scc-digitalhub/digitalhub-core/commit/1f2a6b8296a18dbb08af83d7f35824da75e595fc))
+* artifacts lifecycle ([45da6f0](https://github.com/scc-digitalhub/digitalhub-core/commit/45da6f0f1b46cc7f15f1b42a8c7efa4c1bbf34c3))
+* broadcast user events for entities lifecycle ([a289e36](https://github.com/scc-digitalhub/digitalhub-core/commit/a289e36ed3a7efdd1ac7b426494c87810b2b34f9))
+* core events lifecylcle with no-ops ([e207f67](https://github.com/scc-digitalhub/digitalhub-core/commit/e207f6712aaadc2d055586d3b7a0d94450df110c))
+* dataItems lifecycle ([6c1369b](https://github.com/scc-digitalhub/digitalhub-core/commit/6c1369b5cc5eaafe5b1dd8ff67ee3af6769238ed))
+* key accessor supports partial keys ([9f9c1f8](https://github.com/scc-digitalhub/digitalhub-core/commit/9f9c1f803d95dfa8e0aa3d918bef434253f27c41))
+* kubeAi let uses configure number of processors ([92400fc](https://github.com/scc-digitalhub/digitalhub-core/commit/92400fc26a18eef5ff03d4cac78ff1d72b73188e))
+* lifecycle trigger add jdbc store ([e7d5015](https://github.com/scc-digitalhub/digitalhub-core/commit/e7d50158833d2e4236ad595c6ea880e5ff1a0114))
+* models lifecycle ([7918002](https://github.com/scc-digitalhub/digitalhub-core/commit/791800237131e0ebea7a42da3947bed8d214be3a))
+* mustache template add support writing objects as json ([c6921f4](https://github.com/scc-digitalhub/digitalhub-core/commit/c6921f4171a246c74074d728c3583d31f088da98))
+* Personal access token via exchange ([3b5c742](https://github.com/scc-digitalhub/digitalhub-core/commit/3b5c74287471c1551e2a361fa94562c5c0d44540))
+* support envFrom for kubeAi + use envFrom to inject core secrets ([22311dd](https://github.com/scc-digitalhub/digitalhub-core/commit/22311dd42ab8dda5b0562f24ca7fbbd44789ef28))
+* template processor with mustache ([845adfe](https://github.com/scc-digitalhub/digitalhub-core/commit/845adfe1aa3585c1b01a08e1aaff7533c493ed23))
+* trigger lifecycle ([67512b0](https://github.com/scc-digitalhub/digitalhub-core/commit/67512b03b29540e581b10b922acf57ebd92ffbf1))
+* trigger lifecycle event execution ([22b55fc](https://github.com/scc-digitalhub/digitalhub-core/commit/22b55fcde7c75c454a8148ece59e6e04b4ac5eb5))
+* user management for personal and refresh tokens ([6454778](https://github.com/scc-digitalhub/digitalhub-core/commit/6454778c13eb991fd0c11d53e5d3c738c6feebe2))
+* add clear to files info for entities ([639a1d1](https://github.com/scc-digitalhub/digitalhub-core/commit/639a1d1b291bd330d4250afc8ae1cb5694215651))
+* add expiration checks to db credentials provider ([168e849](https://github.com/scc-digitalhub/digitalhub-core/commit/168e8499f6e245a8db718aeac4404f0c0164d4e1))
+* add prefix bulk delete to s3 store to support pseudo-folders (experimental) ([dfda130](https://github.com/scc-digitalhub/digitalhub-core/commit/dfda130a1ada668b86100f5c9f2eac58a778665b))
+* add security context to kaniko pods ([422f129](https://github.com/scc-digitalhub/digitalhub-core/commit/422f1290b799a416dd9c9c21de492bb36f54f08c))
+* add watcher for Job, Serve and Deployment. Each watcher has own monitor that call refresh with the runnable Id with a debouce of 1 sec to refresh the runnable ([39f78d7](https://github.com/scc-digitalhub/digitalhub-core/commit/39f78d7ca7b3c59554e403afe90f8735335c9fb0))
+* always specify uid/gid for known runtimes + make configurable ([edf0113](https://github.com/scc-digitalhub/digitalhub-core/commit/edf011315c01216a19b388a28bf0db57170613ed))
+* bump spring versions ([c6064a8](https://github.com/scc-digitalhub/digitalhub-core/commit/c6064a87860ebf0abcf4740c368c80a5e12dd030))
+* cascade delete (opt-in)_for files defined in entities path ([5f5f01b](https://github.com/scc-digitalhub/digitalhub-core/commit/5f5f01bf46a33bdf9eb210b804e0a42fc5ac99ae))
+* delete CR resources with propagation foreground ([350e36f](https://github.com/scc-digitalhub/digitalhub-core/commit/350e36fe5bc85e01c6b9b96393cf5bcfc979d7cd))
+* K8s Custom Resource framework ([511b0cf](https://github.com/scc-digitalhub/digitalhub-core/commit/511b0cfa79d428184fda34b43c3adb1ceb1298d2))
+* make default files store configurable in project ([d4b79a5](https://github.com/scc-digitalhub/digitalhub-core/commit/d4b79a5355d62407fbf058682fc5c31d9e895165))
+* require project for entity files upload, use context by default ([4c274e0](https://github.com/scc-digitalhub/digitalhub-core/commit/4c274e069b9fc6845a82927998a45de3ba1006fd))
+* scheduler trigger (wip) ([0983490](https://github.com/scc-digitalhub/digitalhub-core/commit/0983490de2a57c6b512189e5b84f1f5165206370))
+* scheduler trigger runs + support quartz expression and simple triggers ([3d25390](https://github.com/scc-digitalhub/digitalhub-core/commit/3d25390d8363949a3c26563d6d27c5a23b251492))
+* Support for CR runnable in K8s Framework ([da360ce](https://github.com/scc-digitalhub/digitalhub-core/commit/da360ce8fa6b3c859770cab1d02000764ea33a4b))
+* triggers (wip) ([6ab9bf3](https://github.com/scc-digitalhub/digitalhub-core/commit/6ab9bf3a7d920f0d9ca50b674eeee3edfe7800cc))
+
+
+### Bug Fixes
+
+* build kubeai status descriptors only once ([ec804ec](https://github.com/scc-digitalhub/digitalhub-core/commit/ec804ec920fcb9975233fe297a5b6843301e4100))
+* db credentials expiration should be more than access token ([e463938](https://github.com/scc-digitalhub/digitalhub-core/commit/e463938f9f3b756abaf2fa8aa6b20b23630e3f36))
+* restore old version of jetty for solr ([7bc9fb4](https://github.com/scc-digitalhub/digitalhub-core/commit/7bc9fb4d87d27a88579e9a91f50d6fca3663bdc1))
+* update kfp build env vars to align with sdk ([e6388ac](https://github.com/scc-digitalhub/digitalhub-core/commit/e6388ac18f4f844f741f1d235dd09c84d842a1ac))
+* make sure auth manager is available for triggered runs ([02d5cdb](https://github.com/scc-digitalhub/digitalhub-core/commit/02d5cdbfe79be08677a39c71e293c15eb60d498b))
+* triggered runs may have partial credentials, restore full context on fire ([4cbb160](https://github.com/scc-digitalhub/digitalhub-core/commit/4cbb16022e078069444c463b8f84fcf34b73d6c9))
+* dbt runner supports templates as per spec ([bfc782c](https://github.com/scc-digitalhub/digitalhub-core/commit/bfc782c33003e710f8f25b38156a00e1c8b90162))
+* fix bucketName in delete of folders for s3 ([a0e3ac9](https://github.com/scc-digitalhub/digitalhub-core/commit/a0e3ac9449d06408a0aef8593569b60a5bd6f5ff))
+* builder tool for s3 ([b95c095](https://github.com/scc-digitalhub/digitalhub-core/commit/b95c095f9742709601f1786a4e38f46bc269a5d9))
+* kaniko jobs need to run as root ([58d948b](https://github.com/scc-digitalhub/digitalhub-core/commit/58d948b60d4044022ce937df9598fba4c5b371e6))
+* kfp build runs need to have the correct task kind associated ([4f80862](https://github.com/scc-digitalhub/digitalhub-core/commit/4f808621a398b840880131638a2a5895700e2aa6))
+* inflate rebuilt user authentications for trigger and run callbacks ([ce4e644](https://github.com/scc-digitalhub/digitalhub-core/commit/ce4e644a4a404e3ede59a749294beef2085978a2))
+* missing monthly schedule ([52059c8](https://github.com/scc-digitalhub/digitalhub-core/commit/52059c88e58182ed35779d655dbf21fc881d06bb))
+* keep init-config-map for init containers ([13362e5](https://github.com/scc-digitalhub/digitalhub-core/commit/13362e5d1605344089a8944f4df2266c93e2cd4f))
+* init container should mount only shared volume, not user defined ([965ce85](https://github.com/scc-digitalhub/digitalhub-core/commit/965ce85c37ec6e3550b0c55535e3fcbfbb475ea1))
+* properly initialize quartz for postgresql + fix serde issues ([0583c5e](https://github.com/scc-digitalhub/digitalhub-core/commit/0583c5ea753d15852636eeeb87650790b349c932))
+* S3files store should respect credentials region when set ([1eb90bf](https://github.com/scc-digitalhub/digitalhub-core/commit/1eb90bf006bce3c6c709a0971a4e52946e4559e1))
+* use AWS_DEFAULT_REGION in place of non standard S3_REGION ([087ad36](https://github.com/scc-digitalhub/digitalhub-core/commit/087ad364d49fbaa96134ca28925cddb12aae15e4))
+* empty dir spec params should be snake_case ([7b2e10b](https://github.com/scc-digitalhub/digitalhub-core/commit/7b2e10b1f4bbaadf0d4ca42187e4c2e447b6ed48))
+* kubeai runtime profiles should define number of processors - use 1 for now ([0e3b76f](https://github.com/scc-digitalhub/digitalhub-core/commit/0e3b76f13aa9a4decf15566c211511135fd1dc41))
+* refactor filesStorage to use credentials and break loop dependencies between service implementations ([daa85f0](https://github.com/scc-digitalhub/digitalhub-core/commit/daa85f07111a080cbe27f1f8944e08567e7973fe))
+* add check to avoid deployment replicas set to 0 ([bdbba7f](https://github.com/scc-digitalhub/digitalhub-core/commit/bdbba7f3863ad2d7273c4dd5fb803f1249a1fb02))
+* explicitely delete k8s resources in foreground to avoid leaving oprhaned pods ([63d185c](https://github.com/scc-digitalhub/digitalhub-core/commit/63d185ca042d97ec3e7929ecc88d6dad988c5462))
+* fix null variable check in builder-tool ([44ae13c](https://github.com/scc-digitalhub/digitalhub-core/commit/44ae13c2ffb1594e1671abbf6bf21844644b6994))
+* kaniko framework removes configMaps on stop/delete ([243efa7](https://github.com/scc-digitalhub/digitalhub-core/commit/243efa7488319589dd4065fe846bb8815307aaf3))
+* remove delete files after entity deletion due to potential lack of credentials in callbacks ([cd8a267](https://github.com/scc-digitalhub/digitalhub-core/commit/cd8a2675a33fb18761db398de533e17bdf0de007))
+* runnable listener should always persist runnable after processing ([2abe5ef](https://github.com/scc-digitalhub/digitalhub-core/commit/2abe5ef3ee330eba01efe57150af99f49c08d496))
+* runnables should be final otherwise parent listener will also receive subclasses, fixes double execution of argo workflows ([0bb86c3](https://github.com/scc-digitalhub/digitalhub-core/commit/0bb86c3140129ba0d049a9b065483e1c4517e449))
+* s3 filesinfo for single files should have an empty relative path ([77a9144](https://github.com/scc-digitalhub/digitalhub-core/commit/77a91449aa4a1a7ab40b040cb565f83f05666fe8))
+* set all kubeai props as snake case ([b59fa5c](https://github.com/scc-digitalhub/digitalhub-core/commit/b59fa5c6abbd080e059180021b911cc914d5dfc8))
+
+
+
+# [0.10.0](https://github.com/scc-digitalhub/digitalhub-core/compare/0.9.0...0.10.0) (2025-03-14)
 
 ## What's Changed
 * feat: add http single file download and branch support for git by @trubbio in https://github.com/scc-digitalhub/digitalhub-core/pull/147

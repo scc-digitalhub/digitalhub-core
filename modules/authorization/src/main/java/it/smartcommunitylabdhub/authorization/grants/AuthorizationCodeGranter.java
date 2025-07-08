@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /**
  * Copyright 2025 the original author or authors
  *
@@ -21,7 +27,6 @@ import it.smartcommunitylabdhub.authorization.model.TokenRequest;
 import it.smartcommunitylabdhub.authorization.model.TokenResponse;
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.repositories.AuthorizationRequestStore;
-import it.smartcommunitylabdhub.authorization.services.JwtTokenService;
 import it.smartcommunitylabdhub.authorization.services.TokenService;
 import jakarta.validation.constraints.NotNull;
 import java.nio.charset.StandardCharsets;
@@ -57,9 +62,8 @@ public class AuthorizationCodeGranter implements TokenGranter {
 
     private final TokenService tokenService;
 
-    public AuthorizationCodeGranter(TokenService tokenService, JwtTokenService jwtTokenService) {
+    public AuthorizationCodeGranter(TokenService tokenService) {
         Assert.notNull(tokenService, "token service is required");
-        Assert.notNull(jwtTokenService, "token service is required");
         this.tokenService = tokenService;
     }
 
@@ -218,7 +222,7 @@ public class AuthorizationCodeGranter implements TokenGranter {
             }
 
             //generate full credentials + new refresh
-            return tokenService.generateToken(user, withCredentials, withRefresh);
+            return tokenService.generateAccessToken(user, withCredentials, withRefresh, true);
         } catch (AuthenticationException ae) {
             throw new IllegalArgumentException("invalid request");
         }

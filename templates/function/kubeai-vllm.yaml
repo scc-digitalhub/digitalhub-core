@@ -1,0 +1,16 @@
+name: facebook-opt-350m
+kind: kubeai-text
+metadata:
+  description: Deploy an LLM via VLLM - facebook-opt-350m.
+  version: e59f8708612e4c25a2a4df6d503e45e2
+  labels:
+    - openai
+    - kubeai
+    - llm
+    - vllm
+spec:
+  features:
+    - TextGeneration
+  model_name: model
+  engine: VLLM
+  url: hf://facebook/opt-350m

@@ -1,7 +1,32 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Copyright 2025 the original author or authors.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * https://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
+
 package it.smartcommunitylabdhub.framework.k8s.runnables;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import it.smartcommunitylabdhub.commons.infrastructure.ConfigurableRunnable;
+import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.infrastructure.SecuredRunnable;
@@ -37,7 +62,7 @@ import org.springframework.util.StringUtils;
 @AllArgsConstructor
 @NoArgsConstructor
 @ToString
-public class K8sRunnable implements RunRunnable, SecuredRunnable, CredentialsContainer {
+public class K8sRunnable implements RunRunnable, SecuredRunnable, ConfigurableRunnable, CredentialsContainer {
 
     private String id;
 
@@ -104,6 +129,9 @@ public class K8sRunnable implements RunRunnable, SecuredRunnable, CredentialsCon
     @ToString.Exclude
     private Map<String, String> credentialsMap;
 
+    @ToString.Exclude
+    private Map<String, String> configurationMap;
+
     @JsonProperty("context_refs")
     private List<ContextRef> contextRefs;
 
@@ -128,6 +156,20 @@ public class K8sRunnable implements RunRunnable, SecuredRunnable, CredentialsCon
                 credentials
                     .stream()
                     .flatMap(c -> c.toMap().entrySet().stream())
+                    //filter empty
+                    .filter(e -> StringUtils.hasText(e.getValue()))
+                    .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
+        }
+    }
+
+    @Override
+    public void setConfigurations(Collection<Configuration> configurations) {
+        if (configurations != null) {
+            //export to map
+            this.configurationMap =
+                configurations
+                    .stream()
+                    .flatMap(c -> c.toStringMap().entrySet().stream())
                     //filter empty
                     .filter(e -> StringUtils.hasText(e.getValue()))
                     .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));

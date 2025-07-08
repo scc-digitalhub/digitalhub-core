@@ -14,6 +14,10 @@
     <name>framework-k8s</name>
     <description>DHCore framework-k8s</description>
 
+    <properties>
+        <fabric8.version>7.1.0</fabric8.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
@@ -30,7 +34,11 @@
             <artifactId>client-java</artifactId>
             <version>${kubernetes.version}</version>
         </dependency>
-
+        <dependency>
+            <groupId>io.fabric8</groupId>
+            <artifactId>kubernetes-client</artifactId>
+            <version>${fabric8.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>

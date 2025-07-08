@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /**
  * Copyright 2025 the original author or authors
  *
@@ -28,6 +34,7 @@ import it.smartcommunitylabdhub.commons.infrastructure.ConfigurationProvider;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import jakarta.validation.constraints.NotNull;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
@@ -106,6 +113,31 @@ public class AccessCredentialsProvider implements ConfigurationProvider, Credent
             .refreshToken(refreshToken)
             .idToken(accessToken)
             .expiration(exp)
+            .clientId(jwtTokenService.getClientId())
+            .issuer(jwtTokenService.getIssuer());
+
+        return response.build();
+    }
+
+    public AccessCredentials get(@NotNull UserAuthentication<?> auth, int duration) {
+        if (jwtTokenService == null) {
+            return null;
+        }
+
+        log.debug("generate credentials for user authentication {} via jwtToken service", auth.getName());
+        //generate access token with custom duration and no refresh token
+        SignedJWT accessToken = jwtTokenService.generateAccessToken(
+            auth,
+            List.of(jwtTokenService.getAudience()),
+            duration
+        );
+
+        //response
+        AccessCredentialsBuilder response = AccessCredentials
+            .builder()
+            .accessToken(accessToken)
+            .idToken(accessToken)
+            .expiration(duration)
             .clientId(jwtTokenService.getClientId())
             .issuer(jwtTokenService.getIssuer());
 

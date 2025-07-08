@@ -286,6 +286,16 @@
       "type" : "object",
       "title" : "object"
     },
+    "ProjectConfig" : {
+      "type" : "object",
+      "properties" : {
+        "default_files_store" : {
+          "type" : "string",
+          "title" : "fields.config.defaultFilesStore.title",
+          "description" : "fields.config.defaultFilesStore.description"
+        }
+      }
+    },
     "Serializable" : {
       "anyOf" : [ {
         "$ref" : "#/$defs/StringField"
@@ -381,6 +391,11 @@
         "title" : "fields.artifacts.item.title",
         "description" : "fields.artifacts.item.description"
       }
+    },
+    "config" : {
+      "$ref" : "#/$defs/ProjectConfig",
+      "title" : "fields.config.title",
+      "description" : "fields.config.description"
     },
     "dataitems" : {
       "title" : "fields.dataitems.title",

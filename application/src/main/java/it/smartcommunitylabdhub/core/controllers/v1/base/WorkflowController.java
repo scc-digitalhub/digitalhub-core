@@ -1,3 +1,26 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Copyright 2025 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package it.smartcommunitylabdhub.core.controllers.v1.base;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -8,12 +31,11 @@ import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
+import it.smartcommunitylabdhub.commons.services.WorkflowManager;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
-import it.smartcommunitylabdhub.core.models.entities.WorkflowEntity;
-import it.smartcommunitylabdhub.core.models.indexers.IndexableEntityService;
-import it.smartcommunitylabdhub.core.models.queries.filters.entities.WorkflowEntityFilter;
-import it.smartcommunitylabdhub.core.models.queries.services.SearchableWorkflowService;
+import it.smartcommunitylabdhub.core.indexers.IndexableEntityService;
+import it.smartcommunitylabdhub.core.workflows.filter.WorkflowEntityFilter;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -51,10 +73,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class WorkflowController {
 
     @Autowired
-    SearchableWorkflowService workflowService;
+    WorkflowManager workflowManager;
 
     @Autowired
-    IndexableEntityService<WorkflowEntity> indexService;
+    IndexableEntityService<Workflow> indexService;
 
     @Operation(summary = "Create workflow", description = "Create an workflow and return")
     @PostMapping(
@@ -64,7 +86,7 @@ public class WorkflowController {
     )
     public Workflow createWorkflow(@RequestBody @Valid @NotNull Workflow dto)
         throws DuplicatedEntityException, IllegalArgumentException, SystemException, BindException {
-        return workflowService.createWorkflow(dto);
+        return workflowManager.createWorkflow(dto);
     }
 
     @Operation(summary = "List workflows", description = "Return a list of all workflows")
@@ -76,14 +98,14 @@ public class WorkflowController {
             { @SortDefault(sort = "created", direction = Direction.DESC) }
         ) Pageable pageable
     ) {
-        SearchFilter<WorkflowEntity> sf = null;
+        SearchFilter<Workflow> sf = null;
         if (filter != null) {
             sf = filter.toSearchFilter();
         }
         if ("latest".equals(versions)) {
-            return workflowService.searchLatestWorkflows(pageable, sf);
+            return workflowManager.searchLatestWorkflows(pageable, sf);
         } else {
-            return workflowService.searchWorkflows(pageable, sf);
+            return workflowManager.searchWorkflows(pageable, sf);
         }
     }
 
@@ -91,7 +113,7 @@ public class WorkflowController {
     @GetMapping(path = "/{id}", produces = "application/json; charset=UTF-8")
     public Workflow getWorkflow(@PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id)
         throws NoSuchEntityException {
-        return workflowService.getWorkflow(id);
+        return workflowManager.getWorkflow(id);
     }
 
     @Operation(summary = "Update specific workflow", description = "Update and return the workflow")
@@ -104,7 +126,7 @@ public class WorkflowController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestBody @Valid @NotNull Workflow dto
     ) throws NoSuchEntityException, IllegalArgumentException, SystemException, BindException {
-        return workflowService.updateWorkflow(id, dto);
+        return workflowManager.updateWorkflow(id, dto);
     }
 
     @Operation(summary = "Delete a workflow", description = "Delete a specific workflow, with optional cascade")
@@ -113,7 +135,7 @@ public class WorkflowController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestParam(required = false) Boolean cascade
     ) {
-        workflowService.deleteWorkflow(id, cascade);
+        workflowManager.deleteWorkflow(id, cascade);
     }
 
     /*

@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /**
  * Copyright 2025 the original author or authors
  *
@@ -110,7 +116,7 @@ public class RefreshTokenGranter implements TokenGranter {
             }
 
             //generate full credentials + new refresh
-            return tokenService.generateToken(user, withCredentials, true);
+            return tokenService.generateAccessToken(user, withCredentials, true, false);
         } catch (AuthenticationException ae) {
             throw new IllegalArgumentException("invalid or missing refresh_token");
         }

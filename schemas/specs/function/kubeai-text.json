@@ -1,0 +1,77 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "$defs" : {
+    "KubeAIAdapter" : {
+      "type" : "object",
+      "properties" : {
+        "name" : {
+          "type" : "string",
+          "title" : "fields.modelserve.modelname.title",
+          "description" : "fields.modelserve.modelname.description",
+          "default" : "model"
+        },
+        "url" : {
+          "type" : "string",
+          "title" : "fields.kubeai.url.title",
+          "description" : "fields.kubeai.url.description"
+        }
+      }
+    },
+    "KubeAIEngine" : {
+      "type" : "string",
+      "enum" : [ "OLlama", "VLLM", "Infinity" ]
+    },
+    "KubeAIFeature" : {
+      "type" : "string",
+      "enum" : [ "TextGeneration", "TextEmbedding" ]
+    }
+  },
+  "type" : "object",
+  "properties" : {
+    "adapters" : {
+      "title" : "fields.kubeai.adapters.title",
+      "description" : "fields.kubeai.adapters.description",
+      "type" : "array",
+      "items" : {
+        "$ref" : "#/$defs/KubeAIAdapter",
+        "title" : "fields.adapters.item.title",
+        "description" : "fields.adapters.item.description"
+      }
+    },
+    "engine" : {
+      "$ref" : "#/$defs/KubeAIEngine",
+      "title" : "fields.kubeai.engine.title",
+      "description" : "fields.kubeai.engine.description"
+    },
+    "features" : {
+      "title" : "fields.kubeai.features.title",
+      "description" : "fields.kubeai.features.description",
+      "type" : "array",
+      "items" : {
+        "$ref" : "#/$defs/KubeAIFeature",
+        "title" : "fields.features.item.title",
+        "description" : "fields.features.item.description"
+      }
+    },
+    "image" : {
+      "type" : "string",
+      "title" : "fields.kubeai.image.title",
+      "description" : "fields.kubeai.image.description"
+    },
+    "model_name" : {
+      "type" : "string",
+      "title" : "fields.modelserve.modelname.title",
+      "description" : "fields.modelserve.modelname.description",
+      "default" : "model"
+    },
+    "url" : {
+      "type" : "string",
+      "title" : "fields.kubeai.url.title",
+      "description" : "fields.kubeai.url.description",
+      "pattern" : "^(store://([^/]+)/model/huggingface/.*)|^pvc?://.*$|^s3?://.*$|^ollama?://.*$|^hf?://.*$"
+    }
+  },
+  "required" : [ "engine", "features", "url" ],
+  "title" : "specs.kubeai-text.title",
+  "description" : "specs.kubeai-text.description"
+}
