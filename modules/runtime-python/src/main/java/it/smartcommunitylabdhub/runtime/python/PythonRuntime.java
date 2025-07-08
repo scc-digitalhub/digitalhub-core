@@ -37,7 +37,7 @@ import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
-import it.smartcommunitylabdhub.commons.services.FunctionService;
+import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
@@ -71,7 +71,7 @@ public class PythonRuntime extends K8sBaseRuntime<PythonFunctionSpec, PythonRunS
     private SecretService secretService;
 
     @Autowired
-    private FunctionService functionService;
+    private FunctionManager functionService;
 
     @Autowired
     private CredentialsService credentialsService;

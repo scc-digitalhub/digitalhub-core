@@ -8,6 +8,7 @@ import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.log.Log;
+import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.services.LogService;
 import it.smartcommunitylabdhub.commons.services.RunnableStore;
 import jakarta.validation.constraints.NotNull;
@@ -125,6 +126,17 @@ public class TestConfiguration {
 
             @Override
             public void deleteLogsByRunId(@NotNull String runId) throws SystemException {}
+
+            @Override
+            public Page<Log> searchLogs(Pageable pageable, SearchFilter<Log> filter) throws SystemException {
+                return Page.empty(pageable);
+            }
+
+            @Override
+            public Page<Log> searchLogsByProject(@NotNull String project, Pageable pageable, SearchFilter<Log> filter)
+                throws SystemException {
+                return Page.empty(pageable);
+            }
         };
     }
 }

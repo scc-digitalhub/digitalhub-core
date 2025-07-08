@@ -28,9 +28,9 @@ import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.base.Executable;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.task.Task;
-import it.smartcommunitylabdhub.commons.services.FunctionService;
+import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.commons.services.TaskService;
-import it.smartcommunitylabdhub.commons.services.WorkflowService;
+import it.smartcommunitylabdhub.commons.services.WorkflowManager;
 import it.smartcommunitylabdhub.core.runs.lifecycle.RunContext;
 import it.smartcommunitylabdhub.core.runs.lifecycle.RunEvent;
 import it.smartcommunitylabdhub.fsm.FsmState;
@@ -49,10 +49,10 @@ public class RunStateCreated implements FsmState.Builder<State, RunEvent, RunCon
     private TaskService taskService;
 
     @Autowired
-    private FunctionService functionService;
+    private FunctionManager functionService;
 
     @Autowired
-    private WorkflowService workflowService;
+    private WorkflowManager workflowService;
 
     public FsmState<State, RunEvent, RunContext, RunRunnable> build() {
         //define state

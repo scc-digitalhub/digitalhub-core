@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.core.controllers.v1.context;
@@ -33,12 +33,11 @@ import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.commons.models.task.Task;
+import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.core.functions.filters.FunctionEntityFilter;
-import it.smartcommunitylabdhub.core.functions.persistence.FunctionEntity;
-import it.smartcommunitylabdhub.core.functions.service.SearchableFunctionService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -78,7 +77,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class FunctionContextController {
 
     @Autowired
-    SearchableFunctionService functionService;
+    FunctionManager functionManager;
 
     // @Autowired
     // TaskService taskService;
@@ -100,7 +99,7 @@ public class FunctionContextController {
         dto.setProject(project);
 
         //create as new
-        return functionService.createFunction(dto);
+        return functionManager.createFunction(dto);
     }
 
     @Operation(summary = "Search functions")
@@ -113,15 +112,15 @@ public class FunctionContextController {
             { @SortDefault(sort = "created", direction = Direction.DESC) }
         ) Pageable pageable
     ) {
-        SearchFilter<FunctionEntity> sf = null;
+        SearchFilter<Function> sf = null;
         if (filter != null) {
             sf = filter.toSearchFilter();
         }
 
         if ("all".equals(versions)) {
-            return functionService.searchFunctionsByProject(project, pageable, sf);
+            return functionManager.searchFunctionsByProject(project, pageable, sf);
         } else {
-            return functionService.searchLatestFunctionsByProject(project, pageable, sf);
+            return functionManager.searchLatestFunctionsByProject(project, pageable, sf);
         }
     }
 
@@ -131,7 +130,7 @@ public class FunctionContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @ParameterObject @RequestParam @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String name
     ) {
-        functionService.deleteFunctions(project, name);
+        functionManager.deleteFunctions(project, name);
     }
 
     /*
@@ -144,7 +143,7 @@ public class FunctionContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Function function = functionService.getFunction(id);
+        Function function = functionManager.getFunction(id);
 
         //check for project and name match
         if (!function.getProject().equals(project)) {
@@ -165,14 +164,14 @@ public class FunctionContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestBody @Valid @NotNull Function functionDTO
     ) throws NoSuchEntityException, IllegalArgumentException, SystemException, BindException {
-        Function function = functionService.getFunction(id);
+        Function function = functionManager.getFunction(id);
 
         //check for project and name match
         if (!function.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project ");
         }
 
-        return functionService.updateFunction(id, functionDTO);
+        return functionManager.updateFunction(id, functionDTO);
     }
 
     @Operation(summary = "Delete a specific function version, with optional cascade")
@@ -182,14 +181,14 @@ public class FunctionContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestParam(required = false) Boolean cascade
     ) throws NoSuchEntityException {
-        Function function = functionService.getFunction(id);
+        Function function = functionManager.getFunction(id);
 
         //check for project and name match
         if (!function.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
 
-        functionService.deleteFunction(id, cascade);
+        functionManager.deleteFunction(id, cascade);
     }
 
     /*
@@ -202,14 +201,14 @@ public class FunctionContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Function function = functionService.getFunction(id);
+        Function function = functionManager.getFunction(id);
 
         //check for project and name match
         if (!function.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
 
-        return functionService.getTasksByFunctionId(id);
+        return functionManager.getTasksByFunctionId(id);
     }
 
     /*
@@ -221,7 +220,7 @@ public class FunctionContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Function entity = functionService.getFunction(id);
+        Function entity = functionManager.getFunction(id);
 
         //check for project and name match
         if ((entity != null) && !entity.getProject().equals(project)) {

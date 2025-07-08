@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.core.logs;
@@ -33,12 +33,13 @@ import it.smartcommunitylabdhub.commons.models.log.LogBaseSpec;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.models.run.Run;
+import it.smartcommunitylabdhub.commons.services.EntityService;
+import it.smartcommunitylabdhub.commons.services.LogService;
 import it.smartcommunitylabdhub.core.logs.persistence.LogEntity;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
-import it.smartcommunitylabdhub.core.projects.persistence.ProjectEntity;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
-import it.smartcommunitylabdhub.core.runs.persistence.RunEntity;
-import it.smartcommunitylabdhub.core.services.EntityService;
+import it.smartcommunitylabdhub.core.repositories.EntityRepository;
+import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
@@ -46,8 +47,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -59,16 +62,22 @@ import org.springframework.validation.BindException;
 @Service
 @Transactional
 @Slf4j
-public class LogServiceImpl implements SearchableLogService {
+public class LogServiceImpl implements LogService {
 
     @Autowired
-    private EntityService<Log, LogEntity> entityService;
+    private EntityService<Log> entityService;
 
     @Autowired
-    private EntityService<Run, RunEntity> runEntityService;
+    private SearchableEntityRepository<LogEntity, Log> entityRepository;
 
     @Autowired
-    private EntityService<Project, ProjectEntity> projectService;
+    private Converter<LogEntity, Log> dtoBuilder;
+
+    @Autowired
+    private EntityRepository<Run> runEntityService;
+
+    @Autowired
+    private EntityRepository<Project> projectService;
 
     @Override
     public Page<Log> listLogs(Pageable pageable) {
@@ -82,15 +91,10 @@ public class LogServiceImpl implements SearchableLogService {
     }
 
     @Override
-    public Page<Log> searchLogs(Pageable pageable, @Nullable SearchFilter<LogEntity> filter) {
+    public Page<Log> searchLogs(Pageable pageable, @Nullable SearchFilter<Log> filter) {
         log.debug("list logs page {}, filter {}", pageable, String.valueOf(filter));
         try {
-            Specification<LogEntity> specification = filter != null ? filter.toSpecification() : null;
-            if (specification != null) {
-                return entityService.search(specification, pageable);
-            } else {
-                return entityService.list(pageable);
-            }
+            return entityService.search(filter, pageable);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -101,7 +105,7 @@ public class LogServiceImpl implements SearchableLogService {
     public List<Log> listLogsByUser(@NotNull String user) {
         log.debug("list all logs for user {}  ", user);
         try {
-            return entityService.searchAll(CommonSpecification.createdByEquals(user));
+            return entityService.listByUser(user);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -112,7 +116,7 @@ public class LogServiceImpl implements SearchableLogService {
     public List<Log> listLogsByProject(@NotNull String project) {
         log.debug("list all logs for project {}  ", project);
         try {
-            return entityService.searchAll(CommonSpecification.projectEquals(project));
+            return entityService.listByProject(project);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -124,7 +128,7 @@ public class LogServiceImpl implements SearchableLogService {
         log.debug("list logs for project {} page {}", project, pageable);
         Specification<LogEntity> specification = Specification.allOf(CommonSpecification.projectEquals(project));
         try {
-            return entityService.search(specification, pageable);
+            return entityService.listByProject(project, pageable);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -135,16 +139,12 @@ public class LogServiceImpl implements SearchableLogService {
     public Page<Log> searchLogsByProject(
         @NotNull String project,
         Pageable pageable,
-        @Nullable SearchFilter<LogEntity> filter
+        @Nullable SearchFilter<Log> filter
     ) {
         log.debug("list logs for project {} with {} page {}", project, String.valueOf(filter), pageable);
-        Specification<LogEntity> filterSpecification = filter != null ? filter.toSpecification() : null;
-        Specification<LogEntity> specification = Specification.allOf(
-            CommonSpecification.projectEquals(project),
-            filterSpecification
-        );
+
         try {
-            return entityService.search(specification, pageable);
+            return entityService.searchByProject(project, filter, pageable);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -172,7 +172,7 @@ public class LogServiceImpl implements SearchableLogService {
                 return where.toPredicate(root, query, builder);
             };
 
-            return entityService.searchAll(specification);
+            return entityRepository.searchAll(specification).stream().collect(Collectors.toList());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -233,16 +233,6 @@ public class LogServiceImpl implements SearchableLogService {
                     throw new IllegalArgumentException("project mismatch");
                 }
 
-                //DISABLED, no need to evaluate spec for now
-                // // Parse and export Spec
-                // Spec spec = specRegistry.createSpec(dto.getKind(), dto.getSpec());
-                // if (spec == null) {
-                //     throw new IllegalArgumentException("invalid kind");
-                // }
-
-                // //validate
-                // validator.validateSpec(spec);
-
                 //create as new
                 return entityService.create(dto);
             } catch (DuplicatedEntityException e) {
@@ -275,7 +265,7 @@ public class LogServiceImpl implements SearchableLogService {
             dto.setSpec(specMap);
 
             //full update, log is modifiable
-            return entityService.update(id, dto);
+            return entityRepository.update(id, dto);
         } catch (NoSuchEntityException e) {
             throw new NoSuchEntityException(EntityName.LOG.toString());
         } catch (StoreException e) {
@@ -291,7 +281,7 @@ public class LogServiceImpl implements SearchableLogService {
             Log log = findLog(id);
             if (log != null) {
                 //delete the log
-                entityService.delete(id);
+                entityService.delete(id, false);
             }
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
@@ -310,7 +300,7 @@ public class LogServiceImpl implements SearchableLogService {
     public void deleteLogsByProject(@NotNull String project) {
         log.debug("delete logs for project {}", project);
         try {
-            entityService.deleteAll(CommonSpecification.projectEquals(project));
+            entityService.deleteByProject(project, false);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

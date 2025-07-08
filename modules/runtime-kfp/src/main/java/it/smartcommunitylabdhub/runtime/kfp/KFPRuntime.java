@@ -44,7 +44,7 @@ import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
 import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
-import it.smartcommunitylabdhub.commons.services.WorkflowService;
+import it.smartcommunitylabdhub.commons.services.WorkflowManager;
 import it.smartcommunitylabdhub.framework.argo.objects.K8sWorkflowObject;
 import it.smartcommunitylabdhub.framework.argo.runnables.K8sArgoWorkflowRunnable;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
@@ -84,7 +84,7 @@ public class KFPRuntime extends K8sBaseRuntime<KFPWorkflowSpec, KFPRunSpec, KFPR
     SecretService secretService;
 
     @Autowired
-    private WorkflowService workflowService;
+    private WorkflowManager workflowService;
 
     @Autowired
     private CredentialsService credentialsService;

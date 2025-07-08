@@ -26,7 +26,6 @@ import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvents;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.model.Model;
 import it.smartcommunitylabdhub.core.lifecycle.BaseLifecycleManager;
-import it.smartcommunitylabdhub.core.models.persistence.ModelEntity;
 import it.smartcommunitylabdhub.core.models.specs.ModelBaseStatus;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
@@ -34,22 +33,22 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-public class ModelLifecycleManager extends BaseLifecycleManager<Model, ModelEntity, ModelBaseStatus> {
+public class ModelLifecycleManager extends BaseLifecycleManager<Model, ModelBaseStatus> {
 
     /*
      * Actions: ask to perform
      */
 
     public Model upload(@NotNull Model model) {
-        return perform(model, LifecycleEvents.UPLOAD);
+        return perform(model, LifecycleEvents.UPLOAD.name());
     }
 
     public Model delete(@NotNull Model model) {
-        return perform(model, LifecycleEvents.DELETE);
+        return perform(model, LifecycleEvents.DELETE.name());
     }
 
     public Model update(@NotNull Model model) {
-        return perform(model, LifecycleEvents.UPDATE);
+        return perform(model, LifecycleEvents.UPDATE.name());
     }
 
     /*
@@ -62,14 +61,14 @@ public class ModelLifecycleManager extends BaseLifecycleManager<Model, ModelEnti
     // }
 
     public Model onUploading(@NotNull Model model) {
-        return handle(model, State.UPLOADING);
+        return handle(model, State.UPLOADING.name());
     }
 
     public Model onReady(@NotNull Model model) {
-        return handle(model, State.READY);
+        return handle(model, State.READY.name());
     }
 
     public Model onError(@NotNull Model model) {
-        return handle(model, State.ERROR);
+        return handle(model, State.ERROR.name());
     }
 }

@@ -28,12 +28,11 @@ import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvents;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
+import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
-import it.smartcommunitylabdhub.core.components.run.LifecycleManager;
 import it.smartcommunitylabdhub.core.events.EntityAction;
 import it.smartcommunitylabdhub.core.events.EntityOperation;
-import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.fsm.Fsm;
 import it.smartcommunitylabdhub.fsm.exceptions.InvalidTransitionException;
 import jakarta.annotation.Nullable;
@@ -46,8 +45,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
-public abstract class BaseLifecycleManager<D extends BaseDTO & StatusDTO, E extends BaseEntity, T extends Spec>
-    extends LifecycleManager<D, E> {
+public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusDTO, T extends Spec>
+    extends AbstractLifecycleManager<D>
+    implements LifecycleManager<D> {
 
     private Fsm.Factory<State, LifecycleEvents, LifecycleContext<D>, LifecycleEvent<D>> fsmFactory;
 
@@ -112,7 +112,8 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & StatusDTO, E exte
     /*
      * Perform lifecycle operation from events
      */
-    public D perform(@NotNull D dto, @NotNull LifecycleEvents event) {
+    @Override
+    public D perform(@NotNull D dto, @NotNull String event) {
         //build synthetic input from event
         LifecycleEvent<D> input = new LifecycleEvent<>();
         input.setId(dto.getId());
@@ -124,13 +125,14 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & StatusDTO, E exte
         return perform(dto, event, input, null);
     }
 
-    public D perform(@NotNull D dto, @NotNull LifecycleEvents event, @Nullable LifecycleEvent<D> input) {
+    @Override
+    public D perform(@NotNull D dto, @NotNull String event, @Nullable LifecycleEvent<D> input) {
         return perform(dto, event, input, null);
     }
 
     public D perform(
         @NotNull D dto,
-        @NotNull LifecycleEvents event,
+        @NotNull String event,
         @Nullable LifecycleEvent<D> input,
         @Nullable BiConsumer<D, T> effect
     ) {
@@ -142,6 +144,8 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & StatusDTO, E exte
         // build state machine on current context
         Fsm<State, LifecycleEvents, LifecycleContext<D>, LifecycleEvent<D>> fsm = fsm(dto);
 
+        LifecycleEvents lifecycleEvent = LifecycleEvents.valueOf(event);
+
         //execute update op with locking
         dto =
             exec(
@@ -149,7 +153,7 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & StatusDTO, E exte
                 d -> {
                     try {
                         //perform via FSM
-                        Optional<T> output = fsm.perform(event, input);
+                        Optional<T> output = fsm.perform(lifecycleEvent, input);
                         State state = fsm.getCurrentState();
 
                         //update status from fsm output
@@ -183,8 +187,8 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & StatusDTO, E exte
         e.setKind(dto.getKind());
         e.setUser(dto.getUser());
         e.setProject(dto.getProject());
-        e.setEvent(event);
-        e.setState(fsm.getCurrentState());
+        e.setEvent(lifecycleEvent.name());
+        e.setState(fsm.getCurrentState().name());
         //append object to event
         e.setDto(dto);
 
@@ -200,7 +204,8 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & StatusDTO, E exte
     /*
      * Handle lifecycle events from state changes
      */
-    public D handle(@NotNull D dto, State nexState) {
+    @Override
+    public D handle(@NotNull D dto, String nexState) {
         //build synthetic input from state change
         LifecycleEvent<D> input = new LifecycleEvent<>();
         input.setId(dto.getId());
@@ -212,23 +217,31 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & StatusDTO, E exte
         return handle(dto, nexState, input, null);
     }
 
-    public D handle(@NotNull D dto, State nexState, @Nullable LifecycleEvent<D> input) {
-        return handle(dto, nexState, input, null);
+    @Override
+    public D handle(@NotNull D dto, String nextState, @Nullable LifecycleEvent<D> input) {
+        return handle(dto, nextState, input, null);
     }
 
     public D handle(
         @NotNull D dto,
-        State nextState,
+        String nextStateValue,
         @Nullable LifecycleEvent<D> input,
         @Nullable BiConsumer<D, T> effect
     ) {
-        log.debug("handle {} for {} with id {}", nextState, dto.getClass().getSimpleName().toLowerCase(), dto.getId());
+        log.debug(
+            "handle {} for {} with id {}",
+            nextStateValue,
+            dto.getClass().getSimpleName().toLowerCase(),
+            dto.getId()
+        );
         if (log.isTraceEnabled()) {
             log.trace("dto: {}", dto);
         }
 
         // build state machine on current context
         Fsm<State, LifecycleEvents, LifecycleContext<D>, LifecycleEvent<D>> fsm = fsm(dto);
+
+        State nextState = State.valueOf(nextStateValue);
 
         //execute update op with locking
         dto =
@@ -272,7 +285,7 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & StatusDTO, E exte
             .kind(dto.getKind())
             .user(dto.getUser())
             .project(dto.getProject())
-            .state(fsm.getCurrentState())
+            .state(fsm.getCurrentState().name())
             //append object to event
             .dto(dto)
             .build();
