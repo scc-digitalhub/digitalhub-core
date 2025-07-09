@@ -28,6 +28,7 @@ import io.kubernetes.client.common.KubernetesObject;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.BatchV1Api;
+import io.kubernetes.client.openapi.models.V1AppArmorProfile;
 import io.kubernetes.client.openapi.models.V1ConfigMap;
 import io.kubernetes.client.openapi.models.V1ConfigMapVolumeSource;
 import io.kubernetes.client.openapi.models.V1Container;
@@ -40,8 +41,10 @@ import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.kubernetes.client.openapi.models.V1PodSpec;
 import io.kubernetes.client.openapi.models.V1PodTemplateSpec;
 import io.kubernetes.client.openapi.models.V1ResourceRequirements;
+import io.kubernetes.client.openapi.models.V1SeccompProfile;
 import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.openapi.models.V1SecretVolumeSource;
+import io.kubernetes.client.openapi.models.V1SecurityContext;
 import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.FrameworkComponent;
@@ -397,7 +400,7 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sKanikoRunnable, V1Jo
 
         // Prepare environment variables for the Kubernetes job
         List<V1EnvFromSource> envFrom = buildEnvFrom(runnable);
-        List<V1EnvVar> env = buildEnv(runnable);
+        List<V1EnvVar> env = new ArrayList<> (buildEnv(runnable));
 
         // Volumes to attach to the pod based on the volume spec with the additional volume_type
         List<V1Volume> volumes = new LinkedList<>(buildVolumes(runnable));
@@ -449,24 +452,46 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sKanikoRunnable, V1Jo
 
         List<String> kanikoArgsAll = new ArrayList<>(
             List.of(
-                "--dockerfile=/init-config-map/Dockerfile",
-                "--context=" + k8sProperties.getSharedVolume().getMountPath(),
-                "--destination=" + imageName
+                "build",
+                "--frontend",
+                "dockerfile.v0",
+                "--local",
+                "dockerfile=/init-config-map",
+                "--local",
+                "context=" + k8sProperties.getSharedVolume().getMountPath(),
+                "--output",
+                "type=image,name=" + imageName + ",push=true"
             )
         );
         // Add Kaniko args
         kanikoArgsAll.addAll(kanikoArgs);
 
+        List<String> commands = new ArrayList<>(
+            List.of(
+                "buildctl-daemonless.sh"
+            )
+        );
+
+        env.add(new V1EnvVar().name("BUILDKITD_FLAGS").value("--oci-worker-no-process-sandbox"));
+        env.add(new V1EnvVar().name("DOCKER_CONFIG").value("/kaniko/.docker"));
+        V1SecurityContext securityContext = new V1SecurityContext()
+            .seccompProfile(new V1SeccompProfile().type("Unconfined"))
+            .appArmorProfile(new V1AppArmorProfile().type("Unconfined"))
+            .runAsGroup((long)1000)
+            .runAsUser((long)1000);
+
         // Build Container
         V1Container container = new V1Container()
             .name(containerName)
+            .command(commands)
             .image(kanikoImage)
             .imagePullPolicy("IfNotPresent")
             .args(kanikoArgsAll)
             .resources(resources)
             .volumeMounts(volumeMounts)
             .envFrom(envFrom)
-            .env(env);
+            .env(env)
+            .securityContext(securityContext);
 
         // Create a PodSpec for the container, leverage template if provided
         V1PodSpec podSpec = Optional
@@ -499,7 +524,8 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sKanikoRunnable, V1Jo
             .resources(resources)
             .env(env)
             .envFrom(envFrom)
-            .command(initCommand);
+            .command(initCommand)
+            .securityContext(securityContext);
 
         // Set initContainer as first container in the PodSpec
         podSpec.setInitContainers(Collections.singletonList(initContainer));
