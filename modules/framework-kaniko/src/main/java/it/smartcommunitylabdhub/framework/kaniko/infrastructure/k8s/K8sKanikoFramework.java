@@ -105,9 +105,18 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sKanikoRunnable, V1Jo
 
     @Value("${kaniko.secret}")
     private String kanikoSecret;
+  
+    @Value("${kaniko.client-secret.name}")
+    private String kanikoClientSecret;
+
+    @Value("${kaniko.client-secret.mount-path}")
+    private String kanikoClientSecretPath;
 
     @Value("${kaniko.args}")
     private List<String> kanikoArgs;
+
+    @Value("${kaniko.command}")
+    private List<String> kanikoCommand;
 
     public K8sKanikoFramework(ApiClient apiClient) {
         super(apiClient);
@@ -447,14 +456,25 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sKanikoRunnable, V1Jo
             volumeMounts.add(secretVolumeMount);
         }
 
+        if (StringUtils.hasText(kanikoClientSecret)) {
+            V1Volume clientSecretVolume = new V1Volume()
+                .name(kanikoClientSecret)
+                .secret(
+                    new V1SecretVolumeSource()
+                        .secretName(kanikoClientSecret)
+                );
+
+            V1VolumeMount clientSecretVolumeMount = new V1VolumeMount().name(kanikoClientSecret).mountPath(kanikoClientSecretPath);
+
+            volumes.add(clientSecretVolume);
+            volumeMounts.add(clientSecretVolumeMount);
+        }
+
         // resources
         V1ResourceRequirements resources = buildResources(runnable);
 
         List<String> kanikoArgsAll = new ArrayList<>(
             List.of(
-                "build",
-                "--frontend",
-                "dockerfile.v0",
                 "--local",
                 "dockerfile=/init-config-map",
                 "--local",
@@ -464,13 +484,7 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sKanikoRunnable, V1Jo
             )
         );
         // Add Kaniko args
-        kanikoArgsAll.addAll(kanikoArgs);
-
-        List<String> commands = new ArrayList<>(
-            List.of(
-                "buildctl-daemonless.sh"
-            )
-        );
+        kanikoArgs.addAll(kanikoArgsAll);
 
         env.add(new V1EnvVar().name("BUILDKITD_FLAGS").value("--oci-worker-no-process-sandbox"));
         env.add(new V1EnvVar().name("DOCKER_CONFIG").value("/kaniko/.docker"));
@@ -483,10 +497,10 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sKanikoRunnable, V1Jo
         // Build Container
         V1Container container = new V1Container()
             .name(containerName)
-            .command(commands)
+            .command(kanikoCommand)
             .image(kanikoImage)
             .imagePullPolicy("IfNotPresent")
-            .args(kanikoArgsAll)
+            .args(kanikoArgs)
             .resources(resources)
             .volumeMounts(volumeMounts)
             .envFrom(envFrom)

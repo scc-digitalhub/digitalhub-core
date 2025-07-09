@@ -103,7 +103,12 @@ kaniko:
   image-prefix: ${KANIKO_IMAGE_PREFIX:dhcore}
   image-registry: ${KANIKO_IMAGE_REGISTRY:${registry.name}}
   secret: ${KANIKO_SECRET:${registry.secret}}
-  args: ${KANIKO_ARGS:}
+  command: ${KANIKO_COMMAND:buildctl-daemonless.sh}
+  args: ${KANIKO_ARGS:build,--frontend,dockerfile.v0}
+  client-secret: 
+    name: ${KANIKO_CLIENT_SECRET:}
+    mount-path: ${KANIKO_CLIENT_SECRET_PATH:/certs/client}
+
 
 # MLRun config
 mlrun:
