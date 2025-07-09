@@ -233,7 +233,7 @@ public class BaseEntityServiceImpl<D extends BaseDTO & SpecDTO & StatusDTO, E ex
             curState = nextState;
         }
 
-        dto.setStatus(MapUtils.mergeMultipleMaps(dto.getStatus(), Map.of(Fields.STATE, curState)));
+        dto.setStatus(MapUtils.mergeMultipleMaps(dto.getStatus(), Map.of(Fields.STATE, curState.name())));
 
         //save
         if (log.isTraceEnabled()) {
@@ -285,7 +285,7 @@ public class BaseEntityServiceImpl<D extends BaseDTO & SpecDTO & StatusDTO, E ex
         }
 
         //keep current state for update, we evaluate later
-        dto.setStatus(MapUtils.mergeMultipleMaps(dto.getStatus(), Map.of(Fields.STATE, curState)));
+        dto.setStatus(MapUtils.mergeMultipleMaps(dto.getStatus(), Map.of(Fields.STATE, curState.name())));
 
         if (!forceUpdate) {
             //spec is not modifiable: enforce current
