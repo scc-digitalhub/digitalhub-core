@@ -2,22 +2,29 @@ package it.smartcommunitylabdhub.runtime.hpcdl.runners;
 
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.BindException;
 
+import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
+import it.smartcommunitylabdhub.authorization.services.CredentialsService;
+import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.commons.accessors.fields.KeyAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
+import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
 import it.smartcommunitylabdhub.commons.models.artifact.ArtifactBaseSpec;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.enums.State;
+import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.run.Run;
-import it.smartcommunitylabdhub.commons.services.ArtifactService;
+import it.smartcommunitylabdhub.commons.services.ArtifactManager;
+import it.smartcommunitylabdhub.commons.services.ProjectManager;
 import it.smartcommunitylabdhub.files.service.FilesService;
 import it.smartcommunitylabdhub.runtime.hpcdl.HPCDLRuntime;
 import it.smartcommunitylabdhub.runtime.hpcdl.framework.runnables.HPCDLRunnable;
@@ -28,11 +35,15 @@ import it.smartcommunitylabdhub.runtime.hpcdl.specs.HPCDLRunSpec;
 public class HPCDLJobRunner {
 
     private FilesService filesService;
-    private ArtifactService artifactService;
+    private ArtifactManager artifactManager;
+    private ProjectManager projectManager;
+    private CredentialsService credentialsService;
 
-    public HPCDLJobRunner(FilesService filesService, ArtifactService artifactService) {
+    public HPCDLJobRunner(FilesService filesService, ArtifactManager artifactManager, ProjectManager projectManager, CredentialsService credentialsService) {
         this.filesService = filesService;
-        this.artifactService = artifactService;
+        this.artifactManager = artifactManager;
+        this.projectManager = projectManager;
+        this.credentialsService = credentialsService;
     }
 
     public HPCDLRunnable produce(Run run) {
@@ -41,6 +52,13 @@ public class HPCDLJobRunner {
         if (functionSpec == null) {
             throw new IllegalArgumentException("functionSpec is null");
         }
+        Project project = projectManager.getProject(run.getProject());
+                    UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
+        List<Credentials> credentials = auth != null && credentialsService != null
+            ? credentialsService.getCredentials(auth)
+            : null;
+
+
 
         Map<String, String> inputs = new HashMap<>();
         if (runSpec.getInputs() != null) {
@@ -48,13 +66,13 @@ public class HPCDLJobRunner {
                 // convert artifact key to download url
                 String artifactKey = runSpec.getInputs().get(path);
                 KeyAccessor keyAccessor = KeyAccessor.with(artifactKey);
-                Artifact artifact = artifactService.getArtifact(keyAccessor.getId());
+                Artifact artifact = artifactManager.getArtifact(keyAccessor.getId());
                 if (artifact != null) {
                     ArtifactBaseSpec spec = new ArtifactBaseSpec();
                     spec.configure(artifact.getSpec());
 
                     try {
-                        filesService.getDownloadAsUrl(spec.getPath());
+                        filesService.getDownloadAsUrl(spec.getPath(), credentials);
                     } catch (StoreException e) {
                         throw new IllegalArgumentException("cannot construct downoad url for artifact " + artifactKey);
                     }
@@ -71,7 +89,7 @@ public class HPCDLJobRunner {
                 String artifactName = runSpec.getOutputs().get(path);
                 String id = generateKey();
                 String targetPath =
-                    filesService.getDefaultStore() +
+                    filesService.getDefaultStore(project) +
                     "/" +
                     run.getProject() +
                     "/" +
@@ -94,12 +112,12 @@ public class HPCDLJobRunner {
                 artifactDTO.setSpec(spec.toMap());
                 
                 try {
-                    artifactDTO = artifactService.createArtifact(artifactDTO);
+                    artifactDTO = artifactManager.createArtifact(artifactDTO);
                 } catch (IllegalArgumentException | SystemException | DuplicatedEntityException | BindException e) {
                     throw new IllegalArgumentException("cannot create artifact " + artifactName, e);
                 }
                 try {
-                    String url = filesService.getUploadAsUrl(targetPath).getUrl();
+                    String url = filesService.getUploadAsUrl(targetPath, credentials).getUrl();
                     outputs.put(path, url);
                     outputArtifacts.put(path, id);
                 } catch (StoreException e) {

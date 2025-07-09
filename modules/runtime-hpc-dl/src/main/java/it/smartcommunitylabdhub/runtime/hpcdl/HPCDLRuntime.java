@@ -1,5 +1,6 @@
 package it.smartcommunitylabdhub.runtime.hpcdl;
 
+import it.smartcommunitylabdhub.authorization.services.CredentialsService;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
@@ -11,7 +12,8 @@ import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
-import it.smartcommunitylabdhub.commons.services.ArtifactService;
+import it.smartcommunitylabdhub.commons.services.ArtifactManager;
+import it.smartcommunitylabdhub.commons.services.ProjectManager;
 import it.smartcommunitylabdhub.files.service.FilesService;
 import it.smartcommunitylabdhub.runtime.hpcdl.framework.runnables.HPCDLRunnable;
 import it.smartcommunitylabdhub.runtime.hpcdl.runners.HPCDLJobRunner;
@@ -39,7 +41,13 @@ public class HPCDLRuntime extends AbstractBaseRuntime<HPCDLFunctionSpec, HPCDLRu
     private FilesService filesService;
 
     @Autowired
-    private ArtifactService artifactService;
+    private ArtifactManager artifactManager;
+
+    @Autowired
+    private ProjectManager projectManager;
+
+    @Autowired
+    private CredentialsService credentialsService;
 
     public HPCDLRuntime() {
         super(HPCDLRunSpec.KIND);
@@ -93,7 +101,7 @@ public class HPCDLRuntime extends AbstractBaseRuntime<HPCDLFunctionSpec, HPCDLRu
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
         return switch (runAccessor.getTask()) {
-            case HPCDLJobTaskSpec.KIND -> new HPCDLJobRunner(filesService, artifactService).produce(run);
+            case HPCDLJobTaskSpec.KIND -> new HPCDLJobRunner(filesService, artifactManager, projectManager, credentialsService).produce(run);
             default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
         };
     }
@@ -108,13 +116,13 @@ public class HPCDLRuntime extends AbstractBaseRuntime<HPCDLFunctionSpec, HPCDLRu
             runnable instanceof HPCDLRunnable hpcdlRunnable
         ) {
             for(String artifactId: hpcdlRunnable.getOutputArtifacts().values()) {
-                Artifact artifact = artifactService.findArtifact(artifactId);
+                Artifact artifact = artifactManager.findArtifact(artifactId);
                 if (artifact != null) {
                     Map<String, Serializable> status = new HashMap<>();
                     status.put("state", State.CREATED.name());
                     artifact.setStatus(status);
                     try {
-                        artifactService.updateArtifact(artifactId, artifact);
+                        artifactManager.updateArtifact(artifactId, artifact);
                     } catch (NoSuchEntityException | IllegalArgumentException | SystemException | BindException e) {
                         log.error("Failed to update artifact status", e);
                     }    

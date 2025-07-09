@@ -6,7 +6,6 @@ import it.smartcommunitylabdhub.runtime.hpcdl.framework.infrastructure.monitor.H
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
