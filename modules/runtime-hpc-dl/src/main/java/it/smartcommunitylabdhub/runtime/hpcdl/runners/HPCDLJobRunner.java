@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.BindException;
 
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
@@ -25,6 +26,7 @@ import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.services.ArtifactManager;
 import it.smartcommunitylabdhub.commons.services.ProjectManager;
+import it.smartcommunitylabdhub.files.models.DownloadInfo;
 import it.smartcommunitylabdhub.files.service.FilesService;
 import it.smartcommunitylabdhub.runtime.hpcdl.HPCDLRuntime;
 import it.smartcommunitylabdhub.runtime.hpcdl.framework.runnables.HPCDLRunnable;
@@ -66,17 +68,20 @@ public class HPCDLJobRunner {
                 // convert artifact key to download url
                 String artifactKey = runSpec.getInputs().get(path);
                 KeyAccessor keyAccessor = KeyAccessor.with(artifactKey);
-                Artifact artifact = artifactManager.getArtifact(keyAccessor.getId());
+
+                Artifact artifact = StringUtils.hasText(keyAccessor.getId()) && !"latest".equals(keyAccessor.getId()) 
+                ? artifactManager.findArtifact(keyAccessor.getId())
+                : artifactManager.getLatestArtifact(keyAccessor.getProject(), keyAccessor.getName());
                 if (artifact != null) {
                     ArtifactBaseSpec spec = new ArtifactBaseSpec();
                     spec.configure(artifact.getSpec());
 
                     try {
-                        filesService.getDownloadAsUrl(spec.getPath(), credentials);
+                        DownloadInfo info = filesService.getDownloadAsUrl(spec.getPath(), credentials);
+                        inputs.put(path, info.getUrl());
                     } catch (StoreException e) {
                         throw new IllegalArgumentException("cannot construct downoad url for artifact " + artifactKey);
                     }
-                    inputs.put(path, artifactKey);
                 }
             }
         }
