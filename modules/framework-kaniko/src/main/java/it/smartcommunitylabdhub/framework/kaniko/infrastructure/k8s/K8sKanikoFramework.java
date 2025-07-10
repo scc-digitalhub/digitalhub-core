@@ -410,6 +410,9 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sKanikoRunnable, V1Jo
         // Prepare environment variables for the Kubernetes job
         List<V1EnvFromSource> envFrom = buildEnvFrom(runnable);
         List<V1EnvVar> env = new ArrayList<> (buildEnv(runnable));
+        // Add Kaniko specific environment variables
+        env.add(new V1EnvVar().name("BUILDKITD_FLAGS").value("--oci-worker-no-process-sandbox"));
+        env.add(new V1EnvVar().name("DOCKER_CONFIG").value("/kaniko/.docker"));
 
         // Volumes to attach to the pod based on the volume spec with the additional volume_type
         List<V1Volume> volumes = new LinkedList<>(buildVolumes(runnable));
@@ -473,7 +476,10 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sKanikoRunnable, V1Jo
         // resources
         V1ResourceRequirements resources = buildResources(runnable);
 
-        List<String> kanikoArgsAll = new ArrayList<>(
+        List<String> kanikoArgsAll = new ArrayList<>(kanikoArgs);
+
+        // Add Kaniko args
+        kanikoArgsAll.addAll(
             List.of(
                 "--local",
                 "dockerfile=/init-config-map",
@@ -483,16 +489,15 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sKanikoRunnable, V1Jo
                 "type=image,name=" + imageName + ",push=true"
             )
         );
-        // Add Kaniko args
-        kanikoArgs.addAll(kanikoArgsAll);
 
-        env.add(new V1EnvVar().name("BUILDKITD_FLAGS").value("--oci-worker-no-process-sandbox"));
-        env.add(new V1EnvVar().name("DOCKER_CONFIG").value("/kaniko/.docker"));
-        V1SecurityContext securityContext = new V1SecurityContext()
-            .seccompProfile(new V1SeccompProfile().type("Unconfined"))
-            .appArmorProfile(new V1AppArmorProfile().type("Unconfined"))
-            .runAsGroup((long)1000)
-            .runAsUser((long)1000);
+        V1SecurityContext securityContext = 
+              disableRoot 
+            ? buildSecurityContext(runnable) 
+            : new V1SecurityContext()
+                .seccompProfile(new V1SeccompProfile().type("Unconfined"))
+                .appArmorProfile(new V1AppArmorProfile().type("Unconfined"))
+                .runAsGroup((long)1000)
+                .runAsUser((long)1000);
 
         // Build Container
         V1Container container = new V1Container()
@@ -500,7 +505,7 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sKanikoRunnable, V1Jo
             .command(kanikoCommand)
             .image(kanikoImage)
             .imagePullPolicy("IfNotPresent")
-            .args(kanikoArgs)
+            .args(kanikoArgsAll)
             .resources(resources)
             .volumeMounts(volumeMounts)
             .envFrom(envFrom)
@@ -523,8 +528,9 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sKanikoRunnable, V1Jo
             .tolerations(buildTolerations(runnable))
             .volumes(volumes)
             .restartPolicy("Never");
-        //DISABLED: kaniko needs to run as root!
-        // .securityContext(buildPodSecurityContext(runnable));
+        if (disableRoot) {
+            podSpec.setSecurityContext(buildPodSecurityContext(runnable));
+        }
 
         // Create a PodTemplateSpec with the PodSpec
         V1PodTemplateSpec podTemplateSpec = new V1PodTemplateSpec().metadata(metadata).spec(podSpec);
