@@ -309,4 +309,10 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
             throw new K8sFrameworkException(e.getMessage(), e.getMessage());
         }
     }
+
+    @Override
+    public DynamicKubernetesObject get(DynamicKubernetesObject obj) throws K8sFrameworkException {
+        //not updatable without api.
+        return obj;
+    }
 }

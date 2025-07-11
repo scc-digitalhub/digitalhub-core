@@ -28,6 +28,7 @@ import io.kubernetes.client.common.KubernetesObject;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.BatchV1Api;
+import io.kubernetes.client.openapi.models.V1AppArmorProfile;
 import io.kubernetes.client.openapi.models.V1ConfigMap;
 import io.kubernetes.client.openapi.models.V1ConfigMapVolumeSource;
 import io.kubernetes.client.openapi.models.V1Container;
@@ -40,8 +41,10 @@ import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.kubernetes.client.openapi.models.V1PodSpec;
 import io.kubernetes.client.openapi.models.V1PodTemplateSpec;
 import io.kubernetes.client.openapi.models.V1ResourceRequirements;
+import io.kubernetes.client.openapi.models.V1SeccompProfile;
 import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.openapi.models.V1SecretVolumeSource;
+import io.kubernetes.client.openapi.models.V1SecurityContext;
 import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.FrameworkComponent;
@@ -76,8 +79,9 @@ import org.springframework.util.StringUtils;
 
 @Slf4j
 @FrameworkComponent(framework = K8sContainerBuilderRunnable.FRAMEWORK)
-public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunnable, V1Job> {
+public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRunnable, V1Job> {
 
+    public static final long DEFAULT_USER_ID = 1000L;
     public static final int DEADLINE_SECONDS = 3600 * 24 * 3; //3 days
     private static final TypeReference<HashMap<String, Serializable>> typeRef = new TypeReference<
         HashMap<String, Serializable>
@@ -87,25 +91,34 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
 
     private int activeDeadlineSeconds = DEADLINE_SECONDS;
 
-    @Value("${builder.kaniko.image}")
+    @Value("${builder.buildkit.image}")
     private String kanikoImage;
 
     private String initImage;
     private List<String> initCommand = null;
 
-    @Value("${builder.kaniko.image-prefix}")
+    @Value("${builder.buildkit.image-prefix}")
     private String imagePrefix;
 
-    @Value("${builder.kaniko.image-registry}")
+    @Value("${builder.buildkit.image-registry}")
     private String imageRegistry;
 
-    @Value("${builder.kaniko.secret}")
+    @Value("${builder.buildkit.secret}")
     private String kanikoSecret;
 
-    @Value("${builder.kaniko.args}")
+    @Value("${builder.buildkit.client-secret.name}")
+    private String kanikoClientSecret;
+
+    @Value("${builder.buildkit.client-secret.mount-path}")
+    private String kanikoClientSecretPath;
+
+    @Value("${builder.buildkit.args}")
     private List<String> kanikoArgs;
 
-    public K8sKanikoFramework(ApiClient apiClient) {
+    @Value("${builder.buildkit.command}")
+    private List<String> kanikoCommand;
+
+    public K8sBuildkitFramework(ApiClient apiClient) {
         super(apiClient);
         this.batchV1Api = new BatchV1Api(apiClient);
     }
@@ -396,7 +409,10 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
 
         // Prepare environment variables for the Kubernetes job
         List<V1EnvFromSource> envFrom = buildEnvFrom(runnable);
-        List<V1EnvVar> env = buildEnv(runnable);
+        List<V1EnvVar> env = new ArrayList<>(buildEnv(runnable));
+        // Add Kaniko specific environment variables
+        env.add(new V1EnvVar().name("BUILDKITD_FLAGS").value("--oci-worker-no-process-sandbox"));
+        env.add(new V1EnvVar().name("DOCKER_CONFIG").value("/kaniko/.docker"));
 
         // Volumes to attach to the pod based on the volume spec with the additional volume_type
         List<V1Volume> volumes = new LinkedList<>(buildVolumes(runnable));
@@ -443,29 +459,57 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
             volumeMounts.add(secretVolumeMount);
         }
 
+        if (StringUtils.hasText(kanikoClientSecret)) {
+            V1Volume clientSecretVolume = new V1Volume()
+                .name(kanikoClientSecret)
+                .secret(new V1SecretVolumeSource().secretName(kanikoClientSecret));
+
+            V1VolumeMount clientSecretVolumeMount = new V1VolumeMount()
+                .name(kanikoClientSecret)
+                .mountPath(kanikoClientSecretPath);
+
+            volumes.add(clientSecretVolume);
+            volumeMounts.add(clientSecretVolumeMount);
+        }
+
         // resources
         V1ResourceRequirements resources = buildResources(runnable);
 
-        List<String> kanikoArgsAll = new ArrayList<>(
+        List<String> kanikoArgsAll = new ArrayList<>(kanikoArgs);
+
+        // Add Kaniko args
+        kanikoArgsAll.addAll(
             List.of(
-                "--dockerfile=/init-config-map/Dockerfile",
-                "--context=" + k8sProperties.getSharedVolume().getMountPath(),
-                "--destination=" + imageName
+                "--local",
+                "dockerfile=/init-config-map",
+                "--local",
+                "context=" + k8sProperties.getSharedVolume().getMountPath(),
+                "--output",
+                "type=image,name=" + imageName + ",push=true"
             )
         );
-        // Add Kaniko args
-        kanikoArgsAll.addAll(kanikoArgs);
+
+        V1SecurityContext securityContext = buildSecurityContext(runnable);
+
+        //add custom profile to security context
+        securityContext
+            .seccompProfile(new V1SeccompProfile().type("Unconfined"))
+            .appArmorProfile(new V1AppArmorProfile().type("Unconfined"))
+            .runAsGroup(DEFAULT_USER_ID)
+            .runAsUser(DEFAULT_USER_ID);
 
         // Build Container
         V1Container container = new V1Container()
             .name(containerName)
+            .command(kanikoCommand)
             .image(kanikoImage)
             .imagePullPolicy("IfNotPresent")
             .args(kanikoArgsAll)
             .resources(resources)
             .volumeMounts(volumeMounts)
             .envFrom(envFrom)
-            .env(env);
+            .env(env)
+            .securityContext(securityContext);
 
         // Create a PodSpec for the container, leverage template if provided
         V1PodSpec podSpec = Optional
@@ -483,8 +527,9 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
             .tolerations(buildTolerations(runnable))
             .volumes(volumes)
             .restartPolicy("Never");
-        //DISABLED: kaniko needs to run as root!
-        // .securityContext(buildPodSecurityContext(runnable));
+        if (disableRoot) {
+            podSpec.setSecurityContext(buildPodSecurityContext(runnable));
+        }
 
         // Create a PodTemplateSpec with the PodSpec
         V1PodTemplateSpec podTemplateSpec = new V1PodTemplateSpec().metadata(metadata).spec(podSpec);
@@ -498,7 +543,8 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
             .resources(resources)
             .env(env)
             .envFrom(envFrom)
-            .command(initCommand);
+            .command(initCommand)
+            .securityContext(securityContext);
 
         // Set initContainer as first container in the PodSpec
         podSpec.setInitContainers(Collections.singletonList(initContainer));
