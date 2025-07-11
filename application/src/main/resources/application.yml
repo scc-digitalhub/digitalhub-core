@@ -97,13 +97,34 @@ springdoc:
   api-docs:
     path: /v1/api-docs
 
-# Kaniko config
-kaniko:
-  image: ${KANIKO_IMAGE:gcr.io/kaniko-project/executor:latest}
-  image-prefix: ${KANIKO_IMAGE_PREFIX:dhcore}
-  image-registry: ${KANIKO_IMAGE_REGISTRY:${registry.name}}
-  secret: ${KANIKO_SECRET:${registry.secret}}
-  args: ${KANIKO_ARGS:}
+
+# registry
+registry:
+  name: ${IMAGE_REGISTRY:}
+  secret: ${IMAGE_REGISTRY_SECRET:}    
+
+# build config
+builder:
+  framework: ${BUILDER_FRAMEWORK:kaniko}
+  image-prefix: ${BUILDER_IMAGE_PREFIX:dhcore}
+  kaniko:
+    image: ${KANIKO_IMAGE:gcr.io/kaniko-project/executor:latest}
+    image-prefix: ${KANIKO_IMAGE_PREFIX:${builder.image-prefix}}
+    image-registry: ${KANIKO_IMAGE_REGISTRY:${registry.name}}
+    secret: ${KANIKO_SECRET:${registry.secret}}
+    args: ${KANIKO_ARGS:}
+  buildkit:
+    image: ${BUILDKIT_IMAGE:moby/buildkit:master-rootless}
+    image-prefix: ${BUILDKIT_IMAGE_PREFIX:${builder.image-prefix}}
+    image-registry: ${BUILDKIT_IMAGE_REGISTRY:${registry.name}}
+    secret: ${BUILDKIT_SECRET:${registry.secret}}
+    command: ${BUILDKIT_COMMAND:buildctl-daemonless.sh}
+    args: ${BUILDKIT_ARGS:build,--frontend,dockerfile.v0}
+    client-secret: 
+      name: ${BUILDKIT_CLIENT_SECRET_NAME:}
+      mount-path: ${BUILDKIT_CLIENT_SECRET_MOUNT_PATH:/certs/client}
+
+
 
 # MLRun config
 mlrun:
@@ -111,10 +132,7 @@ mlrun:
   image-prefix: ${MLRUN_IMAGE_PREFIX:dhcore}
   image-registry: ${MLRUN_IMAGE_REGISTRY:}
 
-# registry
-registry:
-  name: ${DOCKER_REGISTRY:}
-  secret: ${DOCKER_REGISTRY_SECRET:}
+
 
 argoworkflows:
   artifacts:
@@ -135,6 +153,7 @@ kubernetes:
     user: ${K8S_SEC_USER:}
     group: ${K8S_SEC_GROUP:}
   image-pull-policy: ${K8S_IMAGE_PULL_POLICY:IfNotPresent}
+  registry-secret: ${K8S_REGISTRY_SECRET:${registry.secret}}  
   init:
     image: ${K8S_INIT_IMAGE:ghcr.io/scc-digitalhub/digitalhub-core-builder-tool:latest}
     command: "/bin/bash,-c,/app/builder-tool.sh"

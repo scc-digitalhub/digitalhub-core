@@ -41,7 +41,7 @@ import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
-import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sKanikoRunnable;
+import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
 import it.smartcommunitylabdhub.runtime.python.runners.PythonBuildRunner;
 import it.smartcommunitylabdhub.runtime.python.runners.PythonJobRunner;
 import it.smartcommunitylabdhub.runtime.python.runners.PythonServeRunner;
@@ -206,8 +206,8 @@ public class PythonRuntime extends K8sBaseRuntime<PythonFunctionSpec, PythonRunS
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
         //update image name after build
-        if (runnable instanceof K8sKanikoRunnable) {
-            String image = ((K8sKanikoRunnable) runnable).getImage();
+        if (runnable instanceof K8sContainerBuilderRunnable) {
+            String image = ((K8sContainerBuilderRunnable) runnable).getImage();
 
             String functionId = runAccessor.getFunctionId();
             Function function = functionService.getFunction(functionId);

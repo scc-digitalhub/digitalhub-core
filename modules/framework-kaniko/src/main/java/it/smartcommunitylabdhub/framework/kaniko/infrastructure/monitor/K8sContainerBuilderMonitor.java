@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.framework.kaniko.infrastructure.monitor;
@@ -30,33 +30,36 @@ import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.services.RunnableStore;
 import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
+import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sBaseFramework;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.monitor.K8sBaseMonitor;
-import it.smartcommunitylabdhub.framework.kaniko.infrastructure.k8s.K8sKanikoFramework;
-import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sKanikoRunnable;
+import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.util.Assert;
 
 @Slf4j
 @ConditionalOnKubernetes
 @Component
-@MonitorComponent(framework = "build")
-public class K8sKanikoMonitor extends K8sBaseMonitor<K8sKanikoRunnable> {
+@MonitorComponent(framework = K8sContainerBuilderRunnable.FRAMEWORK)
+public class K8sContainerBuilderMonitor extends K8sBaseMonitor<K8sContainerBuilderRunnable> {
 
-    private final K8sKanikoFramework framework;
+    @Autowired(required = false)
+    private K8sBaseFramework<K8sContainerBuilderRunnable, V1Job> framework;
 
-    public K8sKanikoMonitor(RunnableStore<K8sKanikoRunnable> runnableStore, K8sKanikoFramework kanikoFramework) {
+    public K8sContainerBuilderMonitor(RunnableStore<K8sContainerBuilderRunnable> runnableStore) {
         super(runnableStore);
-        Assert.notNull(kanikoFramework, "kaniko framework is required");
-
-        this.framework = kanikoFramework;
     }
 
     @Override
-    public K8sKanikoRunnable refresh(K8sKanikoRunnable runnable) {
+    public K8sContainerBuilderRunnable refresh(K8sContainerBuilderRunnable runnable) {
+        if (framework == null) {
+            log.warn("No builder framework available");
+            return runnable;
+        }
+
         try {
             V1Job job = framework.get(framework.build(runnable));
 
