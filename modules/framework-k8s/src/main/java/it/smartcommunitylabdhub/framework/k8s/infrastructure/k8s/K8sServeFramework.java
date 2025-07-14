@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s;
@@ -55,6 +55,7 @@ import it.smartcommunitylabdhub.framework.k8s.model.K8sTemplate;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreServiceType;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
+import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -203,6 +204,16 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
         service = create(service);
         results.put("service", service);
 
+        //check if additional names are specified
+        if (runnable.getServiceNames() != null) {
+            for (String serviceName : runnable.getServiceNames()) {
+                //build service with additional name
+                V1Service additionalService = build(runnable, serviceName);
+                log.info("create additional service for {}", String.valueOf(additionalService.getMetadata().getName()));
+                additionalService = createOrUpdate(additionalService);
+            }
+        }
+
         //update state
         runnable.setState(State.RUNNING.name());
 
@@ -331,6 +342,37 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
         delete(service);
         messages.add(String.format("service %s deleted", service.getMetadata().getName()));
 
+        //check if additional names are specified
+        if (runnable.getServiceNames() != null) {
+            for (String serviceName : runnable.getServiceNames()) {
+                //build service with additional name
+                try {
+                    V1Service additionalService = get(build(runnable, serviceName));
+                    //check for label match to avoid removing services for different runs
+                    if (
+                        additionalService == null ||
+                        additionalService.getMetadata() == null ||
+                        additionalService.getMetadata().getLabels() == null ||
+                        !runnable
+                            .getId()
+                            .equals(additionalService.getMetadata().getLabels().get("app.kubernetes.io/version"))
+                    ) {
+                        continue;
+                    }
+
+                    log.info(
+                        "delete additional service for {}",
+                        String.valueOf(additionalService.getMetadata().getName())
+                    );
+                    delete(additionalService);
+                    messages.add(String.format("service %s deleted", additionalService.getMetadata().getName()));
+                } catch (K8sFrameworkException | IllegalArgumentException e) {
+                    //skip
+                    log.debug("error deleting additional services k8s results: {}", e.getMessage());
+                }
+            }
+        }
+
         if (!"keep".equals(collectResults)) {
             //update results
             try {
@@ -451,17 +493,19 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
     }
 
     public V1Service build(K8sServeRunnable runnable) throws K8sFrameworkException {
+        return build(runnable, null);
+    }
+
+    public V1Service build(K8sServeRunnable runnable, @Nullable String serviceNameSuffix) throws K8sFrameworkException {
         log.debug("build for {}", runnable.getId());
         if (log.isTraceEnabled()) {
             log.trace("runnable: {}", runnable);
         }
 
         // Generate deploymentName and ContainerName
-        String serviceName = k8sBuilderHelper.getServiceName(
-            runnable.getRuntime(),
-            runnable.getTask(),
-            runnable.getId()
-        );
+        String serviceName = serviceNameSuffix == null
+            ? k8sBuilderHelper.getServiceName(runnable.getRuntime(), runnable.getTask(), runnable.getId())
+            : k8sBuilderHelper.getServiceName(runnable.getRuntime(), runnable.getProject(), serviceNameSuffix);
 
         log.debug("build k8s service for {}", serviceName);
 
@@ -570,6 +614,33 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
             log.debug("create k8s service for {}", serviceName);
 
             return coreV1Api.createNamespacedService(namespace, service, null, null, null, null);
+        } catch (ApiException e) {
+            log.error("Error with k8s: {}", e.getMessage());
+            if (log.isTraceEnabled()) {
+                log.trace("k8s api response: {}", e.getResponseBody());
+            }
+
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+        }
+    }
+
+    public V1Service createOrUpdate(V1Service service) throws K8sFrameworkException {
+        Assert.notNull(service.getMetadata(), "metadata can not be null");
+
+        try {
+            String serviceName = service.getMetadata().getName();
+            log.debug("create or update k8s service for {}", serviceName);
+
+            try {
+                V1Service s = coreV1Api.readNamespacedService(serviceName, namespace, null);
+                log.debug("replace k8s service for {}", s.getMetadata().getName());
+
+                return coreV1Api.replaceNamespacedService(serviceName, namespace, service, null, null, null, null);
+            } catch (ApiException e) {
+                log.debug("create k8s service for {}", serviceName);
+
+                return coreV1Api.createNamespacedService(namespace, service, null, null, null, null);
+            }
         } catch (ApiException e) {
             log.error("Error with k8s: {}", e.getMessage());
             if (log.isTraceEnabled()) {
