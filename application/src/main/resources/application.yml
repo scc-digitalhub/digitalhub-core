@@ -150,6 +150,7 @@ kubernetes:
   results: ${K8S_ENABLE_RESULTS:default}
   security:
     disable-root: ${K8S_SEC_DISABLE_ROOT:false}
+    seccomp-profile: ${K8S_SEC_SECCOMP_PROFILE:RuntimeDefault}
     user: ${K8S_SEC_USER:}
     group: ${K8S_SEC_GROUP:}
   image-pull-policy: ${K8S_IMAGE_PULL_POLICY:IfNotPresent}
