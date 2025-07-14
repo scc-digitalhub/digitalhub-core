@@ -3,9 +3,11 @@ package it.smartcommunitylabdhub.runtime.hpcdl.framework.runnables;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RunnableComponent;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.runtime.hpcdl.framework.infrastructure.HPCDLFramework;
+import it.smartcommunitylabdhub.runtime.hpcdl.framework.infrastructure.objects.HPCDLJob;
 
 import java.io.Serializable;
 import java.util.Map;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -49,6 +51,8 @@ public class HPCDLRunnable implements RunRunnable  {
     private String message;
 
     private Map<String, Serializable> results;
+
+    private HPCDLJob job;
 
     @Override
     public String getFramework() {

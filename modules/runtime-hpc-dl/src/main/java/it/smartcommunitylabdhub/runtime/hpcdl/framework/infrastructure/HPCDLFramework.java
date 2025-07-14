@@ -15,6 +15,7 @@ import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -62,21 +63,27 @@ public class HPCDLFramework implements Framework<HPCDLRunnable>, InitializingBea
         HPCDLJob job = build(runnable);
 
         //create job
-        job = create(job);;
+        job = create(job);
 
         
         Map<String, Serializable> results = new HashMap<>();
         results.put("job", job);
 
+        runnable.setJob(job);
+
         //update state
-        runnable.setState(State.RUNNING.name());
+        if (State.ERROR.name().equals(job.getStatus())) {
+            runnable.setState(job.getStatus());
+        } else {
+            runnable.setState(State.RUNNING.name());
+        }
 
         try {
             runnable.setResults(
                 results
                     .entrySet()
                     .stream()
-                    .collect(Collectors.toMap(Entry::getKey, e -> mapper.convertValue(e, typeRef)))
+                    .collect(Collectors.toMap(Entry::getKey, e -> mapper.convertValue(e.getValue(), typeRef)))
             );
         } catch (IllegalArgumentException e) {
             log.error("error reading HPC-DL job results: {}", e.getMessage());
@@ -170,11 +177,25 @@ public class HPCDLFramework implements Framework<HPCDLRunnable>, InitializingBea
 
         HPCDLJob job = new HPCDLJob();
 
-        job.setId(runnable.getId());
-        job.setImage(runnable.getImage());
-        job.setInputs(runnable.getInputs());
-        job.setOutputs(runnable.getOutputs());
-        job.setArgs(runnable.getArgs());
+        if (runnable.getJob() != null) {
+            job = runnable.getJob();
+        } else {
+            job.setImage(runnable.getImage());
+            job.setInputs(runnable.getInputs());
+            job.setOutputs(runnable.getOutputs());
+            job.setArgs(runnable.getArgs());
+            job.setCommand(runnable.getCommand());
+        }
+
+        // if (runnable.getResults() != null && runnable.getResults().containsKey("job")) {
+        //     // if job already exists, retrieve it
+        //     try {
+        //         Map<String, Serializable> jobMap = (Map<String, Serializable>)runnable.getResults().get("job");
+        //         job.setId(jobMap.get("id").toString());
+        //         job.setStatus(jobMap.get("status").toString());
+        //         job.setHpcIds(jobMap.get("hpcIds") != null ? (List<String>) jobMap.get("hpcIds") : new LinkedList<>());
+        //     } catch (Exception e) {}
+        // }
 
         return job;
     }
@@ -189,13 +210,32 @@ public class HPCDLFramework implements Framework<HPCDLRunnable>, InitializingBea
 
     public HPCDLJob get(@NotNull HPCDLJob job) throws HPCDLFrameworkException {
 
+        if (State.ERROR.name().equals(job.getStatus()) || State.STOPPED.name().equals(job.getStatus()) || State.DELETED.name().equals(job.getStatus()) | State.COMPLETED.name().equals(job.getStatus())) {
+            // if job is in error or stopped or deleted or completed, we do not need to fetch it
+            log.debug("HPC-DL job {} is in state {}, no need to fetch it", job.getId(), job.getStatus());
+            return job;
+        }
+
         try {
-            String name = job.getId();
-            log.debug("get HPC-DL job for {}", name);
-            return connector.getJob(name);
+            String id = job.getId();
+            log.debug("get HPC-DL job for {}", id);
+            HPCDLJob remoteJob = connector.getJob(id, job.getHpcIds());
+            if (remoteJob != null) {
+                job.setHpcIds(remoteJob.getHpcIds());
+                job.setStatus(remoteJob.getStatus());
+                if (remoteJob.getMessage() != null) {
+                    job.setMessage(remoteJob.getMessage());
+                }
+                if (remoteJob.getMetrics() != null && !remoteJob.getMetrics().isEmpty()) {
+                    job.setMetrics(remoteJob.getMetrics());
+                }
+            }
+
+            return job;
         } catch (Exception e) {
             log.error("Error with HPC-DL API: {}", e.getMessage());
-            throw new HPCDLFrameworkException(e.getMessage(), e);
+            return job;
+            // throw new HPCDLFrameworkException(e.getMessage(), e);
         }
     }
 

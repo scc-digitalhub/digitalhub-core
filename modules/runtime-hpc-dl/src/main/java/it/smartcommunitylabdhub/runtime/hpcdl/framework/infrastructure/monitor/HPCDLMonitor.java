@@ -138,6 +138,13 @@ public class HPCDLMonitor implements Runnable {
                 // Job has failed delete job and pod
                 runnable.setState(State.STOPPED.name());
             }
+            // runnable.getResults().put("job", job);
+            // if (job.getMetrics() != null && !job.getMetrics().isEmpty()) {
+            //     runnable.setMetrics(job.getMetrics().keySet().stream()
+            //         .map(metricName -> new CoreMetric)
+            //         .toList());
+            // }
+            runnable.setJob(job);
 
         } catch (HPCDLFrameworkException e) {
             // Set Runnable to ERROR state

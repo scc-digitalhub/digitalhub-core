@@ -58,6 +58,7 @@ public class HPCDLRunSpec extends RunBaseSpec {
         this.functionSpec = spec.getFunctionSpec();
         this.inputs = spec.getInputs();
         this.outputs = spec.getOutputs();
+        this.args = spec.getArgs();
     }
 
     public void setFunctionSpec(HPCDLFunctionSpec functionSpec) {

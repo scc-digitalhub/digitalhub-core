@@ -1,5 +1,6 @@
 package it.smartcommunitylabdhub.runtime.hpcdl.framework.infrastructure;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -8,7 +9,7 @@ import org.springframework.stereotype.Component;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.runtime.hpcdl.framework.infrastructure.objects.HPCDLJob;
 
-@Component
+// @Component
 public class MockHPCDLConnector implements HPCDLConnector {
 
     private Map<String, HPCDLJob> jobs = new HashMap<>();
@@ -24,7 +25,7 @@ public class MockHPCDLConnector implements HPCDLConnector {
     }
 
     @Override
-    public HPCDLJob getJob(String jobId) {
+    public HPCDLJob getJob(String jobId, Collection<String> hpcId) {
         HPCDLJob job = jobs.get(jobId);
         if (job != null) {
             Long running = ((System.currentTimeMillis() - jobStart.get(jobId)) / 1000);
