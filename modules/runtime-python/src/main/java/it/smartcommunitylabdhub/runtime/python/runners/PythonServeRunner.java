@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.runtime.python.runners;
@@ -26,7 +26,9 @@ package it.smartcommunitylabdhub.runtime.python.runners;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.models.enums.State;
+import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
+import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
@@ -72,6 +74,8 @@ public class PythonServeRunner {
     private final Map<String, String> secretData;
 
     private final K8sBuilderHelper k8sBuilderHelper;
+    private final FunctionManager functionService;
+
     private final Resource entrypoint = new ClassPathResource("runtime-python/docker/entrypoint.sh");
 
     public PythonServeRunner(
@@ -81,13 +85,15 @@ public class PythonServeRunner {
         String command,
         PythonFunctionSpec functionPythonSpec,
         Map<String, String> secretData,
-        K8sBuilderHelper k8sBuilderHelper
+        K8sBuilderHelper k8sBuilderHelper,
+        FunctionManager functionService
     ) {
         this.image = image;
         this.command = command;
         this.functionSpec = functionPythonSpec;
         this.secretData = secretData;
         this.k8sBuilderHelper = k8sBuilderHelper;
+        this.functionService = functionService;
 
         this.userId = userId != null ? userId : UID;
         this.groupId = groupId != null ? groupId : GID;
@@ -220,6 +226,22 @@ public class PythonServeRunner {
         //expose http trigger only
         CorePort servicePort = new CorePort(HTTP_PORT, HTTP_PORT);
 
+        //evaluate service names
+        List<String> serviceNames = new ArrayList<>();
+        if (taskSpec.getServiceName() != null && StringUtils.hasText(taskSpec.getServiceName())) {
+            //prepend with function name
+            serviceNames.add(taskAccessor.getFunction() + "-" + taskSpec.getServiceName());
+        }
+
+        if (functionService != null) {
+            //check if latest
+            Function latest = functionService.getLatestFunction(run.getProject(), taskAccessor.getFunction());
+            if (taskAccessor.getFunctionId().equals(latest.getId())) {
+                //prepend with function name
+                serviceNames.add(taskAccessor.getFunction() + "-latest");
+            }
+        }
+
         K8sRunnable k8sServeRunnable = K8sServeRunnable
             .builder()
             .runtime(PythonRuntime.RUNTIME)
@@ -254,6 +276,7 @@ public class PythonServeRunner {
             .replicas(taskSpec.getReplicas())
             .servicePorts(List.of(servicePort))
             .serviceType(taskSpec.getServiceType())
+            .serviceNames(serviceNames != null && !serviceNames.isEmpty() ? serviceNames : null)
             .build();
 
         k8sServeRunnable.setId(run.getId());

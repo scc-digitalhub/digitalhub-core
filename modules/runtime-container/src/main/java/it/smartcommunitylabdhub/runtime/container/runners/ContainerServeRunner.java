@@ -6,27 +6,29 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.runtime.container.runners;
 
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.models.enums.State;
+import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.objects.SourceCode;
 import it.smartcommunitylabdhub.commons.models.run.Run;
+import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
@@ -53,15 +55,18 @@ public class ContainerServeRunner {
     private final Map<String, String> secretData;
 
     private final K8sBuilderHelper k8sBuilderHelper;
+    private final FunctionManager functionService;
 
     public ContainerServeRunner(
         ContainerFunctionSpec functionContainerSpec,
         Map<String, String> secretData,
-        K8sBuilderHelper k8sBuilderHelper
+        K8sBuilderHelper k8sBuilderHelper,
+        FunctionManager functionService
     ) {
         this.functionSpec = functionContainerSpec;
         this.secretData = secretData;
         this.k8sBuilderHelper = k8sBuilderHelper;
+        this.functionService = functionService;
     }
 
     public K8sServeRunnable produce(Run run) {
@@ -108,6 +113,22 @@ public class ContainerServeRunner {
             }
         }
 
+        //evaluate service names
+        List<String> serviceNames = new ArrayList<>();
+        if (taskSpec.getServiceName() != null && StringUtils.hasText(taskSpec.getServiceName())) {
+            //prepend with function name
+            serviceNames.add(taskAccessor.getFunction() + "-" + taskSpec.getServiceName());
+        }
+
+        if (functionService != null) {
+            //check if latest
+            Function latest = functionService.getLatestFunction(run.getProject(), taskAccessor.getFunction());
+            if (taskAccessor.getFunctionId().equals(latest.getId())) {
+                //prepend with function name
+                serviceNames.add(taskAccessor.getFunction() + "-latest");
+            }
+        }
+
         K8sServeRunnable k8sServeRunnable = K8sServeRunnable
             .builder()
             .runtime(ContainerRuntime.RUNTIME)
@@ -142,6 +163,7 @@ public class ContainerServeRunner {
             .contextSources(contextSources)
             .servicePorts(taskSpec.getServicePorts())
             .serviceType(taskSpec.getServiceType())
+            .serviceNames(serviceNames != null && !serviceNames.isEmpty() ? serviceNames : null)
             .build();
 
         k8sServeRunnable.setId(run.getId());
