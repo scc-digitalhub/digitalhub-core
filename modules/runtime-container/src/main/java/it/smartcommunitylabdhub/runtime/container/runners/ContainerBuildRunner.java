@@ -35,7 +35,7 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileGenerator;
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileGeneratorFactory;
-import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sKanikoRunnable;
+import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
 import it.smartcommunitylabdhub.runtime.container.ContainerRuntime;
 import it.smartcommunitylabdhub.runtime.container.specs.ContainerBuildTaskSpec;
 import it.smartcommunitylabdhub.runtime.container.specs.ContainerFunctionSpec;
@@ -74,7 +74,7 @@ public class ContainerBuildRunner {
         this.k8sBuilderHelper = k8sBuilderHelper;
     }
 
-    public K8sKanikoRunnable produce(Run run) {
+    public K8sContainerBuilderRunnable produce(Run run) {
         ContainerRunSpec runSpec = new ContainerRunSpec(run.getSpec());
         ContainerBuildTaskSpec taskSpec = runSpec.getTaskBuildSpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
@@ -164,7 +164,7 @@ public class ContainerBuildRunner {
         }
 
         // Build runnable
-        return K8sKanikoRunnable
+        return K8sContainerBuilderRunnable
             .builder()
             .id(run.getId())
             .project(run.getProject())

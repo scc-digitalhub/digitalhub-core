@@ -34,7 +34,7 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileGenerator;
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileGeneratorFactory;
-import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sKanikoRunnable;
+import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
 import it.smartcommunitylabdhub.runtime.python.PythonRuntime;
 import it.smartcommunitylabdhub.runtime.python.model.NuclioFunctionBuilder;
 import it.smartcommunitylabdhub.runtime.python.model.NuclioFunctionSpec;
@@ -80,7 +80,7 @@ public class PythonBuildRunner {
         this.k8sBuilderHelper = k8sBuilderHelper;
     }
 
-    public K8sKanikoRunnable produce(Run run) {
+    public K8sContainerBuilderRunnable produce(Run run) {
         PythonRunSpec runSpec = new PythonRunSpec(run.getSpec());
         PythonBuildTaskSpec taskSpec = runSpec.getTaskBuildSpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
@@ -234,7 +234,7 @@ public class PythonBuildRunner {
             }
         }
 
-        return K8sKanikoRunnable
+        return K8sContainerBuilderRunnable
             .builder()
             .id(run.getId())
             .project(run.getProject())
