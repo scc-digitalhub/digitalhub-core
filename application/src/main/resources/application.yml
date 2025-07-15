@@ -70,6 +70,9 @@ runtime:
   kfp:
     image: ${RUNTIME_KFP_IMAGE:ghcr.io/scc-digitalhub/digitalhub-sdk/wrapper-kfp:latest}
     duration: ${RUNTIME_KFP_DURATION:${jwt.refresh-token.duration}}
+  hera:
+    image: ${RUNTIME_HERA_IMAGE:ghcr.io/scc-digitalhub/digitalhub-sdk/wrapper-hera:latest}
+    duration: ${RUNTIME_HERA_DURATION:${jwt.refresh-token.duration}}
   python:
     images:
       PYTHON3_9: ${RUNTIME_PYTHON_IMAGE_3_9:ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.9-latest}
