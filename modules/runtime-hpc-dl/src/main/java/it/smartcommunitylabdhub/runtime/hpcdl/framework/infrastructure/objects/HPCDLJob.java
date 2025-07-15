@@ -20,6 +20,8 @@ public class HPCDLJob implements Serializable{
     private String[] args;
     private String command;
 
+    private Map<String, Serializable> config = new HashMap<>();
+
     private Map<String, String> inputs = new HashMap<>();
     private Map<String, String> outputs = new HashMap<>();
 
@@ -39,6 +41,7 @@ public class HPCDLJob implements Serializable{
         this.message = job.getMessage();
         this.command = job.getCommand();
         this.metrics = job.getMetrics();
+        this.config = job.getConfig();
     }
 
 }

@@ -1,5 +1,6 @@
 package it.smartcommunitylabdhub.runtime.hpcdl.framework.infrastructure;
 
+import java.io.Serializable;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collection;
@@ -101,12 +102,16 @@ public class HPCDLAPIConnector implements HPCDLConnector, InitializingBean {
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public HPCDLJob createJob(HPCDLJob job) {
         String path = "/v1/launch_container";
         Map<String, Object> config = new HashMap<>();
-        config.put("config_hpc", new HashMap<>(config));
+        config.put("config_hpc", new HashMap<>(hpcConfig));
         config.put("config_server", new HashMap<>(hpcServerConfig));
+        if (job.getConfig() != null) {
+            ((Map<String,Serializable>)config.get("config_server")).putAll(job.getConfig());
+        }
         String configStr = null;
         try {
             configStr = new ObjectMapper().writeValueAsString(config);
@@ -142,6 +147,12 @@ public class HPCDLAPIConnector implements HPCDLConnector, InitializingBean {
         data.put("exec_command", command);
         data.put("config_json", configStr);
 
+        logger.info(path + " request with data");
+        data.entrySet().forEach(e -> logger.info("data {}: {}", e.getKey(), e.getValue()));
+        logger.info("file input_json: {}", inputJson);
+        logger.info("file output_json: {}", outputJson);
+        logger.info("file query_file: {}", "SELECT * FROM metadata WHERE field = none");
+
         Map<String, Object> files = new HashMap<>();
         files.put("output_json", stringToFileResource(outputJson, "output_json"));
         files.put("input_json",stringToFileResource(inputJson, "input_json"));
@@ -170,6 +181,7 @@ public class HPCDLAPIConnector implements HPCDLConnector, InitializingBean {
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         headers.add("Authorization", "Bearer " + hpcdlToken);
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+
         // Common form parameters.
         for (Map.Entry<String, String> entry : data.entrySet()) {
             multipartBodyBuilder.part(entry.getKey(), entry.getValue());

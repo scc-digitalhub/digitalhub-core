@@ -1,5 +1,6 @@
 package it.smartcommunitylabdhub.runtime.hpcdl.specs;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -26,6 +27,7 @@ public class HPCDLRunSpec extends RunBaseSpec {
     public static final String KIND = HPCDLRuntime.RUNTIME + "+run";
 
     // map path to artifact key
+    @Schema(title = "fields.inputs.title", description = "fields.inputs.description")
     private Map<String, String> inputs = new HashMap<>();
 
     // map path to artifact name
@@ -35,13 +37,27 @@ public class HPCDLRunSpec extends RunBaseSpec {
     @JsonUnwrapped
     private HPCDLJobTaskSpec taskJobSpec;
 
+    @Schema(pattern = "^\\d{2}:\\d{2}:\\d{2}$")
+    private String walltime;
+    
+    private Integer nodes;
+    
+    @JsonProperty("tasks_per_node")
+    private Integer tasksPerNode;
+    
+    @JsonProperty("cpus_per_task")
+    private Integer cpusPerTask;
+    
+    private Integer gpus;
+
+    private String qos;
 
     // @JsonProperty("function_spec")
     @JsonSchemaIgnore
     @JsonUnwrapped
     private HPCDLFunctionSpec functionSpec;
 
-    @Schema(title = "fields.hpcdl.args.title", description = "fields.hpcdl.args.description")
+    @Schema(title = "fields.container.args.title", description = "fields.container.args.description")
     private List<String> args;
 
     public HPCDLRunSpec(Map<String, Serializable> data) {
@@ -59,6 +75,12 @@ public class HPCDLRunSpec extends RunBaseSpec {
         this.inputs = spec.getInputs();
         this.outputs = spec.getOutputs();
         this.args = spec.getArgs();
+        this.walltime = spec.getWalltime();
+        this.nodes = spec.getNodes();
+        this.tasksPerNode = spec.getTasksPerNode();
+        this.cpusPerTask = spec.getCpusPerTask();
+        this.gpus = spec.getGpus();
+        this.qos = spec.getQos();
     }
 
     public void setFunctionSpec(HPCDLFunctionSpec functionSpec) {

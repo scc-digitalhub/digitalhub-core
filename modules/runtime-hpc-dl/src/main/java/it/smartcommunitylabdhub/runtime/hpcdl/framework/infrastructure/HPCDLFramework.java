@@ -185,18 +185,8 @@ public class HPCDLFramework implements Framework<HPCDLRunnable>, InitializingBea
             job.setOutputs(runnable.getOutputs());
             job.setArgs(runnable.getArgs());
             job.setCommand(runnable.getCommand());
+            job.setConfig(runnable.getConfig());
         }
-
-        // if (runnable.getResults() != null && runnable.getResults().containsKey("job")) {
-        //     // if job already exists, retrieve it
-        //     try {
-        //         Map<String, Serializable> jobMap = (Map<String, Serializable>)runnable.getResults().get("job");
-        //         job.setId(jobMap.get("id").toString());
-        //         job.setStatus(jobMap.get("status").toString());
-        //         job.setHpcIds(jobMap.get("hpcIds") != null ? (List<String>) jobMap.get("hpcIds") : new LinkedList<>());
-        //     } catch (Exception e) {}
-        // }
-
         return job;
     }
 

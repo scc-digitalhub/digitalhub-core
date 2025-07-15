@@ -6,6 +6,7 @@ import it.smartcommunitylabdhub.runtime.hpcdl.framework.infrastructure.HPCDLFram
 import it.smartcommunitylabdhub.runtime.hpcdl.framework.infrastructure.objects.HPCDLJob;
 
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.Map;
 
 import lombok.AllArgsConstructor;
@@ -53,6 +54,8 @@ public class HPCDLRunnable implements RunRunnable  {
     private Map<String, Serializable> results;
 
     private HPCDLJob job;
+
+    private Map<String, Serializable> config;
 
     @Override
     public String getFramework() {

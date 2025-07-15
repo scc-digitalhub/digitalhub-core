@@ -13,6 +13,7 @@ import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
 import it.smartcommunitylabdhub.commons.services.ArtifactManager;
+import it.smartcommunitylabdhub.commons.services.MetricsService;
 import it.smartcommunitylabdhub.commons.services.ProjectManager;
 import it.smartcommunitylabdhub.files.service.FilesService;
 import it.smartcommunitylabdhub.runtime.hpcdl.framework.runnables.HPCDLRunnable;
@@ -48,6 +49,9 @@ public class HPCDLRuntime extends AbstractBaseRuntime<HPCDLFunctionSpec, HPCDLRu
 
     @Autowired
     private CredentialsService credentialsService;
+
+    @Autowired
+    private MetricsService<Run> runMetricService;
 
     public HPCDLRuntime() {
         super(HPCDLRunSpec.KIND);
@@ -128,6 +132,7 @@ public class HPCDLRuntime extends AbstractBaseRuntime<HPCDLFunctionSpec, HPCDLRu
                     }    
                 }
             }
+            return HPCDLRunStatus.builder().job(hpcdlRunnable.getJob()).build();
         }
 
         return null;
@@ -135,7 +140,15 @@ public class HPCDLRuntime extends AbstractBaseRuntime<HPCDLFunctionSpec, HPCDLRu
 
     @Override
     public HPCDLRunStatus onRunning(Run run, RunRunnable runnable) {
-        // TODO: update metrics?
+        RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
+
+        // Retrieve status when node workflow is completed
+        if (
+            HPCDLJobTaskSpec.KIND.equals(runAccessor.getTask()) &&
+            runnable instanceof HPCDLRunnable hpcdlRunnable
+        ) {
+            return HPCDLRunStatus.builder().job(hpcdlRunnable.getJob()).build();
+        }
         return null;
     }
 

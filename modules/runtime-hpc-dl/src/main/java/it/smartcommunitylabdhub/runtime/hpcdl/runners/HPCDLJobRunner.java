@@ -131,6 +131,14 @@ public class HPCDLJobRunner {
             }
         }
 
+        Map<String, Serializable> conf = new HashMap<>();
+        if(runSpec.getWalltime() != null) conf.put("walltime", runSpec.getWalltime());
+        if(runSpec.getNodes() != null) conf.put("nodes", runSpec.getNodes());
+        if(runSpec.getTasksPerNode() != null) conf.put("tasks_per_node", runSpec.getTasksPerNode());
+        if(runSpec.getCpusPerTask() != null) conf.put("cpus_per_task", runSpec.getCpusPerTask());
+        if(runSpec.getGpus() != null) conf.put("gpus", runSpec.getGpus());
+        if(runSpec.getQos() != null) conf.put("qos", runSpec.getQos());
+
         HPCDLRunnable runnable = HPCDLRunnable
             .builder()
             .runtime(HPCDLRuntime.RUNTIME)
@@ -144,6 +152,7 @@ public class HPCDLJobRunner {
             .outputs(outputs)
             .inputs(inputs)
             .outputArtifacts(outputArtifacts)
+            .config(conf)
             .build();
         runnable.setId(run.getId());
         runnable.setProject(run.getProject());
