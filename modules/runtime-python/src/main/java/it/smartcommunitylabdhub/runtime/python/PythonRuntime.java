@@ -172,7 +172,8 @@ public class PythonRuntime extends K8sBaseRuntime<PythonFunctionSpec, PythonRunS
                     command,
                     runPythonSpec.getFunctionSpec(),
                     secretService.getSecretData(run.getProject(), runPythonSpec.getTaskJobSpec().getSecrets()),
-                    k8sBuilderHelper
+                    k8sBuilderHelper,
+                    functionService
                 )
                     .produce(run);
                 case PythonBuildTaskSpec.KIND -> new PythonBuildRunner(

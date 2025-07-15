@@ -164,7 +164,8 @@ public class ContainerRuntime
                 case ContainerServeTaskSpec.KIND -> new ContainerServeRunner(
                     runContainerSpec.getFunctionSpec(),
                     secretService.getSecretData(run.getProject(), runContainerSpec.getTaskServeSpec().getSecrets()),
-                    k8sBuilderHelper
+                    k8sBuilderHelper,
+                    functionService
                 )
                     .produce(run);
                 case ContainerBuildTaskSpec.KIND -> new ContainerBuildRunner(

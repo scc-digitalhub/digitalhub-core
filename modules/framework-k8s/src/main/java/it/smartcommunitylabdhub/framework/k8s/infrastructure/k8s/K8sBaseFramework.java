@@ -45,6 +45,7 @@ import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
 import io.kubernetes.client.openapi.models.V1PodSecurityContext;
 import io.kubernetes.client.openapi.models.V1ResourceRequirements;
+import io.kubernetes.client.openapi.models.V1SeccompProfile;
 import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.openapi.models.V1SecretEnvSource;
 import io.kubernetes.client.openapi.models.V1SecurityContext;
@@ -118,6 +119,7 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
     protected String defaultImagePullPolicy = "IfNotPresent";
 
     protected boolean disableRoot = false;
+    protected String seccompProfile = "RuntimeDefault";
 
     protected String gpuResourceKey;
     protected CoreResourceDefinition cpuResourceDefinition = new CoreResourceDefinition();
@@ -201,6 +203,11 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
         if (disableRoot != null) {
             this.disableRoot = disableRoot.booleanValue();
         }
+    }
+
+    @Autowired
+    public void setSeccompProfile(@Value("${kubernetes.security.seccomp-profile}") String seccompProfile) {
+        this.seccompProfile = seccompProfile;
     }
 
     @Autowired
@@ -1127,11 +1134,17 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
         V1SecurityContext context = new V1SecurityContext();
         //always disable privileged
         context.privileged(false);
+        context.allowPrivilegeEscalation(false);
 
         //enforce policy for non root when requested by admin
         if (disableRoot) {
             context.allowPrivilegeEscalation(false);
             context.runAsNonRoot(true);
+        }
+
+        if (seccompProfile != null) {
+            //set seccomp profile
+            context.setSeccompProfile(new V1SeccompProfile().type(seccompProfile));
         }
 
         //check for additional config, root is *always* disallowed
@@ -1151,6 +1164,11 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
         //enforce policy for non root when requested by admin
         if (disableRoot) {
             context.runAsNonRoot(true);
+        }
+
+        if (seccompProfile != null) {
+            //set seccomp profile
+            context.setSeccompProfile(new V1SeccompProfile().type(seccompProfile));
         }
 
         //check for additional config, root is *always* disallowed
