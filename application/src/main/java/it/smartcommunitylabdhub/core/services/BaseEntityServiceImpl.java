@@ -70,7 +70,7 @@ import org.springframework.validation.BindException;
  */
 @Slf4j
 @Transactional
-public class BaseEntityServiceImpl<D extends BaseDTO & SpecDTO & StatusDTO, E extends BaseEntity>
+public abstract class BaseEntityServiceImpl<D extends BaseDTO & SpecDTO & StatusDTO, E extends BaseEntity>
     implements EntityService<D>, InitializingBean {
 
     public static final int PAGE_MAX_SIZE = 1000;
@@ -95,7 +95,7 @@ public class BaseEntityServiceImpl<D extends BaseDTO & SpecDTO & StatusDTO, E ex
     }
 
     @SuppressWarnings("unchecked")
-    public BaseEntityServiceImpl(
+    protected BaseEntityServiceImpl(
         SearchableEntityRepository<E, D> repository,
         Converter<D, E> entityBuilder,
         Converter<E, D> dtoBuilder
@@ -191,6 +191,10 @@ public class BaseEntityServiceImpl<D extends BaseDTO & SpecDTO & StatusDTO, E ex
     /*
      * Service
      */
+    @Override
+    public EntityName getType() {
+        return type;
+    }
 
     @Override
     public D create(@NotNull D dto)
@@ -330,7 +334,7 @@ public class BaseEntityServiceImpl<D extends BaseDTO & SpecDTO & StatusDTO, E ex
             if (getFinalizer() == null) {
                 //no cascade available!
                 log.warn("Cascade delete not supported");
-                throw new IllegalArgumentException();
+                // throw new IllegalArgumentException();
             }
             D e = repository.find(id);
             if (e != null) {

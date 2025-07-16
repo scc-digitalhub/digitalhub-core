@@ -27,12 +27,16 @@ import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
+import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.core.events.EntityAction;
 import it.smartcommunitylabdhub.core.events.EntityEvent;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
+import it.smartcommunitylabdhub.core.utils.EntityUtils;
 import it.smartcommunitylabdhub.core.utils.UUIDKeyGenerator;
 import jakarta.validation.constraints.NotNull;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -57,11 +61,13 @@ import org.springframework.util.Assert;
 
 @Slf4j
 @Transactional
-public class BaseEntityRepository<E extends BaseEntity, D extends BaseDTO> implements SearchableEntityRepository<E, D> {
+public abstract class BaseEntityRepository<E extends BaseEntity, D extends BaseDTO>
+    implements SearchableEntityRepository<E, D> {
 
     public static final int PAGE_MAX_SIZE = 1000;
     public static final int DEFAULT_TIMEOUT = 30;
     protected final JpaRepository<E, String> repository;
+    protected final EntityName type;
 
     protected final Converter<D, E> entityBuilder;
     protected final Converter<E, D> dtoBuilder;
@@ -72,7 +78,8 @@ public class BaseEntityRepository<E extends BaseEntity, D extends BaseDTO> imple
     private Map<String, Pair<ReentrantLock, Instant>> locks = new ConcurrentHashMap<>();
     private int timeout = DEFAULT_TIMEOUT;
 
-    public BaseEntityRepository(
+    @SuppressWarnings("unchecked")
+    protected BaseEntityRepository(
         JpaRepository<E, String> repository,
         Converter<D, E> entityBuilder,
         Converter<E, D> dtoBuilder
@@ -84,6 +91,10 @@ public class BaseEntityRepository<E extends BaseEntity, D extends BaseDTO> imple
         this.repository = repository;
         this.entityBuilder = entityBuilder;
         this.dtoBuilder = dtoBuilder;
+
+        // resolve generics type via subclass trick
+        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+        this.type = EntityUtils.getEntityName((Class<D>) t);
     }
 
     @Autowired(required = false)
@@ -95,6 +106,11 @@ public class BaseEntityRepository<E extends BaseEntity, D extends BaseDTO> imple
     @Autowired
     public void setEventPublisher(ApplicationEventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
+    }
+
+    @Override
+    public EntityName getType() {
+        return type;
     }
 
     /*
