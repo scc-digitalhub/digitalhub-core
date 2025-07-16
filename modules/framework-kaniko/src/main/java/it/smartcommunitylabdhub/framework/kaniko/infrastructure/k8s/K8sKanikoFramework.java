@@ -375,6 +375,9 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
         if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
             //get template
             template = templates.get(runnable.getTemplate());
+        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
+            //use default template
+            template = templates.get(DEFAULT_TEMPLATE);
         }
 
         //build destination image name and set to runnable
