@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.framework.k8s.kubernetes;
@@ -81,6 +81,25 @@ public class K8sBuilderHelper implements InitializingBean {
 
     @Value("${kubernetes.namespace}")
     private String namespace;
+
+    private String emptyDirDefaultSize = "128Mi";
+    private String emptyDirDefaultMedium = null;
+
+    @Autowired(required = false)
+    public void setEmptyDirDefaultMedium(@Value("${kubernetes.empty-dir.medium}") String emptyDirDefaultMedium) {
+        this.emptyDirDefaultMedium = emptyDirDefaultMedium;
+    }
+
+    @Autowired
+    public void setEmptyDirDefaultSize(@Value("${kubernetes.empty-dir.size}") String emptyDirDefaultSize) {
+        if (StringUtils.hasText(emptyDirDefaultSize)) {
+            //ensure we have a valid size
+            Quantity.fromString(emptyDirDefaultSize);
+            this.emptyDirDefaultSize = emptyDirDefaultSize;
+        } else {
+            log.warn("EmptyDir default size not set, using default 128Mi");
+        }
+    }
 
     public K8sBuilderHelper(ApiClient client) {
         api = new CoreV1Api(client);
@@ -209,8 +228,8 @@ public class K8sBuilderHelper implements InitializingBean {
             case "empty_dir":
                 return volume.emptyDir(
                     new V1EmptyDirVolumeSource()
-                        .medium(spec.getOrDefault("medium", null))
-                        .sizeLimit(Quantity.fromString(spec.getOrDefault("size_limit", "128Mi")))
+                        .medium(emptyDirDefaultMedium) //configured by admin only!
+                        .sizeLimit(Quantity.fromString(spec.getOrDefault("size_limit", emptyDirDefaultSize)))
                 );
             default:
                 return null;
