@@ -167,6 +167,9 @@ kubernetes:
     mount_path: /shared
     spec:
       sizeLimit: 100Mi
+  empty-dir:
+    size: ${K8S_EMPTY_DIR_SIZE:128Mi}
+    medium: ${K8S_EMPTY_DIR_MEDIUM:}
   service:
     type: ${K8S_SERVICE_TYPE:NodePort}
   resources:
@@ -182,6 +185,10 @@ kubernetes:
       requests: ${K8S_RESOURCE_PVC_DEFAULT:2Gi}
       limits: ${K8S_RESOURCE_PVC_LIMIT:}
       storage-class: ${K8S_RESOURCE_PVC_STORAGE_CLASS:}
+    ephemeral:
+      requests: ${K8S_RESOURCE_EPHEMERAL_DEFAULT:2Gi}
+      limits: ${K8S_RESOURCE_EPHEMERAL_LIMIT:}
+      storage-class: ${K8S_RESOURCE_EPHEMERAL_STORAGE_CLASS:}      
   config:
     config-map: ${DH_CONFIG_COMMON_MAPS:}
     secret: ${DH_CONFIG_COMMON_SECRETS:}

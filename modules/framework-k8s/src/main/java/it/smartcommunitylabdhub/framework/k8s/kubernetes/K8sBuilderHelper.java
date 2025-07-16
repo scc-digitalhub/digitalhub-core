@@ -32,12 +32,18 @@ import io.kubernetes.client.openapi.models.V1ConfigMapKeySelector;
 import io.kubernetes.client.openapi.models.V1EmptyDirVolumeSource;
 import io.kubernetes.client.openapi.models.V1EnvVar;
 import io.kubernetes.client.openapi.models.V1EnvVarSource;
+import io.kubernetes.client.openapi.models.V1EphemeralVolumeSource;
+import io.kubernetes.client.openapi.models.V1ObjectMeta;
+import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimSpec;
+import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimTemplate;
 import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimVolumeSource;
 import io.kubernetes.client.openapi.models.V1SecretKeySelector;
 import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;
+import io.kubernetes.client.openapi.models.V1VolumeResourceRequirements;
 import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
 import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreResourceDefinition;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import jakarta.validation.constraints.NotNull;
 import java.util.ArrayList;
@@ -84,6 +90,40 @@ public class K8sBuilderHelper implements InitializingBean {
 
     private String emptyDirDefaultSize = "128Mi";
     private String emptyDirDefaultMedium = null;
+
+    protected CoreResourceDefinition ephemeralResourceDefinition = new CoreResourceDefinition();
+    protected String ephemeralStorageClass;
+
+    public void setEphemeralResourceDefinition(CoreResourceDefinition ephemeralResourceDefinition) {
+        this.ephemeralResourceDefinition = ephemeralResourceDefinition;
+    }
+
+    @Autowired
+    public void setPvcRequestsResourceDefinition(
+        @Value("${kubernetes.resources.ephemeral.requests}") String ephemeralResourceDefinition
+    ) {
+        if (StringUtils.hasText(ephemeralResourceDefinition)) {
+            this.ephemeralResourceDefinition.setRequests(ephemeralResourceDefinition);
+        }
+    }
+
+    @Autowired
+    public void setPvcLimitsResourceDefinition(
+        @Value("${kubernetes.resources.ephemeral.limits}") String ephemeralResourceDefinition
+    ) {
+        if (StringUtils.hasText(ephemeralResourceDefinition)) {
+            this.ephemeralResourceDefinition.setLimits(ephemeralResourceDefinition);
+        }
+    }
+
+    @Autowired
+    public void setEphemeralStorageClass(
+        @Value("${kubernetes.resources.ephemeral.storage-class}") String ephemeralStorageClass
+    ) {
+        if (StringUtils.hasText(ephemeralStorageClass)) {
+            this.ephemeralStorageClass = ephemeralStorageClass;
+        }
+    }
 
     @Autowired(required = false)
     public void setEmptyDirDefaultMedium(@Value("${kubernetes.empty-dir.medium}") String emptyDirDefaultMedium) {
@@ -224,6 +264,35 @@ public class K8sBuilderHelper implements InitializingBean {
                 return volume.persistentVolumeClaim(
                     new V1PersistentVolumeClaimVolumeSource().claimName(getVolumeName(id, coreVolume.getName()))
                     // .claimName(spec.getOrDefault("claimName", coreVolume.getName()))
+                );
+            case "ephemeral":
+                //build claim
+                Quantity quantity = Quantity.fromString(
+                    spec.getOrDefault("size", ephemeralResourceDefinition.getRequests())
+                );
+                V1VolumeResourceRequirements req = new V1VolumeResourceRequirements()
+                    .requests(Map.of("storage", quantity));
+
+                //enforce limit
+                //TODO check if valid!
+                if (ephemeralResourceDefinition.getLimits() != null) {
+                    Quantity limit = Quantity.fromString(ephemeralResourceDefinition.getLimits());
+                    req.setLimits(Map.of("storage", limit));
+                }
+
+                return volume.ephemeral(
+                    new V1EphemeralVolumeSource()
+                        .volumeClaimTemplate(
+                            new V1PersistentVolumeClaimTemplate()
+                                .metadata(new V1ObjectMeta().name(getVolumeName(id, coreVolume.getName())))
+                                .spec(
+                                    new V1PersistentVolumeClaimSpec()
+                                        .accessModes(Collections.singletonList("ReadWriteOnce"))
+                                        .volumeMode("Filesystem")
+                                        .storageClassName(spec.getOrDefault("storage_class", ephemeralStorageClass))
+                                        .resources(req)
+                                )
+                        )
                 );
             case "empty_dir":
                 return volume.emptyDir(

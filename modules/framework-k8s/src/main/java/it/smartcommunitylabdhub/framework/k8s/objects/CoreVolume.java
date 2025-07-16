@@ -56,6 +56,7 @@ public class CoreVolume implements Serializable {
         // config_map,
         // secret,
         persistent_volume_claim,
+        ephemeral,
         empty_dir,
     }
 }
