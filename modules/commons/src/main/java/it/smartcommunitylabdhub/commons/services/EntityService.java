@@ -27,6 +27,7 @@ import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
+import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
@@ -41,6 +42,8 @@ import org.springframework.validation.BindException;
  * Supports search via filters.
  */
 public interface EntityService<D extends BaseDTO> {
+    EntityName getType();
+
     D create(@NotNull D dto) throws BindException, IllegalArgumentException, DuplicatedEntityException, StoreException;
 
     D update(@NotNull String id, @NotNull D dto)
