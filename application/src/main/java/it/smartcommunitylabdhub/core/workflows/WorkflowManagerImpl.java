@@ -214,7 +214,7 @@ public class WorkflowManagerImpl implements WorkflowManager {
         log.debug("search latest workflows for project {} with {} page {}", project, String.valueOf(filter), pageable);
 
         try {
-            return versionableService.listLatestByProject(project, pageable);
+            return versionableService.searchLatestByProject(project, filter, pageable);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

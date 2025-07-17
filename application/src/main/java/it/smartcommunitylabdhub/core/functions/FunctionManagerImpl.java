@@ -195,7 +195,7 @@ public class FunctionManagerImpl implements FunctionManager {
         log.debug("search latest functions for project {} with {} page {}", project, String.valueOf(filter), pageable);
 
         try {
-            return versionableService.listLatestByProject(project, pageable);
+            return versionableService.searchLatestByProject(project, filter, pageable);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
