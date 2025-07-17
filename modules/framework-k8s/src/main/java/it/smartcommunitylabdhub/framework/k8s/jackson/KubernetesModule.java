@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.framework.k8s.jackson;
@@ -43,6 +43,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -138,19 +139,27 @@ public class KubernetesModule implements com.github.victools.jsonschema.generato
                     .map(o -> o.get("profile"))
                     .orElse(null);
 
+                //add blank as default
+                List<OneOfEntry> profiles = Stream
+                    .concat(
+                        Stream.of(new OneOfEntry("", "", null)),
+                        templates.stream().map(t -> new OneOfEntry(t.getId(), t.getName(), t.getDescription()))
+                    )
+                    .toList();
+
                 if (node != null) {
                     //set oneOf
                     ArrayNode opts = config.createArrayNode();
-                    templates
+                    profiles
                         .stream()
                         .map(t -> {
                             ObjectNode o = config.createObjectNode();
-                            o.put(config.getKeyword(SchemaKeyword.TAG_CONST), t.getId());
-                            if (StringUtils.hasText(t.getName())) {
+                            o.put(config.getKeyword(SchemaKeyword.TAG_CONST), t.id());
+                            if (StringUtils.hasText(t.name())) {
                                 //DISABLED, using a fake object for display
                                 // o.put(config.getKeyword(SchemaKeyword.TAG_TITLE), t.getName());
                             }
-                            if (StringUtils.hasText(t.getDescription())) {
+                            if (StringUtils.hasText(t.description())) {
                                 //DISABLED, unsupported by frontend lib
                                 // o.put(config.getKeyword(SchemaKeyword.TAG_DESCRIPTION), t.getDescription());
                             }
@@ -171,6 +180,7 @@ public class KubernetesModule implements com.github.victools.jsonschema.generato
                     profile
                         .put(config.getKeyword(SchemaKeyword.TAG_TITLE), "fields.profile.title")
                         .put(config.getKeyword(SchemaKeyword.TAG_DESCRIPTION), "fields.profile.description")
+                        .put(config.getKeyword(SchemaKeyword.TAG_DEFAULT), "")
                         .set(config.getKeyword(SchemaKeyword.TAG_ONEOF), opts);
 
                     ((ObjectNode) def.get(config.getKeyword(SchemaKeyword.TAG_PROPERTIES))).replace("profile", profile);
@@ -181,13 +191,13 @@ public class KubernetesModule implements com.github.victools.jsonschema.generato
 
                     //set oneOf
                     ArrayNode prps = config.createArrayNode();
-                    templates
+                    profiles
                         .stream()
                         .map(t -> {
                             ObjectNode o = config.createObjectNode();
                             o.set(
                                 "profile",
-                                config.createObjectNode().put(config.getKeyword(SchemaKeyword.TAG_CONST), t.getId())
+                                config.createObjectNode().put(config.getKeyword(SchemaKeyword.TAG_CONST), t.id())
                             );
                             ObjectNode e = config
                                 .createObjectNode()
@@ -195,11 +205,11 @@ public class KubernetesModule implements com.github.victools.jsonschema.generato
                                     config.getKeyword(SchemaKeyword.TAG_TYPE),
                                     config.getKeyword(SchemaKeyword.TAG_TYPE_OBJECT)
                                 );
-                            if (StringUtils.hasText(t.getName())) {
-                                e.put(config.getKeyword(SchemaKeyword.TAG_TITLE), t.getName());
+                            if (StringUtils.hasText(t.name())) {
+                                e.put(config.getKeyword(SchemaKeyword.TAG_TITLE), t.name());
                             }
-                            if (StringUtils.hasText(t.getDescription())) {
-                                e.put(config.getKeyword(SchemaKeyword.TAG_DESCRIPTION), t.getDescription());
+                            if (StringUtils.hasText(t.description())) {
+                                e.put(config.getKeyword(SchemaKeyword.TAG_DESCRIPTION), t.description());
                             }
 
                             o.set("template", e);
@@ -227,4 +237,6 @@ public class KubernetesModule implements com.github.victools.jsonschema.generato
             return null;
         }
     }
+
+    public record OneOfEntry(String id, String name, String description) {}
 }
