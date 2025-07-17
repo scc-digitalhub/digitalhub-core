@@ -1160,7 +1160,6 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
         V1SecurityContext context = new V1SecurityContext();
         //always disable privileged
         context.privileged(false);
-        context.allowPrivilegeEscalation(false);
 
         //enforce policy for non root when requested by admin
         if (disableRoot) {
