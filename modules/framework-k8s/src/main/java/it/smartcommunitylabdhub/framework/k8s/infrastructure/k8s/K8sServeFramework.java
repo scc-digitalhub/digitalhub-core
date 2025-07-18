@@ -789,6 +789,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
                 .resources(resources)
                 .env(env)
                 .envFrom(envFrom)
+                .securityContext(buildSecurityContext(runnable))
                 .command(initCommand);
 
             podSpec.setInitContainers(Collections.singletonList(initContainer));

@@ -501,6 +501,7 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
             .resources(resources)
             .env(env)
             .envFrom(envFrom)
+            .securityContext(buildSecurityContext(runnable))
             .command(initCommand);
 
         // Set initContainer as first container in the PodSpec

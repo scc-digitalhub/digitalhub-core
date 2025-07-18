@@ -33,6 +33,7 @@ import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Affinity;
+import io.kubernetes.client.openapi.models.V1Capabilities;
 import io.kubernetes.client.openapi.models.V1ConfigMap;
 import io.kubernetes.client.openapi.models.V1ConfigMapVolumeSource;
 import io.kubernetes.client.openapi.models.V1EnvFromSource;
@@ -1163,6 +1164,7 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
 
         //enforce policy for non root when requested by admin
         if (disableRoot) {
+            context.capabilities(new V1Capabilities().drop(Collections.singletonList("ALL")));
             context.allowPrivilegeEscalation(false);
             context.runAsNonRoot(true);
         }

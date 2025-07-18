@@ -547,6 +547,7 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
             .env(env)
             .envFrom(envFrom)
             .command(initCommand)
+            .securityContext(buildSecurityContext(runnable))
             .securityContext(securityContext);
 
         // Set initContainer as first container in the PodSpec

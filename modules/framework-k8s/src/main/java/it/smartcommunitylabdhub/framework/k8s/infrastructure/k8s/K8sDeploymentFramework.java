@@ -504,6 +504,7 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
                 .resources(resources)
                 .env(env)
                 .envFrom(envFrom)
+                .securityContext(buildSecurityContext(runnable))
                 .command(initCommand);
 
             podSpec.setInitContainers(Collections.singletonList(initContainer));

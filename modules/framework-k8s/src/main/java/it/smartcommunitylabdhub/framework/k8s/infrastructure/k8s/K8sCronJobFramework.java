@@ -381,6 +381,7 @@ public class K8sCronJobFramework extends K8sBaseFramework<K8sCronJobRunnable, V1
                 .resources(resources)
                 .env(env)
                 .envFrom(envFrom)
+                .securityContext(buildSecurityContext(runnable))
                 //TODO below execute a command that is a Go script
                 .command(List.of("/bin/bash", "-c", "/app/builder-tool.sh"));
 

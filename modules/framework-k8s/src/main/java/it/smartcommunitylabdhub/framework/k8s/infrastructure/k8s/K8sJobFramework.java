@@ -508,6 +508,7 @@ public class K8sJobFramework extends K8sBaseFramework<K8sJobRunnable, V1Job> {
                 .resources(resources)
                 .env(env)
                 .envFrom(envFrom)
+                .securityContext(buildSecurityContext(runnable))
                 .command(initCommand);
 
             podSpec.setInitContainers(Collections.singletonList(initContainer));
