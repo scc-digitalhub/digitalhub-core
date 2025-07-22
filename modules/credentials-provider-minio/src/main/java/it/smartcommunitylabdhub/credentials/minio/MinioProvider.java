@@ -76,10 +76,13 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
     private String secretKey;
 
     @Value("${credentials.provider.minio.claim}")
-    private String claim;
+    private String claimPrefix;
 
     @Value("${credentials.provider.minio.policy}")
     private String defaultPolicy;
+
+    @Value("${credentials.provider.minio.roleArn}")
+    private String defaultRoleArn;
 
     @Value("${credentials.provider.minio.endpoint}")
     private String endpointUrl;
@@ -99,7 +102,7 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
     private S3Config config;
 
     // cache credentials for up to DURATION
-    LoadingCache<Pair<String, String>, S3Credentials> cache;
+    LoadingCache<Pair<String, MinioPolicy>, S3Credentials> cache;
 
     public MinioProvider(FilesService filesService) {
         Assert.notNull(filesService, "files service is required");
@@ -146,10 +149,10 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
                 .newBuilder()
                 .expireAfterWrite(cacheDuration, TimeUnit.SECONDS)
                 .build(
-                    new CacheLoader<Pair<String, String>, S3Credentials>() {
+                    new CacheLoader<Pair<String, MinioPolicy>, S3Credentials>() {
                         @Override
-                        public S3Credentials load(@Nonnull Pair<String, String> key) throws Exception {
-                            log.debug("load credentials for {} policy {}", key.getFirst(), key.getSecond());
+                        public S3Credentials load(@Nonnull Pair<String, MinioPolicy> key) throws Exception {
+                            log.debug("load credentials for {}", key.getFirst());
                             return generate(key.getFirst(), key.getSecond());
                         }
                     }
@@ -183,8 +186,11 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
         }
     }
 
-    private S3Credentials generate(@NotNull String username, @NotNull String policy) throws StoreException {
-        log.debug("generate credentials for user authentication {} policy {} via STS service", username, policy);
+    private S3Credentials generate(@NotNull String username, @NotNull MinioPolicy policy) throws StoreException {
+        log.debug("generate credentials for user authentication {} via STS service", username);
+        if (log.isTraceEnabled()) {
+            log.trace("policy: {}", policy);
+        }
 
         try {
             //assume role as user
@@ -195,9 +201,9 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
                 accessKey,
                 secretKey,
                 duration,
-                null,
+                policy.getPolicy(),
                 region,
-                null,
+                policy.getRoleArn(),
                 null,
                 null,
                 null
@@ -253,11 +259,11 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
                 )
                 .orElse(null);
 
-            if (policy != null && StringUtils.hasText(policy.getPolicy())) {
+            if (policy != null) {
                 String username = auth.getName();
                 log.debug("get credentials for user authentication {} from cache", username);
                 try {
-                    Pair<String, String> key = Pair.of(username, policy.getPolicy());
+                    Pair<String, MinioPolicy> key = Pair.of(username, policy);
                     S3Credentials credentials = cache.get(key);
                     if (credentials == null) {
                         return null;
@@ -331,16 +337,22 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
     public <T extends AbstractAuthenticationToken> Credentials process(@NotNull T token) {
         if (Boolean.TRUE.equals(enabled)) {
             //extract a policy from jwt tokens
-            if (token instanceof JwtAuthenticationToken && StringUtils.hasText(claim)) {
-                String policy = ((JwtAuthenticationToken) token).getToken().getClaimAsString(claim);
-                if (StringUtils.hasText(policy)) {
-                    return MinioPolicy.builder().claim(claim).policy(policy).build();
-                }
+            if (token instanceof JwtAuthenticationToken) {
+                //check if role or policy is set
+                String roleArnParam =
+                    ((JwtAuthenticationToken) token).getToken().getClaimAsString(claimPrefix + "/roleArn");
+                String policyParam =
+                    ((JwtAuthenticationToken) token).getToken().getClaimAsString(claimPrefix + "/policy");
+
+                String roleArn = StringUtils.hasText(roleArnParam) ? roleArnParam : defaultRoleArn;
+                String policy = StringUtils.hasText(policyParam) ? policyParam : defaultPolicy;
+
+                return MinioPolicy.builder().claim(claimPrefix).roleArn(roleArn).policy(policy).build();
             }
 
             //fallback to default
             if (StringUtils.hasText(defaultPolicy)) {
-                return MinioPolicy.builder().claim(claim).policy(defaultPolicy).build();
+                return MinioPolicy.builder().claim(claimPrefix).policy(defaultPolicy).roleArn(defaultRoleArn).build();
             }
         }
 

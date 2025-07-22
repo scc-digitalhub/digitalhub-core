@@ -322,8 +322,9 @@ credentials:
       endpoint: ${MINIO_CREDENTIALS_ENDPOINT:}
       region: ${MINIO_CREDENTIALS_REGION:us-east-1}
       bucket: ${MINIO_CREDENTIALS_BUCKET:}
-      claim: ${MINIO_CREDENTIALS_CLAIM:minio/policy}
-      policy: ${MINIO_CREDENTIALS_POLICY:readwrite}
+      claim: ${MINIO_CREDENTIALS_CLAIM_PREFIX:minio}
+      policy: ${MINIO_CREDENTIALS_POLICY:{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:*"],"Resource":["arn:aws:s3:::*"]}]}}
+      roleArn: ${MINIO_CREDENTIALS_ROLE_ARN:}
       access-key: ${MINIO_CREDENTIALS_ACCESS_KEY:}
       secret-key: ${MINIO_CREDENTIALS_SECRET_KEY:}
 
