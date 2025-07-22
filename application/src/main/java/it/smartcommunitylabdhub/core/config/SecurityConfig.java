@@ -233,7 +233,7 @@ public class SecurityConfig {
 
         //enable basic if required (client auth)
         //NOTE: configure first to avoid injecting user auth manager for basic
-        if (StringUtils.hasText(clientId) && StringUtils.hasText(clientId)) {
+        if (StringUtils.hasText(clientId) && StringUtils.hasText(clientSecret)) {
             //client basic auth flow
             securityChain
                 .httpBasic(basic -> basic.authenticationEntryPoint(new Http403ForbiddenEntryPoint()))
