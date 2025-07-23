@@ -187,11 +187,19 @@ public class KFPRuntime extends K8sBaseRuntime<KFPWorkflowSpec, KFPRunSpec, KFPR
         if (auth != null) {
             //get only core credentials from providers
             if (accessCredentialsProvider != null) {
-                //get custom duration credentials
-                List<Credentials> credentials = List.of(
-                    accessCredentialsProvider.get((UserAuthentication<?>) auth, duration)
-                );
-                runnable.setCredentials(credentials);
+                if (KFPPipelineTaskSpec.KIND.equals(runAccessor.getTask())) {
+                    //get custom duration credentials
+                    List<Credentials> credentials = List.of(
+                        accessCredentialsProvider.get((UserAuthentication<?>) auth, duration)
+                    );
+                    runnable.setCredentials(credentials);
+                } else {
+                    //keep standard duration
+                    List<Credentials> credentials = List.of(
+                        accessCredentialsProvider.get((UserAuthentication<?>) auth)
+                    );
+                    runnable.setCredentials(credentials);
+                }
             } else {
                 //keep globally provided access credentials
                 List<Credentials> credentials = credentialsService

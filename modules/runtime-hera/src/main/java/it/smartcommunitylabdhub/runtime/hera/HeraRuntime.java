@@ -187,11 +187,19 @@ public class HeraRuntime extends K8sBaseRuntime<HeraWorkflowSpec, HeraRunSpec, H
         if (auth != null) {
             //get only core credentials from providers
             if (accessCredentialsProvider != null) {
-                //get custom duration credentials
-                List<Credentials> credentials = List.of(
-                    accessCredentialsProvider.get((UserAuthentication<?>) auth, duration)
-                );
-                runnable.setCredentials(credentials);
+                if (HeraPipelineTaskSpec.KIND.equals(runAccessor.getTask())) {
+                    //get custom duration credentials
+                    List<Credentials> credentials = List.of(
+                        accessCredentialsProvider.get((UserAuthentication<?>) auth, duration)
+                    );
+                    runnable.setCredentials(credentials);
+                } else {
+                    //keep standard duration
+                    List<Credentials> credentials = List.of(
+                        accessCredentialsProvider.get((UserAuthentication<?>) auth)
+                    );
+                    runnable.setCredentials(credentials);
+                }
             } else {
                 //keep globally provided access credentials
                 List<Credentials> credentials = credentialsService
