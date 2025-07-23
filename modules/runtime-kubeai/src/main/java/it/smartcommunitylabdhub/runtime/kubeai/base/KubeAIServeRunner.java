@@ -41,9 +41,11 @@ import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sSecretHelper;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
+import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAIEngine;
 import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAIModelSpec;
 import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAiEnvFrom;
 import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAiEnvFromRef;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -175,11 +177,28 @@ public class KubeAIServeRunner {
             modelName = modelName.substring(0, 39);
         }
 
+        List<String> args = new ArrayList<>();
+        if (KubeAIEngine.VLLM.name().equals(engine)) {
+            //inject args to reduce logging
+            args.add("--disable-log-requests");
+            args.add("--disable-log-stats");
+            args.add("--uvicorn-log-level=warning");
+        }
+        if (KubeAIEngine.OLlama.name().equals(engine)) {
+            //inject args to reduce logging
+            env.put("OLLAMA_DEBUG", "false");
+            env.put("GIN_MODE", "release");
+        }
+
+        if (runSpec.getArgs() != null) {
+            args.addAll(runSpec.getArgs());
+        }
+
         KubeAIModelSpec modelSpec = KubeAIModelSpec
             .builder()
             .url(url)
             .image(functionSpec.getImage())
-            .args(runSpec.getArgs())
+            .args(args.isEmpty() ? null : args)
             .cacheProfile(runSpec.getCacheProfile())
             .resourceProfile(resourceProfile + ":" + Integer.toString(processors))
             .adapters(functionSpec.getAdapters())
