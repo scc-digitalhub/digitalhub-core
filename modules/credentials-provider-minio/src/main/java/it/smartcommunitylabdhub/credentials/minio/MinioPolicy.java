@@ -65,10 +65,6 @@ public class MinioPolicy extends AbstractCredentials {
             map.put(prefix + "/roleArn", roleArn);
         }
 
-        if (map.isEmpty()) {
-            return null;
-        }
-
         return map;
     }
 
