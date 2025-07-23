@@ -22,6 +22,8 @@ import io.kubernetes.client.openapi.models.V1Container;
 import io.kubernetes.client.openapi.models.V1EnvFromSource;
 import io.kubernetes.client.openapi.models.V1EnvVar;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
+import io.kubernetes.client.openapi.models.V1Pod;
+import io.kubernetes.client.openapi.models.V1PodList;
 import io.kubernetes.client.openapi.models.V1PodSecurityContext;
 import io.kubernetes.client.openapi.models.V1Secret;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.FrameworkComponent;
@@ -48,6 +50,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @FrameworkComponent(framework = K8sArgoWorkflowFramework.FRAMEWORK)
@@ -342,10 +345,12 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
     }
 
     private void appendArtifactRepository(IoArgoprojWorkflowV1alpha1Workflow workflow) {
-        IoArgoprojWorkflowV1alpha1ArtifactRepositoryRef ref = new IoArgoprojWorkflowV1alpha1ArtifactRepositoryRef()
-            .configMap(artifactRepositoryConfigMap)
-            .key(artifactRepositoryKey);
-        workflow.getSpec().setArtifactRepositoryRef(ref);
+        if (StringUtils.hasText(artifactRepositoryConfigMap) || StringUtils.hasText(artifactRepositoryKey)) {
+            IoArgoprojWorkflowV1alpha1ArtifactRepositoryRef ref = new IoArgoprojWorkflowV1alpha1ArtifactRepositoryRef()
+                .configMap(artifactRepositoryConfigMap)
+                .key(artifactRepositoryKey);
+            workflow.getSpec().setArtifactRepositoryRef(ref);
+        }
     }
 
     private void appendTemplateDefaults(IoArgoprojWorkflowV1alpha1Workflow workflow, K8sArgoWorkflowRunnable runnable)
@@ -504,6 +509,44 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
             log.error("Error with k8s: {}", e.getResponseBody());
             if (log.isDebugEnabled()) {
                 log.debug("k8s api response: {}", e.getResponseBody());
+            }
+
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+        }
+    }
+
+    @Override
+    public List<V1Pod> pods(K8sWorkflowObject workflow) throws K8sFrameworkException {
+        if (workflow == null || workflow.getMetadata() == null) {
+            return null;
+        }
+
+        //fetch labels to select pods
+        String workflowName = workflow.getMetadata().getName();
+
+        String labelSelector = "workflows.argoproj.io/workflow=" + workflowName;
+        try {
+            log.debug("load pods for {}", labelSelector);
+            V1PodList pods = coreV1Api.listNamespacedPod(
+                namespace,
+                null,
+                null,
+                null,
+                null,
+                labelSelector,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            );
+
+            return pods.getItems();
+        } catch (ApiException e) {
+            log.error("Error with k8s: {}", e.getMessage());
+            if (log.isTraceEnabled()) {
+                log.trace("k8s api response: {}", e.getResponseBody());
             }
 
             throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
