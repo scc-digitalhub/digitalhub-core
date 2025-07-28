@@ -4,15 +4,20 @@ import it.smartcommunitylabdhub.authorization.services.CredentialsService;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
 import it.smartcommunitylabdhub.commons.models.base.Executable;
+import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.enums.State;
+import it.smartcommunitylabdhub.commons.models.files.FileInfo;
+import it.smartcommunitylabdhub.commons.models.files.FilesInfo;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
 import it.smartcommunitylabdhub.commons.services.ArtifactManager;
+import it.smartcommunitylabdhub.commons.services.FilesInfoService;
 import it.smartcommunitylabdhub.commons.services.MetricsService;
 import it.smartcommunitylabdhub.commons.services.ProjectManager;
 import it.smartcommunitylabdhub.files.service.FilesService;
@@ -25,7 +30,11 @@ import it.smartcommunitylabdhub.runtime.hpcdl.specs.HPCDLRunStatus;
 import it.smartcommunitylabdhub.runtimes.base.AbstractBaseRuntime;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +49,9 @@ public class HPCDLRuntime extends AbstractBaseRuntime<HPCDLFunctionSpec, HPCDLRu
 
     @Autowired
     private FilesService filesService;
+
+    @Autowired
+    private FilesInfoService filesInfoService;
 
     @Autowired
     private ArtifactManager artifactManager;
@@ -119,15 +131,24 @@ public class HPCDLRuntime extends AbstractBaseRuntime<HPCDLFunctionSpec, HPCDLRu
             HPCDLJobTaskSpec.KIND.equals(runAccessor.getTask()) &&
             runnable instanceof HPCDLRunnable hpcdlRunnable
         ) {
-            for(String artifactId: hpcdlRunnable.getOutputArtifacts().values()) {
-                Artifact artifact = artifactManager.findArtifact(artifactId);
+            for(java.util.Map.Entry<String, String> artifactEntry: hpcdlRunnable.getOutputArtifacts().entrySet()) {
+                Artifact artifact = artifactManager.findArtifact(artifactEntry.getValue());
                 if (artifact != null) {
                     Map<String, Serializable> status = new HashMap<>();
-                    status.put("state", State.CREATED.name());
+                    status.put("state", State.READY.name());
                     artifact.setStatus(status);
                     try {
-                        artifactManager.updateArtifact(artifactId, artifact);
-                    } catch (NoSuchEntityException | IllegalArgumentException | SystemException | BindException e) {
+                        FileInfo info = FileInfo.builder()
+                            .name(artifact.getName())
+                            .path(artifactEntry.getKey())
+                            .lastModified(new Date())
+                            .build();
+                        ArrayList<FileInfo> fileInfos = new ArrayList<>();
+                        fileInfos.add(info);
+                        status.put("files", fileInfos);
+                        filesInfoService.saveFilesInfo(EntityName.ARTIFACT.name(), artifact.getId(), fileInfos);
+                        artifactManager.updateArtifact(artifact.getId(), artifact);
+                    } catch (NoSuchEntityException | IllegalArgumentException | SystemException | BindException | StoreException e) {
                         log.error("Failed to update artifact status", e);
                     }    
                 }
