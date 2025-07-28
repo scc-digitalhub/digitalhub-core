@@ -23,7 +23,7 @@ package it.smartcommunitylabdhub.credentials.minio;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import it.smartcommunitylabdhub.authorization.model.AbstractCredentials;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -48,10 +48,47 @@ public class MinioPolicy extends AbstractCredentials {
     @JsonIgnore
     private String policy;
 
+    @JsonIgnore
+    private String roleArn;
+
     @Override
     public Map<String, String> toMap() {
         //write claim under requested key
-        String k = StringUtils.hasText(claim) ? claim : "minio/policy";
-        return Collections.singletonMap(k, policy);
+        String prefix = StringUtils.hasText(claim) ? claim : "";
+        Map<String, String> map = new HashMap<>();
+
+        if (StringUtils.hasText(policy)) {
+            map.put(prefix + "/policy", policy);
+        }
+
+        if (StringUtils.hasText(roleArn)) {
+            map.put(prefix + "/roleArn", roleArn);
+        }
+
+        return map;
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((claim == null) ? 0 : claim.hashCode());
+        result = prime * result + ((policy == null) ? 0 : policy.hashCode());
+        result = prime * result + ((roleArn == null) ? 0 : roleArn.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null) return false;
+        if (getClass() != obj.getClass()) return false;
+        MinioPolicy other = (MinioPolicy) obj;
+
+        if (toMap() == null) {
+            return other.toMap() == null;
+        }
+
+        return toMap().equals(other.toMap());
     }
 }

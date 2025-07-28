@@ -16,20 +16,30 @@
 
 package it.smartcommunitylabdhub.core.runs.filters;
 
+import it.smartcommunitylabdhub.commons.Fields;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilterConverter;
 import it.smartcommunitylabdhub.core.runs.persistence.RunEntity;
 import jakarta.validation.constraints.NotNull;
+import java.util.Arrays;
+import java.util.List;
 import org.springframework.stereotype.Component;
 
 @Component
 public class RunFilterConverter extends AbstractEntityFilterConverter<Run, RunEntity> {
 
+    private static final String[] FIELDS = { Fields.TASK, Fields.FUNCTION, Fields.WORKFLOW };
+
+    private static final List<String> fields;
+
+    static {
+        fields = Arrays.asList(FIELDS);
+    }
+
     @Override
     protected String map(@NotNull String source) {
-        //task is top level
-        if ("task".equals(source)) {
-            return "task";
+        if (fields.contains(source)) {
+            return source;
         }
 
         return super.map(source);

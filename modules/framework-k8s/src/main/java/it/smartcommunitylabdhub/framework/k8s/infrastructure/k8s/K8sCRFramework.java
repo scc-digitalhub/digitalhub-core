@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s;
@@ -29,7 +29,10 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.kubernetes.client.openapi.ApiClient;
+import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
+import io.kubernetes.client.openapi.models.V1Pod;
+import io.kubernetes.client.openapi.models.V1PodList;
 import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.util.generic.KubernetesApiResponse;
 import io.kubernetes.client.util.generic.dynamic.DynamicKubernetesApi;
@@ -314,5 +317,51 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
     public DynamicKubernetesObject get(DynamicKubernetesObject obj) throws K8sFrameworkException {
         //not updatable without api.
         return obj;
+    }
+
+    @Override
+    public List<V1Pod> pods(DynamicKubernetesObject object) throws K8sFrameworkException {
+        if (object == null || object.getMetadata() == null) {
+            return null;
+        }
+
+        //try super first
+        List<V1Pod> items = super.pods(object);
+        if (items != null && !items.isEmpty()) {
+            return items;
+        }
+
+        //build labels to select pods
+        //we expect a label matching the api kind = resource name
+        //TODO make this extensible
+        String name = object.getMetadata().getName();
+        String label = object.getKind().toLowerCase();
+        String labelSelector = label + "=" + name;
+        try {
+            log.debug("load pods for {}", labelSelector);
+            V1PodList pods = coreV1Api.listNamespacedPod(
+                namespace,
+                null,
+                null,
+                null,
+                null,
+                labelSelector,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            );
+
+            return pods.getItems();
+        } catch (ApiException e) {
+            log.error("Error with k8s: {}", e.getMessage());
+            if (log.isTraceEnabled()) {
+                log.trace("k8s api response: {}", e.getResponseBody());
+            }
+
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+        }
     }
 }

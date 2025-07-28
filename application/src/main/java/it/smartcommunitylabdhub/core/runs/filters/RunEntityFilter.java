@@ -36,6 +36,7 @@ import jakarta.validation.constraints.Pattern;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Matcher;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -45,8 +46,18 @@ public class RunEntityFilter extends AbstractEntityFilter<Run> {
 
     @Nullable
     @Pattern(regexp = Keys.TASK_PATTERN)
-    @Schema(example = "kind://my-project/task-id", defaultValue = "", description = "Task path")
+    @Schema(example = "kind://my-project/task-id", defaultValue = "", description = "Task key")
     private String task;
+
+    @Nullable
+    @Pattern(regexp = Keys.FUNCTION_PATTERN + "|" + Keys.TASK_PATTERN)
+    @Schema(example = "kind://my-project/function-name:id", defaultValue = "", description = "Function key")
+    private String function;
+
+    @Nullable
+    @Pattern(regexp = Keys.WORKFLOW_PATTERN + "|" + Keys.TASK_PATTERN)
+    @Schema(example = "kind://my-project/workflow-name:id", defaultValue = "", description = "Workflow key")
+    private String workflow;
 
     @Override
     public SearchFilter<Run> toSearchFilter() {
@@ -71,6 +82,34 @@ public class RunEntityFilter extends AbstractEntityFilter<Run> {
             .ifPresent(value ->
                 criteria.add(new BaseEntitySearchCriteria<>("task", value, SearchCriteria.Operation.equal))
             );
+
+        //function match
+        Optional
+            .ofNullable(function)
+            .ifPresent(value -> {
+                Matcher matcher = java.util.regex.Pattern.compile(Keys.FUNCTION_PATTERN).matcher(value);
+                if (matcher.matches()) {
+                    //exact match
+                    criteria.add(new BaseEntitySearchCriteria<>("function", value, SearchCriteria.Operation.equal));
+                } else {
+                    //like match
+                    criteria.add(new BaseEntitySearchCriteria<>("function", value, SearchCriteria.Operation.like));
+                }
+            });
+
+        //workflow exact match
+        Optional
+            .ofNullable(workflow)
+            .ifPresent(value -> {
+                Matcher matcher = java.util.regex.Pattern.compile(Keys.WORKFLOW_PATTERN).matcher(value);
+                if (matcher.matches()) {
+                    //exact match
+                    criteria.add(new BaseEntitySearchCriteria<>("workflow", value, SearchCriteria.Operation.equal));
+                } else {
+                    //like match
+                    criteria.add(new BaseEntitySearchCriteria<>("workflow", value, SearchCriteria.Operation.like));
+                }
+            });
 
         return BaseEntityFilter.<Run>builder().criteria(criteria).condition(SearchFilter.Condition.and).build();
     }

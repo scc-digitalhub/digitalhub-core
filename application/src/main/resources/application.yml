@@ -66,10 +66,13 @@ management:
 # Runtimes
 runtime:
   dbt:
-    image: ${RUNTIME_DBT_IMAGE:ghcr.io/scc-digitalhub/digitalhub-sdk/wrapper-dbt:latest}
+    image: ${RUNTIME_DBT_IMAGE:ghcr.io/scc-digitalhub/digitalhub-sdk-wrapper-dbt/wrapper-dbt:latest}
   kfp:
-    image: ${RUNTIME_KFP_IMAGE:ghcr.io/scc-digitalhub/digitalhub-sdk/wrapper-kfp:latest}
+    image: ${RUNTIME_KFP_IMAGE:ghcr.io/scc-digitalhub/digitalhub-sdk-wrapper-kfp/wrapper-kfp:latest}
     duration: ${RUNTIME_KFP_DURATION:${jwt.refresh-token.duration}}
+  hera:
+    image: ${RUNTIME_HERA_IMAGE:ghcr.io/scc-digitalhub/digitalhub-sdk-wrapper-hera/wrapper-hera:latest}
+    duration: ${RUNTIME_HERA_DURATION:${jwt.refresh-token.duration}}
   python:
     images:
       PYTHON3_9: ${RUNTIME_PYTHON_IMAGE_3_9:ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.9-latest}
@@ -136,8 +139,8 @@ mlrun:
 
 argoworkflows:
   artifacts:
-    configmap: ${ARGOWORKFLOWS_ARTIFACTS_CONFIGMAP:artifact-repositories}
-    key: ${ARGOWORKFLOWS_ARTIFACTS_KEY:default-artifact-repository}
+    configmap: ${ARGOWORKFLOWS_ARTIFACTS_CONFIGMAP:}
+    key: ${ARGOWORKFLOWS_ARTIFACTS_KEY:}
   serviceaccount: ${ARGOWORKFLOWS_SERVICE_ACCOUNT:default}
   user: ${ARGOWORKFLOWS_USER:1000}
 
@@ -164,6 +167,9 @@ kubernetes:
     mount_path: /shared
     spec:
       sizeLimit: 100Mi
+  empty-dir:
+    size: ${K8S_EMPTY_DIR_SIZE:128Mi}
+    medium: ${K8S_EMPTY_DIR_MEDIUM:}
   service:
     type: ${K8S_SERVICE_TYPE:NodePort}
   resources:
@@ -179,6 +185,10 @@ kubernetes:
       requests: ${K8S_RESOURCE_PVC_DEFAULT:2Gi}
       limits: ${K8S_RESOURCE_PVC_LIMIT:}
       storage-class: ${K8S_RESOURCE_PVC_STORAGE_CLASS:}
+    ephemeral:
+      requests: ${K8S_RESOURCE_EPHEMERAL_DEFAULT:2Gi}
+      limits: ${K8S_RESOURCE_EPHEMERAL_LIMIT:}
+      storage-class: ${K8S_RESOURCE_EPHEMERAL_STORAGE_CLASS:}      
   config:
     config-map: ${DH_CONFIG_COMMON_MAPS:}
     secret: ${DH_CONFIG_COMMON_SECRETS:}
@@ -312,8 +322,9 @@ credentials:
       endpoint: ${MINIO_CREDENTIALS_ENDPOINT:}
       region: ${MINIO_CREDENTIALS_REGION:us-east-1}
       bucket: ${MINIO_CREDENTIALS_BUCKET:}
-      claim: ${MINIO_CREDENTIALS_CLAIM:minio/policy}
-      policy: ${MINIO_CREDENTIALS_POLICY:readwrite}
+      claim: ${MINIO_CREDENTIALS_CLAIM_PREFIX:minio}
+      policy: ${MINIO_CREDENTIALS_POLICY:{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:*"],"Resource":["arn:aws:s3:::*"]}]}}
+      roleArn: ${MINIO_CREDENTIALS_ROLE_ARN:}
       access-key: ${MINIO_CREDENTIALS_ACCESS_KEY:}
       secret-key: ${MINIO_CREDENTIALS_SECRET_KEY:}
 

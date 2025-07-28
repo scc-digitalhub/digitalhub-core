@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.framework.k8s.kubernetes;
@@ -32,12 +32,18 @@ import io.kubernetes.client.openapi.models.V1ConfigMapKeySelector;
 import io.kubernetes.client.openapi.models.V1EmptyDirVolumeSource;
 import io.kubernetes.client.openapi.models.V1EnvVar;
 import io.kubernetes.client.openapi.models.V1EnvVarSource;
+import io.kubernetes.client.openapi.models.V1EphemeralVolumeSource;
+import io.kubernetes.client.openapi.models.V1ObjectMeta;
+import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimSpec;
+import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimTemplate;
 import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimVolumeSource;
 import io.kubernetes.client.openapi.models.V1SecretKeySelector;
 import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;
+import io.kubernetes.client.openapi.models.V1VolumeResourceRequirements;
 import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
 import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreResourceDefinition;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import jakarta.validation.constraints.NotNull;
 import java.util.ArrayList;
@@ -81,6 +87,59 @@ public class K8sBuilderHelper implements InitializingBean {
 
     @Value("${kubernetes.namespace}")
     private String namespace;
+
+    private String emptyDirDefaultSize = "128Mi";
+    private String emptyDirDefaultMedium = null;
+
+    protected CoreResourceDefinition ephemeralResourceDefinition = new CoreResourceDefinition();
+    protected String ephemeralStorageClass;
+
+    public void setEphemeralResourceDefinition(CoreResourceDefinition ephemeralResourceDefinition) {
+        this.ephemeralResourceDefinition = ephemeralResourceDefinition;
+    }
+
+    @Autowired
+    public void setPvcRequestsResourceDefinition(
+        @Value("${kubernetes.resources.ephemeral.requests}") String ephemeralResourceDefinition
+    ) {
+        if (StringUtils.hasText(ephemeralResourceDefinition)) {
+            this.ephemeralResourceDefinition.setRequests(ephemeralResourceDefinition);
+        }
+    }
+
+    @Autowired
+    public void setPvcLimitsResourceDefinition(
+        @Value("${kubernetes.resources.ephemeral.limits}") String ephemeralResourceDefinition
+    ) {
+        if (StringUtils.hasText(ephemeralResourceDefinition)) {
+            this.ephemeralResourceDefinition.setLimits(ephemeralResourceDefinition);
+        }
+    }
+
+    @Autowired
+    public void setEphemeralStorageClass(
+        @Value("${kubernetes.resources.ephemeral.storage-class}") String ephemeralStorageClass
+    ) {
+        if (StringUtils.hasText(ephemeralStorageClass)) {
+            this.ephemeralStorageClass = ephemeralStorageClass;
+        }
+    }
+
+    @Autowired(required = false)
+    public void setEmptyDirDefaultMedium(@Value("${kubernetes.empty-dir.medium}") String emptyDirDefaultMedium) {
+        this.emptyDirDefaultMedium = emptyDirDefaultMedium;
+    }
+
+    @Autowired
+    public void setEmptyDirDefaultSize(@Value("${kubernetes.empty-dir.size}") String emptyDirDefaultSize) {
+        if (StringUtils.hasText(emptyDirDefaultSize)) {
+            //ensure we have a valid size
+            Quantity.fromString(emptyDirDefaultSize);
+            this.emptyDirDefaultSize = emptyDirDefaultSize;
+        } else {
+            log.warn("EmptyDir default size not set, using default 128Mi");
+        }
+    }
 
     public K8sBuilderHelper(ApiClient client) {
         api = new CoreV1Api(client);
@@ -206,11 +265,40 @@ public class K8sBuilderHelper implements InitializingBean {
                     new V1PersistentVolumeClaimVolumeSource().claimName(getVolumeName(id, coreVolume.getName()))
                     // .claimName(spec.getOrDefault("claimName", coreVolume.getName()))
                 );
+            case "ephemeral":
+                //build claim
+                Quantity quantity = Quantity.fromString(
+                    spec.getOrDefault("size", ephemeralResourceDefinition.getRequests())
+                );
+                V1VolumeResourceRequirements req = new V1VolumeResourceRequirements()
+                    .requests(Map.of("storage", quantity));
+
+                //enforce limit
+                //TODO check if valid!
+                if (ephemeralResourceDefinition.getLimits() != null) {
+                    Quantity limit = Quantity.fromString(ephemeralResourceDefinition.getLimits());
+                    req.setLimits(Map.of("storage", limit));
+                }
+
+                return volume.ephemeral(
+                    new V1EphemeralVolumeSource()
+                        .volumeClaimTemplate(
+                            new V1PersistentVolumeClaimTemplate()
+                                .metadata(new V1ObjectMeta().name(getVolumeName(id, coreVolume.getName())))
+                                .spec(
+                                    new V1PersistentVolumeClaimSpec()
+                                        .accessModes(Collections.singletonList("ReadWriteOnce"))
+                                        .volumeMode("Filesystem")
+                                        .storageClassName(spec.getOrDefault("storage_class", ephemeralStorageClass))
+                                        .resources(req)
+                                )
+                        )
+                );
             case "empty_dir":
                 return volume.emptyDir(
                     new V1EmptyDirVolumeSource()
-                        .medium(spec.getOrDefault("medium", null))
-                        .sizeLimit(Quantity.fromString(spec.getOrDefault("size_limit", "128Mi")))
+                        .medium(emptyDirDefaultMedium) //configured by admin only!
+                        .sizeLimit(Quantity.fromString(spec.getOrDefault("size_limit", emptyDirDefaultSize)))
                 );
             default:
                 return null;

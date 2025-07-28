@@ -50,7 +50,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -64,14 +63,13 @@ import org.springframework.validation.BindException;
 @Slf4j
 public class LogServiceImpl implements LogService {
 
+    public static final int MAX_LENGTH = 30 * 1024;
+
     @Autowired
     private EntityService<Log> entityService;
 
     @Autowired
     private SearchableEntityRepository<LogEntity, Log> entityRepository;
-
-    @Autowired
-    private Converter<LogEntity, Log> dtoBuilder;
 
     @Autowired
     private EntityRepository<Run> runEntityService;
@@ -126,7 +124,6 @@ public class LogServiceImpl implements LogService {
     @Override
     public Page<Log> listLogsByProject(@NotNull String project, Pageable pageable) {
         log.debug("list logs for project {} page {}", project, pageable);
-        Specification<LogEntity> specification = Specification.allOf(CommonSpecification.projectEquals(project));
         try {
             return entityService.listByProject(project, pageable);
         } catch (StoreException e) {
@@ -233,6 +230,12 @@ public class LogServiceImpl implements LogService {
                     throw new IllegalArgumentException("project mismatch");
                 }
 
+                //check if too big and slice
+                if (dto.getContent() != null && dto.getContent().length() > MAX_LENGTH) {
+                    log.debug("log content too long, slice to {}", MAX_LENGTH);
+                    dto.setContent(dto.getContent().substring(0, MAX_LENGTH));
+                }
+
                 //create as new
                 return entityService.create(dto);
             } catch (DuplicatedEntityException e) {
@@ -263,6 +266,12 @@ public class LogServiceImpl implements LogService {
 
             //update spec
             dto.setSpec(specMap);
+
+            //check if too big and slice
+            if (dto.getContent() != null && dto.getContent().length() > MAX_LENGTH) {
+                log.debug("log content too long, slice to {}", MAX_LENGTH);
+                dto.setContent(dto.getContent().substring(0, MAX_LENGTH));
+            }
 
             //full update, log is modifiable
             return entityRepository.update(id, dto);

@@ -73,7 +73,7 @@ public class PersistenceConfig {
         Converter<Project, ProjectEntity> entityBuilder,
         Converter<ProjectEntity, Project> dtoBuilder
     ) {
-        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder);
+        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder) {};
     }
 
     @Bean
@@ -82,7 +82,7 @@ public class PersistenceConfig {
         Converter<Artifact, ArtifactEntity> entityBuilder,
         Converter<ArtifactEntity, Artifact> dtoBuilder
     ) {
-        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder);
+        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder) {};
     }
 
     @Bean
@@ -91,7 +91,7 @@ public class PersistenceConfig {
         Converter<DataItem, DataItemEntity> entityBuilder,
         Converter<DataItemEntity, DataItem> dtoBuilder
     ) {
-        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder);
+        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder) {};
     }
 
     @Bean
@@ -100,7 +100,7 @@ public class PersistenceConfig {
         Converter<Model, ModelEntity> entityBuilder,
         Converter<ModelEntity, Model> dtoBuilder
     ) {
-        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder);
+        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder) {};
     }
 
     @Bean
@@ -109,7 +109,7 @@ public class PersistenceConfig {
         Converter<Function, FunctionEntity> entityBuilder,
         Converter<FunctionEntity, Function> dtoBuilder
     ) {
-        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder);
+        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder) {};
     }
 
     @Bean
@@ -118,7 +118,7 @@ public class PersistenceConfig {
         Converter<Log, LogEntity> entityBuilder,
         Converter<LogEntity, Log> dtoBuilder
     ) {
-        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder);
+        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder) {};
     }
 
     @Bean
@@ -127,7 +127,7 @@ public class PersistenceConfig {
         Converter<Run, RunEntity> entityBuilder,
         Converter<RunEntity, Run> dtoBuilder
     ) {
-        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder);
+        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder) {};
     }
 
     @Bean
@@ -136,7 +136,7 @@ public class PersistenceConfig {
         Converter<Secret, SecretEntity> entityBuilder,
         Converter<SecretEntity, Secret> dtoBuilder
     ) {
-        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder);
+        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder) {};
     }
 
     @Bean
@@ -145,7 +145,7 @@ public class PersistenceConfig {
         Converter<Task, TaskEntity> entityBuilder,
         Converter<TaskEntity, Task> dtoBuilder
     ) {
-        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder);
+        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder) {};
     }
 
     @Bean
@@ -154,7 +154,7 @@ public class PersistenceConfig {
         Converter<Workflow, WorkflowEntity> entityBuilder,
         Converter<WorkflowEntity, Workflow> dtoBuilder
     ) {
-        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder);
+        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder) {};
     }
 
     @Bean
@@ -163,6 +163,6 @@ public class PersistenceConfig {
         Converter<Trigger, TriggerEntity> entityBuilder,
         Converter<TriggerEntity, Trigger> dtoBuilder
     ) {
-        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder);
+        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder) {};
     }
 }

@@ -24,13 +24,10 @@
 package it.smartcommunitylabdhub.runtime.kubeai.base;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
-import it.smartcommunitylabdhub.framework.k8s.base.K8sResourceProfileAware;
 import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAIFile;
 import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAIScaling;
-import it.smartcommunitylabdhub.runtime.kubeai.text.specs.KubeAITextServeTaskSpec;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -42,10 +39,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class KubeAIServeRunSpec extends RunBaseSpec implements K8sResourceProfileAware {
-
-    @JsonUnwrapped
-    private KubeAITextServeTaskSpec taskServeSpec;
+public class KubeAIServeRunSpec extends RunBaseSpec {
 
     // execution
     @Schema(title = "fields.kubeai.args.title", description = "fields.kubeai.args.description")
@@ -60,8 +54,6 @@ public class KubeAIServeRunSpec extends RunBaseSpec implements K8sResourceProfil
     private Set<String> secrets;
 
     // resources
-    @Schema(title = "fields.kubeai.resourceprofile.title", description = "fields.kubeai.resourceprofile.description")
-    private String profile;
 
     @Schema(title = "fields.kubeai.cacheprofile.title", description = "fields.kubeai.cacheprofile.description")
     @JsonProperty("cache_profile")
@@ -77,19 +69,13 @@ public class KubeAIServeRunSpec extends RunBaseSpec implements K8sResourceProfil
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
         KubeAIServeRunSpec spec = mapper.convertValue(data, KubeAIServeRunSpec.class);
-        this.taskServeSpec = spec.getTaskServeSpec();
         this.args = spec.getArgs();
         this.env = spec.getEnv();
         this.files = spec.getFiles();
         this.secrets = spec.getSecrets();
-        this.profile = spec.getProfile();
         this.cacheProfile = spec.getCacheProfile();
         this.processors = spec.getProcessors();
         this.scaling = spec.getScaling();
-    }
-
-    public void setTaskServeSpec(KubeAITextServeTaskSpec taskServeSpec) {
-        this.taskServeSpec = taskServeSpec;
     }
 
     public static KubeAIServeRunSpec with(Map<String, Serializable> data) {

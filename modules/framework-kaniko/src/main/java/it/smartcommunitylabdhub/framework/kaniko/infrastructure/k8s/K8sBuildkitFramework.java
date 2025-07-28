@@ -38,6 +38,7 @@ import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1JobSpec;
 import io.kubernetes.client.openapi.models.V1KeyToPath;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
+import io.kubernetes.client.openapi.models.V1PodSecurityContext;
 import io.kubernetes.client.openapi.models.V1PodSpec;
 import io.kubernetes.client.openapi.models.V1PodTemplateSpec;
 import io.kubernetes.client.openapi.models.V1ResourceRequirements;
@@ -388,6 +389,9 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
         if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
             //get template
             template = templates.get(runnable.getTemplate());
+        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
+            //use default template
+            template = templates.get(DEFAULT_TEMPLATE);
         }
 
         //build destination image name and set to runnable
@@ -492,11 +496,13 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
         V1SecurityContext securityContext = buildSecurityContext(runnable);
 
         //add custom profile to security context
-        securityContext
-            .seccompProfile(new V1SeccompProfile().type("Unconfined"))
-            .appArmorProfile(new V1AppArmorProfile().type("Unconfined"))
-            .runAsGroup(DEFAULT_USER_ID)
-            .runAsUser(DEFAULT_USER_ID);
+        securityContext.runAsGroup(DEFAULT_USER_ID).runAsUser(DEFAULT_USER_ID);
+
+        if (!disableRoot) {
+            securityContext
+                .seccompProfile(new V1SeccompProfile().type("Unconfined"))
+                .appArmorProfile(new V1AppArmorProfile().type("Unconfined"));
+        }
 
         // Build Container
         V1Container container = new V1Container()
@@ -520,16 +526,19 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
             .map(V1PodTemplateSpec::getSpec)
             .orElse(new V1PodSpec());
 
+        V1PodSecurityContext podSecurityContext = buildPodSecurityContext(runnable);
+        if (!disableRoot) {
+            podSecurityContext.seccompProfile(new V1SeccompProfile().type("Unconfined"));
+        }
+
         podSpec
             .containers(Collections.singletonList(container))
             .nodeSelector(buildNodeSelector(runnable))
             .affinity(buildAffinity(runnable))
             .tolerations(buildTolerations(runnable))
             .volumes(volumes)
-            .restartPolicy("Never");
-        if (disableRoot) {
-            podSpec.setSecurityContext(buildPodSecurityContext(runnable));
-        }
+            .restartPolicy("Never")
+            .setSecurityContext(podSecurityContext);
 
         // Create a PodTemplateSpec with the PodSpec
         V1PodTemplateSpec podTemplateSpec = new V1PodTemplateSpec().metadata(metadata).spec(podSpec);
@@ -544,7 +553,7 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
             .env(env)
             .envFrom(envFrom)
             .command(initCommand)
-            .securityContext(securityContext);
+            .securityContext(buildSecurityContext(runnable));
 
         // Set initContainer as first container in the PodSpec
         podSpec.setInitContainers(Collections.singletonList(initContainer));

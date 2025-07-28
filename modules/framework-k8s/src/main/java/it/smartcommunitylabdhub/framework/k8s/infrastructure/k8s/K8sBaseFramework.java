@@ -33,6 +33,7 @@ import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Affinity;
+import io.kubernetes.client.openapi.models.V1Capabilities;
 import io.kubernetes.client.openapi.models.V1ConfigMap;
 import io.kubernetes.client.openapi.models.V1ConfigMapVolumeSource;
 import io.kubernetes.client.openapi.models.V1EnvFromSource;
@@ -99,6 +100,8 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public abstract class K8sBaseFramework<T extends K8sRunnable, K extends KubernetesObject>
     implements Framework<T>, InitializingBean {
+
+    public static final String DEFAULT_TEMPLATE = "default";
 
     //custom object mapper with mixIn for IntOrString
     protected static final ObjectMapper mapper = KubernetesMapper.OBJECT_MAPPER;
@@ -583,18 +586,22 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
 
         //build template labels when defined
         Map<String, String> templateLabels = new HashMap<>();
+        K8sRunnable template = null;
         if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
             //add template
-            K8sRunnable template = templates.get(runnable.getTemplate()).getProfile();
+            template = templates.get(runnable.getTemplate()).getProfile();
             templateLabels.put(
                 K8sBuilderHelper.sanitizeNames(applicationProperties.getName()) + "/template",
                 runnable.getTemplate()
             );
+        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
+            //use default template
+            template = templates.get(DEFAULT_TEMPLATE).getProfile();
+        }
 
-            if (template.getLabels() != null && !template.getLabels().isEmpty()) {
-                for (CoreLabel l : template.getLabels()) {
-                    templateLabels.putIfAbsent(l.name(), K8sBuilderHelper.sanitizeNames(l.value()));
-                }
+        if (template != null && template.getLabels() != null && !template.getLabels().isEmpty()) {
+            for (CoreLabel l : template.getLabels()) {
+                templateLabels.putIfAbsent(l.name(), K8sBuilderHelper.sanitizeNames(l.value()));
             }
         }
 
@@ -669,22 +676,25 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
         }
 
         //volumes defined in template
+        K8sRunnable template = null;
         if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
             //add template
-            K8sRunnable template = templates.get(runnable.getTemplate()).getProfile();
-
-            if (template.getVolumes() != null) {
-                template
-                    .getVolumes()
-                    .forEach(volumeMap -> {
-                        V1Volume volume = k8sBuilderHelper.getVolume(runnable.getId(), volumeMap);
-                        if (volume != null) {
-                            volumes.add(volume);
-                        }
-                    });
-            }
+            template = templates.get(runnable.getTemplate()).getProfile();
+        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
+            //use default template
+            template = templates.get(DEFAULT_TEMPLATE).getProfile();
         }
 
+        if (template != null && template.getVolumes() != null) {
+            template
+                .getVolumes()
+                .forEach(volumeMap -> {
+                    V1Volume volume = k8sBuilderHelper.getVolume(runnable.getId(), volumeMap);
+                    if (volume != null) {
+                        volumes.add(volume);
+                    }
+                });
+        }
         //check if context build volume is required
         if (
             (runnable.getContextRefs() != null && !runnable.getContextRefs().isEmpty()) ||
@@ -727,20 +737,24 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
         }
 
         //volumes defined in template
+        K8sRunnable template = null;
         if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
             //add template
-            K8sRunnable template = templates.get(runnable.getTemplate()).getProfile();
+            template = templates.get(runnable.getTemplate()).getProfile();
+        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
+            //use default template
+            template = templates.get(DEFAULT_TEMPLATE).getProfile();
+        }
 
-            if (template.getVolumes() != null) {
-                template
-                    .getVolumes()
-                    .forEach(volumeMap -> {
-                        V1VolumeMount mount = k8sBuilderHelper.getVolumeMount(volumeMap);
-                        if (mount != null) {
-                            volumeMounts.add(mount);
-                        }
-                    });
-            }
+        if (template != null && template.getVolumes() != null) {
+            template
+                .getVolumes()
+                .forEach(volumeMap -> {
+                    V1VolumeMount mount = k8sBuilderHelper.getVolumeMount(volumeMap);
+                    if (mount != null) {
+                        volumeMounts.add(mount);
+                    }
+                });
         }
 
         //check if context build volume is required
@@ -816,56 +830,60 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
             resources.setRequests(k8sBuilderHelper.convertResources(requests));
             resources.setLimits(k8sBuilderHelper.convertResources(limits));
         }
-
+        K8sRunnable template = null;
         if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
             //add template
-            K8sRunnable template = templates.get(runnable.getTemplate()).getProfile();
-            if (template != null && template.getResources() != null) {
-                //override *all* definitions if set
-                //translate requests and limits
-                CoreResource res = template.getResources();
-                Map<String, String> requests = new HashMap<>();
-                Map<String, String> limits = new HashMap<>();
+            template = templates.get(runnable.getTemplate()).getProfile();
+        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
+            //use default template
+            template = templates.get(DEFAULT_TEMPLATE).getProfile();
+        }
 
-                //cpu
-                Optional
-                    .ofNullable(res.getCpu())
-                    .ifPresent(cpu -> {
-                        if (cpu.getRequests() != null) {
-                            requests.put("cpu", cpu.getRequests());
-                        }
-                        if (cpu.getLimits() != null) {
-                            limits.put("cpu", cpu.getLimits());
-                        }
-                    });
+        if (template != null && template.getResources() != null) {
+            //override *all* definitions if set
+            //translate requests and limits
+            CoreResource res = template.getResources();
+            Map<String, String> requests = new HashMap<>();
+            Map<String, String> limits = new HashMap<>();
 
-                //mem
-                Optional
-                    .ofNullable(res.getMem())
-                    .ifPresent(mem -> {
-                        if (mem.getRequests() != null) {
-                            requests.put("memory", mem.getRequests());
-                        }
-                        if (mem.getLimits() != null) {
-                            limits.put("memory", mem.getLimits());
-                        }
-                    });
+            //cpu
+            Optional
+                .ofNullable(res.getCpu())
+                .ifPresent(cpu -> {
+                    if (cpu.getRequests() != null) {
+                        requests.put("cpu", cpu.getRequests());
+                    }
+                    if (cpu.getLimits() != null) {
+                        limits.put("cpu", cpu.getLimits());
+                    }
+                });
 
-                //gpu
-                Optional
-                    .ofNullable(res.getGpu())
-                    .ifPresent(cpu -> {
-                        if (gpuResourceKey != null && res.getGpu().getRequests() != null) {
-                            requests.put(gpuResourceKey, res.getGpu().getRequests());
-                        }
-                        if (gpuResourceKey != null && res.getGpu().getLimits() != null) {
-                            limits.put(gpuResourceKey, res.getGpu().getLimits());
-                        }
-                    });
+            //mem
+            Optional
+                .ofNullable(res.getMem())
+                .ifPresent(mem -> {
+                    if (mem.getRequests() != null) {
+                        requests.put("memory", mem.getRequests());
+                    }
+                    if (mem.getLimits() != null) {
+                        limits.put("memory", mem.getLimits());
+                    }
+                });
 
-                resources.setRequests(k8sBuilderHelper.convertResources(requests));
-                resources.setLimits(k8sBuilderHelper.convertResources(limits));
-            }
+            //gpu
+            Optional
+                .ofNullable(res.getGpu())
+                .ifPresent(cpu -> {
+                    if (gpuResourceKey != null && res.getGpu().getRequests() != null) {
+                        requests.put(gpuResourceKey, res.getGpu().getRequests());
+                    }
+                    if (gpuResourceKey != null && res.getGpu().getLimits() != null) {
+                        limits.put(gpuResourceKey, res.getGpu().getLimits());
+                    }
+                });
+
+            resources.setRequests(k8sBuilderHelper.convertResources(requests));
+            resources.setLimits(k8sBuilderHelper.convertResources(limits));
         }
 
         //default resources fallback
@@ -916,19 +934,23 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
             );
         }
 
+        K8sRunnable template = null;
         if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
             //add template
-            K8sRunnable template = templates.get(runnable.getTemplate()).getProfile();
-            if (template.getNodeSelector() != null && !template.getNodeSelector().isEmpty()) {
-                selectors.putAll(
-                    template
-                        .getNodeSelector()
-                        .stream()
-                        .collect(Collectors.toMap(CoreNodeSelector::key, CoreNodeSelector::value))
-                );
-            }
+            template = templates.get(runnable.getTemplate()).getProfile();
+        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
+            //use default template
+            template = templates.get(DEFAULT_TEMPLATE).getProfile();
         }
 
+        if (template != null && template.getNodeSelector() != null && !template.getNodeSelector().isEmpty()) {
+            selectors.putAll(
+                template
+                    .getNodeSelector()
+                    .stream()
+                    .collect(Collectors.toMap(CoreNodeSelector::key, CoreNodeSelector::value))
+            );
+        }
         if (selectors.isEmpty()) {
             return null;
         }
@@ -943,12 +965,17 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
             tolerations.addAll(runnable.getTolerations().stream().map(t -> t).collect(Collectors.toList()));
         }
 
+        K8sRunnable template = null;
         if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
             //add template
-            K8sRunnable template = templates.get(runnable.getTemplate()).getProfile();
-            if (template.getTolerations() != null && !template.getTolerations().isEmpty()) {
-                tolerations.addAll(template.getTolerations().stream().map(t -> t).collect(Collectors.toList()));
-            }
+            template = templates.get(runnable.getTemplate()).getProfile();
+        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
+            //use default template
+            template = templates.get(DEFAULT_TEMPLATE).getProfile();
+        }
+
+        if (template != null && template.getTolerations() != null && !template.getTolerations().isEmpty()) {
+            tolerations.addAll(template.getTolerations().stream().map(t -> t).collect(Collectors.toList()));
         }
 
         if (tolerations.isEmpty()) {
@@ -1134,10 +1161,10 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
         V1SecurityContext context = new V1SecurityContext();
         //always disable privileged
         context.privileged(false);
-        context.allowPrivilegeEscalation(false);
 
         //enforce policy for non root when requested by admin
         if (disableRoot) {
+            context.capabilities(new V1Capabilities().drop(Collections.singletonList("ALL")));
             context.allowPrivilegeEscalation(false);
             context.runAsNonRoot(true);
         }
@@ -1185,27 +1212,51 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
     }
 
     public String buildPriorityClassName(T runnable) throws K8sFrameworkException {
+        K8sRunnable template = null;
         if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
             //use template
-            return templates.get(runnable.getTemplate()).getProfile().getPriorityClass();
+            template = templates.get(runnable.getTemplate()).getProfile();
+        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
+            //use default template
+            template = templates.get(DEFAULT_TEMPLATE).getProfile();
+        }
+
+        if (template != null) {
+            return template.getPriorityClass();
         }
 
         return runnable.getPriorityClass();
     }
 
     public String buildRuntimeClassName(T runnable) throws K8sFrameworkException {
+        K8sRunnable template = null;
         if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
             //use template
-            return templates.get(runnable.getTemplate()).getProfile().getRuntimeClass();
+            template = templates.get(runnable.getTemplate()).getProfile();
+        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
+            //use default template
+            template = templates.get(DEFAULT_TEMPLATE).getProfile();
+        }
+
+        if (template != null) {
+            return template.getRuntimeClass();
         }
 
         return runnable.getRuntimeClass();
     }
 
     public V1Affinity buildAffinity(T runnable) throws K8sFrameworkException {
+        K8sRunnable template = null;
         if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
             //use template
-            return templates.get(runnable.getTemplate()).getProfile().getAffinity();
+            template = templates.get(runnable.getTemplate()).getProfile();
+        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
+            //use default template
+            template = templates.get(DEFAULT_TEMPLATE).getProfile();
+        }
+
+        if (template != null) {
+            return template.getAffinity();
         }
 
         return runnable.getAffinity();
@@ -1253,20 +1304,24 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
 
         //volumes defined in template
         //TODO evaluate support
+        K8sRunnable template = null;
         if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
             //add template
-            K8sRunnable template = templates.get(runnable.getTemplate()).getProfile();
+            template = templates.get(runnable.getTemplate()).getProfile();
+        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
+            //use default template
+            template = templates.get(DEFAULT_TEMPLATE).getProfile();
+        }
 
-            if (template.getVolumes() != null) {
-                template
-                    .getVolumes()
-                    .stream()
-                    .filter(v -> v.getVolumeType() == CoreVolume.VolumeType.persistent_volume_claim)
-                    .forEach(v -> {
-                        //TODO evaluate support
-                        log.warn("Volumes defined in templates are not fully supported");
-                    });
-            }
+        if (template != null && template.getVolumes() != null) {
+            template
+                .getVolumes()
+                .stream()
+                .filter(v -> v.getVolumeType() == CoreVolume.VolumeType.persistent_volume_claim)
+                .forEach(v -> {
+                    //TODO evaluate support
+                    log.warn("Volumes defined in templates are not fully supported");
+                });
         }
 
         return volumes;

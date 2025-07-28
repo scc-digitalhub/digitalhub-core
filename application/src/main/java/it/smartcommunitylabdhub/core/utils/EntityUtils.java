@@ -31,6 +31,7 @@ import it.smartcommunitylabdhub.commons.models.log.Log;
 import it.smartcommunitylabdhub.commons.models.model.Model;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.run.Run;
+import it.smartcommunitylabdhub.commons.models.secret.Secret;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.trigger.Trigger;
 import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
@@ -54,6 +55,8 @@ public class EntityUtils {
         ENTITY_NAME_MAP.put(Run.class, EntityName.RUN);
 
         ENTITY_NAME_MAP.put(Log.class, EntityName.LOG);
+
+        ENTITY_NAME_MAP.put(Secret.class, EntityName.SECRET);
     }
 
     private EntityUtils() {

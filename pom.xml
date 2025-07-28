@@ -39,6 +39,7 @@
         <module>modules/runtime-container</module>
         <module>modules/runtime-dbt</module>
         <module>modules/runtime-kfp</module>
+        <module>modules/runtime-hera</module>
         <module>modules/runtime-python</module>
         <module>modules/runtime-model-serve</module>
         <module>modules/runtime-hpc-dl</module>
