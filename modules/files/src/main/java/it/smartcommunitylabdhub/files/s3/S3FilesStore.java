@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.files.s3;
@@ -39,6 +39,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -238,8 +239,11 @@ public class S3FilesStore implements FilesStore {
     }
 
     @Override
-    public List<FileInfo> fileInfo(@NotNull String path, @Nullable List<Credentials> credentials)
-        throws StoreException {
+    public List<FileInfo> fileInfo(
+        @NotNull String path,
+        @Nullable Boolean recursive,
+        @Nullable List<Credentials> credentials
+    ) throws StoreException {
         log.debug("file info for {}", path);
 
         Keys keys = parseKey(path);
@@ -261,6 +265,13 @@ public class S3FilesStore implements FilesStore {
             log.trace("read object metadata for {}: {}", bucketName, key);
         }
 
+        //disable grouping by path to let api list all objects as flat
+        String delimiter = null;
+        if (Boolean.FALSE.equals(recursive)) {
+            //group by path
+            delimiter = "/";
+        }
+
         try {
             S3Client client = getClient(s3Credentials);
             //support single file in path for now
@@ -271,12 +282,13 @@ public class S3FilesStore implements FilesStore {
                     .builder()
                     .bucket(bucketName)
                     .prefix(prefix)
-                    // .delimiter("/") //disable grouping by path to let api list all objects as flat
+                    .delimiter(delimiter)
                     .maxKeys(MAX_KEYS)
                     .build();
 
-                return client
-                    .listObjectsV2(req)
+                ListObjectsV2Response response = client.listObjectsV2(req);
+
+                List<FileInfo> files = response
                     .contents()
                     .stream()
                     .limit(MAX_KEYS)
@@ -291,6 +303,21 @@ public class S3FilesStore implements FilesStore {
                             .build();
                     })
                     .toList();
+
+                //append common prefixes to list subfolders
+                List<FileInfo> folders = response
+                    .commonPrefixes()
+                    .stream()
+                    // .filter(o -> StringUtils.countOccurrencesOf(o.prefix(), "/") < 2)
+                    .map(o -> {
+                        String p = prefix != null
+                            ? (o.prefix().startsWith(prefix) ? o.prefix().substring(prefix.length()) : o.prefix())
+                            : o.prefix();
+                        return FileInfo.builder().path(p).name(p).build();
+                    })
+                    .toList();
+
+                return Stream.concat(folders.stream(), files.stream()).toList();
             } else {
                 HeadObjectResponse headObject = client.headObject(
                     HeadObjectRequest.builder().bucket(bucketName).key(key).build()
@@ -305,6 +332,8 @@ public class S3FilesStore implements FilesStore {
 
                 if (StringUtils.hasText(headObject.checksumSHA256())) {
                     response.setHash("sha256:" + headObject.checksumSHA256());
+                } else if (StringUtils.hasText(headObject.eTag())) {
+                    response.setHash("ETAG:" + headObject.eTag());
                 }
 
                 headObject
@@ -553,7 +582,8 @@ public class S3FilesStore implements FilesStore {
     }
 
     @Override
-    public void remove(@NotNull String path, @Nullable List<Credentials> credentials) throws StoreException {
+    public void remove(@NotNull String path, @Nullable Boolean recursive, @Nullable List<Credentials> credentials)
+        throws StoreException {
         Keys keys = parseKey(path);
         log.debug("resolved path to {}", keys);
 
@@ -573,6 +603,13 @@ public class S3FilesStore implements FilesStore {
             log.trace("remove object for {}: {}", bucketName, key);
         }
 
+        //disable grouping by path to let api list all objects as flat
+        String delimiter = null;
+        if (Boolean.FALSE.equals(recursive)) {
+            //group by path
+            delimiter = "/";
+        }
+
         try {
             S3Client client = getClient(s3Credentials);
 
@@ -583,6 +620,7 @@ public class S3FilesStore implements FilesStore {
                     .builder()
                     .bucket(bucketName)
                     .prefix(key)
+                    .delimiter(delimiter)
                     .build();
                 ListObjectsV2Iterable listResponseIter = client.listObjectsV2Paginator(listRequest);
 
