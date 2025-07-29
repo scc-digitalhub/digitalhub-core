@@ -94,6 +94,13 @@ runtime:
     group-id: ${RUNTIME_HUGGINGFACE_GROUP_ID:${kubernetes.security.group}}
   kubeai:
     endpoint: ${RUNTIME_KUBEAI_ENDPOINT:}
+  flower:
+    images:
+      server: ${RUNTIME_FLOWER_SERVER:flwr/superlink:1.19.0}
+      client: ${RUNTIME_FLOWER_CLIENT:flwr/supernode:1.19.0}
+      runner: ${RUNTIME_FLOWER_RUNNER:flwr/clientapp:1.19.0}
+    user-id: ${RUNTIME_FLOWER_USER_ID:${kubernetes.security.user}}
+    group-id: ${RUNTIME_FLOWER_GROUP_ID:${kubernetes.security.group}}
 
 # Spring Docs
 springdoc:
