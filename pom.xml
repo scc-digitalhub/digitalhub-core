@@ -42,6 +42,7 @@
         <module>modules/runtime-kfp</module>
         <module>modules/runtime-hera</module>
         <module>modules/runtime-python</module>
+        <module>modules/runtime-flower</module>
         <module>modules/runtime-model-serve</module>
         <module>modules/runtime-kubeai</module>
         <module>modules/openmetadata-integration</module>
