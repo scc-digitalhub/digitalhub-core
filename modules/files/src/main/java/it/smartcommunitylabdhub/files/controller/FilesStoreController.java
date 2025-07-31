@@ -74,7 +74,8 @@ public class FilesStoreController {
     public Collection<String> getFilesStores(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project
     ) throws NoSuchEntityException, StoreException {
-        return Collections.singleton(filesService.getDefaultStore(projectService.get(project)));
+        //TODO remove workaround and expose project file store as is
+        return Collections.singleton(filesService.getDefaultStore(projectService.get(project)) + "/" + project);
     }
 
     @GetMapping(path = "/info", produces = "application/json; charset=UTF-8")
