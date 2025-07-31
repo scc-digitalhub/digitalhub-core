@@ -1,6 +1,6 @@
 {
   "name": "digitalhub-core",
-  "version": "0.7.0",
+  "version": "0.13.0",
   "private": true,
   "scripts": {
     "prettier": "prettier --config ./.prettierrc.yml --write --list-different \"modules/*/src/**/*.java\"  \"application/src/**/*.java\"",

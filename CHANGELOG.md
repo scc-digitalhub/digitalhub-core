@@ -1,3 +1,61 @@
+# [0.13.0](https://github.com/scc-digitalhub/digitalhub-core/compare/0.12.0...0.13.0) (2025-07-31)
+
+## What's Changed
+
+* credentials and config injection is delegated to runtimes by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/174
+* Entity refactor by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/175
+* Replace Kaniko with Buildkit by @ffais in https://github.com/scc-digitalhub/digitalhub-core/pull/176
+* Support service names for k8s svcs, with user-defined and latest by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/177
+* User manager + account removal by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/179
+* Runtime for Hera-based Argo pipelines by @kazhamiakin in https://github.com/scc-digitalhub/digitalhub-core/pull/178
+* Named service support for model serving by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/180
+* Support k8s default template by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/181
+* Add support for k8s ephemeral volumes for scratch by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/182
+* Minio provider policy support by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/183
+* Add file api for file browser with stores by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/184
+
+### Features
+
+* add name to run ([0eee44b](https://github.com/scc-digitalhub/digitalhub-core/commit/0eee44b8bc5051cd388b61413f480832c26213ff))
+* restore previously issued credentials for bearer token exchange ([6e30f24](https://github.com/scc-digitalhub/digitalhub-core/commit/6e30f24fc5cf51262d92050735c3bd68ea661257))
+* add file api for file browser with stores ([c4c4787](https://github.com/scc-digitalhub/digitalhub-core/commit/c4c47878ca6c2e954091b8317bfc4394fcaa8667))
+* collect argo pods logs ([25c983b](https://github.com/scc-digitalhub/digitalhub-core/commit/25c983b1c1c0f3e90ceaef8898340b81b606fb20))
+* collect pods + logs for custom resources ([01cd50c](https://github.com/scc-digitalhub/digitalhub-core/commit/01cd50ccba7ec9a9d682f2f64d5bf31329aa14ff))
+* support inline policy and roleArn for minio AssumeRole flow ([e6c951a](https://github.com/scc-digitalhub/digitalhub-core/commit/e6c951a4b833a7c855ad2571cbb7e42a1c28a5fc))
+* use long duration token for pipeline only, not build tasks ([6647961](https://github.com/scc-digitalhub/digitalhub-core/commit/664796163f79ca2884419c3b48536b0e24f629dd))
+* add drop ALL capabilities for secured runs + apply security config to init containers ([3f9820e](https://github.com/scc-digitalhub/digitalhub-core/commit/3f9820eb185428c281baac12450f34f3000500eb))
+* store function and workflow keys for runs to enable searchBy ([118dc9b](https://github.com/scc-digitalhub/digitalhub-core/commit/118dc9b03835cb31f9b3a0f5f5a45fd518d35ab8))
+* add seccompprofile + disable privilege escalation for k8s pods ([52035b7](https://github.com/scc-digitalhub/digitalhub-core/commit/52035b70a0a8e15d9b54d4eaf05544b9677da42d))
+* add support for k8s ephemeral volumes for scratch ([1f0a72a](https://github.com/scc-digitalhub/digitalhub-core/commit/1f0a72a659184df20947e1a8127f6feaaeb951e1))
+* empty_dir medium and default size configurable by administrator ([1bc31c0](https://github.com/scc-digitalhub/digitalhub-core/commit/1bc31c0a88e9018cd6fc40eded7ab405cb35de21))
+* named service support for model serving ([4c62121](https://github.com/scc-digitalhub/digitalhub-core/commit/4c62121955590cf4b36a80aa4aecef0fe1604a1c))
+* runtime for Hera-based Argo pipelines ([194c56b](https://github.com/scc-digitalhub/digitalhub-core/commit/194c56b4f896fd190788924a5b60fc546471aa73))
+* support k8s default template ([a85b8b8](https://github.com/scc-digitalhub/digitalhub-core/commit/a85b8b80ebdbde545e81e742cce17c0d68e10ed6))
+* support service names for k8s svcs, with user-defined and latest ([d9bd39e](https://github.com/scc-digitalhub/digitalhub-core/commit/d9bd39e3105a1511445bc6092d2e54d3790ee971))
+* user manager + account removal ([c65c318](https://github.com/scc-digitalhub/digitalhub-core/commit/c65c3186c2ab8f59b60d09f2993a3acc6f555dcc))
+* container builder framework supporting kaniko and buildkit ([863d92a](https://github.com/scc-digitalhub/digitalhub-core/commit/863d92a3ad902415caa50243dba2e3ef1f23929d))
+* enable lucene by default ([597d8e6](https://github.com/scc-digitalhub/digitalhub-core/commit/597d8e66f428ff750c710fc1c6a880e0c6618f01))
+
+### Bug Fixes
+
+* add project as scope to file browser api ([30b2fc6](https://github.com/scc-digitalhub/digitalhub-core/commit/30b2fc6932c26f98a20fd6fe4bfa02ab5b22fdbf))
+* build standard security context for argo workflows ([6b3976f](https://github.com/scc-digitalhub/digitalhub-core/commit/6b3976f8900486e63d0b6abd0891a6b77289f107))
+* entity names use for path building should be lowercase ([8f44770](https://github.com/scc-digitalhub/digitalhub-core/commit/8f4477053313073b0683966294eb226045ff99f4))
+* reduce logging for kubeAi pods ([6da03f2](https://github.com/scc-digitalhub/digitalhub-core/commit/6da03f23ad208d126912b692ebc6809e5f49c11b))
+* truncate log entries > 30k ([82206ab](https://github.com/scc-digitalhub/digitalhub-core/commit/82206ab38a245e635241e9986be4e3259dcdf7e6))
+* minio policy should not return null map when empty ([6b4381b](https://github.com/scc-digitalhub/digitalhub-core/commit/6b4381b4f889103aa5d55072c266fd9de14a242d))
+* align kubeai specs definitions between text and stt ([2fb4b75](https://github.com/scc-digitalhub/digitalhub-core/commit/2fb4b752caad27a9ee43a7b68391abed26c95eeb))
+* kubeai secret injection for credentials ([26155f6](https://github.com/scc-digitalhub/digitalhub-core/commit/26155f6147dfcb1749796a3b5601f17d1d953a39))
+* add a default blank option for profiles in json schema definition ([90eb1af](https://github.com/scc-digitalhub/digitalhub-core/commit/90eb1af2516b8aa9e2b364632b18bfaa9117fc71))
+* disabled allowPrivilegeEscalation only when disable root is enforced ([78a5f3c](https://github.com/scc-digitalhub/digitalhub-core/commit/78a5f3cfbae7205bb5673bdb447aa624a57d5540))
+* use search filter for latest for function ([6a5eed6](https://github.com/scc-digitalhub/digitalhub-core/commit/6a5eed61092573ce63cf01d3664d4d169c13b268))
+
+## New Contributors
+* @ffais made their first contribution in https://github.com/scc-digitalhub/digitalhub-core/pull/176
+
+**Full Changelog**: https://github.com/scc-digitalhub/digitalhub-core/compare/0.12.0...0.13.0
+
+
 # [0.12.0](https://github.com/scc-digitalhub/digitalhub-core/compare/0.11.0...0.12.0) (2025-06-30)
 
 ### Features
