@@ -23,7 +23,9 @@
 
 package it.smartcommunitylabdhub.runtime.flower.runners;
 
+import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
+import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
@@ -37,39 +39,56 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreServiceType;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
-import it.smartcommunitylabdhub.runtime.flower.FlowerRuntime;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientTaskSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerFunctionSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerRunSpec;
+import it.smartcommunitylabdhub.runtime.flower.FlowerServerRuntime;
+import it.smartcommunitylabdhub.runtime.flower.model.FABModel;
+import it.smartcommunitylabdhub.runtime.flower.model.FlowerSourceCode;
+import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerFunctionSpec;
+import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerRunSpec;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerTaskSpec;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.util.StringUtils;
+import org.springframework.web.util.UriComponents;
+import org.springframework.web.util.UriComponentsBuilder;
+
 public class FlowerServerRunner {
 
-    private static final int UID = 1000;
-    private static final int GID = 1000;
+    private static final int UID = 49999;
+    private static final int GID = 49999;
     private static final List<Integer> HTTP_PORTS = List.of(9091, 9092, 9093);
 
     private final int userId;
     private final int groupId;
-    private final FlowerFunctionSpec functionSpec;
+    private final String image;
+    private final FlowerServerFunctionSpec functionSpec;
     private final Map<String, String> secretData;
 
     private final K8sBuilderHelper k8sBuilderHelper;
     private final FunctionManager functionService;
 
+    private final Resource entrypoint = new ClassPathResource("runtime-flower/docker/server.sh");
+
     public FlowerServerRunner(
+        String image,
         Integer userId,
         Integer groupId,
-        FlowerFunctionSpec functionPythonSpec,
+        FlowerServerFunctionSpec functionPythonSpec,
         Map<String, String> secretData,
         K8sBuilderHelper k8sBuilderHelper,
         FunctionManager functionService
     ) {
+        this.image = image;
         this.functionSpec = functionPythonSpec;
         this.secretData = secretData;
         this.k8sBuilderHelper = k8sBuilderHelper;
@@ -80,13 +99,15 @@ public class FlowerServerRunner {
     }
 
     public K8sRunnable produce(Run run) {
-        FlowerRunSpec runSpec = new FlowerRunSpec(run.getSpec());
-        FlowerServerTaskSpec taskSpec = runSpec.getTaskServerSpec();
+        FlowerServerRunSpec runSpec = new FlowerServerRunSpec(run.getSpec());
+        FlowerServerTaskSpec taskSpec = runSpec.getTaskDeploySpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
 
         List<CoreEnv> coreEnvList = new ArrayList<>(
             List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))
         );
+
+        coreEnvList.add(new CoreEnv("PYTHONPATH", "${PYTHONPATH}:/shared/"));
 
         List<CoreEnv> coreSecrets = secretData == null
             ? null
@@ -97,9 +118,75 @@ public class FlowerServerRunner {
         //run args. TODO - improve
         String[] args = {"--insecure"};
 
+        // Parse run spec
+        RunSpecAccessor runSpecAccessor = RunSpecAccessor.with(run.getSpec());
+
         //read source and build context
         List<ContextRef> contextRefs = null;
         List<ContextSource> contextSources = new ArrayList<>();
+
+        //write entrypoint
+        try {
+            ContextSource entry = ContextSource
+                .builder()
+                .name("server.sh")
+                .base64(Base64.getEncoder().encodeToString(entrypoint.getContentAsByteArray()))
+                .build();
+            contextSources.add(entry);
+        } catch (IOException ioe) {
+            throw new CoreRuntimeException("error with reading server entrypoint for runtime-flower");
+        }
+
+
+        if (functionSpec.getSource() != null) {
+            FlowerSourceCode source = functionSpec.getSource();
+            String path = "main.py";
+
+            if (StringUtils.hasText(source.getSource())) {
+                try {
+                    //evaluate if local path (no scheme)
+                    UriComponents uri = UriComponentsBuilder.fromUriString(source.getSource()).build();
+                    String scheme = uri.getScheme();
+
+                    if (scheme != null) {
+                        //write as ref
+                        contextRefs = Collections.singletonList(ContextRef.from(source.getSource()));
+                    } else {
+                        if (StringUtils.hasText(path)) {
+                            //override path for local src
+                            path = uri.getPath();
+                            if (path.startsWith(".")) {
+                                path = path.substring(1);
+                            }
+                        }
+                    }
+                } catch (IllegalArgumentException e) {
+                    //skip invalid source
+                }
+            }
+
+            if (StringUtils.hasText(source.getBase64())) {
+                contextSources.add(ContextSource.builder().name(path).base64(source.getBase64()).build());
+                // generate toml in addition to source
+                FABModel fabModel = new FABModel();
+                fabModel.setName(runSpecAccessor.getFunction() + "-" + runSpecAccessor.getFunctionId());
+                fabModel.setVersion("1.0.0");
+                if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
+                    fabModel.setDependencies(functionSpec.getRequirements());
+                }
+                fabModel.setServerApp("main:" + functionSpec.getSource().getHandler());
+                fabModel.setDefaultFederation("core-federation");
+                fabModel.setConfig(runSpec.getParameters());
+                String toml = fabModel.toTOML();
+                System.out.println("Generated TOML: " + toml);
+                // convert toml to base64
+                String tomlBase64 = Base64.getEncoder().encodeToString(toml.getBytes(StandardCharsets.UTF_8));
+                contextSources.add(ContextSource.builder()
+                                    .name("pyproject.toml")
+                                    .base64(tomlBase64)
+                                    .build());
+            }
+        }
 
         //expose ports
         List<CorePort> servicePorts = HTTP_PORTS.stream()
@@ -118,10 +205,18 @@ public class FlowerServerRunner {
             }
         }
 
+        String cmd = null;
+        if (!StringUtils.hasText(functionSpec.getImage())) {
+            //use image as command
+            cmd = "/bin/sh";
+            List<String> argList = new ArrayList<>(List.of("/shared/server.sh", "/shared"));
+            argList.addAll(Arrays.asList(args));
+            args = argList.toArray(new String[0]);
+        }
         K8sRunnable k8sServeRunnable = K8sServeRunnable
             .builder()
-            .runtime(FlowerRuntime.RUNTIME)
-            .task(FlowerClientTaskSpec.KIND)
+            .runtime(FlowerServerRuntime.RUNTIME)
+            .task(FlowerServerTaskSpec.KIND)
             .state(State.READY.name())
             .labels(
                 k8sBuilderHelper != null
@@ -129,7 +224,8 @@ public class FlowerServerRunner {
                     : null
             )
             //base
-            .image(functionSpec.getServerImage())
+            .image(StringUtils.hasText(functionSpec.getImage()) ? functionSpec.getImage() : image)
+            .command(cmd)
             .args(args)
             .contextRefs(contextRefs)
             .contextSources(contextSources)

@@ -23,13 +23,9 @@
 
 package it.smartcommunitylabdhub.runtime.flower.runners;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
-import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
-import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
@@ -40,14 +36,12 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCronJobRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
-import it.smartcommunitylabdhub.runtime.flower.FlowerRuntime;
+import it.smartcommunitylabdhub.runtime.flower.FlowerServerRuntime;
 import it.smartcommunitylabdhub.runtime.flower.model.FABModel;
-import it.smartcommunitylabdhub.runtime.flower.model.FlowerSourceCode;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerFunctionSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerRunSpec;
+import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerFunctionSpec;
+import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerRunSpec;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerTrainTaskSpec;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -57,15 +51,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;
-import org.springframework.web.util.UriComponents;
-import org.springframework.web.util.UriComponentsBuilder;
 
 public class FlowerTrainRunner {
-
-    private static ObjectMapper jsonMapper = JacksonMapper.CUSTOM_OBJECT_MAPPER;
 
     private static final int UID = 1000;
     private static final int GID = 1000;
@@ -74,7 +62,7 @@ public class FlowerTrainRunner {
     private final String image;
     private final int userId;
     private final int groupId;
-    private final FlowerFunctionSpec functionSpec;
+    private final FlowerServerFunctionSpec functionSpec;
     private final Map<String, String> secretData;
 
     private final K8sBuilderHelper k8sBuilderHelper;
@@ -83,7 +71,7 @@ public class FlowerTrainRunner {
         String image,
         Integer userId,
         Integer groupId,
-        FlowerFunctionSpec functionPythonSpec,
+        FlowerServerFunctionSpec functionPythonSpec,
         Map<String, String> secretData,
         K8sBuilderHelper k8sBuilderHelper
     ) {
@@ -97,7 +85,7 @@ public class FlowerTrainRunner {
     }
 
     public K8sRunnable produce(Run run) {
-        FlowerRunSpec runSpec = new FlowerRunSpec(run.getSpec());
+        FlowerServerRunSpec runSpec = new FlowerServerRunSpec(run.getSpec());
         FlowerTrainTaskSpec taskSpec = runSpec.getTaskTrainSpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
 
@@ -146,7 +134,7 @@ public class FlowerTrainRunner {
 
             K8sRunnable k8sJobRunnable = K8sJobRunnable
                 .builder()
-                .runtime(FlowerRuntime.RUNTIME)
+                .runtime(FlowerServerRuntime.RUNTIME)
                 .task(FlowerTrainTaskSpec.KIND)
                 .state(State.READY.name())
                 .labels(
@@ -181,7 +169,7 @@ public class FlowerTrainRunner {
                 k8sJobRunnable =
                     K8sCronJobRunnable
                         .builder()
-                        .runtime(FlowerRuntime.RUNTIME)
+                        .runtime(FlowerServerRuntime.RUNTIME)
                         .task(FlowerTrainTaskSpec.KIND)
                         .state(State.READY.name())
                         .labels(

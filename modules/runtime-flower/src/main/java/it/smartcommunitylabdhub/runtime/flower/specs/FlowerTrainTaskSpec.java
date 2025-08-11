@@ -27,7 +27,7 @@ import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
-import it.smartcommunitylabdhub.runtime.flower.FlowerRuntime;
+import it.smartcommunitylabdhub.runtime.flower.FlowerServerRuntime;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.Map;
@@ -40,10 +40,10 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@SpecType(runtime = FlowerRuntime.RUNTIME, kind = FlowerTrainTaskSpec.KIND, entity = EntityName.TASK)
+@SpecType(runtime = FlowerServerRuntime.RUNTIME, kind = FlowerTrainTaskSpec.KIND, entity = EntityName.TASK)
 public class FlowerTrainTaskSpec extends K8sFunctionTaskBaseSpec {
 
-    public static final String KIND = "flower+train";
+    public static final String KIND = "flower-server+train";
 
     @Pattern(regexp = Keys.CRONTAB_PATTERN)
     private String schedule;

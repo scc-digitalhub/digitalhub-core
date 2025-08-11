@@ -26,18 +26,20 @@ package it.smartcommunitylabdhub.runtime.flower.specs;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
-import it.smartcommunitylabdhub.runtime.flower.FlowerRuntime;
+import it.smartcommunitylabdhub.runtime.flower.FlowerServerRuntime;
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
-@SpecType(runtime = FlowerRuntime.RUNTIME, kind = FlowerServerTaskSpec.KIND, entity = EntityName.TASK)
+@NoArgsConstructor
+@SpecType(runtime = FlowerServerRuntime.RUNTIME, kind = FlowerServerTaskSpec.KIND, entity = EntityName.TASK)
 public class FlowerServerTaskSpec extends K8sFunctionTaskBaseSpec {
 
-    public static final String KIND = "flower+server";    
+    public static final String KIND = "flower-server+deploy";    
 
     public FlowerServerTaskSpec(Map<String, Serializable> data) {
         configure(data);
