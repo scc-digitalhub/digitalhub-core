@@ -30,7 +30,7 @@ import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
-import it.smartcommunitylabdhub.runtime.flower.FlowerRuntime;
+import it.smartcommunitylabdhub.runtime.flower.FlowerServerRuntime;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
@@ -41,38 +41,32 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = FlowerRuntime.RUNTIME, kind = FlowerRunSpec.KIND, entity = EntityName.RUN)
-public class FlowerRunSpec extends RunBaseSpec {
+@SpecType(runtime = FlowerServerRuntime.RUNTIME, kind = FlowerServerRunSpec.KIND, entity = EntityName.RUN)
+public class FlowerServerRunSpec extends RunBaseSpec {
 
-    public static final String KIND = FlowerRuntime.RUNTIME + "+run";
+    public static final String KIND = FlowerServerRuntime.RUNTIME + "+run";
 
     @JsonUnwrapped
     private FlowerTrainTaskSpec taskTrainSpec;
     @JsonUnwrapped
-    private FlowerClientTaskSpec taskClientSpec;
+    private FlowerServerTaskSpec taskDeploySpec;
     @JsonUnwrapped
-    private FlowerServerTaskSpec taskServerSpec;
-
-    @JsonUnwrapped
-    private FlowerBuildClientTaskSpec taskBuildClientSpec;
-    @JsonUnwrapped
-    private FlowerBuildServerTaskSpec taskBuildServerSpec;
+    private FlowerBuildServerTaskSpec taskBuildSpec;
 
     @JsonSchemaIgnore
     @JsonUnwrapped
-    private FlowerFunctionSpec functionSpec;
+    private FlowerServerFunctionSpec functionSpec;
 
     private Map<String, String> inputs = new HashMap<>();
 
     private Map<String, Serializable> parameters = new HashMap<>();
     
+    @Schema(title = "fields.flower.federation.title", description = "fields.flower.federation.description")
+    private String federation;
     @Schema(title = "fields.flower.superlink.title", description = "fields.flower.superlink.description")
     private String superlink;
 
-    @Schema(title = "fields.flower.federation.title", description = "fields.flower.federation.description")
-    private String federation;
-
-    public FlowerRunSpec(Map<String, Serializable> data) {
+    public FlowerServerRunSpec(Map<String, Serializable> data) {
         configure(data);
     }
 
@@ -80,38 +74,29 @@ public class FlowerRunSpec extends RunBaseSpec {
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
 
-        FlowerRunSpec spec = mapper.convertValue(data, FlowerRunSpec.class);
+        FlowerServerRunSpec spec = mapper.convertValue(data, FlowerServerRunSpec.class);
 
         this.functionSpec = spec.getFunctionSpec();
     
         this.taskTrainSpec = spec.getTaskTrainSpec();
-        this.taskClientSpec = spec.getTaskClientSpec();
-        this.taskServerSpec = spec.getTaskServerSpec();
-        this.taskBuildClientSpec = spec.getTaskBuildClientSpec();
-        this.taskBuildServerSpec = spec.getTaskBuildServerSpec();
+        this.taskDeploySpec = spec.getTaskDeploySpec();
+        this.taskBuildSpec = spec.getTaskBuildSpec();
 
         this.inputs = spec.getInputs();
         this.parameters = spec.getParameters();
-        this.superlink = spec.getSuperlink();
         this.federation = spec.getFederation();
+        this.superlink = spec.getSuperlink();
     }
     public void setTaskTrainSpec(FlowerTrainTaskSpec taskTrainSpec) {
         this.taskTrainSpec = taskTrainSpec;
     }
-
-    public void setTaskClientSpec(FlowerClientTaskSpec taskClientSpec) {
-        this.taskClientSpec = taskClientSpec;
+    public void setTaskDeploySpec(FlowerServerTaskSpec taskDeploySpec) {
+        this.taskDeploySpec = taskDeploySpec;
     }
-    public void setTaskServerSpec(FlowerServerTaskSpec taskServerSpec) {
-        this.taskServerSpec = taskServerSpec;
+    public void setTaskBuildSpec(FlowerBuildServerTaskSpec taskBuildSpec) {
+        this.taskBuildSpec = taskBuildSpec;
     }
-    public void setTaskBuildClientSpec(FlowerBuildClientTaskSpec taskBuildClientSpec) {
-        this.taskBuildClientSpec = taskBuildClientSpec;
-    }
-    public void setTaskBuildServerSpec(FlowerBuildServerTaskSpec taskBuildServerSpec) {
-        this.taskBuildServerSpec = taskBuildServerSpec;
-    }
-    public void setFunctionSpec(FlowerFunctionSpec functionSpec) {
+    public void setFunctionSpec(FlowerServerFunctionSpec functionSpec) {
         this.functionSpec = functionSpec;
     }
 }

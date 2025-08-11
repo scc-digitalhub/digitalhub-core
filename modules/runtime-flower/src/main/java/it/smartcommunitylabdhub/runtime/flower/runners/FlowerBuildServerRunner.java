@@ -35,12 +35,12 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileGenerator;
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileGeneratorFactory;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
-import it.smartcommunitylabdhub.runtime.flower.FlowerRuntime;
+import it.smartcommunitylabdhub.runtime.flower.FlowerServerRuntime;
 import it.smartcommunitylabdhub.runtime.flower.model.FABModel;
 import it.smartcommunitylabdhub.runtime.flower.model.FlowerSourceCode;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerBuildServerTaskSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerFunctionSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerRunSpec;
+import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerFunctionSpec;
+import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerRunSpec;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -59,7 +59,7 @@ public class FlowerBuildServerRunner {
 
     private final String image;
     private final String command;
-    private final FlowerFunctionSpec functionSpec;
+    private final FlowerServerFunctionSpec functionSpec;
     private final Map<String, String> secretData;
 
     private final K8sBuilderHelper k8sBuilderHelper;
@@ -67,7 +67,7 @@ public class FlowerBuildServerRunner {
     public FlowerBuildServerRunner(
         String image,
         String command,
-        FlowerFunctionSpec functionPythonSpec,
+        FlowerServerFunctionSpec functionPythonSpec,
         Map<String, String> secretData,
         K8sBuilderHelper k8sBuilderHelper
     ) {
@@ -79,8 +79,8 @@ public class FlowerBuildServerRunner {
     }
 
     public K8sContainerBuilderRunnable produce(Run run) {
-        FlowerRunSpec runSpec = new FlowerRunSpec(run.getSpec());
-        FlowerBuildServerTaskSpec taskSpec = runSpec.getTaskBuildServerSpec();
+        FlowerServerRunSpec runSpec = new FlowerServerRunSpec(run.getSpec());
+        FlowerBuildServerTaskSpec taskSpec = runSpec.getTaskBuildSpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
 
         List<CoreEnv> coreEnvList = new ArrayList<>(
@@ -96,7 +96,7 @@ public class FlowerBuildServerRunner {
         // Generate docker file
         DockerfileGeneratorFactory dockerfileGenerator = DockerfileGenerator.factory();
 
-        String baseImage = StringUtils.hasText(functionSpec.getBaseServerImage()) ? functionSpec.getBaseServerImage() : image;
+        String baseImage = StringUtils.hasText(functionSpec.getBaseImage()) ? functionSpec.getBaseImage() : image;
 
         // Add base Image
         dockerfileGenerator.from(baseImage);
@@ -112,8 +112,8 @@ public class FlowerBuildServerRunner {
         List<ContextRef> contextRefs = null;
         List<ContextSource> contextSources = new ArrayList<>();
         
-        if (functionSpec.getServerSource() != null) {
-            FlowerSourceCode source = functionSpec.getServerSource();
+        if (functionSpec.getSource() != null) {
+            FlowerSourceCode source = functionSpec.getSource();
             String path = "main.py";
 
             if (StringUtils.hasText(source.getSource())) {
@@ -148,7 +148,7 @@ public class FlowerBuildServerRunner {
                 if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
                     fabModel.setDependencies(functionSpec.getRequirements());
                 }
-                fabModel.setServerApp("main:" + functionSpec.getServerSource().getHandler());
+                fabModel.setServerApp("main:" + functionSpec.getSource().getHandler());
                 fabModel.setDefaultFederation("core-federation");
                 fabModel.setConfig(runSpec.getParameters());
                 String toml = fabModel.toTOML();
@@ -184,8 +184,8 @@ public class FlowerBuildServerRunner {
             K8sBuilderHelper.sanitizeNames(runSpecAccessor.getFunction());
 
         //evaluate user provided image name
-        if (StringUtils.hasText(functionSpec.getServerImage())) {
-            String name = functionSpec.getServerImage().split(":")[0]; //remove tag if present
+        if (StringUtils.hasText(functionSpec.getImage())) {
+            String name = functionSpec.getImage().split(":")[0]; //remove tag if present
             if (StringUtils.hasText(name) && name.length() > 3) {
                 imageName = name;
             }
@@ -195,7 +195,7 @@ public class FlowerBuildServerRunner {
             .builder()
             .id(run.getId())
             .project(run.getProject())
-            .runtime(FlowerRuntime.RUNTIME)
+            .runtime(FlowerServerRuntime.RUNTIME)
             .task(FlowerBuildServerTaskSpec.KIND)
             .state(State.READY.name())
             .labels(

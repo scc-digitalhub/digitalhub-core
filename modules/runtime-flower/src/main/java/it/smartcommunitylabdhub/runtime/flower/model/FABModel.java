@@ -25,6 +25,8 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.util.StringUtils;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -75,13 +77,13 @@ public class FABModel {
                         "name = \"" + valueOf(name) + "\"\n" + //
                         "version = \"" + valueOf(version) + "\"\n" + //
                         "description = \"" + valueOf(description) + "\"\n" + //
-                        "license = \"" + valueOf(license) + "\"\n" + //
+                        // "license = \"" + valueOf(license) + "\"\n" + //
                         "dependencies = [\n" + //
                         String.join(",\n", (dependencies == null ? List.of() : dependencies).stream().map(d -> "\"" + d + "\"").toList()) + "\n" + //
                         "]\n" + //
                         "\n" + //
                         "[tool.hatch.build.targets.wheel]\n" + //
-                        "packages = [" + (packages == null ? "\".\"" : packages.stream().map(p -> "\"" + p + "\"").toList()) + "]\n" + //
+                        "packages = [" + (packages == null ? "\".\"" : StringUtils.collectionToCommaDelimitedString(packages.stream().map(p -> "\"" + p + "\"").toList())) + "]\n" + //
                         "\n" + //
                         "[tool.flwr.app]\n" + //
                         "publisher = \"" + valueOf(publisher) + "\"\n" + //
@@ -91,19 +93,19 @@ public class FABModel {
                         "clientapp = \"" + valueOf(clientApp) + "\"\n" + //
                         "\n" + //
                         "[tool.flwr.app.config]\n" + //
-                        config != null ? String.join("\n", config.entrySet().stream().map(e -> "\"" + e.getKey() + "\" = " + typedValueOf(e.getValue())).toList()) : "" + //
+                        (config != null ? String.join("\n", config.entrySet().stream().map(e -> "\"" + e.getKey() + "\" = " + typedValueOf(e.getValue())).toList()) : "") + //
                         "\n" + //
                         "[tool.flwr.federations]\n" +
                         "default = \"" + valueOf(defaultFederation) + "\"\n" + //
                         "\n" + //
-                        federationConfigs != null
+                        (federationConfigs != null
                             ? String.join("\n\n", federationConfigs.entrySet().stream()
                                 .map(e -> "[tool.flwr.federations." + e.getKey() + "]\n" +
                                     String.join("\n", e.getValue().entrySet().stream()
                                         .map(f -> "\"" + f.getKey() + "\" = " + typedValueOf(f.getValue()))
                                         .toList()))
                                 .toList())
-                            : "";
+                            : "");
                         
 
         return toml;
