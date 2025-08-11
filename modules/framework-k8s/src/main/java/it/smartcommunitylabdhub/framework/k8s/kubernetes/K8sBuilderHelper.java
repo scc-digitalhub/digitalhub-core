@@ -369,7 +369,7 @@ public class K8sBuilderHelper implements InitializingBean {
             return null;
         } else {
             //use only allowed chars in k8s resource names!
-            String value = name.toLowerCase().replaceAll("[^a-zA-Z0-9._-]+", "");
+            String value = name.toLowerCase().replaceAll("[^a-z0-9-]+", "");
             if (value.length() > K8S_NAME_MAX_LENGTH) {
                 log.error("Name exceeds max length: {} ({})", String.valueOf(value.length()), value);
 
