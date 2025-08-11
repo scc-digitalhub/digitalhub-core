@@ -1,9 +1,3 @@
-/*
- * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 /**
  * Copyright 2025 the original author or authors
  *
@@ -22,12 +16,13 @@
 
 package it.smartcommunitylabdhub.core.models.lifecycle;
 
+import it.smartcommunitylabdhub.commons.lifecycle.LifecycleState;
 import it.smartcommunitylabdhub.commons.models.model.Model;
-import it.smartcommunitylabdhub.core.lifecycle.BaseLifecycleManager;
-import it.smartcommunitylabdhub.core.models.specs.ModelBaseStatus;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
-@Slf4j
-@Component
-public class ModelLifecycleManager extends BaseLifecycleManager<Model, ModelBaseStatus, ModelState, ModelEvents> {}
+public enum ModelState implements LifecycleState<Model> {
+    CREATED,
+    UPLOADING,
+    READY,
+    ERROR,
+    DELETED,
+}
