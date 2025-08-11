@@ -1,9 +1,3 @@
-/*
- * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 /**
  * Copyright 2025 the original author or authors
  *
@@ -22,13 +16,13 @@
 
 package it.smartcommunitylabdhub.core.artifacts.lifecycle;
 
+import it.smartcommunitylabdhub.commons.lifecycle.LifecycleState;
 import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
-import it.smartcommunitylabdhub.core.artifacts.specs.ArtifactBaseStatus;
-import it.smartcommunitylabdhub.core.lifecycle.BaseLifecycleManager;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
-@Slf4j
-@Component
-public class ArtifactsLifecycleManager
-    extends BaseLifecycleManager<Artifact, ArtifactBaseStatus, ArtifactState, ArtifactEvents> {}
+public enum ArtifactState implements LifecycleState<Artifact> {
+    CREATED,
+    UPLOADING,
+    READY,
+    ERROR,
+    DELETED,
+}
