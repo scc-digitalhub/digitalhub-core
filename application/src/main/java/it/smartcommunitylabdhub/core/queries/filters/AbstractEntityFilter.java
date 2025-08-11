@@ -26,7 +26,6 @@ package it.smartcommunitylabdhub.core.queries.filters;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.queries.SearchCriteria;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import jakarta.annotation.Nullable;
@@ -121,9 +120,7 @@ public abstract class AbstractEntityFilter<T extends BaseDTO> {
             .ofNullable(state)
             .ifPresent(value -> {
                 try {
-                    criteria.add(
-                        new BaseEntitySearchCriteria<>("state", State.valueOf(value), SearchCriteria.Operation.equal)
-                    );
+                    criteria.add(new BaseEntitySearchCriteria<>("state", value, SearchCriteria.Operation.equal));
                 } catch (IllegalArgumentException e) {
                     //invalid enum value, skip
                 }

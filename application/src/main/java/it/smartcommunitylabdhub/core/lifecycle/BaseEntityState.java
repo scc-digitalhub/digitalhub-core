@@ -24,8 +24,8 @@ package it.smartcommunitylabdhub.core.lifecycle;
 
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvent;
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvents;
+import it.smartcommunitylabdhub.commons.lifecycle.LifecycleState;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.fsm.FsmState;
 import it.smartcommunitylabdhub.fsm.Transition;
@@ -37,21 +37,23 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.data.util.Pair;
 
-public class BaseEntityState<D extends BaseDTO & StatusDTO>
-    implements FsmState.Builder<State, LifecycleEvents, LifecycleContext<D>, LifecycleEvent<D>> {
+public class BaseEntityState<
+    D extends BaseDTO & StatusDTO, S extends Enum<S> & LifecycleState<D>, E extends Enum<E> & LifecycleEvents<D>
+>
+    implements FsmState.Builder<S, E, LifecycleContext<D>, LifecycleEvent<D>> {
 
-    protected final State state;
-    protected final Set<Pair<LifecycleEvents, State>> nextStates;
-    protected List<Transition<State, LifecycleEvents, LifecycleContext<D>, LifecycleEvent<D>>> txs;
+    protected final S state;
+    protected final Set<Pair<E, S>> nextStates;
+    protected List<Transition<S, E, LifecycleContext<D>, LifecycleEvent<D>>> txs;
 
-    protected BaseEntityState(@NotNull State state, @Nullable Set<Pair<LifecycleEvents, State>> nextStates) {
+    public BaseEntityState(@NotNull S state, @Nullable Set<Pair<E, S>> nextStates) {
         this.state = state;
         this.nextStates = nextStates == null ? Set.of() : nextStates;
     }
 
-    protected BaseEntityState(
-        @NotNull State state,
-        @NotNull List<Transition<State, LifecycleEvents, LifecycleContext<D>, LifecycleEvent<D>>> txs
+    public BaseEntityState(
+        @NotNull S state,
+        @NotNull List<Transition<S, E, LifecycleContext<D>, LifecycleEvent<D>>> txs
     ) {
         this.state = state;
         this.txs = txs;
@@ -65,7 +67,7 @@ public class BaseEntityState<D extends BaseDTO & StatusDTO>
     }
 
     @Override
-    public FsmState<State, LifecycleEvents, LifecycleContext<D>, LifecycleEvent<D>> build() {
+    public FsmState<S, E, LifecycleContext<D>, LifecycleEvent<D>> build() {
         if (txs != null) {
             return new FsmState<>(state, txs);
         }
@@ -75,7 +77,7 @@ public class BaseEntityState<D extends BaseDTO & StatusDTO>
             nextStates
                 .stream()
                 .map(pair ->
-                    new Transition.Builder<State, LifecycleEvents, LifecycleContext<D>, LifecycleEvent<D>>()
+                    new Transition.Builder<S, E, LifecycleContext<D>, LifecycleEvent<D>>()
                         .event(pair.getFirst())
                         .nextState(pair.getSecond())
                         .withInternalLogic((currentState, nextState, event, context, input) -> {

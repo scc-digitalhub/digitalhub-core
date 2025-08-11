@@ -25,8 +25,8 @@ package it.smartcommunitylabdhub.core.lifecycle;
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvent;
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvents;
+import it.smartcommunitylabdhub.commons.lifecycle.LifecycleState;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
@@ -38,6 +38,8 @@ import it.smartcommunitylabdhub.fsm.exceptions.InvalidTransitionException;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -45,18 +47,35 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
-public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusDTO, T extends Spec>
+public abstract class BaseLifecycleManager<
+    D extends BaseDTO & SpecDTO & StatusDTO,
+    T extends Spec,
+    S extends Enum<S> & LifecycleState<D>,
+    E extends Enum<E> & LifecycleEvents<D>
+>
     extends AbstractLifecycleManager<D>
     implements LifecycleManager<D> {
 
-    private Fsm.Factory<State, LifecycleEvents, LifecycleContext<D>, LifecycleEvent<D>> fsmFactory;
+    private final Class<S> stateClass;
+    private final Class<E> eventsClass;
+
+    private Fsm.Factory<S, E, LifecycleContext<D>, LifecycleEvent<D>> fsmFactory;
+
+    @SuppressWarnings({ "unchecked", "checkstyle:magicnumber" })
+    public BaseLifecycleManager() {
+        // resolve generics type via subclass trick
+        Type ts = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[2];
+        this.stateClass = (Class<S>) ts;
+        Type te = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[3];
+        this.eventsClass = (Class<E>) te;
+    }
 
     @Autowired(required = false)
-    public void setFsmFactory(Fsm.Factory<State, LifecycleEvents, LifecycleContext<D>, LifecycleEvent<D>> fsmFactory) {
+    public void setFsmFactory(Fsm.Factory<S, E, LifecycleContext<D>, LifecycleEvent<D>> fsmFactory) {
         this.fsmFactory = fsmFactory;
     }
 
-    protected Fsm<State, LifecycleEvents, LifecycleContext<D>, LifecycleEvent<D>> fsm(D dto) {
+    protected Fsm<S, E, LifecycleContext<D>, LifecycleEvent<D>> fsm(D dto) {
         if (fsmFactory == null) {
             throw new IllegalStateException("FSM factory not set: provide or override");
         }
@@ -68,7 +87,9 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         }
 
         //get enum via enum..
-        State initialState = State.valueOf(state);
+        S initialState = Enum.valueOf(stateClass, state);
+
+        // State initialState = State.valueOf(state);
 
         //default context has only dto in it
         LifecycleContext<D> context = new LifecycleContext<>(dto);
@@ -142,9 +163,10 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         }
 
         // build state machine on current context
-        Fsm<State, LifecycleEvents, LifecycleContext<D>, LifecycleEvent<D>> fsm = fsm(dto);
+        Fsm<S, E, LifecycleContext<D>, LifecycleEvent<D>> fsm = fsm(dto);
 
-        LifecycleEvents lifecycleEvent = LifecycleEvents.valueOf(event);
+        // LifecycleEvents lifecycleEvent = LifecycleEvents.valueOf(event);
+        E lifecycleEvent = Enum.valueOf(eventsClass, event);
 
         //execute update op with locking
         dto =
@@ -154,7 +176,7 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
                     try {
                         //perform via FSM
                         Optional<T> output = fsm.perform(lifecycleEvent, input);
-                        State state = fsm.getCurrentState();
+                        S state = fsm.getCurrentState();
 
                         //update status from fsm output
                         Map<String, Serializable> baseStatus = Map.of("state", state.name());
@@ -239,9 +261,9 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         }
 
         // build state machine on current context
-        Fsm<State, LifecycleEvents, LifecycleContext<D>, LifecycleEvent<D>> fsm = fsm(dto);
-
-        State nextState = State.valueOf(nextStateValue);
+        Fsm<S, E, LifecycleContext<D>, LifecycleEvent<D>> fsm = fsm(dto);
+        S nextState = Enum.valueOf(stateClass, nextStateValue);
+        // State nextState = State.valueOf(nextStateValue);
 
         //execute update op with locking
         dto =
@@ -251,7 +273,7 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
                     try {
                         //perform via FSM
                         Optional<T> output = fsm.goToState(nextState, input);
-                        State state = fsm.getCurrentState();
+                        S state = fsm.getCurrentState();
 
                         //update status from fsm output
                         Map<String, Serializable> baseStatus = Map.of("state", state.name());
