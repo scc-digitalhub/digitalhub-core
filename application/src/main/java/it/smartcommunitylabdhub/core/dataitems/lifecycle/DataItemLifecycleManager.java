@@ -23,12 +23,13 @@
 package it.smartcommunitylabdhub.core.dataitems.lifecycle;
 
 import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
-import it.smartcommunitylabdhub.core.dataitems.specs.DataItemBaseStatus;
 import it.smartcommunitylabdhub.core.lifecycle.BaseLifecycleManager;
+import it.smartcommunitylabdhub.core.lifecycle.LifecycleManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
 public class DataItemLifecycleManager
-    extends BaseLifecycleManager<DataItem, DataItemBaseStatus, DataItemState, DataItemEvents> {}
+    extends BaseLifecycleManager<DataItem, DataItemState, DataItemEvents>
+    implements LifecycleManager<DataItem> {}

@@ -23,12 +23,13 @@
 package it.smartcommunitylabdhub.core.artifacts.lifecycle;
 
 import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
-import it.smartcommunitylabdhub.core.artifacts.specs.ArtifactBaseStatus;
 import it.smartcommunitylabdhub.core.lifecycle.BaseLifecycleManager;
+import it.smartcommunitylabdhub.core.lifecycle.LifecycleManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
 public class ArtifactsLifecycleManager
-    extends BaseLifecycleManager<Artifact, ArtifactBaseStatus, ArtifactState, ArtifactEvents> {}
+    extends BaseLifecycleManager<Artifact, ArtifactState, ArtifactEvents>
+    implements LifecycleManager<Artifact> {}

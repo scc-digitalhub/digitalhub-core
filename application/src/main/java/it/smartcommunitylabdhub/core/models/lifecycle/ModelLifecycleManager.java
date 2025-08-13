@@ -24,10 +24,12 @@ package it.smartcommunitylabdhub.core.models.lifecycle;
 
 import it.smartcommunitylabdhub.commons.models.model.Model;
 import it.smartcommunitylabdhub.core.lifecycle.BaseLifecycleManager;
-import it.smartcommunitylabdhub.core.models.specs.ModelBaseStatus;
+import it.smartcommunitylabdhub.core.lifecycle.LifecycleManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-public class ModelLifecycleManager extends BaseLifecycleManager<Model, ModelBaseStatus, ModelState, ModelEvents> {}
+public class ModelLifecycleManager
+    extends BaseLifecycleManager<Model, ModelState, ModelEvents>
+    implements LifecycleManager<Model> {}

@@ -22,7 +22,6 @@
 
 package it.smartcommunitylabdhub.core.lifecycle;
 
-import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvent;
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvents;
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleState;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
@@ -32,7 +31,6 @@ import it.smartcommunitylabdhub.fsm.Transition;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.data.util.Pair;
@@ -40,21 +38,18 @@ import org.springframework.data.util.Pair;
 public class BaseEntityState<
     D extends BaseDTO & StatusDTO, S extends Enum<S> & LifecycleState<D>, E extends Enum<E> & LifecycleEvents<D>
 >
-    implements FsmState.Builder<S, E, LifecycleContext<D>, LifecycleEvent<D>> {
+    implements FsmState.Builder<S, E, D> {
 
     protected final S state;
     protected final Set<Pair<E, S>> nextStates;
-    protected List<Transition<S, E, LifecycleContext<D>, LifecycleEvent<D>>> txs;
+    protected List<Transition<S, E, D>> txs;
 
     public BaseEntityState(@NotNull S state, @Nullable Set<Pair<E, S>> nextStates) {
         this.state = state;
         this.nextStates = nextStates == null ? Set.of() : nextStates;
     }
 
-    public BaseEntityState(
-        @NotNull S state,
-        @NotNull List<Transition<S, E, LifecycleContext<D>, LifecycleEvent<D>>> txs
-    ) {
+    public BaseEntityState(@NotNull S state, @NotNull List<Transition<S, E, D>> txs) {
         this.state = state;
         this.txs = txs;
         this.nextStates =
@@ -67,27 +62,20 @@ public class BaseEntityState<
     }
 
     @Override
-    public FsmState<S, E, LifecycleContext<D>, LifecycleEvent<D>> build() {
+    public FsmState<S, E, D> build() {
         if (txs != null) {
             return new FsmState<>(state, txs);
         }
 
         //build state transitions with no ops
-        txs =
+        return new FsmState<>(
+            state,
             nextStates
                 .stream()
                 .map(pair ->
-                    new Transition.Builder<S, E, LifecycleContext<D>, LifecycleEvent<D>>()
-                        .event(pair.getFirst())
-                        .nextState(pair.getSecond())
-                        .withInternalLogic((currentState, nextState, event, context, input) -> {
-                            //no-op, nothing happened yet
-                            return Optional.empty();
-                        })
-                        .build()
+                    new Transition.Builder<S, E, D>().event(pair.getFirst()).nextState(pair.getSecond()).build()
                 )
-                .toList();
-
-        return new FsmState<>(state, txs);
+                .toList()
+        );
     }
 }

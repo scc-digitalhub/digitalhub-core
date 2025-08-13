@@ -26,6 +26,7 @@ package it.smartcommunitylabdhub.core.runs.lifecycle.states;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.enums.State;
+import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
 import it.smartcommunitylabdhub.core.runs.lifecycle.RunContext;
 import it.smartcommunitylabdhub.core.runs.lifecycle.RunEvent;
 import it.smartcommunitylabdhub.fsm.FsmState;
@@ -37,16 +38,16 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-public class RunStateBuilt implements FsmState.Builder<State, RunEvent, RunContext, RunRunnable> {
+public class RunStateBuilt implements FsmState.Builder<State, RunEvent, RunContext> {
 
-    public FsmState<State, RunEvent, RunContext, RunRunnable> build() {
+    public FsmState<State, RunEvent, RunContext> build() {
         //define state
         State state = State.BUILT;
 
         //transitions
-        List<Transition<State, RunEvent, RunContext, RunRunnable>> txs = List.of(
+        List<Transition<State, RunEvent, RunContext>> txs = List.of(
             //(RUN)->READY
-            new Transition.Builder<State, RunEvent, RunContext, RunRunnable>()
+            new Transition.Builder<State, RunEvent, RunContext>()
                 .event(RunEvent.RUN)
                 .nextState(State.READY)
                 .withInternalLogic((currentState, nextState, event, context, rn) -> {
@@ -61,10 +62,10 @@ public class RunStateBuilt implements FsmState.Builder<State, RunEvent, RunConte
                 })
                 .build(),
             //(ERROR)->ERROR
-            new Transition.Builder<State, RunEvent, RunContext, RunRunnable>()
+            new Transition.Builder<State, RunEvent, RunContext>()
                 .event(RunEvent.ERROR)
                 .nextState(State.ERROR)
-                .withInternalLogic((currentState, nextState, event, context, runnable) -> {
+                .<RunRunnable, RunBaseStatus>withInternalLogic((currentState, nextState, event, context, runnable) -> {
                     RunSpecAccessor specAccessor = RunSpecAccessor.with(context.run.getSpec());
                     if (specAccessor.isLocalExecution()) {
                         return Optional.empty();
@@ -75,7 +76,7 @@ public class RunStateBuilt implements FsmState.Builder<State, RunEvent, RunConte
                 })
                 .build(),
             //(DELETING)->DELETING
-            new Transition.Builder<State, RunEvent, RunContext, RunRunnable>()
+            new Transition.Builder<State, RunEvent, RunContext>()
                 .event(RunEvent.DELETING)
                 .nextState(State.DELETING)
                 .withInternalLogic((currentState, nextState, event, context, runnable) -> {
