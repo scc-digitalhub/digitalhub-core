@@ -44,6 +44,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.ProviderException;
 import java.time.Duration;
 import java.time.ZonedDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -55,6 +56,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.util.Pair;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
@@ -350,10 +352,29 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
                 return MinioPolicy.builder().claim(claimPrefix).roleArn(roleArn).policy(policy).build();
             }
 
-            //fallback to default
-            if (StringUtils.hasText(defaultPolicy)) {
-                return MinioPolicy.builder().claim(claimPrefix).policy(defaultPolicy).roleArn(defaultRoleArn).build();
+            //extract stored policy from bearer
+            if (
+                token instanceof BearerTokenAuthentication &&
+                ((BearerTokenAuthentication) token).getTokenAttributes() != null
+            ) {
+                @SuppressWarnings("unchecked")
+                List<Credentials> credentials = (List<
+                        Credentials
+                    >) ((BearerTokenAuthentication) token).getTokenAttributes().get("credentials");
+                if (credentials != null) {
+                    Optional<MinioPolicy> p = credentials
+                        .stream()
+                        .filter(c -> c instanceof MinioPolicy)
+                        .findFirst()
+                        .map(c -> (MinioPolicy) c);
+                    if (p.isPresent()) {
+                        return p.get();
+                    }
+                }
             }
+
+            //fallback to default
+            return MinioPolicy.builder().claim(claimPrefix).policy(defaultPolicy).roleArn(defaultRoleArn).build();
         }
 
         return null;

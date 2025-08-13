@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.commons.models.project;
@@ -32,6 +32,7 @@ import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
@@ -53,11 +54,13 @@ import org.springframework.lang.Nullable;
 public class Project implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO {
 
     @Nullable
-    @Pattern(regexp = Keys.SLUG_PATTERN)
+    @Pattern(regexp = Keys.RFC_1123_PATTERN)
+    @Size(min = 2, max = Keys.MAX_NAME_LENGTH)
     private String id;
 
     @NotNull
-    @Pattern(regexp = Keys.SLUG_PATTERN)
+    @Pattern(regexp = Keys.RFC_1123_PATTERN)
+    @Size(min = 2, max = Keys.MAX_NAME_LENGTH)
     private String name;
 
     @Pattern(regexp = Keys.SLUG_PATTERN)

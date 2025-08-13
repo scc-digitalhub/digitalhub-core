@@ -26,6 +26,7 @@ import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
 import io.kubernetes.client.openapi.models.V1PodSecurityContext;
 import io.kubernetes.client.openapi.models.V1Secret;
+import io.kubernetes.client.openapi.models.V1SecurityContext;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.FrameworkComponent;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.jackson.YamlMapperFactory;
@@ -381,6 +382,7 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
         }
 
         container.envFrom(envFrom).env(env).resources(buildResources(runnable));
+        container.securityContext(buildSecurityContext(runnable));
 
         V1PodSecurityContext securityContext = buildPodSecurityContext(runnable);
 
@@ -404,12 +406,21 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
             });
     }
 
-    public V1PodSecurityContext buildPodSecurityContext(K8sArgoWorkflowRunnable runnable) throws K8sFrameworkException {
-        V1PodSecurityContext context = new V1PodSecurityContext();
-        //enforce policy for non root when requested by admin
-        if (disableRoot) {
-            context.runAsNonRoot(true);
+    public V1SecurityContext buildSecurityContext(K8sArgoWorkflowRunnable runnable) throws K8sFrameworkException {
+        V1SecurityContext context = super.buildSecurityContext(runnable);
+
+        //override user when configured
+        if (runAsUser != null && runAsUser != 0) {
+            context.setRunAsUser((long) runAsUser);
         }
+
+        return context;
+    }
+
+    public V1PodSecurityContext buildPodSecurityContext(K8sArgoWorkflowRunnable runnable) throws K8sFrameworkException {
+        V1PodSecurityContext context = super.buildPodSecurityContext(runnable);
+
+        //override user when configured
         if (runAsUser != null && runAsUser != 0) {
             context.setRunAsUser((long) runAsUser);
         }

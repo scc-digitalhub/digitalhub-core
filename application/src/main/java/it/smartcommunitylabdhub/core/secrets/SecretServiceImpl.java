@@ -465,7 +465,7 @@ public class SecretServiceImpl implements SecretService {
     // }
 
     private String getProjectSecretName(String project) {
-        return K8sBuilderHelper.sanitizeNames("proj-secrets-" + "-" + project);
+        return K8sBuilderHelper.sanitizeNames("proj-secrets-" + project);
     }
 
     private String getSecretPath(String provider, String secret, String key) {

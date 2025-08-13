@@ -52,6 +52,7 @@ import org.springframework.http.converter.FormHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -280,6 +281,27 @@ public class DbCredentialsProvider implements CredentialsProvider, InitializingB
                 String role = ((JwtAuthenticationToken) token).getToken().getClaimAsString(claim);
                 if (StringUtils.hasText(role)) {
                     return DbRole.builder().claim(claim).role(role).build();
+                }
+            }
+
+            //extract stored policy from bearer
+            if (
+                token instanceof BearerTokenAuthentication &&
+                ((BearerTokenAuthentication) token).getTokenAttributes() != null
+            ) {
+                @SuppressWarnings("unchecked")
+                List<Credentials> credentials = (List<
+                        Credentials
+                    >) ((BearerTokenAuthentication) token).getTokenAttributes().get("credentials");
+                if (credentials != null) {
+                    Optional<DbRole> p = credentials
+                        .stream()
+                        .filter(c -> c instanceof DbRole)
+                        .findFirst()
+                        .map(c -> (DbRole) c);
+                    if (p.isPresent()) {
+                        return p.get();
+                    }
                 }
             }
 

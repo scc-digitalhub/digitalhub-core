@@ -284,6 +284,11 @@ public class JwtTokenService implements InitializingBean {
                     attributes.put("exp", now.plusSeconds(accessTokenDuration));
                     attributes.put("scope", StringUtils.collectionToCommaDelimitedString(pat.getScopes()));
 
+                    //inject extended attributes
+                    attributes.put("credentials", user.getCredentials());
+                    attributes.put("subject_token", user.getToken());
+
+                    //TODO evaluate restoring original token
                     DefaultOAuth2AuthenticatedPrincipal principal = new DefaultOAuth2AuthenticatedPrincipal(
                         user.getName(),
                         attributes,

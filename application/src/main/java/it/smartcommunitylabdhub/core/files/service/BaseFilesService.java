@@ -277,7 +277,7 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
                 "/" +
                 project +
                 "/" +
-                type.name() +
+                type.name().toLowerCase() +
                 "/" +
                 id +
                 (filename.startsWith("/") ? filename : "/" + filename);
@@ -323,7 +323,7 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
                 "/" +
                 project +
                 "/" +
-                type.name() +
+                type.name().toLowerCase() +
                 "/" +
                 id +
                 "/" +
@@ -374,7 +374,7 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
                 "/" +
                 project +
                 "/" +
-                type.name() +
+                type.name().toLowerCase() +
                 "/" +
                 id +
                 "/" +
@@ -425,7 +425,7 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
                 "/" +
                 project +
                 "/" +
-                type.name() +
+                type.name().toLowerCase() +
                 "/" +
                 id +
                 "/" +
