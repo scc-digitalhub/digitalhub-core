@@ -175,10 +175,10 @@ public class FlowerServerRunner {
                     fabModel.setDependencies(functionSpec.getRequirements());
                 }
                 fabModel.setServerApp("main:" + functionSpec.getSource().getHandler());
+                fabModel.setClientApp("");
                 fabModel.setDefaultFederation("core-federation");
                 fabModel.setConfig(runSpec.getParameters());
                 String toml = fabModel.toTOML();
-                System.out.println("Generated TOML: " + toml);
                 // convert toml to base64
                 String tomlBase64 = Base64.getEncoder().encodeToString(toml.getBytes(StandardCharsets.UTF_8));
                 contextSources.add(ContextSource.builder()

@@ -88,9 +88,10 @@ public class FABModel {
                         "[tool.flwr.app]\n" + //
                         "publisher = \"" + valueOf(publisher) + "\"\n" + //
                         "\n" + //
+                        (serverApp != null || clientApp != null ? 
                         "[tool.flwr.app.components]\n" + //
-                        "serverapp = \"" + valueOf(serverApp) + "\"\n" + //
-                        "clientapp = \"" + valueOf(clientApp) + "\"\n" + //
+                        (serverApp  != null ? "serverapp = \"" + valueOf(serverApp) + "\"\n" : "") + //
+                        (clientApp != null ? "clientapp = \"" + valueOf(clientApp) + "\"\n": ""): "") + //
                         "\n" + //
                         "[tool.flwr.app.config]\n" + //
                         (config != null ? String.join("\n", config.entrySet().stream().map(e -> "\"" + e.getKey() + "\" = " + typedValueOf(e.getValue())).toList()) : "") + //
