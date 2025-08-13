@@ -149,6 +149,7 @@ public class FlowerClientRuntime extends K8sBaseRuntime<FlowerClientFunctionSpec
         K8sRunnable runnable =
             switch (runAccessor.getTask()) {
                 case FlowerClientTaskSpec.KIND -> new FlowerClientRunner(
+                    images.get("client"),
                     userId,
                     groupId,
                     runFlowerSpec.getFunctionSpec(),

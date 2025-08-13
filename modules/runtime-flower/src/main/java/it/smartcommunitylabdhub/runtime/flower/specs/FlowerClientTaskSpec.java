@@ -30,10 +30,12 @@ import it.smartcommunitylabdhub.runtime.flower.FlowerClientRuntime;
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
+@NoArgsConstructor
 @SpecType(runtime = FlowerClientRuntime.RUNTIME, kind = FlowerClientTaskSpec.KIND, entity = EntityName.TASK)
 public class FlowerClientTaskSpec extends K8sFunctionTaskBaseSpec {
 

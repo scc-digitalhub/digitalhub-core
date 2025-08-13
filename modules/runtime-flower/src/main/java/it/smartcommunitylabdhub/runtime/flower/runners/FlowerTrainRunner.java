@@ -38,6 +38,7 @@ import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runtime.flower.FlowerServerRuntime;
 import it.smartcommunitylabdhub.runtime.flower.model.FABModel;
+import it.smartcommunitylabdhub.runtime.flower.model.FlowerSourceCode;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerFunctionSpec;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerRunSpec;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerTrainTaskSpec;
@@ -52,6 +53,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.util.UriComponents;
+import org.springframework.web.util.UriComponentsBuilder;
 
 public class FlowerTrainRunner {
 
@@ -94,6 +97,8 @@ public class FlowerTrainRunner {
                 List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))
             );
 
+            coreEnvList.add(new CoreEnv("PYTHONPATH", "${PYTHONPATH}:/shared/"));
+    
             List<CoreEnv> coreSecrets = secretData == null
                 ? null
                 : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
@@ -107,28 +112,73 @@ public class FlowerTrainRunner {
             List<ContextRef> contextRefs = null;
             List<ContextSource> contextSources = new ArrayList<>();
 
-            FABModel fabModel = new FABModel();
-            fabModel.setName(runSpecAccessor.getFunction());
-            fabModel.setVersion(runSpecAccessor.getFunctionId());
-            if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
-                fabModel.setDependencies(functionSpec.getRequirements());
-            }
-            Map<String, Serializable> config = new HashMap<>();
-            config.put("insecure", true);
-            config.put("address", runSpec.getSuperlink());
             String federation = runSpec.getFederation() != null ? runSpec.getFederation() : defaultFederation;
-            fabModel.setFederationConfigs(Collections.singletonMap(federation, config));
-            String toml = fabModel.toTOML();
-            // convert toml to base64
-            String tomlBase64 = Base64.getEncoder().encodeToString(toml.getBytes(StandardCharsets.UTF_8));
-            contextSources.add(ContextSource.builder().name("pyproject.toml").base64(tomlBase64).build());
 
+            if (functionSpec.getSource() != null) {
+                FlowerSourceCode source = functionSpec.getSource();
+                String path = "main.py";
+
+                if (StringUtils.hasText(source.getSource())) {
+                    try {
+                        //evaluate if local path (no scheme)
+                        UriComponents uri = UriComponentsBuilder.fromUriString(source.getSource()).build();
+                        String scheme = uri.getScheme();
+
+                        if (scheme != null) {
+                            //write as ref
+                            contextRefs = Collections.singletonList(ContextRef.from(source.getSource()));
+                        } else {
+                            if (StringUtils.hasText(path)) {
+                                //override path for local src
+                                path = uri.getPath();
+                                if (path.startsWith(".")) {
+                                    path = path.substring(1);
+                                }
+                            }
+                        }
+                    } catch (IllegalArgumentException e) {
+                        //skip invalid source
+                    }
+                }
+
+                if (StringUtils.hasText(source.getBase64())) {
+                    contextSources.add(ContextSource.builder().name(path).base64(source.getBase64()).build());
+                    // generate toml in addition to source
+                    FABModel fabModel = new FABModel();
+                    fabModel.setName(runSpecAccessor.getFunction() + "-" + runSpecAccessor.getFunctionId());
+                    fabModel.setVersion("1.0.0");
+                    if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
+                        fabModel.setDependencies(functionSpec.getRequirements());
+                    }
+                    fabModel.setServerApp("main:" + functionSpec.getSource().getHandler());
+                    // fake client app for compatibility
+                    fabModel.setClientApp("main:" + functionSpec.getSource().getHandler());
+                    fabModel.setDefaultFederation(defaultFederation);
+                    Map<String, Serializable> config = new HashMap<>();
+                    config.put("insecure", true);
+                    config.put("address", runSpec.getSuperlink());
+                    fabModel.setFederationConfigs(Collections.singletonMap(federation, config));
+
+                    fabModel.setConfig(runSpec.getParameters());
+                    String toml = fabModel.toTOML();
+                    // convert toml to base64
+                    String tomlBase64 = Base64.getEncoder().encodeToString(toml.getBytes(StandardCharsets.UTF_8));
+                    contextSources.add(ContextSource.builder()
+                                        .name("pyproject.toml")
+                                        .base64(tomlBase64)
+                                        .build());
+                }
+            }
+        
+            String federationConfig = "insecure=true " + "address=\""+runSpec.getSuperlink()+"\"";
             List<String> args = new ArrayList<>(
                 List.of(
                     "run",
-                    ".",
-                    federation,
-                    "--stream"
+                    "--stream",
+                    "--federation-config",
+                    federationConfig,
+                    "/shared/",
+                    federation
                 )
             );
 

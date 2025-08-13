@@ -66,6 +66,7 @@ public class FlowerClientRunner {
 
     private final int userId;
     private final int groupId;
+    private final String image;
     private final FlowerClientFunctionSpec functionSpec;
     private final Map<String, String> secretData;
 
@@ -74,12 +75,14 @@ public class FlowerClientRunner {
     private final Resource entrypoint = new ClassPathResource("runtime-flower/docker/client.sh");
 
     public FlowerClientRunner(
+        String image,
         Integer userId,
         Integer groupId,
         FlowerClientFunctionSpec functionPythonSpec,
         Map<String, String> secretData,
         K8sBuilderHelper k8sBuilderHelper
     ) {
+        this.image = image;
         this.functionSpec = functionPythonSpec;
         this.secretData = secretData;
         this.k8sBuilderHelper = k8sBuilderHelper;
@@ -114,10 +117,6 @@ public class FlowerClientRunner {
 
         // Parse run spec
         RunSpecAccessor runSpecAccessor = RunSpecAccessor.with(run.getSpec());
-
-        //read source and build context
-        List<ContextRef> contextRefs = null;
-        List<ContextSource> contextSources = new ArrayList<>();
 
         //write entrypoint
         try {
@@ -167,11 +166,11 @@ public class FlowerClientRunner {
                 if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
                     fabModel.setDependencies(functionSpec.getRequirements());
                 }
+                fabModel.setServerApp("");
                 fabModel.setClientApp("main:" + functionSpec.getSource().getHandler());
                 fabModel.setDefaultFederation("core-federation");
                 fabModel.setConfig(runSpec.getParameters());
                 String toml = fabModel.toTOML();
-                System.out.println("Generated TOML: " + toml);
                 // convert toml to base64
                 String tomlBase64 = Base64.getEncoder().encodeToString(toml.getBytes(StandardCharsets.UTF_8));
                 contextSources.add(ContextSource.builder()
@@ -202,7 +201,7 @@ public class FlowerClientRunner {
                     : null
             )
             //base
-            .image(functionSpec.getImage())
+            .image(StringUtils.hasText(functionSpec.getImage()) ? functionSpec.getImage() : image)
             .command(cmd)
             .args(args)
             .contextRefs(contextRefs)
