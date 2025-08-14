@@ -44,6 +44,7 @@ import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientRunSpec;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -110,9 +111,11 @@ public class FlowerBuildClientRunner {
         
         FABModel fabModel = new FABModel();
         fabModel.setName(runSpecAccessor.getFunction());
-        fabModel.setVersion(runSpecAccessor.getFunctionId());
+        fabModel.setVersion("1.0.0");
+        fabModel.setDependencies(new LinkedList<>());
+        fabModel.getDependencies().add("flwr[rest]");
         if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
-            fabModel.setDependencies(functionSpec.getRequirements());
+            fabModel.getDependencies().addAll(functionSpec.getRequirements());
         }
         fabModel.setDefaultFederation("core-federation");
         String toml = fabModel.toTOML();

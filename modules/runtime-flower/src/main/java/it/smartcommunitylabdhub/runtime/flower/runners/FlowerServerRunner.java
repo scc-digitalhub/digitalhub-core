@@ -49,6 +49,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -61,7 +62,7 @@ public class FlowerServerRunner {
 
     private static final int UID = 49999;
     private static final int GID = 49999;
-    private static final List<Integer> HTTP_PORTS = List.of(9091, 9092, 9093);
+    private static final List<Integer> HTTP_PORTS = List.of(9091, 9093, 9095);
 
     private final int userId;
     private final int groupId;
@@ -111,7 +112,7 @@ public class FlowerServerRunner {
         Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
 
         //run args. TODO - improve
-        String[] args = {"--insecure"};
+        String[] args = {"--insecure", "--fleet-api-type", "rest"};
 
         //read source and build context
         List<ContextRef> contextRefs = null;
@@ -133,8 +134,10 @@ public class FlowerServerRunner {
         FABModel fabModel = new FABModel();
         fabModel.setName("flowerapp");
         fabModel.setVersion("1.0.0");
+        fabModel.setDependencies(new LinkedList<>());
+        fabModel.getDependencies().add("flwr[rest]");
         if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
-            fabModel.setDependencies(functionSpec.getRequirements());
+            fabModel.getDependencies().addAll(functionSpec.getRequirements());
         }
         fabModel.setDefaultFederation("core-federation");
         String toml = fabModel.toTOML();
