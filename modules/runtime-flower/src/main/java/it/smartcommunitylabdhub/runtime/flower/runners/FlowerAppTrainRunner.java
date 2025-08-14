@@ -36,12 +36,12 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCronJobRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
-import it.smartcommunitylabdhub.runtime.flower.FlowerServerRuntime;
+import it.smartcommunitylabdhub.runtime.flower.FlowerAppRuntime;
 import it.smartcommunitylabdhub.runtime.flower.model.FABModel;
 import it.smartcommunitylabdhub.runtime.flower.model.FlowerSourceCode;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerFunctionSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerRunSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerTrainTaskSpec;
+import it.smartcommunitylabdhub.runtime.flower.specs.FlowerAppFunctionSpec;
+import it.smartcommunitylabdhub.runtime.flower.specs.FlowerAppRunSpec;
+import it.smartcommunitylabdhub.runtime.flower.specs.FlowerAppTrainTaskSpec;
 
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
@@ -56,7 +56,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
-public class FlowerTrainRunner {
+public class FlowerAppTrainRunner {
 
     private static final int UID = 1000;
     private static final int GID = 1000;
@@ -65,16 +65,16 @@ public class FlowerTrainRunner {
     private final String image;
     private final int userId;
     private final int groupId;
-    private final FlowerServerFunctionSpec functionSpec;
+    private final FlowerAppFunctionSpec functionSpec;
     private final Map<String, String> secretData;
 
     private final K8sBuilderHelper k8sBuilderHelper;
 
-    public FlowerTrainRunner(
+    public FlowerAppTrainRunner(
         String image,
         Integer userId,
         Integer groupId,
-        FlowerServerFunctionSpec functionPythonSpec,
+        FlowerAppFunctionSpec functionPythonSpec,
         Map<String, String> secretData,
         K8sBuilderHelper k8sBuilderHelper
     ) {
@@ -88,8 +88,8 @@ public class FlowerTrainRunner {
     }
 
     public K8sRunnable produce(Run run) {
-        FlowerServerRunSpec runSpec = new FlowerServerRunSpec(run.getSpec());
-        FlowerTrainTaskSpec taskSpec = runSpec.getTaskTrainSpec();
+        FlowerAppRunSpec runSpec = new FlowerAppRunSpec(run.getSpec());
+        FlowerAppTrainTaskSpec taskSpec = runSpec.getTaskTrainSpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
 
         try {
@@ -114,9 +114,10 @@ public class FlowerTrainRunner {
 
             String federation = runSpec.getFederation() != null ? runSpec.getFederation() : defaultFederation;
 
-            if (functionSpec.getSource() != null) {
-                FlowerSourceCode source = functionSpec.getSource();
-                String path = "main.py";
+            if (functionSpec.getFabSource() != null) {
+                FlowerSourceCode source = functionSpec.getFabSource();
+                String serverPath = "server.py";
+                String clientPath = "client.py";
 
                 if (StringUtils.hasText(source.getSource())) {
                     try {
@@ -128,11 +129,18 @@ public class FlowerTrainRunner {
                             //write as ref
                             contextRefs = Collections.singletonList(ContextRef.from(source.getSource()));
                         } else {
-                            if (StringUtils.hasText(path)) {
+                            if (StringUtils.hasText(serverPath)) {
                                 //override path for local src
-                                path = uri.getPath();
-                                if (path.startsWith(".")) {
-                                    path = path.substring(1);
+                                serverPath = uri.getPath();
+                                if (serverPath.startsWith(".")) {
+                                    serverPath = serverPath.substring(1);
+                                }
+                            }
+                            if (StringUtils.hasText(clientPath)) {
+                                //override path for local src
+                                clientPath = uri.getPath();
+                                if (clientPath.startsWith(".")) {
+                                    clientPath = clientPath.substring(1);
                                 }
                             }
                         }
@@ -141,8 +149,9 @@ public class FlowerTrainRunner {
                     }
                 }
 
-                if (StringUtils.hasText(source.getBase64())) {
-                    contextSources.add(ContextSource.builder().name(path).base64(source.getBase64()).build());
+                if (StringUtils.hasText(source.getClientbase64()) && StringUtils.hasText(source.getServerbase64())) {
+                    contextSources.add(ContextSource.builder().name(clientPath).base64(source.getClientbase64()).build());
+                    contextSources.add(ContextSource.builder().name(serverPath).base64(source.getServerbase64()).build());
                     // generate toml in addition to source
                     FABModel fabModel = new FABModel();
                     fabModel.setName(runSpecAccessor.getFunction() + "-" + runSpecAccessor.getFunctionId());
@@ -150,9 +159,9 @@ public class FlowerTrainRunner {
                     if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
                         fabModel.setDependencies(functionSpec.getRequirements());
                     }
-                    fabModel.setServerApp("main:" + functionSpec.getSource().getHandler());
+                    fabModel.setServerApp("server:" + functionSpec.getFabSource().getServerapp());
                     // fake client app for compatibility
-                    fabModel.setClientApp("main:" + functionSpec.getSource().getHandler());
+                    fabModel.setClientApp("client:" + functionSpec.getFabSource().getClientapp());
                     fabModel.setDefaultFederation(defaultFederation);
                     Map<String, Serializable> config = new HashMap<>();
                     config.put("insecure", true);
@@ -184,8 +193,8 @@ public class FlowerTrainRunner {
 
             K8sRunnable k8sJobRunnable = K8sJobRunnable
                 .builder()
-                .runtime(FlowerServerRuntime.RUNTIME)
-                .task(FlowerTrainTaskSpec.KIND)
+                .runtime(FlowerAppRuntime.RUNTIME)
+                .task(FlowerAppTrainTaskSpec.KIND)
                 .state(State.READY.name())
                 .labels(
                     k8sBuilderHelper != null
@@ -219,8 +228,8 @@ public class FlowerTrainRunner {
                 k8sJobRunnable =
                     K8sCronJobRunnable
                         .builder()
-                        .runtime(FlowerServerRuntime.RUNTIME)
-                        .task(FlowerTrainTaskSpec.KIND)
+                        .runtime(FlowerAppRuntime.RUNTIME)
+                        .task(FlowerAppTrainTaskSpec.KIND)
                         .state(State.READY.name())
                         .labels(
                             k8sBuilderHelper != null

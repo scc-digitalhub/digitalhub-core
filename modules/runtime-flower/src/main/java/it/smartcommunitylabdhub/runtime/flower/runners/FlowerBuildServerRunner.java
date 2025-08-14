@@ -112,51 +112,17 @@ public class FlowerBuildServerRunner {
         List<ContextRef> contextRefs = null;
         List<ContextSource> contextSources = new ArrayList<>();
         
-        if (functionSpec.getSource() != null) {
-            FlowerSourceCode source = functionSpec.getSource();
-            String path = "main.py";
-
-            if (StringUtils.hasText(source.getSource())) {
-                try {
-                    //evaluate if local path (no scheme)
-                    UriComponents uri = UriComponentsBuilder.fromUriString(source.getSource()).build();
-                    String scheme = uri.getScheme();
-
-                    if (scheme != null) {
-                        //write as ref
-                        contextRefs = Collections.singletonList(ContextRef.from(source.getSource()));
-                    } else {
-                        if (StringUtils.hasText(path)) {
-                            //override path for local src
-                            path = uri.getPath();
-                            if (path.startsWith(".")) {
-                                path = path.substring(1);
-                            }
-                        }
-                    }
-                } catch (IllegalArgumentException e) {
-                    //skip invalid source
-                }
-            }
-
-            if (StringUtils.hasText(source.getBase64())) {
-                contextSources.add(ContextSource.builder().name(path).base64(source.getBase64()).build());
-                // generate toml in addition to source
-                FABModel fabModel = new FABModel();
-                fabModel.setName(runSpecAccessor.getFunction());
-                fabModel.setVersion(runSpecAccessor.getFunctionId());
-                if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
-                    fabModel.setDependencies(functionSpec.getRequirements());
-                }
-                fabModel.setServerApp("main:" + functionSpec.getSource().getHandler());
-                fabModel.setDefaultFederation("core-federation");
-                fabModel.setConfig(runSpec.getParameters());
-                String toml = fabModel.toTOML();
-                // convert toml to base64
-                String tomlBase64 = Base64.getEncoder().encodeToString(toml.getBytes(StandardCharsets.UTF_8));
-                contextSources.add(ContextSource.builder().name("pyproject.toml").base64(tomlBase64).build());
-            }
+        FABModel fabModel = new FABModel();
+        fabModel.setName(runSpecAccessor.getFunction());
+        fabModel.setVersion(runSpecAccessor.getFunctionId());
+        if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
+            fabModel.setDependencies(functionSpec.getRequirements());
         }
+        fabModel.setDefaultFederation("core-federation");
+        String toml = fabModel.toTOML();
+        // convert toml to base64
+        String tomlBase64 = Base64.getEncoder().encodeToString(toml.getBytes(StandardCharsets.UTF_8));
+        contextSources.add(ContextSource.builder().name("pyproject.toml").base64(tomlBase64).build());
 
         //set workdir from now on
         dockerfileGenerator.workdir("/app");

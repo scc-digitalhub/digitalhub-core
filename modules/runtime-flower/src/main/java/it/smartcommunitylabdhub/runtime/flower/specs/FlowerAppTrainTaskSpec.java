@@ -27,6 +27,7 @@ import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
+import it.smartcommunitylabdhub.runtime.flower.FlowerAppRuntime;
 import it.smartcommunitylabdhub.runtime.flower.FlowerServerRuntime;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
@@ -40,15 +41,15 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@SpecType(runtime = FlowerServerRuntime.RUNTIME, kind = FlowerTrainTaskSpec.KIND, entity = EntityName.TASK)
-public class FlowerTrainTaskSpec extends K8sFunctionTaskBaseSpec {
+@SpecType(runtime = FlowerAppRuntime.RUNTIME, kind = FlowerAppTrainTaskSpec.KIND, entity = EntityName.TASK)
+public class FlowerAppTrainTaskSpec extends K8sFunctionTaskBaseSpec {
 
-    public static final String KIND = "flower-server+train";
+    public static final String KIND = "flower-app+train";
 
     @Pattern(regexp = Keys.CRONTAB_PATTERN)
     private String schedule;
 
-    public FlowerTrainTaskSpec(Map<String, Serializable> data) {
+    public FlowerAppTrainTaskSpec(Map<String, Serializable> data) {
         configure(data);
     }
 
@@ -56,7 +57,7 @@ public class FlowerTrainTaskSpec extends K8sFunctionTaskBaseSpec {
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
 
-        FlowerTrainTaskSpec spec = mapper.convertValue(data, FlowerTrainTaskSpec.class);
+        FlowerAppTrainTaskSpec spec = mapper.convertValue(data, FlowerAppTrainTaskSpec.class);
         this.schedule = spec.getSchedule();
     }
 }

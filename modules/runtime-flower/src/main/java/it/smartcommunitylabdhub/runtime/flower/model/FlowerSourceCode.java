@@ -23,24 +23,37 @@
 
 package it.smartcommunitylabdhub.runtime.flower.model;
 
+import java.io.Serializable;
+
+import org.springframework.lang.Nullable;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
-import it.smartcommunitylabdhub.commons.models.objects.SourceCode;
+
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class FlowerSourceCode 
-    extends SourceCode<it.smartcommunitylabdhub.runtime.flower.model.FlowerSourceCode.FlowerSourceCodeLanguages> {
+public class FlowerSourceCode implements Serializable {
 
-    @Override
-    public FlowerSourceCodeLanguages getLang() {
-        return FlowerSourceCodeLanguages.python;
-    }
+    @Nullable
+    @Schema(title = "fields.flowerSourceCode.source.title", description = "fields.flowerSourceCode.source.description")
+    private String source;
 
-    public enum FlowerSourceCodeLanguages {
-        python,
-    }
+    @Nullable
+    @Schema(title = "fields.flowerSourceCode.clientapp.title", description = "fields.flowerSourceCode.clientapp.description")
+    private String clientapp;
+
+    @Nullable
+    @Schema(title = "fields.flowerSourceCode.serverapp.title", description = "fields.flowerSourceCode.serverapp.description")
+    private String serverapp;
+
+    @Schema(title = "fields.flowerSourceCode.clientbase64.title", description = "fields.flowerSourceCode.clientbase64.description")
+    private String clientbase64;
+
+    @Schema(title = "fields.flowerSourceCode.serverbase64.title", description = "fields.flowerSourceCode.serverbase64.description")
+    private String serverbase64;
 
 }
