@@ -45,6 +45,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -109,7 +110,7 @@ public class FlowerClientRunner {
         List<ContextSource> contextSources = new ArrayList<>();
 
         //run args. TODO - improve
-        String[] args = {"--insecure", "--superlink", runSpec.getSuperlink()};
+        String[] args = {"--insecure", "--superlink", createSuperlinkAddress(runSpec.getSuperlink()), "--rest"};
 
 
         //write entrypoint
@@ -127,8 +128,10 @@ public class FlowerClientRunner {
         FABModel fabModel = new FABModel();
         fabModel.setName("flowerapp");
         fabModel.setVersion("1.0.0");
+        fabModel.setDependencies(new LinkedList<>());
+        fabModel.getDependencies().add("flwr[rest]");
         if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
-            fabModel.setDependencies(functionSpec.getRequirements());
+            fabModel.getDependencies().addAll(functionSpec.getRequirements());
         }
         fabModel.setDefaultFederation("core-federation");
         String toml = fabModel.toTOML();
@@ -197,5 +200,11 @@ public class FlowerClientRunner {
         k8sDeploymentRunnable.setProject(run.getProject());
 
         return k8sDeploymentRunnable;
+    }
+
+    private String createSuperlinkAddress(String superlink) {
+        return superlink.startsWith("http")
+            ? superlink
+            : "http://" + superlink;
     }
 }
