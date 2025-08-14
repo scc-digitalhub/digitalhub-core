@@ -23,7 +23,6 @@
 
 package it.smartcommunitylabdhub.runtime.flower.runners;
 
-import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.models.enums.State;
@@ -37,7 +36,6 @@ import it.smartcommunitylabdhub.framework.k8s.runnables.K8sDeploymentRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runtime.flower.FlowerClientRuntime;
 import it.smartcommunitylabdhub.runtime.flower.model.FABModel;
-import it.smartcommunitylabdhub.runtime.flower.model.FlowerSourceCode;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientTaskSpec;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientFunctionSpec;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientRunSpec;
@@ -47,19 +45,17 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;
-import org.springframework.web.util.UriComponents;
-import org.springframework.web.util.UriComponentsBuilder;
 
 public class FlowerClientRunner {
-    // TODO allow for running without build
 
     private static final int UID = 49999;
     private static final int GID = 49999;
@@ -115,8 +111,6 @@ public class FlowerClientRunner {
         //run args. TODO - improve
         String[] args = {"--insecure", "--superlink", runSpec.getSuperlink()};
 
-        // Parse run spec
-        RunSpecAccessor runSpecAccessor = RunSpecAccessor.with(run.getSpec());
 
         //write entrypoint
         try {
@@ -130,54 +124,30 @@ public class FlowerClientRunner {
             throw new CoreRuntimeException("error with reading client entrypoint for runtime-flower");
         }
 
-        if (functionSpec.getSource() != null) {
-            FlowerSourceCode source = functionSpec.getSource();
-            String path = "main.py";
+        FABModel fabModel = new FABModel();
+        fabModel.setName("flowerapp");
+        fabModel.setVersion("1.0.0");
+        if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
+            fabModel.setDependencies(functionSpec.getRequirements());
+        }
+        fabModel.setDefaultFederation("core-federation");
+        String toml = fabModel.toTOML();
+        // convert toml to base64
+        String tomlBase64 = Base64.getEncoder().encodeToString(toml.getBytes(StandardCharsets.UTF_8));
+        contextSources.add(ContextSource.builder()
+                            .name("pyproject.toml")
+                            .base64(tomlBase64)
+                            .build());
 
-            if (StringUtils.hasText(source.getSource())) {
-                try {
-                    //evaluate if local path (no scheme)
-                    UriComponents uri = UriComponentsBuilder.fromUriString(source.getSource()).build();
-                    String scheme = uri.getScheme();
-
-                    if (scheme != null) {
-                        //write as ref
-                        contextRefs = Collections.singletonList(ContextRef.from(source.getSource()));
-                    } else {
-                        if (StringUtils.hasText(path)) {
-                            //override path for local src
-                            path = uri.getPath();
-                            if (path.startsWith(".")) {
-                                path = path.substring(1);
-                            }
-                        }
-                    }
-                } catch (IllegalArgumentException e) {
-                    //skip invalid source
-                }
-            }
-
-            if (StringUtils.hasText(source.getBase64())) {
-                contextSources.add(ContextSource.builder().name(path).base64(source.getBase64()).build());
-                // generate toml in addition to source
-                FABModel fabModel = new FABModel();
-                fabModel.setName(runSpecAccessor.getFunction() + "-" + runSpecAccessor.getFunctionId());
-                fabModel.setVersion("1.0.0");
-                if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
-                    fabModel.setDependencies(functionSpec.getRequirements());
-                }
-                fabModel.setServerApp("");
-                fabModel.setClientApp("main:" + functionSpec.getSource().getHandler());
-                fabModel.setDefaultFederation("core-federation");
-                fabModel.setConfig(runSpec.getParameters());
-                String toml = fabModel.toTOML();
-                // convert toml to base64
-                String tomlBase64 = Base64.getEncoder().encodeToString(toml.getBytes(StandardCharsets.UTF_8));
-                contextSources.add(ContextSource.builder()
-                                    .name("pyproject.toml")
-                                    .base64(tomlBase64)
-                                    .build());
-            }
+        if (runSpec.getNodeConfig() != null && !runSpec.getNodeConfig().isEmpty()) {
+            List<String> newArgs = new ArrayList<>(Arrays.asList(args));
+            newArgs.add("--node-config");
+            String config = StringUtils.collectionToDelimitedString(
+            runSpec.getNodeConfig().entrySet().stream().map(e -> {
+                return e.getKey() + "=" + e.getValue();
+            }).collect(Collectors.toList()), " ");
+            newArgs.add(config);
+            args = newArgs.toArray(new String[0]);
         }
 
         String cmd = null;
@@ -188,7 +158,6 @@ public class FlowerClientRunner {
             argList.addAll(Arrays.asList(args));
             args = argList.toArray(new String[0]);
         }
-
 
         K8sRunnable k8sDeploymentRunnable = K8sDeploymentRunnable
             .builder()

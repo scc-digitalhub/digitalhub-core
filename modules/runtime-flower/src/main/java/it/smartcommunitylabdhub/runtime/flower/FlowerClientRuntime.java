@@ -193,7 +193,6 @@ public class FlowerClientRuntime extends K8sBaseRuntime<FlowerClientFunctionSpec
 
             String functionId = runAccessor.getFunctionId();
             Function function = functionService.getFunction(functionId);
-            String kind = runAccessor.getTask();
 
             log.debug("update function {} spec to use built image: {}", functionId, image);
 

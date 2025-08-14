@@ -25,12 +25,14 @@ package it.smartcommunitylabdhub.runtime.flower.specs;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
-import it.smartcommunitylabdhub.runtime.flower.FlowerServerRuntime;
+import it.smartcommunitylabdhub.runtime.flower.FlowerAppRuntime;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.Map;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -39,21 +41,26 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = FlowerServerRuntime.RUNTIME, kind = FlowerServerRunSpec.KIND, entity = EntityName.RUN)
-public class FlowerServerRunSpec extends RunBaseSpec {
+@SpecType(runtime = FlowerAppRuntime.RUNTIME, kind = FlowerAppRunSpec.KIND, entity = EntityName.RUN)
+public class FlowerAppRunSpec extends RunBaseSpec {
 
-    public static final String KIND = FlowerServerRuntime.RUNTIME + "+run";
+    public static final String KIND = FlowerAppRuntime.RUNTIME + "+run";
 
     @JsonUnwrapped
-    private FlowerServerTaskSpec taskDeploySpec;
-    @JsonUnwrapped
-    private FlowerBuildServerTaskSpec taskBuildSpec;
-
+    private FlowerAppTrainTaskSpec taskTrainSpec;
+    
     @JsonSchemaIgnore
     @JsonUnwrapped
-    private FlowerServerFunctionSpec functionSpec;
+    private FlowerAppFunctionSpec functionSpec;
+
+    private Map<String, Serializable> parameters = new HashMap<>();
     
-    public FlowerServerRunSpec(Map<String, Serializable> data) {
+    @Schema(title = "fields.flower.federation.title", description = "fields.flower.federation.description")
+    private String federation;
+    @Schema(title = "fields.flower.superlink.title", description = "fields.flower.superlink.description")
+    private String superlink;
+
+    public FlowerAppRunSpec(Map<String, Serializable> data) {
         configure(data);
     }
 
@@ -61,20 +68,20 @@ public class FlowerServerRunSpec extends RunBaseSpec {
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
 
-        FlowerServerRunSpec spec = mapper.convertValue(data, FlowerServerRunSpec.class);
+        FlowerAppRunSpec spec = mapper.convertValue(data, FlowerAppRunSpec.class);
 
         this.functionSpec = spec.getFunctionSpec();
     
-        this.taskDeploySpec = spec.getTaskDeploySpec();
-        this.taskBuildSpec = spec.getTaskBuildSpec();
+        this.taskTrainSpec = spec.getTaskTrainSpec();
+
+        this.parameters = spec.getParameters();
+        this.federation = spec.getFederation();
+        this.superlink = spec.getSuperlink();
     }
-    public void setTaskDeploySpec(FlowerServerTaskSpec taskDeploySpec) {
-        this.taskDeploySpec = taskDeploySpec;
+    public void setTaskTrainSpec(FlowerAppTrainTaskSpec taskTrainSpec) {
+        this.taskTrainSpec = taskTrainSpec;
     }
-    public void setTaskBuildSpec(FlowerBuildServerTaskSpec taskBuildSpec) {
-        this.taskBuildSpec = taskBuildSpec;
-    }
-    public void setFunctionSpec(FlowerServerFunctionSpec functionSpec) {
+    public void setFunctionSpec(FlowerAppFunctionSpec functionSpec) {
         this.functionSpec = functionSpec;
     }
 }

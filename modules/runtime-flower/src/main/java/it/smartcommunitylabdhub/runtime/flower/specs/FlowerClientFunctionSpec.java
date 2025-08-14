@@ -29,7 +29,6 @@ import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.function.FunctionBaseSpec;
 import it.smartcommunitylabdhub.runtime.flower.FlowerClientRuntime;
-import it.smartcommunitylabdhub.runtime.flower.model.FlowerSourceCode;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -42,10 +41,6 @@ import lombok.Setter;
 @NoArgsConstructor
 @SpecType(runtime = FlowerClientRuntime.RUNTIME, kind = FlowerClientRuntime.RUNTIME, entity = EntityName.FUNCTION)
 public class FlowerClientFunctionSpec extends FunctionBaseSpec {
-
-    @JsonProperty("source")
-    @Schema(title = "fields.flower.sourceCode.title", description = "fields.flower.sourceCode.description")
-    private FlowerSourceCode source;
 
     @JsonProperty("image")
     @Schema(title = "fields.flower.image.title", description = "fields.flower.image.description")
@@ -68,7 +63,6 @@ public class FlowerClientFunctionSpec extends FunctionBaseSpec {
 
         FlowerServerFunctionSpec spec = mapper.convertValue(data, FlowerServerFunctionSpec.class);
         this.requirements = spec.getRequirements();
-        this.source = spec.getSource();
         this.image = spec.getImage();
         this.baseImage = spec.getBaseImage();
     }
