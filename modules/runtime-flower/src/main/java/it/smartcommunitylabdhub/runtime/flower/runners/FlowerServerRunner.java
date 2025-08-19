@@ -140,8 +140,8 @@ public class FlowerServerRunner {
         // String[] args = {"--insecure", "--fleet-api-type", "rest"};
         String[] args = null;
         if (StringUtils.hasText(caCert) && StringUtils.hasText(tlsConf)) {
-            String intName = k8sBuilderHelper.getServiceName("flower-server", FlowerServerTaskSpec.KIND, run.getId());
-            String extName = taskAccessor.getFunction();
+            String dns1 = k8sBuilderHelper.getServiceName("flower-server", FlowerServerTaskSpec.KIND, run.getId());
+            String dns2 = k8sBuilderHelper.getServiceName("flower-server", run.getProject(),  taskAccessor.getFunction() + "-latest");
             contextSources.add(ContextSource.builder()
                     .name("certificates/ca.crt")
                     .base64(Base64.getEncoder().encodeToString(caCert.getBytes(StandardCharsets.UTF_8)))
@@ -152,7 +152,7 @@ public class FlowerServerRunner {
                     .build());
             contextSources.add(ContextSource.builder()
                     .name("certificates/tls.conf")
-                    .base64(Base64.getEncoder().encodeToString(preprocessConf(tlsConf, tlsIntDomain, tlsExtDomain, intName, extName).getBytes(StandardCharsets.UTF_8)))
+                    .base64(Base64.getEncoder().encodeToString(preprocessConf(tlsConf, tlsIntDomain, tlsExtDomain, new String[]{dns1, dns2}).getBytes(StandardCharsets.UTF_8)))
                     .build());
 
             args = new String[] {
@@ -276,11 +276,15 @@ public class FlowerServerRunner {
         return k8sServeRunnable;
     }
 
-    private String preprocessConf(String content, String tlsIntDomain, String tlsExtDomain, String intName, String extName) {
-        // TODO: replace!!!
+    private String preprocessConf(String content, String tlsIntDomain, String tlsExtDomain, String[] intNames) {
+        // TODO: revise!!!
         tlsIntDomain = tlsIntDomain.startsWith(".") ? tlsIntDomain : "." + tlsIntDomain;
         tlsExtDomain = tlsExtDomain.startsWith(".") ? tlsExtDomain : "." + tlsExtDomain;
-        return content.replace("${intDomain}", intName + tlsIntDomain).replace("${extDomain}", extName + tlsExtDomain);
+        String res = content;
+        for (int i = 1; i <= intNames.length; i++) {
+            res = res.replace("${dns"+i+"}", intNames[i-1] + tlsIntDomain);
+        }
+        return res.replace("${extDomain}", "*" + tlsExtDomain);
     }
 
 }
