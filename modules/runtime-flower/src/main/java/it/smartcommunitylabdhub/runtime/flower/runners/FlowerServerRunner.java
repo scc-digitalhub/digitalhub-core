@@ -62,8 +62,9 @@ public class FlowerServerRunner {
 
     private static final int UID = 49999;
     private static final int GID = 49999;
-    private static final List<Integer> HTTP_PORTS = List.of(9091, 9093, 9095);
-
+    // disable REST api scenario for now
+    // private static final List<Integer> HTTP_PORTS = List.of(9091, 9093, 9095);
+    private static final List<Integer> HTTP_PORTS = List.of(9091, 9093, 9092);
     private final int userId;
     private final int groupId;
     private final String image;
@@ -75,10 +76,22 @@ public class FlowerServerRunner {
 
     private final Resource entrypoint = new ClassPathResource("runtime-flower/docker/server.sh");
 
+    private final String caCert;
+    private final String caKey;
+    private final String tlsConf;
+    private final String tlsIntDomain;
+    private final String tlsExtDomain;
+    
+
     public FlowerServerRunner(
         String image,
         Integer userId,
         Integer groupId,
+        String caCert,
+        String caKey,
+        String tlsConf,
+        String tlsIntDomain,
+        String tlsExtDomain,
         FlowerServerFunctionSpec functionPythonSpec,
         Map<String, String> secretData,
         K8sBuilderHelper k8sBuilderHelper,
@@ -92,6 +105,12 @@ public class FlowerServerRunner {
 
         this.userId = userId != null ? userId : UID;
         this.groupId = groupId != null ? groupId : GID;
+
+        this.caCert = caCert;
+        this.caKey = caKey;
+        this.tlsConf = tlsConf;
+        this.tlsIntDomain = tlsIntDomain;
+        this.tlsExtDomain = tlsExtDomain;
     }
 
     public K8sRunnable produce(Run run) {
@@ -111,12 +130,52 @@ public class FlowerServerRunner {
 
         Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
 
-        //run args. TODO - improve
-        String[] args = {"--insecure", "--fleet-api-type", "rest"};
-
         //read source and build context
         List<ContextRef> contextRefs = null;
         List<ContextSource> contextSources = new ArrayList<>();
+
+
+        //run args
+        // disable REST api scenario for now
+        // String[] args = {"--insecure", "--fleet-api-type", "rest"};
+        String[] args = null;
+        if (StringUtils.hasText(caCert) && StringUtils.hasText(tlsConf)) {
+            String intName = k8sBuilderHelper.getServiceName("flower-server", FlowerServerTaskSpec.KIND, run.getId());
+            String extName = taskAccessor.getFunction();
+            contextSources.add(ContextSource.builder()
+                    .name("certificates/ca.crt")
+                    .base64(Base64.getEncoder().encodeToString(caCert.getBytes(StandardCharsets.UTF_8)))
+                    .build());
+            contextSources.add(ContextSource.builder()
+                    .name("certificates/ca.key")
+                    .base64(Base64.getEncoder().encodeToString(caKey.getBytes(StandardCharsets.UTF_8)))
+                    .build());
+            contextSources.add(ContextSource.builder()
+                    .name("certificates/tls.conf")
+                    .base64(Base64.getEncoder().encodeToString(preprocessConf(tlsConf, tlsIntDomain, tlsExtDomain, intName, extName).getBytes(StandardCharsets.UTF_8)))
+                    .build());
+
+            args = new String[] {
+                "--ssl-ca-certfile", "certificates/ca.crt",
+                "--ssl-certfile", "certificates/server.pem",
+                "--ssl-keyfile", "certificates/server.key"
+            };
+        } else  {
+            args = new String[] {"--insecure"};
+        }
+
+        if (runSpec.getAuthPublicKeys() != null && !runSpec.getAuthPublicKeys().isEmpty()) {
+            //add auth public keys
+            String authPublicKeys = String.join(",", runSpec.getAuthPublicKeys());
+            contextSources.add(ContextSource.builder()
+                    .name("keys/client_public_keys.csv")
+                    .base64(Base64.getEncoder().encodeToString(authPublicKeys.getBytes(StandardCharsets.UTF_8)))
+                    .build());
+
+            args = Arrays.copyOf(args, args.length + 2);
+            args[args.length - 2] = "--auth-list-public-keys";
+            args[args.length - 1] = "keys/client_public_keys.csv";
+        }
 
         //write entrypoint
         try {
@@ -135,7 +194,8 @@ public class FlowerServerRunner {
         fabModel.setName("flowerapp");
         fabModel.setVersion("1.0.0");
         fabModel.setDependencies(new LinkedList<>());
-        fabModel.getDependencies().add("flwr[rest]");
+        // disable REST api scenario for now
+        // fabModel.getDependencies().add("flwr[rest]");
         if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
             fabModel.getDependencies().addAll(functionSpec.getRequirements());
         }
@@ -215,4 +275,12 @@ public class FlowerServerRunner {
 
         return k8sServeRunnable;
     }
+
+    private String preprocessConf(String content, String tlsIntDomain, String tlsExtDomain, String intName, String extName) {
+        // TODO: replace!!!
+        tlsIntDomain = tlsIntDomain.startsWith(".") ? tlsIntDomain : "." + tlsIntDomain;
+        tlsExtDomain = tlsExtDomain.startsWith(".") ? tlsExtDomain : "." + tlsExtDomain;
+        return content.replace("${intDomain}", intName + tlsIntDomain).replace("${extDomain}", extName + tlsExtDomain);
+    }
+
 }

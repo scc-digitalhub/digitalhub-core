@@ -51,13 +51,17 @@ import it.smartcommunitylabdhub.runtime.flower.specs.FlowerRunStatus;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerTaskSpec;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import software.amazon.awssdk.services.s3.endpoints.internal.Value.Str;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 
 @Slf4j
 @RuntimeComponent(runtime = FlowerServerRuntime.RUNTIME)
@@ -87,6 +91,17 @@ public class FlowerServerRuntime extends K8sBaseRuntime<FlowerServerFunctionSpec
 
     @Value("${runtime.flower.group-id}")
     private Integer groupId;
+
+    @Value("${runtime.flower.tls-ca-cert:}")
+    private Resource caCert;  
+    @Value("${runtime.flower.tls-ca-key:}")
+    private Resource caKey;  
+    @Value("${runtime.flower.tls-conf:}")
+    private Resource tlsConf;
+    @Value("${runtime.flower.tls-int-domain:}") 
+    private String tlsIntDomain;
+    @Value("${runtime.flower.tls-ext-domain:}")
+    private String tlsExtDomain;
 
     public FlowerServerRuntime() {
         super(FlowerServerRunSpec.KIND);
@@ -146,12 +161,28 @@ public class FlowerServerRuntime extends K8sBaseRuntime<FlowerServerFunctionSpec
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
+        String caCertContent = null;
+        String caKeyContent = null;
+        String tlsConfContent = null;
+        try {
+            caCertContent = caCert == null ? null : caCert.getContentAsString(StandardCharsets.UTF_8);
+            caKeyContent = caKey == null ? null : caKey.getContentAsString(StandardCharsets.UTF_8);
+            tlsConfContent = tlsConf == null ? null : tlsConf.getContentAsString(StandardCharsets.UTF_8);
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("Failed to read certificate files", e);
+        }
+
         K8sRunnable runnable =
             switch (runAccessor.getTask()) {
                 case FlowerServerTaskSpec.KIND -> new FlowerServerRunner(
                     images.get("server"),
                     userId,
                     groupId,
+                    caCertContent,
+                    caKeyContent,
+                    tlsConfContent,
+                    tlsIntDomain,
+                    tlsExtDomain,
                     runFlowerSpec.getFunctionSpec(),
                     secretService.getSecretData(run.getProject(), runFlowerSpec.getTaskDeploySpec().getSecrets()),
                     k8sBuilderHelper,

@@ -49,7 +49,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import org.springframework.core.io.ClassPathResource;
@@ -109,9 +108,21 @@ public class FlowerClientRunner {
         List<ContextRef> contextRefs = null;
         List<ContextSource> contextSources = new ArrayList<>();
 
-        //run args. TODO - improve
-        String[] args = {"--insecure", "--superlink", createSuperlinkAddress(runSpec.getSuperlink()), "--rest"};
+        //run args
+        // disable REST api scenario for now
+        // String[] args = {"--insecure", "--superlink", createSuperlinkAddress(runSpec.getSuperlink()), "--rest"};
+        String[] args = null;
+        if (StringUtils.hasText(runSpec.getRootCertificates())) {
+            String ca =prepareCA(runSpec.getRootCertificates());
+            contextSources.add(ContextSource.builder()
+                    .name("certificates/ca.crt")
+                    .base64(Base64.getEncoder().encodeToString(ca.getBytes(StandardCharsets.UTF_8)))
+                    .build());
 
+            args = new String[]{"--root-certificates", "certificates/ca.crt", "--superlink", createSuperlinkAddress(runSpec.getSuperlink())};
+        } else {
+            args = new String[]{"--insecure", "--superlink", createSuperlinkAddress(runSpec.getSuperlink())};
+        }
 
         //write entrypoint
         try {
@@ -129,7 +140,8 @@ public class FlowerClientRunner {
         fabModel.setName("flowerapp");
         fabModel.setVersion("1.0.0");
         fabModel.setDependencies(new LinkedList<>());
-        fabModel.getDependencies().add("flwr[rest]");
+        // disable REST api scenario for now
+        // fabModel.getDependencies().add("flwr[rest]");
         if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
             fabModel.getDependencies().addAll(functionSpec.getRequirements());
         }
@@ -202,9 +214,17 @@ public class FlowerClientRunner {
         return k8sDeploymentRunnable;
     }
 
+    private String prepareCA(String ca) {
+        return "-----BEGIN CERTIFICATE-----\n" + 
+         ca.replace("-----BEGIN CERTIFICATE-----", "").replace("-----END CERTIFICATE-----", "ca").trim() +
+        "\n" + "-----END CERTIFICATE-----\n";
+    }
+
     private String createSuperlinkAddress(String superlink) {
-        return superlink.startsWith("http")
-            ? superlink
-            : "http://" + superlink;
+        // disable REST api scenario for now
+        // return superlink.startsWith("http")
+        //     ? superlink
+        //     : "http://" + superlink;
+        return superlink;
     }
 }

@@ -42,6 +42,13 @@ if ! [ $? -eq 0 ]; then
     die "Error installing requirements from pyproject.toml"
 fi
 
+if [ -f certificates/ca.crt ] && [ -f certificates/tls.conf ]; then
+    echo "generate server keys..."
+    openssl genrsa -out certificates/server.key 4096
+    openssl req -new  -key certificates/server.key  -out certificates/server.csr  -config certificates/tls.conf
+    openssl x509  -req  -in certificates/server.csr  -CA certificates/ca.crt  -CAkey certificates/ca.key  -CAcreateserial  -out certificates/server.pem  -days 365  -sha256 -extfile certificates/tls.conf -extensions req_ext 
+fi
+
 export HOME="${path_to_project}"
 export FLOWER_HOME="${path_to_project}"
 

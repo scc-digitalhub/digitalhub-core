@@ -164,8 +164,13 @@ public class FlowerAppTrainRunner {
                     fabModel.setClientApp("client:" + functionSpec.getFabSource().getClientapp());
                     fabModel.setDefaultFederation(defaultFederation);
                     Map<String, Serializable> config = new HashMap<>();
-                    config.put("insecure", true);
                     config.put("address", runSpec.getSuperlink());
+                    if (StringUtils.hasText(runSpec.getRootCertificates())) {
+                        config.put("root-certificates", "certificates/ca.crt");
+                    } else {
+                        config.put("insecure", true);
+                    }
+
                     fabModel.setFederationConfigs(Collections.singletonMap(federation, config));
 
                     fabModel.setConfig(runSpec.getParameters());
@@ -179,7 +184,17 @@ public class FlowerAppTrainRunner {
                 }
             }
         
-            String federationConfig = "insecure=true " + "address=\""+runSpec.getSuperlink()+"\"";
+            String federationConfig = "address=\""+runSpec.getSuperlink()+"\"";
+            if (StringUtils.hasText(runSpec.getRootCertificates())) {
+                contextSources.add(ContextSource.builder()
+                    .name("certificates/ca.crt")
+                    .base64(Base64.getEncoder().encodeToString(prepareCA(runSpec.getRootCertificates()).getBytes(StandardCharsets.UTF_8)))
+                    .build());
+                federationConfig += " root-certificates=\"certificates/ca.crt\"";
+            } else {
+                federationConfig += " insecure=true";
+            }
+
             List<String> args = new ArrayList<>(
                 List.of(
                     "run",
@@ -270,5 +285,11 @@ public class FlowerAppTrainRunner {
         } catch (Exception e) {
             throw new IllegalArgumentException(e.getMessage());
         }
+    }
+
+    private String prepareCA(String ca) {
+        return "-----BEGIN CERTIFICATE-----\n" + 
+         ca.replace("-----BEGIN CERTIFICATE-----", "").replace("-----END CERTIFICATE-----", "ca").trim() +
+        "\n" + "-----END CERTIFICATE-----\n";
     }
 }

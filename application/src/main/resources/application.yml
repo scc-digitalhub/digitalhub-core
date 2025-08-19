@@ -101,6 +101,11 @@ runtime:
       runner: ${RUNTIME_FLOWER_RUNNER:flwr/clientapp:1.20.0-py3.12-ubuntu24.04}
     user-id: ${RUNTIME_FLOWER_USER_ID:${kubernetes.security.user}}
     group-id: ${RUNTIME_FLOWER_GROUP_ID:${kubernetes.security.group}}
+    tls-ca-cert: ${RUNTIME_FLOWER_TLS_CA_CERT:}
+    tls-ca-key: ${RUNTIME_FLOWER_TLS_CA_KEY:}
+    tls-conf: ${RUNTIME_FLOWER_TLS_CONF:classpath:/runtime-flower/docker/certificate.conf}
+    tls-int-domain: ${RUNTIME_FLOWER_TLS_INT_DOMAIN:}
+    tls-ext-domain: ${RUNTIME_FLOWER_TLS_EXT_DOMAIN:}
 
 # Spring Docs
 springdoc:
