@@ -28,7 +28,6 @@ import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.runtime.flower.FlowerAppRuntime;
-import it.smartcommunitylabdhub.runtime.flower.FlowerServerRuntime;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.Map;
