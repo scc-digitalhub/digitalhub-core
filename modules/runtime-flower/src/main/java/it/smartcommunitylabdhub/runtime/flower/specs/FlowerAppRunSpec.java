@@ -23,6 +23,7 @@
 
 package it.smartcommunitylabdhub.runtime.flower.specs;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -59,6 +60,9 @@ public class FlowerAppRunSpec extends RunBaseSpec {
     private String federation;
     @Schema(title = "fields.flower.superlink.title", description = "fields.flower.superlink.description")
     private String superlink;
+    @JsonProperty("root_certificates")
+    @Schema(title = "fields.flower.root_certificates.title", description = "fields.flower.root_certificates.description")
+    private String rootCertificates;
 
     public FlowerAppRunSpec(Map<String, Serializable> data) {
         configure(data);
@@ -77,7 +81,9 @@ public class FlowerAppRunSpec extends RunBaseSpec {
         this.parameters = spec.getParameters();
         this.federation = spec.getFederation();
         this.superlink = spec.getSuperlink();
+        this.rootCertificates = spec.getRootCertificates();
     }
+
     public void setTaskTrainSpec(FlowerAppTrainTaskSpec taskTrainSpec) {
         this.taskTrainSpec = taskTrainSpec;
     }

@@ -26,6 +26,7 @@ package it.smartcommunitylabdhub.runtime.flower.specs;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
+import io.swagger.annotations.Extension;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
@@ -63,6 +64,9 @@ public class FlowerClientRunSpec extends RunBaseSpec {
     @Schema(title = "fields.flower.nodeconfig.title", description = "fields.flower.nodeconfig.description")
     private Map<String, Serializable> nodeConfig = new HashMap<>();
 
+    @JsonProperty("root_certificates")
+    @Schema(title = "fields.flower.root_certificates.title", description = "fields.flower.root_certificates.description")
+    private String rootCertificates;
 
     public FlowerClientRunSpec(Map<String, Serializable> data) {
         configure(data);
@@ -80,6 +84,7 @@ public class FlowerClientRunSpec extends RunBaseSpec {
         this.taskBuildSpec = spec.getTaskBuildSpec();
         this.superlink = spec.getSuperlink();
         this.nodeConfig = spec.getNodeConfig();
+        this.rootCertificates = spec.getRootCertificates();
     }
     public void setTaskDeploySpec(FlowerClientTaskSpec taskDeploySpec) {
         this.taskDeploySpec = taskDeploySpec;
