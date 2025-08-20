@@ -8,25 +8,34 @@ usage() {
     echo ""
     echo "Run server."
     echo ""
-    echo "usage: server.sh path_to_project [other_args]"
+    echo "usage: server.sh --path_to_project path_to_project --certificate path_to_certificate --tls_conf path_to_tls_conf --keys path_to_keys"
     echo ""
-    echo "path_to_project path to flower project"
+    echo "  --path path_to_project    path to flower project"
+    echo "  --certificate path_to_certificate  path to certificate file"
+    echo "  --tls_conf path_to_tls_conf  path to tls configuration file"
+    echo "  --keys path_to_keys       path to keys csv file"
     echo ""
 }
 
+echo "Starting init script with args $@..."
+
 PYTHON_BIN=$(which python3)
 path_to_project="."
+cert_args="--insecure"
+auth_args=""
 
 # Parse parameters
-if [ $# -gt 0 ]; then
+while [ $# -gt 0 ]; do
     if [[ $1 == "--help" ]]; then
         usage
         exit 0
-    else 
-        path_to_project="$1"
+    elif [[ $1 == "--"* ]]; then
+        v="${1/--/}"
+        declare "$v"="$2"
         shift
     fi
-fi
+    shift
+done
 
 # check path_to_project
 if [[ -z $path_to_project ]]; then
@@ -42,11 +51,16 @@ if ! [ $? -eq 0 ]; then
     die "Error installing requirements from pyproject.toml"
 fi
 
-if [ -f certificates/ca.crt ] && [ -f certificates/tls.conf ]; then
+if [ -n "${certificate}" ] && [ -n "${tls_conf}" ]; then
     echo "generate server keys..."
     openssl genrsa -out certificates/server.key 4096
     openssl req -new  -key certificates/server.key  -out certificates/server.csr  -config certificates/tls.conf
     openssl x509  -req  -in certificates/server.csr  -CA certificates/ca.crt  -CAkey certificates/ca.key  -CAcreateserial  -out certificates/server.pem  -days 365  -sha256 -extfile certificates/tls.conf -extensions req_ext 
+    cert_args="--ssl-ca-certfile ${certificate} --ssl-certfile certificates/server.pem --ssl-keyfile certificates/server.key"
+fi
+
+if [ -n "${keys}" ]; then
+    auth_args="--auth-list-public-keys ${keys}"
 fi
 
 export HOME="${path_to_project}"
@@ -55,8 +69,8 @@ export FLOWER_HOME="${path_to_project}"
 # run processors
 CMD="flower-superlink"
 
-echo "Launch ${CMD}..."
-$CMD "$@"
+echo "Launch ${CMD} ${cert_args} ${auth_args}..."
+$CMD ${cert_args} ${auth_args}
 if ! [ $? -eq 0 ]; then
     die "Error executing processor"
 fi

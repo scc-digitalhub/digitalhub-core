@@ -27,6 +27,7 @@ import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.run.Run;
+import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
@@ -43,12 +44,12 @@ import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientRunSpec;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.core.io.ClassPathResource;
@@ -64,7 +65,7 @@ public class FlowerClientRunner {
     private final int groupId;
     private final String image;
     private final FlowerClientFunctionSpec functionSpec;
-    private final Map<String, String> secretData;
+    private final SecretService secretService;
 
     private final K8sBuilderHelper k8sBuilderHelper;
 
@@ -75,12 +76,12 @@ public class FlowerClientRunner {
         Integer userId,
         Integer groupId,
         FlowerClientFunctionSpec functionPythonSpec,
-        Map<String, String> secretData,
+        SecretService secretService,
         K8sBuilderHelper k8sBuilderHelper
     ) {
         this.image = image;
         this.functionSpec = functionPythonSpec;
-        this.secretData = secretData;
+        this.secretService = secretService;
         this.k8sBuilderHelper = k8sBuilderHelper;
 
         this.userId = userId != null ? userId : UID;
@@ -98,6 +99,8 @@ public class FlowerClientRunner {
 
         coreEnvList.add(new CoreEnv("PYTHONPATH", "${PYTHONPATH}:/shared/"));
 
+
+        Map<String, String> secretData = secretService.getSecretData(run.getProject(), taskSpec.getSecrets());
         List<CoreEnv> coreSecrets = secretData == null
             ? null
             : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
@@ -111,17 +114,37 @@ public class FlowerClientRunner {
         //run args
         // disable REST api scenario for now
         // String[] args = {"--insecure", "--superlink", createSuperlinkAddress(runSpec.getSuperlink()), "--rest"};
-        String[] args = null;
+        List<String> args = new ArrayList<>();
+        args.addAll(List.of("/shared/client.sh", "--path_to_project", "/shared"));
+
         if (StringUtils.hasText(runSpec.getRootCertificates())) {
             String ca =prepareCA(runSpec.getRootCertificates());
             contextSources.add(ContextSource.builder()
                     .name("certificates/ca.crt")
                     .base64(Base64.getEncoder().encodeToString(ca.getBytes(StandardCharsets.UTF_8)))
                     .build());
+            args.addAll(List.of("--certificate", "certificates/ca.crt"));
+        }
+        args.addAll(List.of("--superlink", createSuperlinkAddress(runSpec.getSuperlink())));
 
-            args = new String[]{"--root-certificates", "certificates/ca.crt", "--superlink", createSuperlinkAddress(runSpec.getSuperlink())};
-        } else {
-            args = new String[]{"--insecure", "--superlink", createSuperlinkAddress(runSpec.getSuperlink())};
+        if (runSpec.getPrivateKeySecret() != null && runSpec.getPublicKeySecret() != null) {
+            Map<String, String> secretDataMap = secretService.getSecretData(
+                run.getProject(),
+                Set.of(runSpec.getPrivateKeySecret(), runSpec.getPublicKeySecret())
+            );
+            if (secretDataMap.get(runSpec.getPrivateKeySecret()) != null && secretDataMap.get(runSpec.getPublicKeySecret()) != null) {
+                String privateKey = secretDataMap.get(runSpec.getPrivateKeySecret());
+                String publicKey = secretDataMap.get(runSpec.getPublicKeySecret());
+                contextSources.add(ContextSource.builder()
+                        .name("keys/auth_key.pub")
+                        .base64(Base64.getEncoder().encodeToString(publicKey.getBytes(StandardCharsets.UTF_8)))
+                        .build());
+                contextSources.add(ContextSource.builder()
+                        .name("keys/auth_key")
+                        .base64(Base64.getEncoder().encodeToString(privateKey.getBytes(StandardCharsets.UTF_8)))
+                        .build());
+                args.addAll(List.of("--private_key", "keys/auth_key", "--public_key", "keys/auth_key.pub"));
+            }
         }
 
         //write entrypoint
@@ -155,24 +178,15 @@ public class FlowerClientRunner {
                             .build());
 
         if (runSpec.getNodeConfig() != null && !runSpec.getNodeConfig().isEmpty()) {
-            List<String> newArgs = new ArrayList<>(Arrays.asList(args));
-            newArgs.add("--node-config");
+
             String config = StringUtils.collectionToDelimitedString(
             runSpec.getNodeConfig().entrySet().stream().map(e -> {
                 return e.getKey() + "=" + e.getValue();
             }).collect(Collectors.toList()), " ");
-            newArgs.add(config);
-            args = newArgs.toArray(new String[0]);
+            args.addAll(List.of("--node_config", config));
         }
 
-        String cmd = null;
-        if (!StringUtils.hasText(functionSpec.getImage())) {
-            //use image as command
-            cmd = "/bin/sh";
-            List<String> argList = new ArrayList<>(List.of("/shared/client.sh", "/shared"));
-            argList.addAll(Arrays.asList(args));
-            args = argList.toArray(new String[0]);
-        }
+        String cmd = "/bin/bash";
 
         K8sRunnable k8sDeploymentRunnable = K8sDeploymentRunnable
             .builder()
@@ -187,7 +201,7 @@ public class FlowerClientRunner {
             //base
             .image(StringUtils.hasText(functionSpec.getImage()) ? functionSpec.getImage() : image)
             .command(cmd)
-            .args(args)
+            .args(args.toArray(new String[0]))
             .contextRefs(contextRefs)
             .contextSources(contextSources)
             .envs(coreEnvList)
@@ -216,8 +230,8 @@ public class FlowerClientRunner {
 
     private String prepareCA(String ca) {
         return "-----BEGIN CERTIFICATE-----\n" + 
-         ca.replace("-----BEGIN CERTIFICATE-----", "").replace("-----END CERTIFICATE-----", "ca").trim() +
-        "\n" + "-----END CERTIFICATE-----\n";
+         ca.replace("-----BEGIN CERTIFICATE-----", "").replace("-----END CERTIFICATE-----", "").trim() +
+        "\n-----END CERTIFICATE-----\n";
     }
 
     private String createSuperlinkAddress(String superlink) {

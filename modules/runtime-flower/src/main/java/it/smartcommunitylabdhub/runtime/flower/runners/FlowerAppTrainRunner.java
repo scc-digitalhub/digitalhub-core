@@ -289,7 +289,7 @@ public class FlowerAppTrainRunner {
 
     private String prepareCA(String ca) {
         return "-----BEGIN CERTIFICATE-----\n" + 
-         ca.replace("-----BEGIN CERTIFICATE-----", "").replace("-----END CERTIFICATE-----", "ca").trim() +
+         ca.replace("-----BEGIN CERTIFICATE-----", "").replace("-----END CERTIFICATE-----", "").trim() +
         "\n" + "-----END CERTIFICATE-----\n";
     }
 }

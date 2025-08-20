@@ -47,7 +47,6 @@ import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerTaskSpec;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
@@ -138,7 +137,9 @@ public class FlowerServerRunner {
         //run args
         // disable REST api scenario for now
         // String[] args = {"--insecure", "--fleet-api-type", "rest"};
-        String[] args = null;
+        List<String> args = new LinkedList<>();
+        args.addAll(List.of("/shared/server.sh", "--path_to_project", "/shared"));
+
         if (StringUtils.hasText(caCert) && StringUtils.hasText(tlsConf)) {
             String dns1 = k8sBuilderHelper.getServiceName("flower-server", FlowerServerTaskSpec.KIND, run.getId());
             String dns2 = k8sBuilderHelper.getServiceName("flower-server", run.getProject(),  taskAccessor.getFunction() + "-latest");
@@ -154,14 +155,10 @@ public class FlowerServerRunner {
                     .name("certificates/tls.conf")
                     .base64(Base64.getEncoder().encodeToString(preprocessConf(tlsConf, tlsIntDomain, tlsExtDomain, new String[]{dns1, dns2}).getBytes(StandardCharsets.UTF_8)))
                     .build());
-
-            args = new String[] {
-                "--ssl-ca-certfile", "certificates/ca.crt",
-                "--ssl-certfile", "certificates/server.pem",
-                "--ssl-keyfile", "certificates/server.key"
-            };
-        } else  {
-            args = new String[] {"--insecure"};
+            args.addAll(List.of(
+                "--certificate", "certificates/ca.crt",
+                "--tls_conf", "certificates/tls.conf"
+            ));
         }
 
         if (runSpec.getAuthPublicKeys() != null && !runSpec.getAuthPublicKeys().isEmpty()) {
@@ -172,9 +169,9 @@ public class FlowerServerRunner {
                     .base64(Base64.getEncoder().encodeToString(authPublicKeys.getBytes(StandardCharsets.UTF_8)))
                     .build());
 
-            args = Arrays.copyOf(args, args.length + 2);
-            args[args.length - 2] = "--auth-list-public-keys";
-            args[args.length - 1] = "keys/client_public_keys.csv";
+            args.addAll(List.of(
+                "--keys", "keys/client_public_keys.csv"
+            ));
         }
 
         //write entrypoint
@@ -225,14 +222,8 @@ public class FlowerServerRunner {
             }
         }
 
-        String cmd = null;
-        if (!StringUtils.hasText(functionSpec.getImage())) {
-            //use image as command
-            cmd = "/bin/sh";
-            List<String> argList = new ArrayList<>(List.of("/shared/server.sh", "/shared"));
-            argList.addAll(Arrays.asList(args));
-            args = argList.toArray(new String[0]);
-        }
+        // use shell script as entrypoint
+        String cmd = "/bin/bash";
         K8sRunnable k8sServeRunnable = K8sServeRunnable
             .builder()
             .runtime(FlowerServerRuntime.RUNTIME)
@@ -246,7 +237,7 @@ public class FlowerServerRunner {
             //base
             .image(StringUtils.hasText(functionSpec.getImage()) ? functionSpec.getImage() : image)
             .command(cmd)
-            .args(args)
+            .args(args.toArray(new String[0]))
             .contextRefs(contextRefs)
             .contextSources(contextSources)
             .envs(coreEnvList)
