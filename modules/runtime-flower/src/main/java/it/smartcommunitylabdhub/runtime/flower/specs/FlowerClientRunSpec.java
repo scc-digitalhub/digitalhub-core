@@ -67,6 +67,14 @@ public class FlowerClientRunSpec extends RunBaseSpec {
     @Schema(title = "fields.flower.root_certificates.title", description = "fields.flower.root_certificates.description")
     private String rootCertificates;
 
+    @JsonProperty("private_key_secret")
+    @Schema(title = "fields.flower.private_key_secret.title", description = "fields.flower.private_key_secret.description")
+    private String privateKeySecret;
+
+    @JsonProperty("public_key_secret")
+    @Schema(title = "fields.flower.public_key_secret.title", description = "fields.flower.public_key_secret.description")
+    private String publicKeySecret;
+
     public FlowerClientRunSpec(Map<String, Serializable> data) {
         configure(data);
     }
@@ -84,6 +92,8 @@ public class FlowerClientRunSpec extends RunBaseSpec {
         this.superlink = spec.getSuperlink();
         this.nodeConfig = spec.getNodeConfig();
         this.rootCertificates = spec.getRootCertificates();
+        this.privateKeySecret = spec.getPrivateKeySecret();
+        this.publicKeySecret = spec.getPublicKeySecret();
     }
     public void setTaskDeploySpec(FlowerClientTaskSpec taskDeploySpec) {
         this.taskDeploySpec = taskDeploySpec;
