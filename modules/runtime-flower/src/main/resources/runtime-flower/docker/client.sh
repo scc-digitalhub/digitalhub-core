@@ -1,6 +1,6 @@
 #!/bin/bash
 die() {
-    printf "Init failed: %s\n\n" "$1"
+    printf "Client app failed: %s\n\n" "$1"
     exit 1
 }
 
@@ -8,7 +8,7 @@ usage() {
     echo ""
     echo "Run client."
     echo ""
-    echo "usage: server.sh --path_to_project path_to_project --certificate path_to_certificate --superlink superlink_url --public_key public_key_value --private_key private_key_value --node_config node_config"
+    echo "usage: server.sh --path_to_project path_to_project --certificate path_to_certificate --superlink superlink_url --public_key public_key_value --private_key private_key_value --node_config node_config --isolation isolation_type"
     echo ""
     echo "  --path path_to_project    path to flower project"
     echo "  --certificate path_to_certificate  path to certificate file"
@@ -16,6 +16,7 @@ usage() {
     echo "  --public_key public_key_value  public key value for supernode authentication"
     echo "  --private_key private_key_value  private key value for supernode authentication"
     echo "  --node_config node_config  node config parameters spec"
+    echo "  --isolation isolation_type  isolation type for the client (default: subprocess)"
     echo ""
 }
 
@@ -23,6 +24,7 @@ PYTHON_BIN=$(which python3)
 path_to_project="."
 cert_args="--insecure"
 auth_args=""
+isolation_args="--isolation subprocess"
 
 # Parse parameters
 while [ $# -gt 0 ]; do
@@ -72,8 +74,8 @@ fi
 # run processors
 CMD="flower-supernode"
 
-echo "Launch ${CMD}  ${cert_args} ${auth_args} --superlink ${superlink} --node-config '${node_config}'..."
-$CMD ${cert_args} ${auth_args} --superlink ${superlink} --node-config "${node_config}"
+echo "Launch ${CMD}  ${cert_args} ${auth_args} ${isolation_args} --superlink ${superlink} --node-config '${node_config}'..."
+$CMD ${cert_args} ${auth_args} ${isolation_args} --superlink ${superlink} --node-config "${node_config}"
 if ! [ $? -eq 0 ]; then
     die "Error executing processor"
 fi

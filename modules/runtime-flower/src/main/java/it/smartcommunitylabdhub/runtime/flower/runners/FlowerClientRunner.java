@@ -38,6 +38,7 @@ import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runtime.flower.FlowerClientRuntime;
 import it.smartcommunitylabdhub.runtime.flower.model.FABModel;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientTaskSpec;
+import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientRunSpec.IsolationType;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientFunctionSpec;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientRunSpec;
 
@@ -131,6 +132,7 @@ public class FlowerClientRunner {
             throw new CoreRuntimeException("Superlink is required for Flower Client Run");
         }
 
+        args.addAll(List.of("--isolation", runSpec.getIsolation() != null ? runSpec.getIsolation().name() : IsolationType.subprocess.name()));
 
         if (runSpec.getPrivateKeySecret() != null && runSpec.getPublicKeySecret() != null) {
             Map<String, String> secretDataMap = secretService.getSecretData(

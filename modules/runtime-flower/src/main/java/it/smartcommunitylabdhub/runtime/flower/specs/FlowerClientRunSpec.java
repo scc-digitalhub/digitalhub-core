@@ -75,6 +75,9 @@ public class FlowerClientRunSpec extends RunBaseSpec {
     @Schema(title = "fields.flower.public_key_secret.title", description = "fields.flower.public_key_secret.description")
     private String publicKeySecret;
 
+    @Schema(title = "fields.flower.isolation.title", description = "fields.flower.isolation.description", defaultValue = "subprocess")
+    private IsolationType isolation = IsolationType.subprocess;
+
     public FlowerClientRunSpec(Map<String, Serializable> data) {
         configure(data);
     }
@@ -103,5 +106,9 @@ public class FlowerClientRunSpec extends RunBaseSpec {
     }
     public void setFunctionSpec(FlowerClientFunctionSpec functionSpec) {
         this.functionSpec = functionSpec;
+    }
+
+    public enum IsolationType {
+        process, subprocess
     }
 }

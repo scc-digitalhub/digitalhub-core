@@ -1,6 +1,6 @@
 #!/bin/bash
 die() {
-    printf "Init failed: %s\n\n" "$1"
+    printf "Server app failed: %s\n\n" "$1"
     exit 1
 }
 
