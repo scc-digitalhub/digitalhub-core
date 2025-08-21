@@ -125,7 +125,12 @@ public class FlowerClientRunner {
                     .build());
             args.addAll(List.of("--certificate", "certificates/ca.crt"));
         }
-        args.addAll(List.of("--superlink", createSuperlinkAddress(runSpec.getSuperlink())));
+        if (StringUtils.hasText(runSpec.getSuperlink())) {
+            args.addAll(List.of("--superlink", createSuperlinkAddress(runSpec.getSuperlink())));
+        } else {
+            throw new CoreRuntimeException("Superlink is required for Flower Client Run");
+        }
+
 
         if (runSpec.getPrivateKeySecret() != null && runSpec.getPublicKeySecret() != null) {
             Map<String, String> secretDataMap = secretService.getSecretData(
@@ -144,6 +149,10 @@ public class FlowerClientRunner {
                         .base64(Base64.getEncoder().encodeToString(privateKey.getBytes(StandardCharsets.UTF_8)))
                         .build());
                 args.addAll(List.of("--private_key", "keys/auth_key", "--public_key", "keys/auth_key.pub"));
+            } else if (secretDataMap.get(runSpec.getPrivateKeySecret()) != null) {
+                throw new CoreRuntimeException("Public key secret not found: " + runSpec.getPublicKeySecret());
+            } else if (secretDataMap.get(runSpec.getPublicKeySecret()) != null) {
+                throw new CoreRuntimeException("Private key secret not found: " + runSpec.getPrivateKeySecret());
             }
         }
 
@@ -228,6 +237,13 @@ public class FlowerClientRunner {
         return k8sDeploymentRunnable;
     }
 
+    /**
+     * Prepare CA certificate for Flower Client.
+     * It ensures the certificate is properly formatted with BEGIN and END lines.
+     *
+     * @param ca The CA certificate string.
+     * @return The formatted CA certificate string.
+     */
     private String prepareCA(String ca) {
         return "-----BEGIN CERTIFICATE-----\n" + 
          ca.replace("-----BEGIN CERTIFICATE-----", "").replace("-----END CERTIFICATE-----", "").trim() +
