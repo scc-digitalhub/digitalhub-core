@@ -35,6 +35,9 @@ import it.smartcommunitylabdhub.runtime.flower.FlowerAppRuntime;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
+
+import jakarta.validation.constraints.NotNull;
+
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -59,6 +62,7 @@ public class FlowerAppRunSpec extends RunBaseSpec {
     @Schema(title = "fields.flower.federation.title", description = "fields.flower.federation.description")
     private String federation;
     @Schema(title = "fields.flower.superlink.title", description = "fields.flower.superlink.description")
+    @NotNull
     private String superlink;
     @JsonProperty("root_certificates")
     @Schema(title = "fields.flower.root_certificates.title", description = "fields.flower.root_certificates.description")

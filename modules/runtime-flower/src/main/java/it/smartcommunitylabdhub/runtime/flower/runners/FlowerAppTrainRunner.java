@@ -26,6 +26,7 @@ package it.smartcommunitylabdhub.runtime.flower.runners;
 
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
+import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
@@ -43,6 +44,7 @@ import it.smartcommunitylabdhub.runtime.flower.specs.FlowerAppFunctionSpec;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerAppRunSpec;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerAppTrainTaskSpec;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -52,6 +54,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -69,6 +74,8 @@ public class FlowerAppTrainRunner {
     private final Map<String, String> secretData;
 
     private final K8sBuilderHelper k8sBuilderHelper;
+
+    private final Resource entrypoint = new ClassPathResource("runtime-flower/docker/app.sh");
 
     public FlowerAppTrainRunner(
         String image,
@@ -113,6 +120,18 @@ public class FlowerAppTrainRunner {
             List<ContextSource> contextSources = new ArrayList<>();
 
             String federation = runSpec.getFederation() != null ? runSpec.getFederation() : defaultFederation;
+
+            //write entrypoint
+            try {
+                ContextSource entry = ContextSource
+                    .builder()
+                    .name("app.sh")
+                    .base64(Base64.getEncoder().encodeToString(entrypoint.getContentAsByteArray()))
+                    .build();
+                contextSources.add(entry);
+            } catch (IOException ioe) {
+                throw new CoreRuntimeException("error with reading server entrypoint for runtime-flower");
+            }
 
             if (functionSpec.getFabSource() != null) {
                 FlowerSourceCode source = functionSpec.getFabSource();
@@ -197,14 +216,20 @@ public class FlowerAppTrainRunner {
 
             List<String> args = new ArrayList<>(
                 List.of(
+                    "/shared/app.sh", 
+                    "/shared",
                     "run",
-                    "--stream",
+                    "--format", 
+                    "json",
                     "--federation-config",
                     federationConfig,
                     "/shared/",
                     federation
                 )
             );
+
+            String cmd = "/bin/bash";
+
 
             K8sRunnable k8sJobRunnable = K8sJobRunnable
                 .builder()
@@ -218,7 +243,7 @@ public class FlowerAppTrainRunner {
                 )
                 //base
                 .image(image)
-                .command("flwr")
+                .command(cmd)
                 .args(args.toArray(new String[0]))
                 .contextRefs(contextRefs)
                 .contextSources(contextSources)
