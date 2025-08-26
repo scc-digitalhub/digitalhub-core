@@ -167,12 +167,6 @@ sync_files() {
 # Trap any error or signal and call the error handling function
 trap 'handle_error $LINENO "$BASH_COMMAND"' ERR
 
-# Process context-sources.txt
-if [ -f "$source_dir/context-sources-map.txt" ]; then
-  sync_files "$source_dir/context-sources-map.txt" "$source_dir/" "$destination_dir"
-fi
-
-
 # Process context-refs.txt
 if [ -f "$source_dir/context-refs.txt" ]; then
 #    mkdir "-p" "$destination_dir"
@@ -283,6 +277,11 @@ if [ -f "$source_dir/context-refs.txt" ]; then
                 ;;
         esac
     done < "$source_dir/context-refs.txt"
+fi
+
+# Process context-sources.txt
+if [ -f "$source_dir/context-sources-map.txt" ]; then
+  sync_files "$source_dir/context-sources-map.txt" "$source_dir/" "$destination_dir"
 fi
 
 ls -1l "$destination_dir"
