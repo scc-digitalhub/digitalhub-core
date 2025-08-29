@@ -23,18 +23,52 @@
 package it.smartcommunitylabdhub.core.artifacts.lifecycle;
 
 import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
-import it.smartcommunitylabdhub.core.lifecycle.BaseFsmFactory;
+import it.smartcommunitylabdhub.lifecycle.BaseEntityState;
+import it.smartcommunitylabdhub.lifecycle.BaseFsmFactory;
+import java.util.Set;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ArtifactFsmFactory extends BaseFsmFactory<Artifact> {
+public class ArtifactFsmFactory extends BaseFsmFactory<Artifact, ArtifactState, ArtifactEvents> {
 
     public ArtifactFsmFactory() {
         super(
-            new ArtifactStateCreated(),
-            new ArtifactStateUploading(),
-            new ArtifactStateReady(),
-            new ArtifactStateError()
+            new BaseEntityState<>(
+                ArtifactState.CREATED,
+                Set.of(
+                    Pair.of(ArtifactEvents.UPLOAD, ArtifactState.UPLOADING),
+                    Pair.of(ArtifactEvents.READY, ArtifactState.READY),
+                    Pair.of(ArtifactEvents.ERROR, ArtifactState.ERROR),
+                    Pair.of(ArtifactEvents.DELETE, ArtifactState.DELETED)
+                )
+            ),
+            new BaseEntityState<>(
+                ArtifactState.UPLOADING,
+                Set.of(
+                    Pair.of(ArtifactEvents.READY, ArtifactState.READY),
+                    Pair.of(ArtifactEvents.ERROR, ArtifactState.ERROR),
+                    Pair.of(ArtifactEvents.DELETE, ArtifactState.DELETED)
+                )
+            ),
+            new BaseEntityState<>(
+                ArtifactState.READY,
+                Set.of(
+                    Pair.of(ArtifactEvents.READY, ArtifactState.READY),
+                    Pair.of(ArtifactEvents.ERROR, ArtifactState.ERROR),
+                    Pair.of(ArtifactEvents.DELETE, ArtifactState.DELETED)
+                )
+            ),
+            new BaseEntityState<>(
+                ArtifactState.ERROR,
+                Set.of(
+                    Pair.of(ArtifactEvents.UPLOAD, ArtifactState.UPLOADING),
+                    Pair.of(ArtifactEvents.READY, ArtifactState.READY),
+                    Pair.of(ArtifactEvents.ERROR, ArtifactState.ERROR),
+                    Pair.of(ArtifactEvents.DELETE, ArtifactState.DELETED)
+                )
+            ),
+            new BaseEntityState<>(ArtifactState.DELETED, Set.of())
         );
     }
 }

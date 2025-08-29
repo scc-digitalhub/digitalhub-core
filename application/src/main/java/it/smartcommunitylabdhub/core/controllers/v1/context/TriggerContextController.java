@@ -37,7 +37,8 @@ import it.smartcommunitylabdhub.commons.services.TriggerManager;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.core.triggers.filters.TriggerEntityFilter;
-import it.smartcommunitylabdhub.core.triggers.lifecycle.TriggerLifecycleManager;
+import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
+import it.smartcommunitylabdhub.triggers.lifecycle.TriggerEvent;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -80,7 +81,7 @@ public class TriggerContextController {
     TriggerManager triggerManager;
 
     @Autowired
-    private TriggerLifecycleManager lifecycleManager;
+    private LifecycleManager<Trigger> lifecycleManager;
 
     @Autowired
     RelationshipsAwareEntityService<Trigger> relationshipsService;
@@ -102,7 +103,7 @@ public class TriggerContextController {
         Trigger trigger = triggerManager.createTrigger(dto);
 
         //run
-        lifecycleManager.run(trigger);
+        lifecycleManager.perform(trigger, TriggerEvent.RUN.name());
 
         return trigger;
     }
@@ -176,7 +177,7 @@ public class TriggerContextController {
         }
 
         //TODO via manager to avoid race condition between cleanup and delete
-        lifecycleManager.stop(trigger);
+        lifecycleManager.perform(trigger, TriggerEvent.STOP.name());
         triggerManager.deleteTrigger(id, cascade != null && cascade);
     }
 
@@ -194,7 +195,7 @@ public class TriggerContextController {
         }
 
         // via manager
-        return lifecycleManager.run(trigger);
+        return lifecycleManager.perform(trigger, TriggerEvent.RUN.name());
     }
 
     @Operation(summary = "Stop a specific trigger execution")
@@ -210,7 +211,7 @@ public class TriggerContextController {
         }
 
         // via manager
-        return lifecycleManager.stop(trigger);
+        return lifecycleManager.perform(trigger, TriggerEvent.STOP.name());
     }
 
     @Operation(summary = "Get relationships info for a given entity, if available")

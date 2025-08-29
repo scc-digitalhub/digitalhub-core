@@ -37,17 +37,17 @@ import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
-import it.smartcommunitylabdhub.commons.services.RunManager;
+import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.services.TaskService;
 import it.smartcommunitylabdhub.core.components.infrastructure.specs.SpecValidator;
-import it.smartcommunitylabdhub.core.events.EntityAction;
-import it.smartcommunitylabdhub.core.events.EntityOperation;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
-import it.smartcommunitylabdhub.core.repositories.EntityRepository;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
+import it.smartcommunitylabdhub.core.runs.persistence.RunEntity;
 import it.smartcommunitylabdhub.core.tasks.filters.TaskFilterConverter;
 import it.smartcommunitylabdhub.core.tasks.persistence.TaskEntity;
+import it.smartcommunitylabdhub.events.EntityAction;
+import it.smartcommunitylabdhub.events.EntityOperation;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
@@ -84,7 +84,7 @@ public class TaskServiceImpl implements TaskService {
     private EntityRepository<Project> projectService;
 
     @Autowired
-    private RunManager runService;
+    private SearchableEntityRepository<RunEntity, Run> runService;
 
     @Autowired
     private SpecRegistry specRegistry;
@@ -322,10 +322,17 @@ public class TaskServiceImpl implements TaskService {
                 if (Boolean.TRUE.equals(cascade)) {
                     log.debug("cascade delete runs for task with id {}", String.valueOf(id));
 
+                    //define a spec for runs building task path
+                    String path = (task.getKind() + "://" + task.getProject() + "/" + task.getId());
+                    Specification<RunEntity> where = Specification.allOf(
+                        CommonSpecification.projectEquals(task.getProject()),
+                        createTaskSpecification(path)
+                    );
+
                     //delete via async event to let manager do cleanups
                     //TODO do in sync to block for errors
                     runService
-                        .getRunsByTaskId(id)
+                        .searchAll(where)
                         .forEach(run -> {
                             log.debug("publish op: delete for {}", run.getId());
                             EntityOperation<Run> event = new EntityOperation<>(run, EntityAction.DELETE);
@@ -344,5 +351,9 @@ public class TaskServiceImpl implements TaskService {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
         }
+    }
+
+    private Specification<RunEntity> createTaskSpecification(String task) {
+        return (root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("task"), task);
     }
 }

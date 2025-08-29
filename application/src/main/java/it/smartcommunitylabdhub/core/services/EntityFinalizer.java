@@ -20,6 +20,7 @@ import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import jakarta.validation.constraints.NotNull;
 
+@FunctionalInterface
 public interface EntityFinalizer<D extends BaseDTO> {
     public void finalize(@NotNull D entity) throws StoreException;
 }

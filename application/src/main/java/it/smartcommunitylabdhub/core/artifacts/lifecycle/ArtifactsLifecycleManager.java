@@ -22,53 +22,14 @@
 
 package it.smartcommunitylabdhub.core.artifacts.lifecycle;
 
-import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvents;
 import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
-import it.smartcommunitylabdhub.commons.models.enums.State;
-import it.smartcommunitylabdhub.core.artifacts.specs.ArtifactBaseStatus;
-import it.smartcommunitylabdhub.core.lifecycle.BaseLifecycleManager;
-import jakarta.validation.constraints.NotNull;
+import it.smartcommunitylabdhub.lifecycle.BaseLifecycleManager;
+import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-public class ArtifactsLifecycleManager extends BaseLifecycleManager<Artifact, ArtifactBaseStatus> {
-
-    /*
-     * Actions: ask to perform
-     */
-
-    public Artifact upload(@NotNull Artifact artifact) {
-        return perform(artifact, LifecycleEvents.UPLOAD.name());
-    }
-
-    public Artifact delete(@NotNull Artifact artifact) {
-        return perform(artifact, LifecycleEvents.DELETE.name());
-    }
-
-    public Artifact update(@NotNull Artifact artifact) {
-        return perform(artifact, LifecycleEvents.UPDATE.name());
-    }
-
-    /*
-     * Events: callbacks
-     */
-
-    //NOTE: disabled, we can not handle onCreated because there is no state change
-    // public Artifact onCreated(@NotNull Artifact artifact) {
-    //     return handle(artifact, State.CREATED);
-    // }
-
-    public Artifact onUploading(@NotNull Artifact artifact) {
-        return handle(artifact, State.UPLOADING.name());
-    }
-
-    public Artifact onReady(@NotNull Artifact artifact) {
-        return handle(artifact, State.READY.name());
-    }
-
-    public Artifact onError(@NotNull Artifact artifact) {
-        return handle(artifact, State.ERROR.name());
-    }
-}
+public class ArtifactsLifecycleManager
+    extends BaseLifecycleManager<Artifact, ArtifactState, ArtifactEvents>
+    implements LifecycleManager<Artifact> {}

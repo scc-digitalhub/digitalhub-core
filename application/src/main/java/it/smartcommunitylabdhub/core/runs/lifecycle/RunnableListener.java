@@ -6,25 +6,24 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.core.runs.lifecycle;
 
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.services.RunManager;
 import it.smartcommunitylabdhub.runtimes.events.RunnableChangedEvent;
@@ -47,10 +46,10 @@ import org.springframework.util.Assert;
 public class RunnableListener {
 
     private final RunManager runService;
-    private final RunLifecycleManager runManager;
+    private final KindAwareRunLifecycleManager runManager;
     private final ThreadPoolTaskExecutor executor;
 
-    public RunnableListener(RunManager runService, RunLifecycleManager runManager) {
+    public RunnableListener(RunManager runService, KindAwareRunLifecycleManager runManager) {
         Assert.notNull(runManager, "run manager is required");
         Assert.notNull(runService, "run service is required");
         this.runService = runService;
@@ -105,7 +104,7 @@ public class RunnableListener {
         // try {
         //read event
         String id = event.getId();
-        State state = State.valueOf(event.getState());
+        String state = event.getState();
 
         // Use service to retrieve the run and check if state is changed
         Run run = runService.findRun(id);
@@ -114,41 +113,22 @@ public class RunnableListener {
             return;
         }
 
-        // if (
-        //     //either signal an update or track progress (running state)
-        //     !Objects.equals(StatusFieldAccessor.with(run.getStatus()).getState(), event.getState()) ||
-        //     State.RUNNING == state
-        // ) {
-        switch (state) {
-            case COMPLETED:
-                // runManager.onCompleted(run, event.getRunnable());
-                wrap(run, event.getRunnable(), runManager::onCompleted);
-                break;
-            case ERROR:
-                // runManager.onError(run, event.getRunnable());
-                wrap(run, event.getRunnable(), runManager::onError);
-                break;
-            case RUNNING:
-                // runManager.onRunning(run, event.getRunnable());
-                wrap(run, event.getRunnable(), runManager::onRunning);
-                break;
-            case STOPPED:
-                // runManager.onStopped(run, event.getRunnable());
-                wrap(run, event.getRunnable(), runManager::onStopped);
-                break;
-            case DELETED:
-                // runManager.onDeleted(run, event.getRunnable());
-                wrap(run, event.getRunnable(), runManager::onDeleted);
-                break;
-            default:
-                log.debug("State {} for run id {} not managed", state, id);
-                break;
+        if (state == null) {
+            log.error("State is null for run id {}", id);
+            return;
         }
-        // } else {
-        //     log.debug("State {} for run id {} not changed", state, id);
-        // }
-        // } catch (StoreException e) {
-        //     log.error("store error for {}:{}", String.valueOf(event.getId()), e.getMessage());
-        // }
+
+        // handle with manager
+        // Note: we always handle the event, as it can be a progress update
+        // even if the state is the same (e.g., RUNNING)
+        // Moreover, some runtimes may not update the state properly
+        // and we want to be sure to handle the event
+        // Thus, we rely on the manager to handle idempotency and state checks
+        // before applying any change
+        // This also allows to handle events like STOPPED or DELETED
+        // even if the state is not changed
+        // Finally, we may want to log or track progress even if the state is the same
+        // for monitoring purposes
+        wrap(run, event.getRunnable(), (r, rb) -> runManager.handle(r, state, rb));
     }
 }

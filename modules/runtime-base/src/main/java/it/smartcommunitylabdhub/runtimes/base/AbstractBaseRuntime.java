@@ -6,34 +6,40 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.runtimes.base;
 
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
+import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.infrastructure.Runtime;
+import it.smartcommunitylabdhub.commons.models.base.Executable;
 import it.smartcommunitylabdhub.commons.models.base.ExecutableBaseSpec;
-import it.smartcommunitylabdhub.commons.models.enums.State;
+import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
+import it.smartcommunitylabdhub.commons.models.task.Task;
+import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
+import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.commons.services.RunnableStore;
+import it.smartcommunitylabdhub.runtimes.lifecycle.RunState;
 import jakarta.validation.constraints.NotNull;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
@@ -50,15 +56,34 @@ import org.springframework.util.StringUtils;
 public abstract class AbstractBaseRuntime<
     F extends ExecutableBaseSpec, S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable
 >
-    implements Runtime<F, S, Z, R> {
+    implements Runtime<S, Z, R> {
 
     private final String kind;
 
     protected Collection<RunnableStore<R>> stores = Collections.emptyList();
 
+    protected EntityRepository<Function> functionRepository;
+    protected EntityRepository<Workflow> workflowRepository;
+    protected EntityRepository<Task> taskRepository;
+
     protected AbstractBaseRuntime(String kind) {
         Assert.hasText(kind, "run kind must be specified");
         this.kind = kind;
+    }
+
+    @Autowired
+    public void setFunctionRepository(EntityRepository<Function> functionRepository) {
+        this.functionRepository = functionRepository;
+    }
+
+    @Autowired
+    public void setWorkflowRepository(EntityRepository<Workflow> workflowRepository) {
+        this.workflowRepository = workflowRepository;
+    }
+
+    @Autowired
+    public void setTaskRepository(EntityRepository<Task> taskRepository) {
+        this.taskRepository = taskRepository;
     }
 
     @Autowired(required = false)
@@ -87,6 +112,29 @@ public abstract class AbstractBaseRuntime<
                 .collect(Collectors.toList());
 
         log.debug("registered stores for {}: {}", getClass().getName(), this.stores);
+    }
+
+    public abstract S build(@NotNull Executable execSpec, @NotNull Task taskSpec, @NotNull Run runSpec);
+
+    @Override
+    public S build(@NotNull Run run) {
+        try {
+            RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
+
+            //retrieve executable
+            Task task;
+
+            task = taskRepository.get(specAccessor.getTaskId());
+
+            Executable function = specAccessor.getWorkflowId() != null
+                ? workflowRepository.get(specAccessor.getWorkflowId())
+                : functionRepository.get(specAccessor.getFunctionId());
+
+            //build
+            return build(function, task, run);
+        } catch (NoSuchEntityException | StoreException e) {
+            throw new CoreRuntimeException(kind + " runtime error building run spec", e);
+        }
     }
 
     @Override
@@ -124,7 +172,7 @@ public abstract class AbstractBaseRuntime<
 
         if (runnable.isPresent()) {
             R runRunnable = runnable.get();
-            runRunnable.setState(State.STOP.name());
+            runRunnable.setState(RunState.STOP.name());
             runRunnable.setMessage("stopping runnable " + runRunnable.getId());
             return runRunnable;
         }
@@ -168,7 +216,7 @@ public abstract class AbstractBaseRuntime<
 
         if (runnable.isPresent()) {
             R runRunnable = runnable.get();
-            runRunnable.setState(State.RESUME.name());
+            runRunnable.setState(RunState.RESUME.name());
             runRunnable.setMessage("resuming runnable " + runRunnable.getId());
             return runRunnable;
         }
@@ -213,7 +261,7 @@ public abstract class AbstractBaseRuntime<
 
         if (runnable.isPresent()) {
             R runRunnable = runnable.get();
-            runRunnable.setState(State.DELETING.name());
+            runRunnable.setState(RunState.DELETING.name());
             runRunnable.setMessage("deleting runnable " + runRunnable.getId());
             return runRunnable;
         }

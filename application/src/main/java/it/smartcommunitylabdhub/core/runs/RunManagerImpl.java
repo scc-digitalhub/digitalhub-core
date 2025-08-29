@@ -30,13 +30,13 @@ import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
-import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.models.task.Task;
+import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.commons.services.EntityService;
 import it.smartcommunitylabdhub.commons.services.RunManager;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
@@ -44,9 +44,9 @@ import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.components.infrastructure.specs.SpecValidator;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
-import it.smartcommunitylabdhub.core.repositories.EntityRepository;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.core.runs.persistence.RunEntity;
+import it.smartcommunitylabdhub.runtimes.lifecycle.RunState;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.util.Collections;
@@ -272,7 +272,7 @@ public class RunManagerImpl implements RunManager {
 
             //spec is not modifiable *after* build
             StatusFieldAccessor status = StatusFieldAccessor.with(current.getStatus());
-            if (State.CREATED.name().equals(status.getState())) {
+            if (RunState.CREATED.name().equals(status.getState())) {
                 //we accept updates, parse and export Spec
                 Spec spec = specRegistry.createSpec(dto.getKind(), dto.getSpec());
                 if (spec == null) {

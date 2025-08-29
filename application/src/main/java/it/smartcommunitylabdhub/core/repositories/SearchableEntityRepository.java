@@ -25,6 +25,7 @@ package it.smartcommunitylabdhub.core.repositories;
 
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
+import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import java.util.List;
 import org.springframework.data.domain.Page;

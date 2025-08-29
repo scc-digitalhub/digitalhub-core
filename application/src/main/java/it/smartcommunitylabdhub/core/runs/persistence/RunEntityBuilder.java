@@ -25,10 +25,10 @@ package it.smartcommunitylabdhub.core.runs.persistence;
 
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
-import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
+import it.smartcommunitylabdhub.runtimes.lifecycle.RunState;
 import jakarta.persistence.AttributeConverter;
 import java.io.Serializable;
 import java.time.ZoneOffset;
@@ -80,7 +80,7 @@ public class RunEntityBuilder implements Converter<Run, RunEntity> {
             .workflow(taskSpecAccessor.getWorkflowKey())
             .state(
                 // Store status if not present
-                statusFieldAccessor.getState() == null ? State.CREATED : State.valueOf(statusFieldAccessor.getState())
+                statusFieldAccessor.getState() == null ? RunState.CREATED.name() : statusFieldAccessor.getState()
             )
             // Metadata Extraction
             .created(

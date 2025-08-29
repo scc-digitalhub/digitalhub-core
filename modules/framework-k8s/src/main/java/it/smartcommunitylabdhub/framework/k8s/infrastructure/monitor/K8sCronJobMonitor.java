@@ -26,12 +26,13 @@ package it.smartcommunitylabdhub.framework.k8s.infrastructure.monitor;
 import io.kubernetes.client.openapi.models.V1CronJob;
 import io.kubernetes.client.openapi.models.V1Pod;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.MonitorComponent;
-import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.services.RunnableStore;
 import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sCronJobFramework;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCronJobRunnable;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -62,7 +63,7 @@ public class K8sCronJobMonitor extends K8sBaseMonitor<K8sCronJobRunnable> {
             if (job == null || job.getStatus() == null) {
                 // something is missing, no recovery
                 log.error("Missing or invalid job for {}", runnable.getId());
-                runnable.setState(State.ERROR.name());
+                runnable.setState(K8sRunnableState.ERROR.name());
                 runnable.setError("Job missing or invalid");
             }
 
@@ -113,7 +114,7 @@ public class K8sCronJobMonitor extends K8sBaseMonitor<K8sCronJobRunnable> {
             }
         } catch (K8sFrameworkException e) {
             // Set Runnable to ERROR state
-            runnable.setState(State.ERROR.name());
+            runnable.setState(K8sRunnableState.ERROR.name());
             runnable.setError(e.toError());
         }
 

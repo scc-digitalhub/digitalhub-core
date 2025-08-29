@@ -30,12 +30,12 @@ import io.kubernetes.client.openapi.models.V1SecurityContext;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.FrameworkComponent;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.jackson.YamlMapperFactory;
-import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.framework.argo.exceptions.K8sArgoFrameworkException;
 import it.smartcommunitylabdhub.framework.argo.objects.K8sWorkflowObject;
 import it.smartcommunitylabdhub.framework.argo.runnables.K8sArgoWorkflowRunnable;
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sBaseFramework;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.io.Serializable;
@@ -133,7 +133,7 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
         }
 
         //update state
-        runnable.setState(State.RUNNING.name());
+        runnable.setState(K8sRunnableState.RUNNING.name());
 
         //update results
         if (!"disable".equals(collectResults)) {
@@ -175,7 +175,7 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
         delete(workflow);
 
         //update state
-        runnable.setState(State.STOPPED.name());
+        runnable.setState(K8sRunnableState.STOPPED.name());
 
         if (log.isTraceEnabled()) {
             log.trace("result: {}", runnable);
@@ -195,7 +195,7 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
         try {
             workflow = get(build(runnable));
         } catch (K8sFrameworkException | IllegalArgumentException e) {
-            runnable.setState(State.DELETED.name());
+            runnable.setState(K8sRunnableState.DELETED.name());
             return runnable;
         }
 
@@ -206,7 +206,7 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
         delete(workflow);
 
         //update state
-        runnable.setState(State.DELETED.name());
+        runnable.setState(K8sRunnableState.DELETED.name());
 
         if (log.isTraceEnabled()) {
             log.trace("result: {}", runnable);

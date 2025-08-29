@@ -24,9 +24,9 @@
 package it.smartcommunitylabdhub.core.runs.service;
 
 import it.smartcommunitylabdhub.commons.models.run.Run;
-import it.smartcommunitylabdhub.core.lifecycle.LifecycleManager;
 import it.smartcommunitylabdhub.core.runs.persistence.RunEntity;
 import it.smartcommunitylabdhub.core.services.BaseEntityServiceImpl;
+import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

@@ -43,11 +43,11 @@ import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.FrameworkComponent;
-import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sTemplate;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -202,7 +202,7 @@ public class K8sJobFramework extends K8sBaseFramework<K8sJobRunnable, V1Job> {
         results.put("job", job);
 
         //update state
-        runnable.setState(State.RUNNING.name());
+        runnable.setState(K8sRunnableState.RUNNING.name());
 
         if (!"disable".equals(collectResults)) {
             //update results
@@ -293,7 +293,7 @@ public class K8sJobFramework extends K8sBaseFramework<K8sJobRunnable, V1Job> {
         }
 
         //update state
-        runnable.setState(State.STOPPED.name());
+        runnable.setState(K8sRunnableState.STOPPED.name());
         runnable.setMessage(String.join(", ", messages));
 
         if (log.isTraceEnabled()) {
@@ -314,7 +314,7 @@ public class K8sJobFramework extends K8sBaseFramework<K8sJobRunnable, V1Job> {
         try {
             job = get(build(runnable));
         } catch (K8sFrameworkException | IllegalArgumentException e) {
-            runnable.setState(State.DELETED.name());
+            runnable.setState(K8sRunnableState.DELETED.name());
             return runnable;
         }
 
@@ -390,7 +390,7 @@ public class K8sJobFramework extends K8sBaseFramework<K8sJobRunnable, V1Job> {
         }
 
         //update state
-        runnable.setState(State.DELETED.name());
+        runnable.setState(K8sRunnableState.DELETED.name());
         runnable.setMessage(String.join(", ", messages));
 
         if (log.isTraceEnabled()) {

@@ -56,7 +56,6 @@ import io.kubernetes.client.openapi.models.V1VolumeMount;
 import io.kubernetes.client.openapi.models.V1VolumeResourceRequirements;
 import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
 import it.smartcommunitylabdhub.commons.infrastructure.Framework;
-import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.framework.k8s.config.KubernetesProperties;
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
@@ -75,6 +74,7 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreResource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreResourceDefinition;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -368,7 +368,7 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
             //TODO collect or rebuild objects
             // destroy(runnable);
 
-            runnable.setState(State.STOPPED.name());
+            runnable.setState(K8sRunnableState.STOPPED.name());
         }
         return runnable;
     }
