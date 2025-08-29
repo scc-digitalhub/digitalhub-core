@@ -25,7 +25,7 @@ package it.smartcommunitylabdhub.trigger.lifecycle.store;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
-import it.smartcommunitylabdhub.commons.models.trigger.TriggerJob;
+import it.smartcommunitylabdhub.triggers.lifecycle.TriggerJob;
 import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.sql.ResultSet;

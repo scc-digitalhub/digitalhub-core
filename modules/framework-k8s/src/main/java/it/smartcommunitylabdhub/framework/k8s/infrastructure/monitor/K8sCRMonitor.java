@@ -27,13 +27,14 @@ import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.util.generic.dynamic.DynamicKubernetesApi;
 import io.kubernetes.client.util.generic.dynamic.DynamicKubernetesObject;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.MonitorComponent;
-import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.services.RunnableStore;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sCRFramework;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -70,7 +71,7 @@ public class K8sCRMonitor extends K8sBaseMonitor<K8sCRRunnable> {
             if (cr == null) {
                 // something is missing, no recovery
                 log.error("Missing or invalid CR for {}", runnable.getId());
-                runnable.setState(State.ERROR.name());
+                runnable.setState(K8sRunnableState.ERROR.name());
                 runnable.setError("CR missing or invalid");
             } else {
                 try {
@@ -121,7 +122,7 @@ public class K8sCRMonitor extends K8sBaseMonitor<K8sCRRunnable> {
             }
         } catch (K8sFrameworkException e) {
             // Set Runnable to ERROR state
-            runnable.setState(State.ERROR.name());
+            runnable.setState(K8sRunnableState.ERROR.name());
             runnable.setError(e.toError());
         }
 

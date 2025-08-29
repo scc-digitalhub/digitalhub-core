@@ -23,19 +23,19 @@
 package it.smartcommunitylabdhub.trigger.lifecycle;
 
 import it.smartcommunitylabdhub.commons.accessors.fields.KeyAccessor;
-import it.smartcommunitylabdhub.commons.annotations.infrastructure.ActuatorComponent;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.infrastructure.Actuator;
-import it.smartcommunitylabdhub.commons.infrastructure.TriggerRun;
 import it.smartcommunitylabdhub.commons.models.trigger.Trigger;
 import it.smartcommunitylabdhub.commons.models.trigger.TriggerBaseStatus;
-import it.smartcommunitylabdhub.commons.models.trigger.TriggerJob;
-import it.smartcommunitylabdhub.commons.models.trigger.TriggerRunBaseStatus;
 import it.smartcommunitylabdhub.trigger.lifecycle.models.LifecycleStates;
 import it.smartcommunitylabdhub.trigger.lifecycle.models.LifecycleTriggerJob;
 import it.smartcommunitylabdhub.trigger.lifecycle.models.LifecycleTriggerSpec;
 import it.smartcommunitylabdhub.trigger.lifecycle.store.TriggerJobStore;
+import it.smartcommunitylabdhub.triggers.infrastructure.Actuator;
+import it.smartcommunitylabdhub.triggers.infrastructure.ActuatorComponent;
+import it.smartcommunitylabdhub.triggers.infrastructure.TriggerRun;
+import it.smartcommunitylabdhub.triggers.lifecycle.TriggerJob;
+import it.smartcommunitylabdhub.triggers.models.TriggerRunBaseStatus;
 import jakarta.validation.constraints.NotNull;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -129,7 +129,7 @@ public class LifecycleActuator
 
     @Override
     public TriggerRunBaseStatus onFire(@NotNull Trigger trigger, TriggerRun<? extends TriggerJob> run) {
-        //nothing to do
-        return null;
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'onFire'");
     }
 }

@@ -38,12 +38,12 @@ import it.smartcommunitylabdhub.commons.services.EntityService;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.components.infrastructure.specs.SpecValidator;
-import it.smartcommunitylabdhub.core.lifecycle.LifecycleManager;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilterConverter;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.core.utils.EntityUtils;
+import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
 import jakarta.validation.constraints.NotNull;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -329,21 +329,44 @@ public abstract class BaseEntityServiceImpl<D extends BaseDTO & SpecDTO & Status
     public void delete(@NotNull String id, @Nullable Boolean cascade) throws StoreException {
         log.debug("delete with id {}", id);
 
-        if (Boolean.TRUE.equals(cascade)) {
-            if (getFinalizer() == null) {
-                //no cascade available!
-                log.warn("Cascade delete not supported");
-                // throw new IllegalArgumentException();
-            }
-            D e = repository.find(id);
-            if (e != null) {
-                //perform gc
-                getFinalizer().finalize(e);
+        D e = repository.find(id);
+        if (e != null) {
+            //we assume that missing status means CREATED
+            StatusFieldAccessor curStatus = StatusFieldAccessor.with(e.getStatus());
+            String curState = curStatus.getState() == null ? "CREATED" : curStatus.getState();
+
+            if (getLifecycleManager() != null && !"DELETED".equals(curState)) {
+                //delegate to lifecycle manager, will perform cascade effect on success
+                log.debug("handle delete via lifecycle manager for {}", id);
+                lifecycleManager.perform(
+                    e,
+                    "DELETE",
+                    cascade,
+                    (dto, r) -> {
+                        try {
+                            if (Boolean.TRUE.equals(cascade) && getFinalizer() != null) {
+                                //perform gc
+                                getFinalizer().finalize(dto);
+                            }
+                            //entity delete is delegated to lm
+                        } catch (StoreException e1) {
+                            log.error("error deleting side effect: {}", e1.getMessage());
+                        }
+                    }
+                );
+            } else {
+                //no lifecycle manager or already completed, just delete
+                log.debug("no lifecycle manager, delete directly");
+
+                if (Boolean.TRUE.equals(cascade) && getFinalizer() != null) {
+                    //perform gc
+                    getFinalizer().finalize(e);
+                }
+
+                //entity delete
+                repository.delete(id);
             }
         }
-
-        //entity delete with no cascade
-        repository.delete(id);
     }
 
     @Override

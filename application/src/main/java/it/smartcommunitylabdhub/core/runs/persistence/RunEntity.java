@@ -23,13 +23,10 @@
 
 package it.smartcommunitylabdhub.core.runs.persistence;
 
-import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity;
 import it.smartcommunitylabdhub.core.persistence.SpecEntity;
 import it.smartcommunitylabdhub.core.persistence.StatusEntity;
-import it.smartcommunitylabdhub.core.repositories.converters.types.StateStringAttributeConverter;
 import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
@@ -69,8 +66,7 @@ public class RunEntity extends AbstractEntity implements SpecEntity, StatusEntit
     @ToString.Exclude
     protected byte[] status;
 
-    @Convert(converter = StateStringAttributeConverter.class)
-    private State state;
+    private String state;
 
     @Override
     public @NotNull String getName() {

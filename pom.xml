@@ -34,6 +34,7 @@
         <module>modules/framework-k8s</module>
         <module>modules/framework-argo</module>
         <module>modules/framework-kaniko</module>
+        <module>modules/trigger-base</module>
         <module>modules/trigger-scheduler</module>
         <module>modules/trigger-lifecycle</module>
         <module>modules/runtime-container</module>

@@ -6,29 +6,29 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.framework.k8s.processors;
 
-import it.smartcommunitylabdhub.commons.annotations.common.RunProcessorType;
+import it.smartcommunitylabdhub.commons.annotations.common.ProcessorType;
+import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.infrastructure.RunProcessor;
-import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
+import it.smartcommunitylabdhub.commons.infrastructure.Processor;
 import it.smartcommunitylabdhub.commons.models.log.Log;
 import it.smartcommunitylabdhub.commons.models.log.LogSpec;
 import it.smartcommunitylabdhub.commons.models.run.Run;
@@ -51,9 +51,13 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.BindException;
 
-@RunProcessorType(stages = { "onRunning", "onCompleted", "onError", "onStopped", "onDeleted" }, id = K8sLogProcessor.ID)
+@ProcessorType(
+    stages = { "onRunning", "onCompleted", "onError", "onStopped", "onDeleted" },
+    type = Run.class,
+    id = K8sLogProcessor.ID
+)
 @Component(K8sLogProcessor.ID)
-public class K8sLogProcessor implements RunProcessor<RunBaseStatus> {
+public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
 
     public static final String ID = "k8sLogProcessor";
 
@@ -68,11 +72,11 @@ public class K8sLogProcessor implements RunProcessor<RunBaseStatus> {
     }
 
     @Override
-    public RunBaseStatus process(Run run, RunRunnable runRunnable, RunBaseStatus status) {
-        if (runRunnable instanceof K8sRunnable) {
+    public <I> RunBaseStatus process(String stage, Run run, I input) throws CoreRuntimeException {
+        if (input instanceof K8sRunnable) {
             //extract logs
-            List<CoreLog> logs = ((K8sRunnable) runRunnable).getLogs();
-            List<CoreMetric> metrics = ((K8sRunnable) runRunnable).getMetrics();
+            List<CoreLog> logs = ((K8sRunnable) input).getLogs();
+            List<CoreMetric> metrics = ((K8sRunnable) input).getMetrics();
 
             if (logs != null) {
                 writeLogs(run, logs, metrics);

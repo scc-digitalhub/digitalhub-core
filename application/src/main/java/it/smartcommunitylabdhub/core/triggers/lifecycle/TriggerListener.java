@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.core.triggers.lifecycle;
@@ -26,11 +26,11 @@ package it.smartcommunitylabdhub.core.triggers.lifecycle;
 import it.smartcommunitylabdhub.authorization.UserAuthenticationManager;
 import it.smartcommunitylabdhub.authorization.UserAuthenticationManagerBuilder;
 import it.smartcommunitylabdhub.authorization.providers.NoOpAuthenticationProvider;
-import it.smartcommunitylabdhub.commons.infrastructure.TriggerRun;
 import it.smartcommunitylabdhub.commons.models.trigger.Trigger;
-import it.smartcommunitylabdhub.commons.models.trigger.TriggerExecutionEvent;
-import it.smartcommunitylabdhub.commons.models.trigger.TriggerJob;
 import it.smartcommunitylabdhub.commons.services.TriggerManager;
+import it.smartcommunitylabdhub.triggers.infrastructure.TriggerRun;
+import it.smartcommunitylabdhub.triggers.lifecycle.TriggerExecutionEvent;
+import it.smartcommunitylabdhub.triggers.lifecycle.TriggerJob;
 import java.util.Collections;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.BiConsumer;
@@ -52,7 +52,7 @@ import org.springframework.util.Assert;
 public class TriggerListener {
 
     private final TriggerManager triggerService;
-    private final TriggerLifecycleManager triggerManager;
+    private final KindAwareTriggerLifecycleManager triggerManager;
     private final ThreadPoolTaskExecutor executor;
 
     private UserAuthenticationManager authenticationManager;
@@ -62,7 +62,7 @@ public class TriggerListener {
         this.authenticationManager = authenticationManagerBuilder.build(new NoOpAuthenticationProvider());
     }
 
-    public TriggerListener(TriggerManager triggerService, TriggerLifecycleManager triggerManager) {
+    public TriggerListener(TriggerManager triggerService, KindAwareTriggerLifecycleManager triggerManager) {
         Assert.notNull(triggerManager, "trigger manager is required");
         Assert.notNull(triggerService, "trigger service is required");
         this.triggerService = triggerService;
@@ -124,6 +124,11 @@ public class TriggerListener {
 
         String id = event.getId();
 
+        if (event.getEvent() == null) {
+            log.error("Missing event for id {}", id);
+            return;
+        }
+
         //load trigger from db
         Trigger trigger = triggerService.findTrigger(event.getId());
         if (trigger == null) {
@@ -131,22 +136,7 @@ public class TriggerListener {
             return;
         }
 
-        switch (event.getEvent()) {
-            case FIRE:
-                // triggerManager.fire(trigger);
-                wrap(trigger, event.getRun(), triggerManager::onFire);
-                break;
-            // case RUN:
-            //     triggerManager.run(trigger);
-            //     break;
-            // case STOP:
-            //     break;
-            case ERROR:
-                wrap(trigger, event.getRun(), triggerManager::onError);
-                break;
-            default:
-                log.debug("Event {} for trigger id {} not managed", event.getEvent(), id);
-                break;
-        }
+        // handle with manager
+        wrap(trigger, event.getRun(), (tr, r) -> triggerManager.perform(tr, event.getEvent().name(), r));
     }
 }

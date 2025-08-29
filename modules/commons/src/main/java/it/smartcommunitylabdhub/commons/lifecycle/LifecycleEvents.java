@@ -26,4 +26,6 @@ package it.smartcommunitylabdhub.commons.lifecycle;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 
-public interface LifecycleEvents<D extends BaseDTO & StatusDTO> {}
+public interface LifecycleEvents<D extends BaseDTO & StatusDTO> {
+    String name();
+}

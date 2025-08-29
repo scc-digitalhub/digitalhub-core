@@ -26,12 +26,12 @@ package it.smartcommunitylabdhub.framework.kaniko.infrastructure.monitor;
 import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1Pod;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.MonitorComponent;
-import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.services.RunnableStore;
 import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sBaseFramework;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.monitor.K8sBaseMonitor;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
 import java.util.ArrayList;
 import java.util.List;
@@ -66,7 +66,7 @@ public class K8sContainerBuilderMonitor extends K8sBaseMonitor<K8sContainerBuild
             if (job == null || job.getStatus() == null) {
                 // something is missing, no recovery
                 log.error("Missing or invalid job for {}", runnable.getId());
-                runnable.setState(State.ERROR.name());
+                runnable.setState(K8sRunnableState.ERROR.name());
                 runnable.setError("Job missing or invalid");
             }
 
@@ -75,10 +75,10 @@ public class K8sContainerBuilderMonitor extends K8sBaseMonitor<K8sContainerBuild
             //target for succeded/failed is 1
             if (job.getStatus().getSucceeded() != null && job.getStatus().getSucceeded().intValue() > 0) {
                 // Job has succeeded
-                runnable.setState(State.COMPLETED.name());
+                runnable.setState(K8sRunnableState.COMPLETED.name());
             } else if (job.getStatus().getFailed() != null && job.getStatus().getFailed().intValue() > 0) {
                 // Job has failed delete job and pod
-                runnable.setState(State.ERROR.name());
+                runnable.setState(K8sRunnableState.ERROR.name());
                 runnable.setError("Job failed: " + job.getStatus().getFailed());
             }
 
@@ -120,7 +120,7 @@ public class K8sContainerBuilderMonitor extends K8sBaseMonitor<K8sContainerBuild
             }
         } catch (K8sFrameworkException e) {
             // Set Runnable to ERROR state
-            runnable.setState(State.ERROR.name());
+            runnable.setState(K8sRunnableState.ERROR.name());
             runnable.setError(e.toError());
         }
 

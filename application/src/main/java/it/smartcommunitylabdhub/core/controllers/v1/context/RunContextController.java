@@ -43,7 +43,8 @@ import it.smartcommunitylabdhub.commons.services.RunManager;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.core.runs.filters.RunEntityFilter;
-import it.smartcommunitylabdhub.core.runs.lifecycle.RunLifecycleManager;
+import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
+import it.smartcommunitylabdhub.runtimes.lifecycle.RunEvent;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -86,7 +87,7 @@ public class RunContextController {
     RunManager runManager;
 
     @Autowired
-    RunLifecycleManager lifecycleManager;
+    LifecycleManager<Run> lifecycleManager;
 
     @Autowired
     LogService logService;
@@ -118,8 +119,8 @@ public class RunContextController {
         runBaseSpec.configure(run.getSpec());
 
         if (Boolean.FALSE.equals(runBaseSpec.getLocalExecution())) {
-            run = lifecycleManager.build(run);
-            run = lifecycleManager.run(run);
+            run = lifecycleManager.perform(run, RunEvent.BUILD.name());
+            run = lifecycleManager.perform(run, RunEvent.RUN.name());
         }
 
         return run;
@@ -193,17 +194,18 @@ public class RunContextController {
         }
 
         //delete via manager
-        return lifecycleManager.delete(run);
+        return lifecycleManager.perform(run, RunEvent.DELETE.name());
     }
 
     /*
      * Actions
      */
-    @Operation(summary = "Build a specific run")
-    @PostMapping(path = "/{id}/build")
-    public Run buildRunById(
+    @Operation(summary = "Perform action on a specific run")
+    @PostMapping(path = "/{id}/{action}")
+    public Run performOnRun(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String action
     ) throws NoSuchEntityException {
         Run run = runManager.getRun(id);
 
@@ -213,75 +215,7 @@ public class RunContextController {
         }
 
         // via manager
-        return lifecycleManager.build(run);
-    }
-
-    @Operation(summary = "Execute a specific run")
-    @PostMapping(path = "/{id}/run")
-    public Run runRunById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
-    ) throws NoSuchEntityException {
-        Run run = runManager.getRun(id);
-
-        //check for project  match
-        if (!run.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        // via manager
-        return lifecycleManager.run(run);
-    }
-
-    @Operation(summary = "Stop a specific run execution")
-    @PostMapping(path = "/{id}/stop")
-    public Run stopRunById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
-    ) throws NoSuchEntityException {
-        Run run = runManager.getRun(id);
-
-        //check for project  match
-        if (!run.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        // via manager
-        return lifecycleManager.stop(run);
-    }
-
-    @Operation(summary = "Resume a specific run execution")
-    @PostMapping(path = "/{id}/resume")
-    public Run resumeRunById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
-    ) throws NoSuchEntityException {
-        Run run = runManager.getRun(id);
-
-        //check for project  match
-        if (!run.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        // via manager
-        return lifecycleManager.resume(run);
-    }
-
-    @Operation(summary = "Delete a specific run execution")
-    @PostMapping(path = "/{id}/delete")
-    public Run deleteRunById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
-    ) throws NoSuchEntityException {
-        Run run = runManager.getRun(id);
-
-        //check for project  match
-        if (!run.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        // via manager
-        return lifecycleManager.delete(run);
+        return lifecycleManager.perform(run, action);
     }
 
     /*

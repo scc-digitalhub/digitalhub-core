@@ -7,12 +7,12 @@
 package it.smartcommunitylabdhub.framework.argo.listeners;
 
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.services.RunnableStore;
 import it.smartcommunitylabdhub.framework.argo.infrastructure.k8s.K8sArgoWorkflowFramework;
 import it.smartcommunitylabdhub.framework.argo.runnables.K8sArgoWorkflowRunnable;
 import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import it.smartcommunitylabdhub.runtimes.events.RunnableChangedEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,14 +47,14 @@ public class K8sArgoWorkflowRunnableListener {
 
         try {
             runnable =
-                switch (State.valueOf(state)) {
-                    case State.READY -> {
+                switch (K8sRunnableState.valueOf(state)) {
+                    case K8sRunnableState.READY -> {
                         yield argoFramework.run(runnable);
                     }
-                    case State.STOP -> {
+                    case K8sRunnableState.STOP -> {
                         yield argoFramework.stop(runnable);
                     }
-                    case State.DELETING -> {
+                    case K8sRunnableState.DELETING -> {
                         yield argoFramework.delete(runnable);
                     }
                     default -> {
@@ -65,7 +65,7 @@ public class K8sArgoWorkflowRunnableListener {
             if (runnable != null) {
                 try {
                     // If runnable is deleted, remove from store
-                    if (runnable.getState().equals(State.DELETED.name())) {
+                    if (runnable.getState().equals(K8sRunnableState.DELETED.name())) {
                         runnableStore.remove(runnable.getId());
                     } else {
                         runnableStore.store(runnable.getId(), runnable);
@@ -77,7 +77,7 @@ public class K8sArgoWorkflowRunnableListener {
         } catch (K8sFrameworkException e) {
             // Set runnable to error state send event
             log.error("Error with k8s: {}", e.getMessage());
-            runnable.setState(State.ERROR.name());
+            runnable.setState(K8sRunnableState.ERROR.name());
             runnable.setError(e.toError());
 
             try {

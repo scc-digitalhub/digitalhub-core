@@ -23,8 +23,8 @@
 package it.smartcommunitylabdhub.core.artifacts.lifecycle;
 
 import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
-import it.smartcommunitylabdhub.core.lifecycle.BaseEntityState;
-import it.smartcommunitylabdhub.core.lifecycle.BaseFsmFactory;
+import it.smartcommunitylabdhub.lifecycle.BaseEntityState;
+import it.smartcommunitylabdhub.lifecycle.BaseFsmFactory;
 import java.util.Set;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;

@@ -23,8 +23,8 @@
 package it.smartcommunitylabdhub.core.dataitems.lifecycle;
 
 import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
-import it.smartcommunitylabdhub.core.lifecycle.BaseLifecycleManager;
-import it.smartcommunitylabdhub.core.lifecycle.LifecycleManager;
+import it.smartcommunitylabdhub.lifecycle.BaseLifecycleManager;
+import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

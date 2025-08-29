@@ -31,11 +31,13 @@ import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.models.run.Run;
+import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.commons.services.RunManager;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.core.runs.filters.RunEntityFilter;
-import it.smartcommunitylabdhub.core.runs.lifecycle.RunLifecycleManager;
+import it.smartcommunitylabdhub.core.runs.lifecycle.KindAwareRunLifecycleManager;
+import it.smartcommunitylabdhub.runtimes.lifecycle.RunEvent;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -75,7 +77,7 @@ public class RunController {
     RunManager runManager;
 
     @Autowired
-    RunLifecycleManager lifecycleManager;
+    KindAwareRunLifecycleManager lifecycleManager;
 
     @Operation(summary = "Create run and exec", description = "Create a run and exec")
     @PostMapping(
@@ -85,13 +87,17 @@ public class RunController {
     )
     public Run createRun(@RequestBody @Valid @NotNull Run dto)
         throws DuplicatedEntityException, NoSuchEntityException, SystemException, BindException {
+        //create as new, will check for duplicated
         Run run = runManager.createRun(dto);
 
-        // Build the run
-        run = lifecycleManager.build(run);
+        //if !local then also build+run
+        RunBaseSpec runBaseSpec = new RunBaseSpec();
+        runBaseSpec.configure(run.getSpec());
 
-        // Run the run
-        run = lifecycleManager.run(run);
+        if (Boolean.FALSE.equals(runBaseSpec.getLocalExecution())) {
+            run = lifecycleManager.perform(run, RunEvent.BUILD.name());
+            run = lifecycleManager.perform(run, RunEvent.RUN.name());
+        }
 
         return run;
     }
@@ -134,60 +140,22 @@ public class RunController {
 
     @Operation(summary = "Delete a run", description = "Delete a specific run, with optional cascade on logs")
     @DeleteMapping(path = "/{id}")
-    public void deleteRun(@PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id) {
+    public Run deleteRun(@PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id) {
         Run run = runManager.getRun(id);
 
-        // via manager
-        lifecycleManager.delete(run);
+        //delete via manager
+        return lifecycleManager.perform(run, RunEvent.DELETE.name());
     }
 
-    @Operation(summary = "Build a specific run")
-    @PostMapping(path = "/{id}/build")
-    public Run buildRunById(@PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id)
-        throws NoSuchEntityException {
+    @Operation(summary = "Perform action on a specific run")
+    @PostMapping(path = "/{id}/{action}")
+    public Run performOnRun(
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String action
+    ) throws NoSuchEntityException {
         Run run = runManager.getRun(id);
 
         // via manager
-        return lifecycleManager.build(run);
-    }
-
-    @Operation(summary = "Execute a specific run")
-    @PostMapping(path = "/{id}/run")
-    public Run runRunById(@PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id)
-        throws NoSuchEntityException {
-        Run run = runManager.getRun(id);
-
-        // via manager
-        return lifecycleManager.run(run);
-    }
-
-    @Operation(summary = "Stop a specific run execution")
-    @PostMapping(path = "/{id}/stop")
-    public Run stopRunById(@PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id)
-        throws NoSuchEntityException {
-        Run run = runManager.getRun(id);
-
-        // via manager
-        return lifecycleManager.stop(run);
-    }
-
-    @Operation(summary = "Resume a specific run execution")
-    @PostMapping(path = "/{id}/resume")
-    public Run resumeRunById(@PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id)
-        throws NoSuchEntityException {
-        Run run = runManager.getRun(id);
-
-        // via manager
-        return lifecycleManager.resume(run);
-    }
-
-    @Operation(summary = "Delete a specific run execution")
-    @PostMapping(path = "/{id}/delete")
-    public Run deleteRunById(@PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id)
-        throws NoSuchEntityException {
-        Run run = runManager.getRun(id);
-
-        // via manager
-        return lifecycleManager.delete(run);
+        return lifecycleManager.perform(run, action);
     }
 }
