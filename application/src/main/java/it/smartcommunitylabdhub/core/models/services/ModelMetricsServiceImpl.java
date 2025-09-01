@@ -33,7 +33,7 @@ import it.smartcommunitylabdhub.commons.models.model.Model;
 import it.smartcommunitylabdhub.commons.services.EntityService;
 import it.smartcommunitylabdhub.commons.services.MetricsService;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
-import it.smartcommunitylabdhub.core.metrics.MetricsManager;
+import it.smartcommunitylabdhub.metrics.MetricsManager;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.util.Map;

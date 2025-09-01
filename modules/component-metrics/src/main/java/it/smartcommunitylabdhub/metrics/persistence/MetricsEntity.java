@@ -21,7 +21,7 @@
  * 
  */
 
-package it.smartcommunitylabdhub.core.metrics.persistence;
+package it.smartcommunitylabdhub.metrics.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

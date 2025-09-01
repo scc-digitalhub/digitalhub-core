@@ -21,7 +21,7 @@
  * 
  */
 
-package it.smartcommunitylabdhub.core.metrics.persistence;
+package it.smartcommunitylabdhub.metrics.persistence;
 
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
