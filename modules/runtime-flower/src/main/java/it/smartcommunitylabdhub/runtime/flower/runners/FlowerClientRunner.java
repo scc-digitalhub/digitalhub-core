@@ -37,11 +37,10 @@ import it.smartcommunitylabdhub.framework.k8s.runnables.K8sDeploymentRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runtime.flower.FlowerClientRuntime;
 import it.smartcommunitylabdhub.runtime.flower.model.FABModel;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientTaskSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientRunSpec.IsolationType;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientFunctionSpec;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientRunSpec;
-
+import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientRunSpec.IsolationType;
+import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientTaskSpec;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -52,7 +51,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;
@@ -100,7 +98,6 @@ public class FlowerClientRunner {
 
         coreEnvList.add(new CoreEnv("PYTHONPATH", "${PYTHONPATH}:/shared/"));
 
-
         Map<String, String> secretData = secretService.getSecretData(run.getProject(), taskSpec.getSecrets());
         List<CoreEnv> coreSecrets = secretData == null
             ? null
@@ -119,11 +116,14 @@ public class FlowerClientRunner {
         args.addAll(List.of("/shared/client.sh", "--path_to_project", "/shared"));
 
         if (StringUtils.hasText(runSpec.getRootCertificates())) {
-            String ca =prepareCA(runSpec.getRootCertificates());
-            contextSources.add(ContextSource.builder()
+            String ca = prepareCA(runSpec.getRootCertificates());
+            contextSources.add(
+                ContextSource
+                    .builder()
                     .name("certificates/ca.crt")
                     .base64(Base64.getEncoder().encodeToString(ca.getBytes(StandardCharsets.UTF_8)))
-                    .build());
+                    .build()
+            );
             args.addAll(List.of("--certificate", "certificates/ca.crt"));
         }
         if (StringUtils.hasText(runSpec.getSuperlink())) {
@@ -132,24 +132,38 @@ public class FlowerClientRunner {
             throw new CoreRuntimeException("Superlink is required for Flower Client Run");
         }
 
-        args.addAll(List.of("--isolation", runSpec.getIsolation() != null ? runSpec.getIsolation().name() : IsolationType.subprocess.name()));
+        args.addAll(
+            List.of(
+                "--isolation",
+                runSpec.getIsolation() != null ? runSpec.getIsolation().name() : IsolationType.subprocess.name()
+            )
+        );
 
         if (runSpec.getPrivateKeySecret() != null && runSpec.getPublicKeySecret() != null) {
             Map<String, String> secretDataMap = secretService.getSecretData(
                 run.getProject(),
                 Set.of(runSpec.getPrivateKeySecret(), runSpec.getPublicKeySecret())
             );
-            if (secretDataMap.get(runSpec.getPrivateKeySecret()) != null && secretDataMap.get(runSpec.getPublicKeySecret()) != null) {
+            if (
+                secretDataMap.get(runSpec.getPrivateKeySecret()) != null &&
+                secretDataMap.get(runSpec.getPublicKeySecret()) != null
+            ) {
                 String privateKey = secretDataMap.get(runSpec.getPrivateKeySecret());
                 String publicKey = secretDataMap.get(runSpec.getPublicKeySecret());
-                contextSources.add(ContextSource.builder()
+                contextSources.add(
+                    ContextSource
+                        .builder()
                         .name("keys/auth_key.pub")
                         .base64(Base64.getEncoder().encodeToString(publicKey.getBytes(StandardCharsets.UTF_8)))
-                        .build());
-                contextSources.add(ContextSource.builder()
+                        .build()
+                );
+                contextSources.add(
+                    ContextSource
+                        .builder()
                         .name("keys/auth_key")
                         .base64(Base64.getEncoder().encodeToString(privateKey.getBytes(StandardCharsets.UTF_8)))
-                        .build());
+                        .build()
+                );
                 args.addAll(List.of("--private_key", "keys/auth_key", "--public_key", "keys/auth_key.pub"));
             } else if (secretDataMap.get(runSpec.getPrivateKeySecret()) != null) {
                 throw new CoreRuntimeException("Public key secret not found: " + runSpec.getPublicKeySecret());
@@ -183,17 +197,20 @@ public class FlowerClientRunner {
         String toml = fabModel.toTOML();
         // convert toml to base64
         String tomlBase64 = Base64.getEncoder().encodeToString(toml.getBytes(StandardCharsets.UTF_8));
-        contextSources.add(ContextSource.builder()
-                            .name("pyproject.toml")
-                            .base64(tomlBase64)
-                            .build());
+        contextSources.add(ContextSource.builder().name("pyproject.toml").base64(tomlBase64).build());
 
         if (runSpec.getNodeConfig() != null && !runSpec.getNodeConfig().isEmpty()) {
-
             String config = StringUtils.collectionToDelimitedString(
-            runSpec.getNodeConfig().entrySet().stream().map(e -> {
-                return e.getKey() + "=" + e.getValue();
-            }).collect(Collectors.toList()), " ");
+                runSpec
+                    .getNodeConfig()
+                    .entrySet()
+                    .stream()
+                    .map(e -> {
+                        return e.getKey() + "=" + e.getValue();
+                    })
+                    .collect(Collectors.toList()),
+                " "
+            );
             args.addAll(List.of("--node_config", config));
         }
 
@@ -247,9 +264,11 @@ public class FlowerClientRunner {
      * @return The formatted CA certificate string.
      */
     private String prepareCA(String ca) {
-        return "-----BEGIN CERTIFICATE-----\n" + 
-         ca.replace("-----BEGIN CERTIFICATE-----", "").replace("-----END CERTIFICATE-----", "").trim() +
-        "\n-----END CERTIFICATE-----\n";
+        return (
+            "-----BEGIN CERTIFICATE-----\n" +
+            ca.replace("-----BEGIN CERTIFICATE-----", "").replace("-----END CERTIFICATE-----", "").trim() +
+            "\n-----END CERTIFICATE-----\n"
+        );
     }
 
     private String createSuperlinkAddress(String superlink) {

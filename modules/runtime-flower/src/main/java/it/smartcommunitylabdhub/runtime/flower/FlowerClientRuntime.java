@@ -46,15 +46,14 @@ import it.smartcommunitylabdhub.runtime.flower.runners.FlowerBuildClientRunner;
 import it.smartcommunitylabdhub.runtime.flower.runners.FlowerClientRunner;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerBuildClientTaskSpec;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientFunctionSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientTaskSpec;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientRunSpec;
+import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientTaskSpec;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerRunStatus;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -62,7 +61,8 @@ import org.springframework.beans.factory.annotation.Value;
 
 @Slf4j
 @RuntimeComponent(runtime = FlowerClientRuntime.RUNTIME)
-public class FlowerClientRuntime extends K8sBaseRuntime<FlowerClientFunctionSpec, FlowerClientRunSpec, FlowerRunStatus, K8sRunnable> {
+public class FlowerClientRuntime
+    extends K8sBaseRuntime<FlowerClientFunctionSpec, FlowerClientRunSpec, FlowerRunStatus, K8sRunnable> {
 
     public static final String RUNTIME = "flower-client";
 
@@ -82,7 +82,6 @@ public class FlowerClientRuntime extends K8sBaseRuntime<FlowerClientFunctionSpec
     @Qualifier("flowerImages")
     private Map<String, String> images;
 
-
     @Value("${runtime.flower.user-id}")
     private Integer userId;
 
@@ -98,7 +97,10 @@ public class FlowerClientRuntime extends K8sBaseRuntime<FlowerClientFunctionSpec
         //check run kind
         if (!FlowerClientRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(String.valueOf(run.getKind()), FlowerClientRunSpec.KIND)
+                "Run kind {} unsupported, expecting {}".formatted(
+                        String.valueOf(run.getKind()),
+                        FlowerClientRunSpec.KIND
+                    )
             );
         }
 
@@ -138,7 +140,10 @@ public class FlowerClientRuntime extends K8sBaseRuntime<FlowerClientFunctionSpec
         //check run kind
         if (!FlowerClientRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(String.valueOf(run.getKind()), FlowerClientRunSpec.KIND)
+                "Run kind {} unsupported, expecting {}".formatted(
+                        String.valueOf(run.getKind()),
+                        FlowerClientRunSpec.KIND
+                    )
             );
         }
 

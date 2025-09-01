@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.runtime.flower.runners;
@@ -37,23 +37,18 @@ import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.Dockerfil
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
 import it.smartcommunitylabdhub.runtime.flower.FlowerServerRuntime;
 import it.smartcommunitylabdhub.runtime.flower.model.FABModel;
-import it.smartcommunitylabdhub.runtime.flower.model.FlowerSourceCode;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerBuildServerTaskSpec;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerFunctionSpec;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerRunSpec;
-
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
-import org.springframework.web.util.UriComponents;
-import org.springframework.web.util.UriComponentsBuilder;
 
 @Slf4j
 public class FlowerBuildServerRunner {
@@ -102,7 +97,6 @@ public class FlowerBuildServerRunner {
         // Add base Image
         dockerfileGenerator.from(baseImage);
 
-
         // Copy /shared folder (as workdir)
         dockerfileGenerator.copy(".", "/app");
 
@@ -112,7 +106,7 @@ public class FlowerBuildServerRunner {
         //read source and build context
         List<ContextRef> contextRefs = null;
         List<ContextSource> contextSources = new ArrayList<>();
-        
+
         FABModel fabModel = new FABModel();
         fabModel.setName(runSpecAccessor.getFunction());
         fabModel.setVersion("1.0.0");
@@ -135,7 +129,6 @@ public class FlowerBuildServerRunner {
         Optional
             .ofNullable(taskSpec.getInstructions())
             .ifPresent(instructions -> instructions.forEach(dockerfileGenerator::run));
-
 
         // Set entry point
         dockerfileGenerator.entrypoint(List.of(command));

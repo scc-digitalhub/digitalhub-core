@@ -43,7 +43,6 @@ import it.smartcommunitylabdhub.runtime.flower.model.FABModel;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerFunctionSpec;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerRunSpec;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerTaskSpec;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -52,7 +51,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;
@@ -80,7 +78,6 @@ public class FlowerServerRunner {
     private final String tlsConf;
     private final String tlsIntDomain;
     private final String tlsExtDomain;
-    
 
     public FlowerServerRunner(
         String image,
@@ -133,7 +130,6 @@ public class FlowerServerRunner {
         List<ContextRef> contextRefs = null;
         List<ContextSource> contextSources = new ArrayList<>();
 
-
         //run args
         // disable REST api scenario for now
         // String[] args = {"--insecure", "--fleet-api-type", "rest"};
@@ -142,36 +138,54 @@ public class FlowerServerRunner {
 
         if (StringUtils.hasText(caCert) && StringUtils.hasText(tlsConf)) {
             String dns1 = k8sBuilderHelper.getServiceName("flower-server", FlowerServerTaskSpec.KIND, run.getId());
-            String dns2 = k8sBuilderHelper.getServiceName("flower-server", run.getProject(),  taskAccessor.getFunction() + "-latest");
-            contextSources.add(ContextSource.builder()
+            String dns2 = k8sBuilderHelper.getServiceName(
+                "flower-server",
+                run.getProject(),
+                taskAccessor.getFunction() + "-latest"
+            );
+            contextSources.add(
+                ContextSource
+                    .builder()
                     .name("certificates/ca.crt")
                     .base64(Base64.getEncoder().encodeToString(caCert.getBytes(StandardCharsets.UTF_8)))
-                    .build());
-            contextSources.add(ContextSource.builder()
+                    .build()
+            );
+            contextSources.add(
+                ContextSource
+                    .builder()
                     .name("certificates/ca.key")
                     .base64(Base64.getEncoder().encodeToString(caKey.getBytes(StandardCharsets.UTF_8)))
-                    .build());
-            contextSources.add(ContextSource.builder()
+                    .build()
+            );
+            contextSources.add(
+                ContextSource
+                    .builder()
                     .name("certificates/tls.conf")
-                    .base64(Base64.getEncoder().encodeToString(preprocessConf(tlsConf, tlsIntDomain, tlsExtDomain, new String[]{dns1, dns2}).getBytes(StandardCharsets.UTF_8)))
-                    .build());
-            args.addAll(List.of(
-                "--certificate", "certificates/ca.crt",
-                "--tls_conf", "certificates/tls.conf"
-            ));
+                    .base64(
+                        Base64
+                            .getEncoder()
+                            .encodeToString(
+                                preprocessConf(tlsConf, tlsIntDomain, tlsExtDomain, new String[] { dns1, dns2 })
+                                    .getBytes(StandardCharsets.UTF_8)
+                            )
+                    )
+                    .build()
+            );
+            args.addAll(List.of("--certificate", "certificates/ca.crt", "--tls_conf", "certificates/tls.conf"));
         }
 
         if (runSpec.getAuthPublicKeys() != null && !runSpec.getAuthPublicKeys().isEmpty()) {
             //add auth public keys
             String authPublicKeys = String.join(",", runSpec.getAuthPublicKeys());
-            contextSources.add(ContextSource.builder()
+            contextSources.add(
+                ContextSource
+                    .builder()
                     .name("keys/client_public_keys.csv")
                     .base64(Base64.getEncoder().encodeToString(authPublicKeys.getBytes(StandardCharsets.UTF_8)))
-                    .build());
+                    .build()
+            );
 
-            args.addAll(List.of(
-                "--keys", "keys/client_public_keys.csv"
-            ));
+            args.addAll(List.of("--keys", "keys/client_public_keys.csv"));
         }
 
         //write entrypoint
@@ -186,7 +200,6 @@ public class FlowerServerRunner {
             throw new CoreRuntimeException("error with reading server entrypoint for runtime-flower");
         }
 
-
         FABModel fabModel = new FABModel();
         fabModel.setName("flowerapp");
         fabModel.setVersion("1.0.0");
@@ -200,15 +213,10 @@ public class FlowerServerRunner {
         String toml = fabModel.toTOML();
         // convert toml to base64
         String tomlBase64 = Base64.getEncoder().encodeToString(toml.getBytes(StandardCharsets.UTF_8));
-        contextSources.add(ContextSource.builder()
-                            .name("pyproject.toml")
-                            .base64(tomlBase64)
-                            .build());
+        contextSources.add(ContextSource.builder().name("pyproject.toml").base64(tomlBase64).build());
 
         //expose ports
-        List<CorePort> servicePorts = HTTP_PORTS.stream()
-            .map(port -> new CorePort(port, port))
-            .toList();
+        List<CorePort> servicePorts = HTTP_PORTS.stream().map(port -> new CorePort(port, port)).toList();
 
         //evaluate service names
         List<String> serviceNames = new ArrayList<>();
@@ -273,9 +281,8 @@ public class FlowerServerRunner {
         tlsExtDomain = tlsExtDomain.startsWith(".") ? tlsExtDomain : "." + tlsExtDomain;
         String res = content;
         for (int i = 1; i <= intNames.length; i++) {
-            res = res.replace("${dns"+i+"}", intNames[i-1] + tlsIntDomain);
+            res = res.replace("${dns" + i + "}", intNames[i - 1] + tlsIntDomain);
         }
         return res.replace("${extDomain}", "*" + tlsExtDomain);
     }
-
 }

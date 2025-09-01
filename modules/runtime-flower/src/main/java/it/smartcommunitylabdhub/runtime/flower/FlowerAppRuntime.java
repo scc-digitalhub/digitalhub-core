@@ -30,23 +30,19 @@ import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
-import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.base.Executable;
-import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
-import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
-import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
 import it.smartcommunitylabdhub.runtime.flower.runners.FlowerAppTrainRunner;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerAppFunctionSpec;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerAppRunSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerRunStatus;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerAppTrainTaskSpec;
+import it.smartcommunitylabdhub.runtime.flower.specs.FlowerRunStatus;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.HashMap;
@@ -59,7 +55,8 @@ import org.springframework.beans.factory.annotation.Value;
 
 @Slf4j
 @RuntimeComponent(runtime = FlowerAppRuntime.RUNTIME)
-public class FlowerAppRuntime extends K8sBaseRuntime<FlowerAppFunctionSpec, FlowerAppRunSpec, FlowerRunStatus, K8sRunnable> {
+public class FlowerAppRuntime
+    extends K8sBaseRuntime<FlowerAppFunctionSpec, FlowerAppRunSpec, FlowerRunStatus, K8sRunnable> {
 
     public static final String RUNTIME = "flower-app";
 
@@ -75,7 +72,6 @@ public class FlowerAppRuntime extends K8sBaseRuntime<FlowerAppFunctionSpec, Flow
     @Autowired
     @Qualifier("flowerImages")
     private Map<String, String> images;
-
 
     @Value("${runtime.flower.user-id}")
     private Integer userId;
@@ -149,7 +145,6 @@ public class FlowerAppRuntime extends K8sBaseRuntime<FlowerAppFunctionSpec, Flow
                     k8sBuilderHelper
                 )
                     .produce(run);
-
                 default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
             };
 
@@ -167,5 +162,4 @@ public class FlowerAppRuntime extends K8sBaseRuntime<FlowerAppFunctionSpec, Flow
 
         return runnable;
     }
-
 }

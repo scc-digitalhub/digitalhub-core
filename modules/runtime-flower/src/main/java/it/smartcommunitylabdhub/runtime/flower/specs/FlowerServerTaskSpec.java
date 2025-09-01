@@ -39,7 +39,7 @@ import lombok.Setter;
 @SpecType(runtime = FlowerServerRuntime.RUNTIME, kind = FlowerServerTaskSpec.KIND, entity = EntityName.TASK)
 public class FlowerServerTaskSpec extends K8sFunctionTaskBaseSpec {
 
-    public static final String KIND = "flower-server+deploy";    
+    public static final String KIND = "flower-server+deploy";
 
     public FlowerServerTaskSpec(Map<String, Serializable> data) {
         configure(data);

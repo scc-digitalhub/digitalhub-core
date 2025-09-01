@@ -45,9 +45,9 @@ import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRu
 import it.smartcommunitylabdhub.runtime.flower.runners.FlowerBuildServerRunner;
 import it.smartcommunitylabdhub.runtime.flower.runners.FlowerServerRunner;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerBuildServerTaskSpec;
+import it.smartcommunitylabdhub.runtime.flower.specs.FlowerRunStatus;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerFunctionSpec;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerRunSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerRunStatus;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerTaskSpec;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
@@ -56,8 +56,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
-import software.amazon.awssdk.services.s3.endpoints.internal.Value.Str;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -65,7 +63,8 @@ import org.springframework.core.io.Resource;
 
 @Slf4j
 @RuntimeComponent(runtime = FlowerServerRuntime.RUNTIME)
-public class FlowerServerRuntime extends K8sBaseRuntime<FlowerServerFunctionSpec, FlowerServerRunSpec, FlowerRunStatus, K8sRunnable> {
+public class FlowerServerRuntime
+    extends K8sBaseRuntime<FlowerServerFunctionSpec, FlowerServerRunSpec, FlowerRunStatus, K8sRunnable> {
 
     public static final String RUNTIME = "flower-server";
 
@@ -85,7 +84,6 @@ public class FlowerServerRuntime extends K8sBaseRuntime<FlowerServerFunctionSpec
     @Qualifier("flowerImages")
     private Map<String, String> images;
 
-
     @Value("${runtime.flower.user-id}")
     private Integer userId;
 
@@ -93,13 +91,17 @@ public class FlowerServerRuntime extends K8sBaseRuntime<FlowerServerFunctionSpec
     private Integer groupId;
 
     @Value("${runtime.flower.tls-ca-cert:}")
-    private Resource caCert;  
+    private Resource caCert;
+
     @Value("${runtime.flower.tls-ca-key:}")
-    private Resource caKey;  
+    private Resource caKey;
+
     @Value("${runtime.flower.tls-conf:}")
     private Resource tlsConf;
-    @Value("${runtime.flower.tls-int-domain:}") 
+
+    @Value("${runtime.flower.tls-int-domain:}")
     private String tlsIntDomain;
+
     @Value("${runtime.flower.tls-ext-domain:}")
     private String tlsExtDomain;
 
@@ -112,7 +114,10 @@ public class FlowerServerRuntime extends K8sBaseRuntime<FlowerServerFunctionSpec
         //check run kind
         if (!FlowerServerRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(String.valueOf(run.getKind()), FlowerServerRunSpec.KIND)
+                "Run kind {} unsupported, expecting {}".formatted(
+                        String.valueOf(run.getKind()),
+                        FlowerServerRunSpec.KIND
+                    )
             );
         }
 
@@ -152,7 +157,10 @@ public class FlowerServerRuntime extends K8sBaseRuntime<FlowerServerFunctionSpec
         //check run kind
         if (!FlowerServerRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(String.valueOf(run.getKind()), FlowerServerRunSpec.KIND)
+                "Run kind {} unsupported, expecting {}".formatted(
+                        String.valueOf(run.getKind()),
+                        FlowerServerRunSpec.KIND
+                    )
             );
         }
 
