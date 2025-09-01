@@ -25,7 +25,7 @@ package it.smartcommunitylabdhub.core.components.cloud;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
-import it.smartcommunitylabdhub.core.utils.EntityUtils;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.core.websocket.UserNotification;
 import it.smartcommunitylabdhub.core.websocket.UserNotificationEntityEvent;
 import it.smartcommunitylabdhub.core.websocket.UserNotificationService;

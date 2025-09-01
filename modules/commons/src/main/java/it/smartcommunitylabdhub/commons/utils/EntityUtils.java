@@ -20,7 +20,7 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.core.utils;
+package it.smartcommunitylabdhub.commons.utils;
 
 import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
@@ -38,6 +38,7 @@ import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import java.util.HashMap;
 import java.util.Map;
 
+@Deprecated(forRemoval = true)
 public class EntityUtils {
 
     public static final Map<Class<? extends BaseDTO>, EntityName> ENTITY_NAME_MAP = new HashMap<>();

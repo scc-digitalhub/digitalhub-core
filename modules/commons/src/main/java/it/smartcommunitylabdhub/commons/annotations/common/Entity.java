@@ -21,33 +21,17 @@
  *
  */
 
-package it.smartcommunitylabdhub.commons.models.entities;
+package it.smartcommunitylabdhub.commons.annotations.common;
 
-import lombok.Getter;
-import lombok.ToString;
-import org.springframework.util.Assert;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import org.springframework.stereotype.Indexed;
 
-@Deprecated(forRemoval = true)
-@Getter
-@ToString
-public enum EntityName {
-    PROJECT("project"),
-    WORKFLOW("workflow"),
-    FUNCTION("function"),
-    SECRET("secret"),
-    ARTIFACT("artifact"),
-    DATAITEM("dataitem"),
-    MODEL("model"),
-    TASK("task"),
-    TRIGGER("trigger"),
-    RUN("run"),
-    LOG("log"),
-    METADATA("metadata");
-
-    private final String value;
-
-    EntityName(String value) {
-        Assert.hasText(value, "value cannot be empty");
-        this.value = value;
-    }
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+@Indexed
+public @interface Entity {
+    String entity();
 }
