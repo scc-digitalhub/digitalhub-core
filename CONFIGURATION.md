@@ -29,6 +29,16 @@
 | RUNTIME_HUGGINGFACE_USER_ID       | ${kubernetes.security.user}                                        |             |
 | RUNTIME_HUGGINGFACE_GROUP_ID      | ${kubernetes.security.group}                                       |             |
 | RUNTIME_KUBEAI_ENDPOINT           |                                                                    |
+| RUNTIME_FLOWER_SERVER             | flwr/superlink:1.20.0-py3.12-ubuntu24.04                           |             |    
+| RUNTIME_FLOWER_CLIENT             | flwr/supernode:1.20.0-py3.12-ubuntu24.04                           |             |    
+| RUNTIME_FLOWER_RUNNER             | flwr/clientapp:1.20.0-py3.12-ubuntu24.04                           |             |    
+| RUNTIME_FLOWER_USER_ID            |                                                                    |             |    
+| RUNTIME_FLOWER_GROUP_ID           |                                                                    |             |    
+| RUNTIME_FLOWER_TLS_CA_CERT        |                                                                    |             |    
+| RUNTIME_FLOWER_TLS_CA_KEY         |                                                                    |             |    
+| RUNTIME_FLOWER_TLS_CONF           | classpath:/runtime-flower/docker/certificate.conf                  |             |
+| RUNTIME_FLOWER_TLS_INT_DOMAIN     | ${kubernetes.namespace}                                            |             |
+| RUNTIME_FLOWER_TLS_EXT_DOMAIN     |                                                                    |             |
 | KANIKO_IMAGE                      | gcr.io/kaniko-project/executor:latest                              |
 | KANIKO_IMAGE_PREFIX               | dhcore                                                             |             |
 | KANIKO_IMAGE_REGISTRY             | ${registry.name}                                                   |             |
