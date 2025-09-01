@@ -9,7 +9,6 @@ package it.smartcommunitylabdhub.framework.argo.infrastructure.monitor;
 import io.argoproj.workflow.models.IoArgoprojWorkflowV1alpha1CronWorkflowStatus;
 import io.kubernetes.client.openapi.models.V1Pod;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.MonitorComponent;
-import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.services.RunnableStore;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.framework.argo.infrastructure.k8s.K8sArgoCronWorkflowFramework;
@@ -18,6 +17,7 @@ import it.smartcommunitylabdhub.framework.argo.runnables.K8sArgoCronWorkflowRunn
 import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.monitor.K8sBaseMonitor;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -51,7 +51,7 @@ public class K8sArgoCronWorkflowMonitor extends K8sBaseMonitor<K8sArgoCronWorkfl
             if (workflow == null || workflow.getWorkflow().getStatus() == null) {
                 // something is missing, no recovery
                 log.error("Missing or invalid Argo Workflow for {}", runnable.getId());
-                runnable.setState(State.ERROR.name());
+                runnable.setState(K8sRunnableState.ERROR.name());
                 runnable.setError("Argo Workflow missing or invalid");
 
                 return runnable;
@@ -61,7 +61,7 @@ public class K8sArgoCronWorkflowMonitor extends K8sBaseMonitor<K8sArgoCronWorkfl
             if (status == null) {
                 // something is missing, no recovery
                 log.error("Missing or invalid Argo Workflow for {}", runnable.getId());
-                runnable.setState(State.ERROR.name());
+                runnable.setState(K8sRunnableState.ERROR.name());
                 runnable.setError("Argo Workflow missing or invalid");
 
                 return runnable;
@@ -111,7 +111,7 @@ public class K8sArgoCronWorkflowMonitor extends K8sBaseMonitor<K8sArgoCronWorkfl
             }
         } catch (K8sFrameworkException e) {
             // Set Runnable to ERROR state
-            runnable.setState(State.ERROR.name());
+            runnable.setState(K8sRunnableState.ERROR.name());
             runnable.setError(e.toError());
         }
 

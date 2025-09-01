@@ -30,7 +30,6 @@ import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
-import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
@@ -39,12 +38,12 @@ import it.smartcommunitylabdhub.commons.services.EntityService;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.components.infrastructure.specs.SpecValidator;
-import it.smartcommunitylabdhub.core.lifecycle.LifecycleManager;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilterConverter;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.core.utils.EntityUtils;
+import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
 import jakarta.validation.constraints.NotNull;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -229,15 +228,15 @@ public abstract class BaseEntityServiceImpl<D extends BaseDTO & SpecDTO & Status
         //on create status is *always* CREATED
         //keep the user provided and move via lifecycle if needed
         StatusFieldAccessor status = StatusFieldAccessor.with(dto.getStatus());
-        State curState = State.CREATED;
-        State nextState = status.getState() == null ? State.CREATED : State.valueOf(status.getState());
+        String curState = "CREATED";
+        String nextState = status.getState() == null ? "CREATED" : status.getState();
 
         if (getLifecycleManager() == null) {
             //no lifecycle action, use next state
             curState = nextState;
         }
 
-        dto.setStatus(MapUtils.mergeMultipleMaps(dto.getStatus(), Map.of(Fields.STATE, curState.name())));
+        dto.setStatus(MapUtils.mergeMultipleMaps(dto.getStatus(), Map.of(Fields.STATE, curState)));
 
         //save
         if (log.isTraceEnabled()) {
@@ -250,9 +249,9 @@ public abstract class BaseEntityServiceImpl<D extends BaseDTO & SpecDTO & Status
             log.trace("res: {}", res);
         }
 
-        if (getLifecycleManager() != null && nextState != curState) {
+        if (getLifecycleManager() != null && !nextState.equals(curState)) {
             //perform transition
-            res = getLifecycleManager().handle(dto, nextState.name());
+            res = getLifecycleManager().handle(dto, nextState);
         }
 
         return res;
@@ -278,10 +277,10 @@ public abstract class BaseEntityServiceImpl<D extends BaseDTO & SpecDTO & Status
 
         //we assume that missing status means CREATED
         StatusFieldAccessor curStatus = StatusFieldAccessor.with(current.getStatus());
-        State curState = curStatus.getState() == null ? State.CREATED : State.valueOf(curStatus.getState());
+        String curState = curStatus.getState() == null ? "CREATED" : curStatus.getState();
 
         StatusFieldAccessor nextStatus = StatusFieldAccessor.with(dto.getStatus());
-        State nextState = nextStatus.getState() == null ? State.CREATED : State.valueOf(nextStatus.getState());
+        String nextState = nextStatus.getState() == null ? "CREATED" : nextStatus.getState();
 
         if (getLifecycleManager() == null) {
             //no lifecycle action, use next state
@@ -289,19 +288,19 @@ public abstract class BaseEntityServiceImpl<D extends BaseDTO & SpecDTO & Status
         }
 
         //keep current state for update, we evaluate later
-        dto.setStatus(MapUtils.mergeMultipleMaps(dto.getStatus(), Map.of(Fields.STATE, curState.name())));
+        dto.setStatus(MapUtils.mergeMultipleMaps(dto.getStatus(), Map.of(Fields.STATE, curState)));
 
         if (!forceUpdate) {
             //spec is not modifiable: enforce current
             dto.setSpec(current.getSpec());
         }
 
-        if (curState != nextState && getLifecycleManager() != null) {
+        if (!curState.equals(nextState) && getLifecycleManager() != null) {
             //move to next state
             log.debug("state change update from {} to {}, handle via lifecycle", curState, nextState);
 
             //update via lifecycle transition
-            D res = getLifecycleManager().handle(dto, nextState.name());
+            D res = getLifecycleManager().handle(dto, nextState);
             if (log.isTraceEnabled()) {
                 log.trace("res: {}", res);
             }
@@ -330,21 +329,44 @@ public abstract class BaseEntityServiceImpl<D extends BaseDTO & SpecDTO & Status
     public void delete(@NotNull String id, @Nullable Boolean cascade) throws StoreException {
         log.debug("delete with id {}", id);
 
-        if (Boolean.TRUE.equals(cascade)) {
-            if (getFinalizer() == null) {
-                //no cascade available!
-                log.warn("Cascade delete not supported");
-                // throw new IllegalArgumentException();
-            }
-            D e = repository.find(id);
-            if (e != null) {
-                //perform gc
-                getFinalizer().finalize(e);
+        D e = repository.find(id);
+        if (e != null) {
+            //we assume that missing status means CREATED
+            StatusFieldAccessor curStatus = StatusFieldAccessor.with(e.getStatus());
+            String curState = curStatus.getState() == null ? "CREATED" : curStatus.getState();
+
+            if (getLifecycleManager() != null && !"DELETED".equals(curState)) {
+                //delegate to lifecycle manager, will perform cascade effect on success
+                log.debug("handle delete via lifecycle manager for {}", id);
+                lifecycleManager.perform(
+                    e,
+                    "DELETE",
+                    cascade,
+                    (dto, r) -> {
+                        try {
+                            if (Boolean.TRUE.equals(cascade) && getFinalizer() != null) {
+                                //perform gc
+                                getFinalizer().finalize(dto);
+                            }
+                            //entity delete is delegated to lm
+                        } catch (StoreException e1) {
+                            log.error("error deleting side effect: {}", e1.getMessage());
+                        }
+                    }
+                );
+            } else {
+                //no lifecycle manager or already completed, just delete
+                log.debug("no lifecycle manager, delete directly");
+
+                if (Boolean.TRUE.equals(cascade) && getFinalizer() != null) {
+                    //perform gc
+                    getFinalizer().finalize(e);
+                }
+
+                //entity delete
+                repository.delete(id);
             }
         }
-
-        //entity delete with no cascade
-        repository.delete(id);
     }
 
     @Override

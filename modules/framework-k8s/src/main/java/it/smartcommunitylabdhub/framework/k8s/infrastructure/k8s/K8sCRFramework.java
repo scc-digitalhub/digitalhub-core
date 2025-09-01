@@ -41,10 +41,10 @@ import io.kubernetes.client.util.generic.options.CreateOptions;
 import io.kubernetes.client.util.generic.options.DeleteOptions;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.FrameworkComponent;
 import it.smartcommunitylabdhub.commons.exceptions.FrameworkException;
-import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.io.Serializable;
@@ -122,7 +122,7 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
             log.error(e.getMessage());
         }
         //update state
-        runnable.setState(State.RUNNING.name());
+        runnable.setState(K8sRunnableState.RUNNING.name());
 
         runnable.setResults(
             results.entrySet().stream().collect(Collectors.toMap(Entry::getKey, e -> mapper.convertValue(e, typeRef)))
@@ -172,7 +172,7 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
         try {
             cr = get(build(runnable), dynamicApi);
         } catch (K8sFrameworkException | IllegalArgumentException e) {
-            runnable.setState(State.DELETED.name());
+            runnable.setState(K8sRunnableState.DELETED.name());
             return runnable;
         }
 
@@ -192,7 +192,7 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
         }
 
         //update state
-        runnable.setState(State.DELETED.name());
+        runnable.setState(K8sRunnableState.DELETED.name());
         runnable.setMessage(String.join(", ", messages));
 
         if (log.isTraceEnabled()) {

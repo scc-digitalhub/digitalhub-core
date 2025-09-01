@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.framework.k8s.listeners;
@@ -26,11 +26,11 @@ package it.smartcommunitylabdhub.framework.k8s.listeners;
 import it.smartcommunitylabdhub.commons.exceptions.FrameworkException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.services.RunnableStore;
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sBaseFramework;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import it.smartcommunitylabdhub.runtimes.events.RunnableChangedEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,23 +80,23 @@ public abstract class K8sRunnableListener<R extends K8sRunnable> {
 
         try {
             runnable =
-                switch (State.valueOf(state)) {
-                    case State.READY -> {
+                switch (K8sRunnableState.valueOf(state)) {
+                    case K8sRunnableState.READY -> {
                         //sanity check: reset left-over messages
                         runnable.setMessage(null);
                         yield k8sFramework.run(runnable);
                     }
-                    case State.STOP -> {
+                    case K8sRunnableState.STOP -> {
                         //sanity check: reset left-over messages
                         runnable.setMessage(null);
                         yield k8sFramework.stop(runnable);
                     }
-                    case State.RESUME -> {
+                    case K8sRunnableState.RESUME -> {
                         //sanity check: reset left-over messages
                         runnable.setMessage(null);
                         yield k8sFramework.resume(runnable);
                     }
-                    case State.DELETING -> {
+                    case K8sRunnableState.DELETING -> {
                         //sanity check: reset left-over messages
                         runnable.setMessage(null);
                         yield k8sFramework.delete(runnable);
@@ -120,7 +120,7 @@ public abstract class K8sRunnableListener<R extends K8sRunnable> {
             // Set runnable to error state send event
             log.error("Error with k8s for runnable {} {}: {}", clazz.getSimpleName(), id, e.getMessage());
             if (runnable != null) {
-                runnable.setState(State.ERROR.name());
+                runnable.setState(K8sRunnableState.ERROR.name());
                 runnable.setError(clazz.getSimpleName() + ":" + String.valueOf(e.getMessage()));
 
                 if (e instanceof K8sFrameworkException) {
@@ -131,7 +131,7 @@ public abstract class K8sRunnableListener<R extends K8sRunnable> {
             // Set runnable to error state send event
             log.error("Error for runnable {} {}: {}", clazz.getSimpleName(), id, e.getMessage());
             if (runnable != null) {
-                runnable.setState(State.ERROR.name());
+                runnable.setState(K8sRunnableState.ERROR.name());
                 runnable.setError(String.valueOf(e.getMessage()));
             }
         } finally {

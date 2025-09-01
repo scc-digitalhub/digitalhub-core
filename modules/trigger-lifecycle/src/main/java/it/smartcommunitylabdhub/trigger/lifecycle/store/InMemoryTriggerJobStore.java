@@ -23,7 +23,7 @@
 package it.smartcommunitylabdhub.trigger.lifecycle.store;
 
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.models.trigger.TriggerJob;
+import it.smartcommunitylabdhub.triggers.lifecycle.TriggerJob;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

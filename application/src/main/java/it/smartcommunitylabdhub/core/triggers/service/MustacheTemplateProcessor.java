@@ -30,6 +30,7 @@ import com.github.mustachejava.MustacheException;
 import com.github.mustachejava.MustacheFactory;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
+import it.smartcommunitylabdhub.commons.services.TemplateProcessor;
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.StringReader;

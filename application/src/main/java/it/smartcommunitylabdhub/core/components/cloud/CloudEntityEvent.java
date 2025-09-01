@@ -24,7 +24,8 @@
 package it.smartcommunitylabdhub.core.components.cloud;
 
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.core.events.EntityAction;
+import it.smartcommunitylabdhub.events.EntityAction;
+
 import org.springframework.context.ApplicationEvent;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.ResolvableTypeProvider;

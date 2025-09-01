@@ -23,13 +23,53 @@
 package it.smartcommunitylabdhub.core.models.lifecycle;
 
 import it.smartcommunitylabdhub.commons.models.model.Model;
-import it.smartcommunitylabdhub.core.lifecycle.BaseFsmFactory;
+import it.smartcommunitylabdhub.lifecycle.BaseEntityState;
+import it.smartcommunitylabdhub.lifecycle.BaseFsmFactory;
+
+import java.util.Set;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ModelFsmFactory extends BaseFsmFactory<Model> {
+public class ModelFsmFactory extends BaseFsmFactory<Model, ModelState, ModelEvents> {
 
     public ModelFsmFactory() {
-        super(new ModelStateCreated(), new ModelStateUploading(), new ModelStateReady(), new ModelStateError());
+        super(
+            new BaseEntityState<>(
+                ModelState.CREATED,
+                Set.of(
+                    Pair.of(ModelEvents.UPLOAD, ModelState.UPLOADING),
+                    Pair.of(ModelEvents.READY, ModelState.READY),
+                    Pair.of(ModelEvents.ERROR, ModelState.ERROR),
+                    Pair.of(ModelEvents.DELETE, ModelState.DELETED)
+                )
+            ),
+            new BaseEntityState<>(
+                ModelState.UPLOADING,
+                Set.of(
+                    Pair.of(ModelEvents.READY, ModelState.READY),
+                    Pair.of(ModelEvents.ERROR, ModelState.ERROR),
+                    Pair.of(ModelEvents.DELETE, ModelState.DELETED)
+                )
+            ),
+            new BaseEntityState<>(
+                ModelState.READY,
+                Set.of(
+                    Pair.of(ModelEvents.READY, ModelState.READY),
+                    Pair.of(ModelEvents.ERROR, ModelState.ERROR),
+                    Pair.of(ModelEvents.DELETE, ModelState.DELETED)
+                )
+            ),
+            new BaseEntityState<>(
+                ModelState.ERROR,
+                Set.of(
+                    Pair.of(ModelEvents.UPLOAD, ModelState.UPLOADING),
+                    Pair.of(ModelEvents.READY, ModelState.READY),
+                    Pair.of(ModelEvents.ERROR, ModelState.ERROR),
+                    Pair.of(ModelEvents.DELETE, ModelState.DELETED)
+                )
+            ),
+            new BaseEntityState<>(ModelState.DELETED, Set.of())
+        );
     }
 }

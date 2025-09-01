@@ -23,7 +23,7 @@
 package it.smartcommunitylabdhub.trigger.lifecycle.store;
 
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.models.trigger.TriggerJob;
+import it.smartcommunitylabdhub.triggers.lifecycle.TriggerJob;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.function.Predicate;

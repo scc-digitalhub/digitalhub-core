@@ -23,18 +23,53 @@
 package it.smartcommunitylabdhub.core.dataitems.lifecycle;
 
 import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
-import it.smartcommunitylabdhub.core.lifecycle.BaseFsmFactory;
+import it.smartcommunitylabdhub.lifecycle.BaseEntityState;
+import it.smartcommunitylabdhub.lifecycle.BaseFsmFactory;
+
+import java.util.Set;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
 @Component
-public class DataItemFsmFactory extends BaseFsmFactory<DataItem> {
+public class DataItemFsmFactory extends BaseFsmFactory<DataItem, DataItemState, DataItemEvents> {
 
     public DataItemFsmFactory() {
         super(
-            new DataItemStateCreated(),
-            new DataItemStateUploading(),
-            new DataItemStateReady(),
-            new DataItemStateError()
+            new BaseEntityState<>(
+                DataItemState.CREATED,
+                Set.of(
+                    Pair.of(DataItemEvents.UPLOAD, DataItemState.UPLOADING),
+                    Pair.of(DataItemEvents.READY, DataItemState.READY),
+                    Pair.of(DataItemEvents.ERROR, DataItemState.ERROR),
+                    Pair.of(DataItemEvents.DELETE, DataItemState.DELETED)
+                )
+            ),
+            new BaseEntityState<>(
+                DataItemState.UPLOADING,
+                Set.of(
+                    Pair.of(DataItemEvents.READY, DataItemState.READY),
+                    Pair.of(DataItemEvents.ERROR, DataItemState.ERROR),
+                    Pair.of(DataItemEvents.DELETE, DataItemState.DELETED)
+                )
+            ),
+            new BaseEntityState<>(
+                DataItemState.READY,
+                Set.of(
+                    Pair.of(DataItemEvents.READY, DataItemState.READY),
+                    Pair.of(DataItemEvents.ERROR, DataItemState.ERROR),
+                    Pair.of(DataItemEvents.DELETE, DataItemState.DELETED)
+                )
+            ),
+            new BaseEntityState<>(
+                DataItemState.ERROR,
+                Set.of(
+                    Pair.of(DataItemEvents.UPLOAD, DataItemState.UPLOADING),
+                    Pair.of(DataItemEvents.READY, DataItemState.READY),
+                    Pair.of(DataItemEvents.ERROR, DataItemState.ERROR),
+                    Pair.of(DataItemEvents.DELETE, DataItemState.DELETED)
+                )
+            ),
+            new BaseEntityState<>(DataItemState.DELETED, Set.of())
         );
     }
 }
