@@ -243,6 +243,11 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-relationships</artifactId>
+            <version>${revision}</version>
+        </dependency>        
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-runtime-base</artifactId>
             <version>${revision}</version>
         </dependency>

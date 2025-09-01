@@ -31,6 +31,7 @@
         <module>modules/authorization</module>
         <module>modules/fsm</module>
         <module>modules/component-metrics</module>        
+        <module>modules/component-relationships</module>        
         <module>modules/runtime-base</module>
         <module>modules/framework-k8s</module>
         <module>modules/framework-argo</module>

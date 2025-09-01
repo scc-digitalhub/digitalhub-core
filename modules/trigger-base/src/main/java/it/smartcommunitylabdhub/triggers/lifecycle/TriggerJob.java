@@ -22,7 +22,7 @@
 
 package it.smartcommunitylabdhub.triggers.lifecycle;
 
-import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
+import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import java.io.Serializable;
 import java.util.List;
 

@@ -21,7 +21,7 @@
  * 
  */
 
-package it.smartcommunitylabdhub.core.relationships.persistence;
+package it.smartcommunitylabdhub.relationships.persistence;
 
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;

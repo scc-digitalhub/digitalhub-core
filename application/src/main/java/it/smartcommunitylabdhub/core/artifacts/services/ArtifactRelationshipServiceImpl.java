@@ -17,7 +17,7 @@
 package it.smartcommunitylabdhub.core.artifacts.services;
 
 import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
-import it.smartcommunitylabdhub.core.relationships.BaseRelationshipsAwareEntityService;
+import it.smartcommunitylabdhub.relationships.BaseRelationshipsAwareEntityService;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

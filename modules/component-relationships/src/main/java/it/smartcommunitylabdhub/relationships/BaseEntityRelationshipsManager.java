@@ -21,16 +21,14 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.relationships;
+package it.smartcommunitylabdhub.relationships;
 
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
-import it.smartcommunitylabdhub.commons.models.metadata.RelationshipsMetadata;
-import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
-import it.smartcommunitylabdhub.core.relationships.persistence.RelationshipEntity;
-import it.smartcommunitylabdhub.core.utils.EntityUtils;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
+import it.smartcommunitylabdhub.relationships.persistence.RelationshipEntity;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;

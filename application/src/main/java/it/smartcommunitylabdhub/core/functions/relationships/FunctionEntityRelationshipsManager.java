@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.core.functions.relationships;
 
 import it.smartcommunitylabdhub.commons.models.function.Function;
-import it.smartcommunitylabdhub.core.relationships.BaseEntityRelationshipsManager;
+import it.smartcommunitylabdhub.relationships.BaseEntityRelationshipsManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

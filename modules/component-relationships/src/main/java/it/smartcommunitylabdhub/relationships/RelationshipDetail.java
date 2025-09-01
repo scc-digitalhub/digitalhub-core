@@ -6,33 +6,46 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
-package it.smartcommunitylabdhub.core.relationships;
+package it.smartcommunitylabdhub.relationships;
 
-import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.metadata.RelationshipsMetadata;
-import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.validation.constraints.NotNull;
-import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+import org.springframework.lang.Nullable;
 
-public interface RelationshipsManager<T extends BaseDTO> {
-    List<RelationshipDetail> getRelationships(@NotNull String id);
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@ToString
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class RelationshipDetail {
 
-    List<RelationshipDetail> registerRelationships(@NotNull String id, @NotNull RelationshipsMetadata relationships);
+    @NotNull
+    private RelationshipName type;
 
-    void clearRelationships(@NotNull String id);
+    @Nullable
+    private String source;
+
+    @Nullable
+    private String dest;
 }

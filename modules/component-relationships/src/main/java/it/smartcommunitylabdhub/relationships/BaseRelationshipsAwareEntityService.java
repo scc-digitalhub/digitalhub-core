@@ -14,15 +14,13 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.core.relationships;
+package it.smartcommunitylabdhub.relationships;
 
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
-import it.smartcommunitylabdhub.commons.models.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
-import it.smartcommunitylabdhub.commons.services.RelationshipsAwareEntityService;
 import jakarta.transaction.Transactional;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
