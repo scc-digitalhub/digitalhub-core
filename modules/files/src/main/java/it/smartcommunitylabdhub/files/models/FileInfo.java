@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.commons.models.files;
+package it.smartcommunitylabdhub.files.models;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
