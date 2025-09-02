@@ -24,11 +24,11 @@
 package it.smartcommunitylabdhub.triggers.lifecycle;
 
 import it.smartcommunitylabdhub.commons.models.trigger.Trigger;
-import it.smartcommunitylabdhub.commons.models.trigger.TriggerBaseSpec;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.fsm.Transition;
 import it.smartcommunitylabdhub.triggers.infrastructure.Actuator;
 import it.smartcommunitylabdhub.triggers.models.TriggerRunBaseStatus;
+import it.smartcommunitylabdhub.triggers.specs.TriggerBaseSpec;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;

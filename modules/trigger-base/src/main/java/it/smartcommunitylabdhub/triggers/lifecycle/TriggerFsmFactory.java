@@ -24,11 +24,11 @@
 package it.smartcommunitylabdhub.triggers.lifecycle;
 
 import it.smartcommunitylabdhub.commons.models.trigger.Trigger;
-import it.smartcommunitylabdhub.commons.models.trigger.TriggerBaseSpec;
-import it.smartcommunitylabdhub.commons.models.trigger.TriggerBaseStatus;
 import it.smartcommunitylabdhub.lifecycle.BaseFsmFactory;
 import it.smartcommunitylabdhub.triggers.infrastructure.Actuator;
 import it.smartcommunitylabdhub.triggers.models.TriggerRunBaseStatus;
+import it.smartcommunitylabdhub.triggers.specs.TriggerBaseSpec;
+import it.smartcommunitylabdhub.triggers.specs.TriggerBaseStatus;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j

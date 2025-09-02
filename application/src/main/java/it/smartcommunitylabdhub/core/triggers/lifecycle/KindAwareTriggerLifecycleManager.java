@@ -18,8 +18,6 @@ package it.smartcommunitylabdhub.core.triggers.lifecycle;
 
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.trigger.Trigger;
-import it.smartcommunitylabdhub.commons.models.trigger.TriggerBaseSpec;
-import it.smartcommunitylabdhub.commons.models.trigger.TriggerBaseStatus;
 import it.smartcommunitylabdhub.commons.services.RunManager;
 import it.smartcommunitylabdhub.commons.services.TaskService;
 import it.smartcommunitylabdhub.commons.services.TemplateProcessor;
@@ -29,6 +27,8 @@ import it.smartcommunitylabdhub.triggers.infrastructure.Actuator;
 import it.smartcommunitylabdhub.triggers.infrastructure.ActuatorComponent;
 import it.smartcommunitylabdhub.triggers.lifecycle.TriggerLifecycleManager;
 import it.smartcommunitylabdhub.triggers.models.TriggerRunBaseStatus;
+import it.smartcommunitylabdhub.triggers.specs.TriggerBaseSpec;
+import it.smartcommunitylabdhub.triggers.specs.TriggerBaseStatus;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

@@ -24,10 +24,10 @@
 package it.smartcommunitylabdhub.triggers.infrastructure;
 
 import it.smartcommunitylabdhub.commons.models.trigger.Trigger;
-import it.smartcommunitylabdhub.commons.models.trigger.TriggerBaseSpec;
-import it.smartcommunitylabdhub.commons.models.trigger.TriggerBaseStatus;
 import it.smartcommunitylabdhub.triggers.lifecycle.TriggerJob;
 import it.smartcommunitylabdhub.triggers.models.TriggerRunBaseStatus;
+import it.smartcommunitylabdhub.triggers.specs.TriggerBaseSpec;
+import it.smartcommunitylabdhub.triggers.specs.TriggerBaseStatus;
 import jakarta.validation.constraints.NotNull;
 
 public interface Actuator<S extends TriggerBaseSpec, Z extends TriggerBaseStatus, R extends TriggerRunBaseStatus> {

@@ -21,13 +21,11 @@
  * 
  */
 
-package it.smartcommunitylabdhub.commons.models.secret;
+package it.smartcommunitylabdhub.core.dataitems.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.models.base.BaseSpec;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.NotBlank;
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;
@@ -37,22 +35,16 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class SecretBaseSpec extends BaseSpec {
+public class DataItemBaseSpec extends BaseSpec {
 
+    @NotBlank
     @JsonProperty("path")
-    @NotNull
-    @Pattern(regexp = "secret://([\\w-]+)")
-    String path;
-
-    @NotNull
-    @Schema(allowableValues = { "kubernetes" }, defaultValue = "kubernetes")
-    String provider;
+    private String path;
 
     @Override
     public void configure(Map<String, Serializable> data) {
-        SecretBaseSpec spec = mapper.convertValue(data, SecretBaseSpec.class);
+        DataItemBaseSpec concreteSpec = mapper.convertValue(data, DataItemBaseSpec.class);
 
-        this.path = spec.getPath();
-        this.provider = spec.getProvider();
+        this.path = concreteSpec.getPath();
     }
 }

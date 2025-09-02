@@ -31,7 +31,6 @@ import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.secret.Secret;
-import it.smartcommunitylabdhub.commons.models.secret.SecretBaseSpec;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.commons.services.SecretService;
@@ -41,6 +40,7 @@ import it.smartcommunitylabdhub.core.components.infrastructure.specs.SpecValidat
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.core.secrets.persistence.SecretEntity;
+import it.smartcommunitylabdhub.core.secrets.specs.SecretBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;

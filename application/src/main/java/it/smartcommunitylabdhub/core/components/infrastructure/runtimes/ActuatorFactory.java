@@ -23,11 +23,11 @@
 
 package it.smartcommunitylabdhub.core.components.infrastructure.runtimes;
 
-import it.smartcommunitylabdhub.commons.models.trigger.TriggerBaseSpec;
-import it.smartcommunitylabdhub.commons.models.trigger.TriggerBaseStatus;
 import it.smartcommunitylabdhub.triggers.infrastructure.Actuator;
 import it.smartcommunitylabdhub.triggers.infrastructure.ActuatorComponent;
 import it.smartcommunitylabdhub.triggers.models.TriggerRunBaseStatus;
+import it.smartcommunitylabdhub.triggers.specs.TriggerBaseSpec;
+import it.smartcommunitylabdhub.triggers.specs.TriggerBaseStatus;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;

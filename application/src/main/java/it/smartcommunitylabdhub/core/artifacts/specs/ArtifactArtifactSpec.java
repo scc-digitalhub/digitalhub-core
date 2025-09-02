@@ -24,7 +24,6 @@
 package it.smartcommunitylabdhub.core.artifacts.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.artifact.ArtifactBaseSpec;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import java.io.Serializable;
 import java.util.Map;

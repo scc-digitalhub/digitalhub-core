@@ -21,10 +21,11 @@
  * 
  */
 
-package it.smartcommunitylabdhub.commons.models.trigger;
+package it.smartcommunitylabdhub.core.artifacts.specs;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import it.smartcommunitylabdhub.commons.models.base.BaseSpec;
-import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotBlank;
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;
@@ -34,33 +35,20 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class TriggerBaseSpec extends BaseSpec {
+public class ArtifactBaseSpec extends BaseSpec {
 
-    @NotEmpty
-    private String task;
+    @JsonProperty("src_path")
+    private String srcPath;
 
-    private String function;
-
-    private String workflow;
-
-    @NotEmpty
-    private Map<String, Serializable> template;
+    @NotBlank
+    @JsonProperty("path")
+    private String path;
 
     @Override
     public void configure(Map<String, Serializable> data) {
-        TriggerBaseSpec spec = mapper.convertValue(data, TriggerBaseSpec.class);
+        ArtifactBaseSpec spec = mapper.convertValue(data, ArtifactBaseSpec.class);
 
-        this.task = spec.getTask();
-        this.function = spec.getFunction();
-        this.workflow = spec.getWorkflow();
-
-        this.template = spec.getTemplate();
-    }
-
-    public static TriggerBaseSpec from(Map<String, Serializable> data) {
-        TriggerBaseSpec spec = new TriggerBaseSpec();
-        spec.configure(data);
-
-        return spec;
+        this.srcPath = spec.getSrcPath();
+        this.path = spec.getPath();
     }
 }
