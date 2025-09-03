@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.files.service;
+package it.smartcommunitylabdhub.files.base;
 
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.CredentialsService;

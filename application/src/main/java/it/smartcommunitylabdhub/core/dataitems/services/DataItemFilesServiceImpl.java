@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.core.dataitems.services;
 
 import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
-import it.smartcommunitylabdhub.core.files.service.BaseFilesService;
+import it.smartcommunitylabdhub.files.base.BaseFilesService;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

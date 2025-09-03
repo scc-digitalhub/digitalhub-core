@@ -21,20 +21,19 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.files.service;
+package it.smartcommunitylabdhub.files.service;
 
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.core.files.persistence.FilesInfoDTOBuilder;
-import it.smartcommunitylabdhub.core.files.persistence.FilesInfoEntity;
-import it.smartcommunitylabdhub.core.files.persistence.FilesInfoEntityBuilder;
-import it.smartcommunitylabdhub.core.files.persistence.FilesInfoRepository;
-import it.smartcommunitylabdhub.core.utils.UUIDKeyGenerator;
 import it.smartcommunitylabdhub.files.models.FileInfo;
 import it.smartcommunitylabdhub.files.models.FilesInfo;
-import it.smartcommunitylabdhub.files.service.FilesInfoService;
+import it.smartcommunitylabdhub.files.persistence.FilesInfoDTOBuilder;
+import it.smartcommunitylabdhub.files.persistence.FilesInfoEntity;
+import it.smartcommunitylabdhub.files.persistence.FilesInfoEntityBuilder;
+import it.smartcommunitylabdhub.files.persistence.FilesInfoRepository;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -60,7 +59,7 @@ public class FilesInfoServiceImpl implements FilesInfoService {
     @Autowired
     private FilesInfoRepository repository;
 
-    private StringKeyGenerator keyGenerator = new UUIDKeyGenerator();
+    private StringKeyGenerator keyGenerator = () -> UUID.randomUUID().toString().replace("-", "");
 
     @Autowired(required = false)
     public void setKeyGenerator(StringKeyGenerator keyGenerator) {

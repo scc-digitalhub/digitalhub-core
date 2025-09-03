@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.files.persistence;
+package it.smartcommunitylabdhub.files.persistence;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
