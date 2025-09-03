@@ -23,18 +23,43 @@
 
 package it.smartcommunitylabdhub.core.runs.service;
 
+import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.core.runs.persistence.RunEntity;
 import it.smartcommunitylabdhub.core.services.BaseEntityServiceImpl;
+import it.smartcommunitylabdhub.core.utils.NamesGenerator;
 import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
 import jakarta.transaction.Transactional;
+import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.validation.BindException;
 
 @Service
 @Transactional
 @Slf4j
 public class RunEntityServiceImpl extends BaseEntityServiceImpl<Run, RunEntity> {
+
+    private NamesGenerator nameGenerator;
+
+    @Autowired(required = false)
+    public void setNameGenerator(NamesGenerator nameGenerator) {
+        this.nameGenerator = nameGenerator;
+    }
+
+    @Override
+    public Run create(@NotNull Run dto)
+        throws IllegalArgumentException, BindException, DuplicatedEntityException, StoreException {
+        //generate random name if missing
+        if (nameGenerator != null && !StringUtils.hasText(dto.getName())) {
+            String name = nameGenerator.generateKey();
+            dto.setName(name);
+        }
+        return super.create(dto);
+    }
 
     @Override
     protected LifecycleManager<Run> getLifecycleManager() {

@@ -66,13 +66,16 @@ public class RunDTOBuilder implements Converter<RunEntity, Run> {
         //extract spec now
         Map<String, Serializable> spec = converter.convertToEntityAttribute(entity.getSpec());
         RunSpecAccessor accessor = RunSpecAccessor.with(spec);
-        //derive name
-        String name = entity.getId();
-        if (StringUtils.hasText(accessor.getFunction())) {
-            name = accessor.getFunction() + "/" + entity.getId();
-        }
-        if (StringUtils.hasText(accessor.getWorkflow())) {
-            name = accessor.getWorkflow() + "/" + entity.getId();
+        //derive name if missing
+        String name = entity.getName();
+        if (!StringUtils.hasText(name)) {
+            name = entity.getId();
+            if (StringUtils.hasText(accessor.getFunction())) {
+                name = accessor.getFunction() + "/" + entity.getId();
+            }
+            if (StringUtils.hasText(accessor.getWorkflow())) {
+                name = accessor.getWorkflow() + "/" + entity.getId();
+            }
         }
 
         //read metadata map as-is

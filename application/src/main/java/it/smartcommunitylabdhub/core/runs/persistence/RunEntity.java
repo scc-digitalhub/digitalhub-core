@@ -38,6 +38,7 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.springframework.util.StringUtils;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -48,6 +49,9 @@ import org.hibernate.annotations.JdbcTypeCode;
 @Entity
 @Table(name = "runs")
 public class RunEntity extends AbstractEntity implements SpecEntity, StatusEntity {
+
+    @Column(nullable = false)
+    private String name;
 
     @Column(nullable = false)
     private String task;
@@ -70,7 +74,7 @@ public class RunEntity extends AbstractEntity implements SpecEntity, StatusEntit
 
     @Override
     public @NotNull String getName() {
-        return id;
+        return StringUtils.hasText(name) ? name : getId();
     }
 
     @Override

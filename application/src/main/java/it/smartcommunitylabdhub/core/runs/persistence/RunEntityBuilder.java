@@ -69,6 +69,7 @@ public class RunEntityBuilder implements Converter<Run, RunEntity> {
         return RunEntity
             .builder()
             .id(dto.getId())
+            .name(dto.getName())
             .kind(dto.getKind())
             .project(dto.getProject())
             .metadata(converter.convertToDatabaseColumn(dto.getMetadata()))
