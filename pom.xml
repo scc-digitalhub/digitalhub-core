@@ -30,8 +30,9 @@
         <module>modules/commons</module>
         <module>modules/authorization</module>
         <module>modules/fsm</module>
-        <module>modules/component-metrics</module>        
-        <module>modules/component-relationships</module>        
+        <module>modules/component-metrics</module>
+        <module>modules/component-relationships</module>
+        <module>modules/component-search</module>
         <module>modules/runtime-base</module>
         <module>modules/framework-k8s</module>
         <module>modules/framework-argo</module>
@@ -51,6 +52,8 @@
         <module>modules/files</module>
         <module>modules/credentials-provider-db</module>
         <module>modules/credentials-provider-minio</module>
+        <module>modules/search-lucene</module>
+        <module>modules/search-solr</module>
         <module>frontend</module>
         <module>application</module>
     </modules>
@@ -98,7 +101,7 @@
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>3.3.1</version>
             </plugin>
-        </plugins>        
+        </plugins>
     </reporting>
 
     <!-- TODO remove when sonata repo is sync

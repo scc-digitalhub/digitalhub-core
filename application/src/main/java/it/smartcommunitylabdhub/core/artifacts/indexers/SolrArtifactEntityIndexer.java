@@ -24,8 +24,8 @@
 package it.smartcommunitylabdhub.core.artifacts.indexers;
 
 import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
-import it.smartcommunitylabdhub.core.components.solr.SolrBaseEntityIndexer;
-import it.smartcommunitylabdhub.core.components.solr.SolrComponent;
+import it.smartcommunitylabdhub.solr.SolrComponent;
+import it.smartcommunitylabdhub.solr.base.SolrBaseEntityIndexer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Primary;

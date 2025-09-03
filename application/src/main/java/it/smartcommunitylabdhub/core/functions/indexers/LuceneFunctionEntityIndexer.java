@@ -24,8 +24,8 @@
 package it.smartcommunitylabdhub.core.functions.indexers;
 
 import it.smartcommunitylabdhub.commons.models.function.Function;
-import it.smartcommunitylabdhub.core.components.lucene.LuceneBaseEntityIndexer;
-import it.smartcommunitylabdhub.core.components.lucene.LuceneComponent;
+import it.smartcommunitylabdhub.lucene.LuceneComponent;
+import it.smartcommunitylabdhub.lucene.base.LuceneBaseEntityIndexer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;

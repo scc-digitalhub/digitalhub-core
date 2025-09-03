@@ -29,11 +29,6 @@
         <!-- <jackson.version>2.15.3</jackson.version> -->
         <kubernetes.version>21.0.2-legacy</kubernetes.version>
         <postgresql.version>42.7.2</postgresql.version>
-        <!-- note: jetty locked to 10 due to solr 9.x incompatibility -->
-        <!-- note: do NOT set jetty.version because spring bom defines it for jetty 12 -->
-        <jetty4solr.version>10.0.24</jetty4solr.version>
-        <solr.version>9.7.0</solr.version>
-        <lucene.version>9.11.1</lucene.version>
         <checkstyle.config.location>../checkstyle/checkstyle.xml</checkstyle.config.location>
         <checkstyle.failOnViolation>false</checkstyle.failOnViolation>
     </properties>
@@ -169,54 +164,7 @@
             <version>${slf4j.version}</version> <!-- or the latest version -->
         </dependency>
 
-        <!-- Solr -->
-        <dependency>
-            <groupId>org.apache.solr</groupId>
-            <artifactId>solr-solrj</artifactId>
-            <version>${solr.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>jetty-util</artifactId>
-            <version>${jetty4solr.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>jetty-client</artifactId>
-            <version>${jetty4solr.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>jetty-io</artifactId>
-            <version>${jetty4solr.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>jetty-http</artifactId>
-            <version>${jetty4solr.version}</version>
-        </dependency>
 
-        <!-- LUCENE -->
-        <dependency>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-core</artifactId>
-            <version>${lucene.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-queryparser</artifactId>
-            <version>${lucene.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-highlighter</artifactId>
-            <version>${lucene.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-grouping</artifactId>
-            <version>${lucene.version}</version>
-        </dependency>
 
         <!-- TEMPLATING -->
         <dependency>
@@ -245,7 +193,12 @@
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-relationships</artifactId>
             <version>${revision}</version>
-        </dependency>        
+        </dependency>      
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-search</artifactId>
+            <version>${revision}</version>
+        </dependency>          
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-runtime-base</artifactId>
@@ -351,6 +304,16 @@
             <artifactId>credentials-provider-db</artifactId>
             <version>${revision}</version>
         </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-search-lucene</artifactId>
+            <version>${revision}</version>
+        </dependency>     
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-search-solr</artifactId>
+            <version>${revision}</version>
+        </dependency>               
     </dependencies>
 
     <build>

@@ -26,10 +26,11 @@ package it.smartcommunitylabdhub.core.events;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.core.components.cloud.CloudEntityEvent;
-import it.smartcommunitylabdhub.core.indexers.EntityIndexer;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.core.websocket.UserNotificationEntityEvent;
 import it.smartcommunitylabdhub.relationships.EntityRelationshipsManager;
+import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
+
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import lombok.extern.slf4j.Slf4j;
