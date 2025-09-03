@@ -3,36 +3,50 @@
     xmlns="http://maven.apache.org/POM/4.0.0"
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <!-- <parent>
+    <parent>
         <groupId>it.smartcommunitylabdhub</groupId>
         <artifactId>digitalhub-core</artifactId>
         <version>${revision}</version>
         <relativePath>../</relativePath>
-    </parent> -->
-    <parent>
+    </parent>
+    <!-- <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.3.13</version>
         <relativePath>../</relativePath>
-    </parent>
+    </parent> -->
     <groupId>it.smartcommunitylabdhub</groupId>
     <artifactId>core</artifactId>
     <name>dhcore</name>
     <version>${revision}</version>
     <description>Digital Hub Core</description>
     <properties>
-        <revision>0.14.0-SNAPSHOT</revision>
-        <java.version>21</java.version>
-        <spring-security.version>6.3.10</spring-security.version>
-        <springdoc.version>2.2.0</springdoc.version>
+        <!-- <revision>0.14.0-SNAPSHOT</revision> -->
+        <!-- <project.build.outputTimestamp>2025-08-01T00:00:00Z</project.build.outputTimestamp> -->
+        <!-- <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding> -->
+        <!-- <java.version>21</java.version> -->
+        <!-- <spring-security.version>6.3.10</spring-security.version> -->
+        <!-- <springdoc.version>2.2.0</springdoc.version> -->
 
         <!-- <jackson.version>2.15.3</jackson.version> -->
-        <kubernetes.version>21.0.2-legacy</kubernetes.version>
+        <!-- <kubernetes.version>21.0.2-legacy</kubernetes.version> -->
         <postgresql.version>42.7.2</postgresql.version>
-        <checkstyle.config.location>../checkstyle/checkstyle.xml</checkstyle.config.location>
-        <checkstyle.failOnViolation>false</checkstyle.failOnViolation>
+        <!-- <checkstyle.config.location>../checkstyle/checkstyle.xml</checkstyle.config.location> -->
+        <!-- <checkstyle.failOnViolation>false</checkstyle.failOnViolation> -->
     </properties>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
     <dependencies>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
@@ -165,7 +179,6 @@
         </dependency>
 
 
-
         <!-- TEMPLATING -->
         <dependency>
             <groupId>com.github.spullara.mustache.java</groupId>
@@ -193,12 +206,12 @@
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-relationships</artifactId>
             <version>${revision}</version>
-        </dependency>      
+        </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-search</artifactId>
             <version>${revision}</version>
-        </dependency>          
+        </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-runtime-base</artifactId>
@@ -308,12 +321,12 @@
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-search-lucene</artifactId>
             <version>${revision}</version>
-        </dependency>     
+        </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-search-solr</artifactId>
             <version>${revision}</version>
-        </dependency>               
+        </dependency>
     </dependencies>
 
     <build>
@@ -329,6 +342,7 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${spring-boot.version}</version>
                 <configuration>
                     <excludes>
                         <exclude>
@@ -342,10 +356,6 @@
                     </layers>
                     <mainClass>it.smartcommunitylabdhub.core.CoreApplication</mainClass>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
                 <executions>
                     <execution>
                         <id>build-info</id>
@@ -359,10 +369,23 @@
                             </additionalProperties>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>pre-integration-test</id>
+                        <goals>
+                            <goal>start</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>post-integration-test</id>
+                        <goals>
+                            <goal>stop</goal>
+                        </goals>
+                    </execution>
                 </executions>
             </plugin>
             <plugin>
                 <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
                 <executions>
                     <execution>
                         <id>templates package</id>
@@ -379,24 +402,6 @@
                                 </resource>
                             </resources>
                         </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>pre-integration-test</id>
-                        <goals>
-                            <goal>start</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>post-integration-test</id>
-                        <goals>
-                            <goal>stop</goal>
-                        </goals>
                     </execution>
                 </executions>
             </plugin>
