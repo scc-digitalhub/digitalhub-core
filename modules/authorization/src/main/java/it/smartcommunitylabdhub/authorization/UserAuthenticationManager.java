@@ -99,6 +99,15 @@ public class UserAuthenticationManager extends ProviderManager {
                         //TODO make configurable?
                         authorities.add(new SimpleGrantedAuthority(p + ":ROLE_USER"));
                     });
+
+                //inject roles from *public* sharing of projects
+                projectAuthHelper
+                    .findIdsBySharedTo("*")
+                    .forEach(p -> {
+                        //derive a scoped USER role
+                        //TODO make configurable?
+                        authorities.add(new SimpleGrantedAuthority(p + ":ROLE_USER"));
+                    });
             }
 
             //inflate credentials
