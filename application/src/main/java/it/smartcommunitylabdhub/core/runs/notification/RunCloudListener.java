@@ -25,10 +25,10 @@ package it.smartcommunitylabdhub.core.runs.notification;
 
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.run.Run;
-import it.smartcommunitylabdhub.core.components.cloud.CloudEntityEvent;
-import it.smartcommunitylabdhub.core.websocket.UserNotification;
-import it.smartcommunitylabdhub.core.websocket.UserNotificationEntityEvent;
-import it.smartcommunitylabdhub.core.websocket.UserNotificationService;
+import it.smartcommunitylabdhub.components.cloud.CloudEntityEvent;
+import it.smartcommunitylabdhub.components.websocket.UserNotification;
+import it.smartcommunitylabdhub.components.websocket.UserNotificationEntityEvent;
+import it.smartcommunitylabdhub.components.websocket.UserNotificationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;

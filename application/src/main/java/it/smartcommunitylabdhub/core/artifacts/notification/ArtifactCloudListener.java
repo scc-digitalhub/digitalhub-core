@@ -23,9 +23,9 @@
 package it.smartcommunitylabdhub.core.artifacts.notification;
 
 import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
-import it.smartcommunitylabdhub.core.components.cloud.BaseCloudListener;
-import it.smartcommunitylabdhub.core.components.cloud.CloudEntityEvent;
-import it.smartcommunitylabdhub.core.websocket.UserNotificationEntityEvent;
+import it.smartcommunitylabdhub.components.cloud.BaseCloudListener;
+import it.smartcommunitylabdhub.components.cloud.CloudEntityEvent;
+import it.smartcommunitylabdhub.components.websocket.UserNotificationEntityEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;

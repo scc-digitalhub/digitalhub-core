@@ -31,6 +31,7 @@
         <module>modules/commons</module>
         <module>modules/authorization</module>
         <module>modules/fsm</module>
+        <module>modules/component-cloud</module>
         <module>modules/component-metrics</module>
         <module>modules/component-relationships</module>
         <module>modules/component-search</module>
@@ -55,6 +56,7 @@
         <module>modules/credentials-provider-minio</module>
         <module>modules/search-lucene</module>
         <module>modules/search-solr</module>
+        <module>modules/cloud-rabbitmq</module>
         <module>frontend</module>
         <module>application</module>
     </modules>

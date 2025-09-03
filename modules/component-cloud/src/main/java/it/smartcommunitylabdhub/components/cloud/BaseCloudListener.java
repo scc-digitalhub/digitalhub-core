@@ -20,15 +20,15 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.core.components.cloud;
+package it.smartcommunitylabdhub.components.cloud;
 
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
-import it.smartcommunitylabdhub.core.websocket.UserNotification;
-import it.smartcommunitylabdhub.core.websocket.UserNotificationEntityEvent;
-import it.smartcommunitylabdhub.core.websocket.UserNotificationService;
+import it.smartcommunitylabdhub.components.websocket.UserNotification;
+import it.smartcommunitylabdhub.components.websocket.UserNotificationEntityEvent;
+import it.smartcommunitylabdhub.components.websocket.UserNotificationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
