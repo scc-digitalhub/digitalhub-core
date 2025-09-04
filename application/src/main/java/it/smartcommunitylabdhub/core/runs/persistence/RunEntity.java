@@ -73,7 +73,7 @@ public class RunEntity extends AbstractEntity implements SpecEntity, StatusEntit
     private String state;
 
     @Override
-    public @NotNull String getName() {
+    public String getName() {
         return StringUtils.hasText(name) ? name : getId();
     }
 
