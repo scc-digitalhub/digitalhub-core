@@ -28,7 +28,7 @@ import it.smartcommunitylabdhub.search.service.IndexableEntityService;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.context.event.ApplicationStartedEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
@@ -36,7 +36,7 @@ import org.springframework.util.Assert;
 
 @Component
 @Slf4j
-@ConditionalOnProperty(prefix = "lucene", name = "index-path")
+@ConditionalOnBean(LuceneComponent.class)
 public class LuceneInitalizer implements ApplicationListener<ApplicationStartedEvent> {
 
     private final LuceneProperties properties;

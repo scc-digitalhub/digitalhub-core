@@ -44,7 +44,7 @@ import org.springframework.util.Assert;
 @Component
 @Slf4j
 @ConditionalOnProperty(prefix = "lucene", name = "index-path")
-@ConditionalOnMissingBean(SearchService.class)
+@ConditionalOnMissingBean(value = SearchService.class, ignored = LuceneComponent.class)
 public class LuceneComponent implements SearchService, InitializingBean {
 
     private LuceneManager indexManager;
