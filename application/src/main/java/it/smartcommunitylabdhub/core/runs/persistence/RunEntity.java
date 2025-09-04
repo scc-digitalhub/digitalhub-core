@@ -50,7 +50,7 @@ import org.springframework.util.StringUtils;
 @Table(name = "runs")
 public class RunEntity extends AbstractEntity implements SpecEntity, StatusEntity {
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private String name;
 
     @Column(nullable = false)
