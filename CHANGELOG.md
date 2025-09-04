@@ -1,3 +1,23 @@
+# [0.14.0-beta1](https://github.com/scc-digitalhub/digitalhub-core/compare/0.13.0...0.14.0-beta1) (2025-09-04)
+
+
+### Bug Fixes
+
+* fix legacy use of joda time in repository ([9c2b45a](https://github.com/scc-digitalhub/digitalhub-core/commit/9c2b45aaa9d85dd8cf70819b6a000315fc59bc36))
+* keep last 32k chars of log, not first ([ac3308f](https://github.com/scc-digitalhub/digitalhub-core/commit/ac3308f33cce680c67dd76b9a603a7611e79c77a))
+* keep priority on context-sources vs context-refs ([a562828](https://github.com/scc-digitalhub/digitalhub-core/commit/a5628286c650bd25deb380faa812323090234ca2))
+* remove inexistent value from cron regex ([6c9f089](https://github.com/scc-digitalhub/digitalhub-core/commit/6c9f0894dae0353be8e8aab1d3b5e60f9482d68b))
+* wrong httpheader class used in webconfig ([99fa49a](https://github.com/scc-digitalhub/digitalhub-core/commit/99fa49ab6a0272e9c88f0c11ac8b5117ea965544))
+
+
+### Features
+
+* human-readable names generator, used for runs + version names by default ([1d6780a](https://github.com/scc-digitalhub/digitalhub-core/commit/1d6780a50966188ef51977d6b01da1ee2c8035c5))
+* set mem resource limit by default with toleration of 1.1, configurable ([a3976d2](https://github.com/scc-digitalhub/digitalhub-core/commit/a3976d2c9b5e72ea1d1b849d4caa390b816c6fbc))
+* support sharing a project with everyone (*) ([1539ca3](https://github.com/scc-digitalhub/digitalhub-core/commit/1539ca33d841ec9a034c5a9a613d2c9070e88354))
+
+
+
 # [0.13.0](https://github.com/scc-digitalhub/digitalhub-core/compare/0.12.0...0.13.0) (2025-07-31)
 
 ## What's Changed

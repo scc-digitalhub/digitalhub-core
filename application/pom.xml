@@ -356,6 +356,7 @@
                         <configuration>${project.basedir}/src/main/layers.xml</configuration>
                     </layers>
                     <mainClass>it.smartcommunitylabdhub.core.CoreApplication</mainClass>
+                    <layout>JAR</layout>
                 </configuration>
                 <executions>
                     <execution>
@@ -369,6 +370,11 @@
                                 <description>${project.description}</description>
                             </additionalProperties>
                         </configuration>
+                    </execution>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
                     </execution>
                     <execution>
                         <id>pre-integration-test</id>
