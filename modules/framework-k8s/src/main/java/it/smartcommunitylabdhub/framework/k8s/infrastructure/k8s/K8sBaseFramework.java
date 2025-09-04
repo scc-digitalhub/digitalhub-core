@@ -76,6 +76,8 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -102,6 +104,7 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
     implements Framework<T>, InitializingBean {
 
     public static final String DEFAULT_TEMPLATE = "default";
+    public static final float DEFAULT_MEM_TOLERATION = 1.1f;
 
     //custom object mapper with mixIn for IntOrString
     protected static final ObjectMapper mapper = KubernetesMapper.OBJECT_MAPPER;
@@ -127,6 +130,7 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
     protected String gpuResourceKey;
     protected CoreResourceDefinition cpuResourceDefinition = new CoreResourceDefinition();
     protected CoreResourceDefinition memResourceDefinition = new CoreResourceDefinition();
+    protected Float memResourceToleration = DEFAULT_MEM_TOLERATION;
     protected CoreResourceDefinition pvcResourceDefinition = new CoreResourceDefinition();
     protected String pvcStorageClass;
 
@@ -237,6 +241,13 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
     ) {
         if (StringUtils.hasText(memResourceDefinition)) {
             this.memResourceDefinition.setLimits(memResourceDefinition);
+        }
+    }
+
+    @Autowired
+    public void setMemResourceToleration(@Value("${kubernetes.resources.mem.toleration}") Float memResourceToleration) {
+        if (memResourceToleration != null && memResourceToleration > 1) {
+            this.memResourceToleration = memResourceToleration;
         }
     }
 
@@ -908,14 +919,25 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
             ? new HashMap<>()
             : new HashMap<>(resources.getLimits());
 
+        //cpu: either user specified, or admin specified, or none
         if (cpuResourceDefinition.getLimits() != null) {
             //merge if missing
             limits.putIfAbsent("cpu", Quantity.fromString(cpuResourceDefinition.getLimits()));
         }
 
-        if (memResourceDefinition.getLimits() != null) {
-            //merge if missing
-            limits.putIfAbsent("memory", Quantity.fromString(memResourceDefinition.getLimits()));
+        //mem: either user specified, or auto-calculated, or admin specified, or none
+        if (!limits.containsKey("memory")) {
+            if (requests.containsKey("memory") && memResourceToleration != null) {
+                BigDecimal ml = requests
+                    .get("memory")
+                    .getNumber()
+                    .multiply(new BigDecimal(memResourceToleration))
+                    .setScale(0, RoundingMode.UP);
+                limits.put("memory", new Quantity(ml, requests.get("memory").getFormat()));
+            } else if (memResourceDefinition.getLimits() != null) {
+                //merge if missing
+                limits.putIfAbsent("memory", Quantity.fromString(memResourceDefinition.getLimits()));
+            }
         }
 
         resources.setLimits(limits);
