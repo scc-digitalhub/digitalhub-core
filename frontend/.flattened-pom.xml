@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>it.smartcommunitylabdhub</groupId>
   <artifactId>dh-console</artifactId>
-  <version>0.13.0-SNAPSHOT</version>
+  <version>0.14.0-SNAPSHOT</version>
   <dependencies>
     <dependency>
       <groupId>org.projectlombok</groupId>
@@ -16,31 +16,31 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot</artifactId>
-      <version>3.3.12</version>
+      <version>3.3.13</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
-      <version>3.3.12</version>
+      <version>3.3.13</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
-      <version>3.3.12</version>
+      <version>3.3.13</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-thymeleaf</artifactId>
-      <version>3.3.12</version>
+      <version>3.3.13</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
       <artifactId>dh-commons</artifactId>
-      <version>0.13.0-SNAPSHOT</version>
+      <version>0.14.0-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
