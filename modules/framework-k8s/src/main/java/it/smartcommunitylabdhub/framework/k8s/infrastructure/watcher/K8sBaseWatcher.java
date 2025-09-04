@@ -55,7 +55,7 @@ public abstract class K8sBaseWatcher<T extends K8sRunnable> implements Initializ
     // Debounce map and interval
     // TODO add cleanup for expired entries
     private final Map<String, Long> debounceMap = new ConcurrentHashMap<>();
-    private static final long DEBOUNCE_INTERVAL_MS = 100;
+    private static final long DEBOUNCE_INTERVAL_MS = 1000;
 
     public K8sBaseWatcher(KubernetesClient client, K8sBaseMonitor<T> k8sMonitor) {
         Assert.notNull(k8sMonitor, "k8s monitor is required");

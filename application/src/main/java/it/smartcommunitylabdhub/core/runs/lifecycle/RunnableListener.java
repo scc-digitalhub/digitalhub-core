@@ -23,14 +23,18 @@
 
 package it.smartcommunitylabdhub.core.runs.lifecycle;
 
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.services.RunManager;
+import it.smartcommunitylabdhub.commons.services.RunnableStore;
 import it.smartcommunitylabdhub.runtimes.events.RunnableChangedEvent;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.BiConsumer;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -48,6 +52,7 @@ public class RunnableListener {
     private final RunManager runService;
     private final KindAwareRunLifecycleManager runManager;
     private final ThreadPoolTaskExecutor executor;
+    private Collection<RunnableStore<?>> stores = Collections.emptyList();
 
     public RunnableListener(RunManager runService, KindAwareRunLifecycleManager runManager) {
         Assert.notNull(runManager, "run manager is required");
@@ -61,6 +66,11 @@ public class RunnableListener {
         executor.setThreadNamePrefix("runlm-");
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.initialize();
+    }
+
+    @Autowired(required = false)
+    public void setStores(Collection<RunnableStore<?>> stores) {
+        this.stores = stores;
     }
 
     /*
@@ -109,7 +119,26 @@ public class RunnableListener {
         // Use service to retrieve the run and check if state is changed
         Run run = runService.findRun(id);
         if (run == null) {
-            log.error("Run with id {} not found", id);
+            log.warn("Run with id {} not found", id);
+            //orphan run, remove from store
+            if (stores != null) {
+                stores.forEach(store -> {
+                    try {
+                        RunRunnable rr = store.find(id);
+                        if (rr != null) {
+                            log.warn(
+                                "Remove orphaned runnable {} from store {}",
+                                id,
+                                store.getResolvableType().resolve().getName()
+                            );
+                            store.remove(id);
+                        }
+                    } catch (StoreException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                });
+            }
             return;
         }
 

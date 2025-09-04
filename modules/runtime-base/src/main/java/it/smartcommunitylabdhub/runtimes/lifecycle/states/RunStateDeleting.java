@@ -39,6 +39,6 @@ public class RunStateDeleting<S extends RunBaseSpec, Z extends RunBaseStatus, R 
     public RunStateDeleting(Runtime<S, Z, R> runtime) {
         super(RunState.DELETING, runtime);
         //transitions
-        txs = List.of(toDelete().build());
+        txs = List.of(toDelete().build(), toError().build());
     }
 }

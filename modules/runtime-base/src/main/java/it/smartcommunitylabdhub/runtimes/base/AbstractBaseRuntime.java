@@ -266,7 +266,7 @@ public abstract class AbstractBaseRuntime<
             return runRunnable;
         }
 
-        log.debug("Error deleting run {}", run.getId());
+        //nothing to do
         return null;
     }
 

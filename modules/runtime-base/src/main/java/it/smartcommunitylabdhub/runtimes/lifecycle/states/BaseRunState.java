@@ -113,13 +113,8 @@ public class BaseRunState<
                     return Optional.empty();
                 }
 
-                if (runnable != null) {
-                    //delete via runtime
-                    return Optional.ofNullable(runtime.delete(run));
-                }
-
-                //no-op, nothing happened yet
-                return Optional.empty();
+                //delete via runtime
+                return Optional.ofNullable(runtime.delete(run));
             });
     }
 

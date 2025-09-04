@@ -22,13 +22,17 @@
 
 package it.smartcommunitylabdhub.runtimes.lifecycle;
 
+import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.infrastructure.Runtime;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
+import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.lifecycle.BaseLifecycleManager;
 import jakarta.validation.constraints.NotNull;
+import java.io.Serializable;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -82,8 +86,16 @@ public class RunLifecycleManager<S extends RunBaseSpec, Z extends RunBaseStatus,
                                 );
                         }
 
-                        //publish to dispatcher
+                        //publish to dispatcher, we will receive a callback
                         this.eventPublisher.publishEvent(runnable);
+                    } else if (runnable == null && RunEvent.DELETE.name().equals(event)) {
+                        StatusFieldAccessor status = StatusFieldAccessor.with(run.getStatus());
+                        if (RunState.DELETING.name().equals(status.getState())) {
+                            //short circuit DELETING for no-ops to DELETED
+                            //this will let manager DELETE the entity
+                            Map<String, Serializable> baseStatus = Map.of("state", RunState.DELETED.name());
+                            run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), baseStatus));
+                        }
                     }
                 };
         }
