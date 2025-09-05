@@ -270,7 +270,7 @@ public class LogServiceImpl implements LogService {
             //check if too big and slice
             if (dto.getContent() != null && dto.getContent().length() > MAX_LENGTH) {
                 log.debug("log content too long, slice to {}", MAX_LENGTH);
-                dto.setContent(dto.getContent().substring(0, MAX_LENGTH));
+                dto.setContent(dto.getContent().substring(dto.getContent().length() - MAX_LENGTH));
             }
 
             //full update, log is modifiable
