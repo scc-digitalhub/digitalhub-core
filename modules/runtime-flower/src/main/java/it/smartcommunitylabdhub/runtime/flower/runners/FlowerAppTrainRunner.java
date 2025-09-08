@@ -52,6 +52,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;
@@ -188,7 +190,9 @@ public class FlowerAppTrainRunner {
 
                 fabModel.setFederationConfigs(Collections.singletonMap(federation, config));
 
-                fabModel.setConfig(runSpec.getParameters());
+                if (runSpec.getParameters() != null && runSpec.getParameters().size() > 0) {
+                    fabModel.setConfig(runSpec.getParameters());
+                }
                 String toml = fabModel.toTOML();
                 // convert toml to base64
                 String tomlBase64 = Base64.getEncoder().encodeToString(toml.getBytes(StandardCharsets.UTF_8));
@@ -222,11 +226,18 @@ public class FlowerAppTrainRunner {
                 "--format",
                 "json",
                 "--federation-config",
-                federationConfig,
-                "/shared/",
-                federation
+                federationConfig
             )
         );
+
+        if (runSpec.getParameters() != null && runSpec.getParameters().size() > 0) {
+            args.add("--run-config");
+            String runConfig = runSpec.getParameters().entrySet().stream().map(e -> e.getKey() + "=" + e.getValue()).collect(Collectors.joining(" "));
+            args.add(runConfig);
+        }
+
+        args.add("/shared/");
+        args.add(federation);
 
         String cmd = "/bin/bash";
 
