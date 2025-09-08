@@ -6,59 +6,44 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
-package it.smartcommunitylabdhub.runtime.container.specs;
+package it.smartcommunitylabdhub.runtime.container.job;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
-import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.runtime.container.ContainerRuntime;
-import jakarta.validation.constraints.Min;
+import it.smartcommunitylabdhub.runtime.container.specs.ContainerRunSpec;
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Getter
-@Setter
 @NoArgsConstructor
-@SpecType(runtime = ContainerRuntime.RUNTIME, kind = ContainerDeployTaskSpec.KIND, entity = EntityName.TASK)
-public class ContainerDeployTaskSpec extends K8sFunctionTaskBaseSpec {
+@SpecType(runtime = ContainerRuntime.RUNTIME, kind = ContainerJobRunSpec.KIND, entity = EntityName.RUN)
+public class ContainerJobRunSpec extends ContainerRunSpec {
 
-    public static final String KIND = "container+deploy";
+    public static final String KIND = ContainerJobTaskSpec.KIND + ":run";
 
-    @Min(1)
-    private Integer replicas;
+    @JsonUnwrapped
+    private ContainerJobTaskSpec taskJobSpec;
 
-    @JsonProperty("fs_group")
-    @Min(1)
-    private Integer fsGroup;
-
-    @JsonProperty("run_as_user")
-    @Min(1)
-    private Integer runAsUser;
-
-    @JsonProperty("run_as_group")
-    @Min(1)
-    private Integer runAsGroup;
-
-    public ContainerDeployTaskSpec(Map<String, Serializable> data) {
+    public ContainerJobRunSpec(Map<String, Serializable> data) {
         configure(data);
     }
 
@@ -66,10 +51,11 @@ public class ContainerDeployTaskSpec extends K8sFunctionTaskBaseSpec {
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
 
-        ContainerDeployTaskSpec spec = mapper.convertValue(data, ContainerDeployTaskSpec.class);
-        this.replicas = spec.getReplicas();
-        this.fsGroup = spec.getFsGroup();
-        this.runAsGroup = spec.getRunAsUser();
-        this.runAsGroup = spec.getRunAsGroup();
+        ContainerJobRunSpec spec = mapper.convertValue(data, ContainerJobRunSpec.class);
+        this.taskJobSpec = spec.getTaskJobSpec();
+    }
+
+    public void setTaskJobSpec(ContainerJobTaskSpec taskJobSpec) {
+        this.taskJobSpec = taskJobSpec;
     }
 }

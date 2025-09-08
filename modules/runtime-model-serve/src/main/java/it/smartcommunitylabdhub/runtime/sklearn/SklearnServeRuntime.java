@@ -88,9 +88,7 @@ public class SklearnServeRuntime
     @Value("${runtime.sklearnserve.group-id}")
     private Integer groupId;
 
-    public SklearnServeRuntime() {
-        super(SklearnServeRunSpec.KIND);
-    }
+    public SklearnServeRuntime() {}
 
     @Override
     public void afterPropertiesSet() throws Exception {
@@ -184,5 +182,10 @@ public class SklearnServeRuntime
         runnable.setConfigurations(configurations);
 
         return runnable;
+    }
+
+    @Override
+    public boolean isSupported(@NotNull Run run) {
+        return SklearnServeRunSpec.KIND.equals(run.getKind());
     }
 }

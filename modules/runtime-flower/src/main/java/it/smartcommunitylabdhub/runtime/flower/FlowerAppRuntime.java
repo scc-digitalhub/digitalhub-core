@@ -79,9 +79,7 @@ public class FlowerAppRuntime
     @Value("${runtime.flower.group-id}")
     private Integer groupId;
 
-    public FlowerAppRuntime() {
-        super(FlowerAppRunSpec.KIND);
-    }
+    public FlowerAppRuntime() {}
 
     @Override
     public FlowerAppRunSpec build(@NotNull Executable function, @NotNull Task task, @NotNull Run run) {
@@ -161,5 +159,10 @@ public class FlowerAppRuntime
         runnable.setConfigurations(configurations);
 
         return runnable;
+    }
+
+    @Override
+    public boolean isSupported(@NotNull Run run) {
+        return FlowerAppRunSpec.KIND.equals(run.getKind());
     }
 }

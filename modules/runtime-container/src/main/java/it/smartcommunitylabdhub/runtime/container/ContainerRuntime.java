@@ -40,21 +40,27 @@ import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
-import it.smartcommunitylabdhub.runtime.container.runners.ContainerBuildRunner;
-import it.smartcommunitylabdhub.runtime.container.runners.ContainerDeployRunner;
-import it.smartcommunitylabdhub.runtime.container.runners.ContainerJobRunner;
-import it.smartcommunitylabdhub.runtime.container.runners.ContainerServeRunner;
-import it.smartcommunitylabdhub.runtime.container.specs.ContainerBuildTaskSpec;
-import it.smartcommunitylabdhub.runtime.container.specs.ContainerDeployTaskSpec;
+import it.smartcommunitylabdhub.runtime.container.build.ContainerBuildRunSpec;
+import it.smartcommunitylabdhub.runtime.container.build.ContainerBuildRunner;
+import it.smartcommunitylabdhub.runtime.container.build.ContainerBuildTaskSpec;
+import it.smartcommunitylabdhub.runtime.container.deploy.ContainerDeployRunSpec;
+import it.smartcommunitylabdhub.runtime.container.deploy.ContainerDeployRunner;
+import it.smartcommunitylabdhub.runtime.container.deploy.ContainerDeployTaskSpec;
+import it.smartcommunitylabdhub.runtime.container.job.ContainerJobRunSpec;
+import it.smartcommunitylabdhub.runtime.container.job.ContainerJobRunner;
+import it.smartcommunitylabdhub.runtime.container.job.ContainerJobTaskSpec;
+import it.smartcommunitylabdhub.runtime.container.serve.ContainerServeRunSpec;
+import it.smartcommunitylabdhub.runtime.container.serve.ContainerServeRunner;
+import it.smartcommunitylabdhub.runtime.container.serve.ContainerServeTaskSpec;
 import it.smartcommunitylabdhub.runtime.container.specs.ContainerFunctionSpec;
-import it.smartcommunitylabdhub.runtime.container.specs.ContainerJobTaskSpec;
 import it.smartcommunitylabdhub.runtime.container.specs.ContainerRunSpec;
 import it.smartcommunitylabdhub.runtime.container.specs.ContainerRunStatus;
-import it.smartcommunitylabdhub.runtime.container.specs.ContainerServeTaskSpec;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,9 +73,12 @@ public class ContainerRuntime
     extends K8sBaseRuntime<ContainerFunctionSpec, ContainerRunSpec, ContainerRunStatus, K8sRunnable> {
 
     public static final String RUNTIME = "container";
-
-    //TODO make configurable
-    public static final int MAX_METRICS = 300;
+    public static final String[] KINDS = {
+        ContainerBuildRunSpec.KIND,
+        ContainerJobRunSpec.KIND,
+        ContainerDeployRunSpec.KIND,
+        ContainerServeRunSpec.KIND,
+    };
 
     @Autowired
     private SecretService secretService;
@@ -83,27 +92,38 @@ public class ContainerRuntime
     @Autowired
     private ConfigurationService configurationService;
 
-    public ContainerRuntime() {
-        super(ContainerRunSpec.KIND);
+    @Override
+    public boolean isSupported(@NotNull Run run) {
+        return Arrays.asList(KINDS).contains(run.getKind());
     }
 
     @Override
     public ContainerRunSpec build(@NotNull Executable function, @NotNull Task task, @NotNull Run run) {
-        //check run kind
-        if (!ContainerRunSpec.KIND.equals(run.getKind())) {
-            throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(String.valueOf(run.getKind()), ContainerRunSpec.KIND)
-            );
-        }
-
         ContainerFunctionSpec funSpec = new ContainerFunctionSpec(function.getSpec());
-        ContainerRunSpec runSpec = new ContainerRunSpec(run.getSpec());
 
-        String kind = task.getKind();
+        String kind = run.getKind();
+        ContainerRunSpec runSpec =
+            switch (kind) {
+                case ContainerDeployRunSpec.KIND -> {
+                    yield new ContainerDeployRunSpec(run.getSpec());
+                }
+                case ContainerJobRunSpec.KIND -> {
+                    yield new ContainerJobRunSpec(run.getSpec());
+                }
+                case ContainerServeRunSpec.KIND -> {
+                    yield new ContainerServeRunSpec(run.getSpec());
+                }
+                case ContainerBuildRunSpec.KIND -> {
+                    yield new ContainerBuildRunSpec(run.getSpec());
+                }
+                default -> throw new IllegalArgumentException(
+                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+                );
+            };
 
         //build task spec as defined
         TaskBaseSpec taskSpec =
-            switch (kind) {
+            switch (task.getKind()) {
                 case ContainerDeployTaskSpec.KIND -> {
                     yield new ContainerDeployTaskSpec(task.getSpec());
                 }
@@ -126,54 +146,39 @@ public class ContainerRuntime
         map.putAll(runSpec.toMap());
         taskSpec.toMap().forEach(map::putIfAbsent);
 
-        ContainerRunSpec containerSpec = new ContainerRunSpec(map);
+        runSpec.configure(map);
         //ensure function is not modified
-        containerSpec.setFunctionSpec(funSpec);
+        runSpec.setFunctionSpec(funSpec);
 
-        return containerSpec;
+        return runSpec;
     }
 
     @Override
     public K8sRunnable run(@NotNull Run run) {
         //check run kind
-        if (!ContainerRunSpec.KIND.equals(run.getKind())) {
-            throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(String.valueOf(run.getKind()), ContainerRunSpec.KIND)
-            );
+        if (!isSupported(run)) {
+            throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
         }
 
-        ContainerRunSpec runContainerSpec = new ContainerRunSpec(run.getSpec());
+        if (k8sBuilderHelper == null) {
+            throw new IllegalArgumentException("No k8s available");
+        }
+
+        //read base task spec to extract secrets
+        K8sFunctionTaskBaseSpec taskSpec = new K8sFunctionTaskBaseSpec();
+        taskSpec.configure(run.getSpec());
+        Map<String, String> secrets = secretService.getSecretData(run.getProject(), taskSpec.getSecrets());
 
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
         K8sRunnable runnable =
             switch (runAccessor.getTask()) {
-                case ContainerDeployTaskSpec.KIND -> new ContainerDeployRunner(
-                    runContainerSpec.getFunctionSpec(),
-                    secretService.getSecretData(run.getProject(), runContainerSpec.getTaskDeploySpec().getSecrets()),
-                    k8sBuilderHelper
-                )
-                    .produce(run);
-                case ContainerJobTaskSpec.KIND -> new ContainerJobRunner(
-                    runContainerSpec.getFunctionSpec(),
-                    secretService.getSecretData(run.getProject(), runContainerSpec.getTaskJobSpec().getSecrets()),
-                    k8sBuilderHelper
-                )
-                    .produce(run);
-                case ContainerServeTaskSpec.KIND -> new ContainerServeRunner(
-                    runContainerSpec.getFunctionSpec(),
-                    secretService.getSecretData(run.getProject(), runContainerSpec.getTaskServeSpec().getSecrets()),
-                    k8sBuilderHelper,
-                    functionService
-                )
-                    .produce(run);
-                case ContainerBuildTaskSpec.KIND -> new ContainerBuildRunner(
-                    runContainerSpec.getFunctionSpec(),
-                    secretService.getSecretData(run.getProject(), runContainerSpec.getTaskBuildSpec().getSecrets()),
-                    k8sBuilderHelper
-                )
-                    .produce(run);
+                case ContainerDeployTaskSpec.KIND -> new ContainerDeployRunner(k8sBuilderHelper).produce(run, secrets);
+                case ContainerJobTaskSpec.KIND -> new ContainerJobRunner(k8sBuilderHelper).produce(run, secrets);
+                case ContainerServeTaskSpec.KIND -> new ContainerServeRunner(k8sBuilderHelper, functionService)
+                    .produce(run, secrets);
+                case ContainerBuildTaskSpec.KIND -> new ContainerBuildRunner(k8sBuilderHelper).produce(run, secrets);
                 default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
             };
 

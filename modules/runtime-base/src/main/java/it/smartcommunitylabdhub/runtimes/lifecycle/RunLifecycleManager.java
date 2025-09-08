@@ -41,12 +41,16 @@ import org.springframework.security.core.context.SecurityContextHolder;
 public class RunLifecycleManager<S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable>
     extends BaseLifecycleManager<Run, RunState, RunEvent> {
 
-    public RunLifecycleManager(RunFsmFactory<S, Z, R> fsmFactory) {
-        this.setFsmFactory(fsmFactory);
+    public RunLifecycleManager(Runtime<S, Z, R> runtime) {
+        this(new RunFsmFactory<>(runtime));
     }
 
-    public RunLifecycleManager(Runtime<S, Z, R> runtime) {
-        this.setFsmFactory(new RunFsmFactory<>(runtime));
+    public RunLifecycleManager(RunFsmFactory<S, Z, R> fsmFactory) {
+        //fix internal types because we have a different signature
+        //this will shadow superclass generic visibility
+        super(Run.class, RunState.class, RunEvent.class);
+        //set fsm factory
+        this.setFsmFactory(fsmFactory);
     }
 
     @Override

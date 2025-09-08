@@ -88,9 +88,7 @@ public class HuggingfaceServeRuntime
     @Value("${runtime.huggingfaceserve.group-id}")
     private Integer groupId;
 
-    public HuggingfaceServeRuntime() {
-        super(HuggingfaceServeRunSpec.KIND);
-    }
+    public HuggingfaceServeRuntime() {}
 
     @Override
     public void afterPropertiesSet() throws Exception {
@@ -184,5 +182,10 @@ public class HuggingfaceServeRuntime
         runnable.setConfigurations(configurations);
 
         return runnable;
+    }
+
+    @Override
+    public boolean isSupported(@NotNull Run run) {
+        return HuggingfaceServeRunSpec.KIND.equals(run.getKind());
     }
 }

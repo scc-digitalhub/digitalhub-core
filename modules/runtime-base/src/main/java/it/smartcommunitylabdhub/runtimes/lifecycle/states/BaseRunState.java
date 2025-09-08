@@ -97,6 +97,11 @@ public class BaseRunState<
                     .ofNullable(runtime.onError(run, runnable))
                     .ifPresent(status -> run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), status.toMap())));
 
+                //final state, cleanup
+                if (runnable != null) {
+                    return Optional.ofNullable(runtime.delete(run));
+                }
+
                 //no-op, nothing happened yet
                 return Optional.empty();
             });
@@ -209,6 +214,11 @@ public class BaseRunState<
                 Optional
                     .ofNullable(runtime.onComplete(run, runnable))
                     .ifPresent(status -> run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), status.toMap())));
+
+                //final state, cleanup
+                if (runnable != null) {
+                    return Optional.ofNullable(runtime.delete(run));
+                }
 
                 return Optional.empty();
             });

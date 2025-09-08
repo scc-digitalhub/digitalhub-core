@@ -105,9 +105,7 @@ public class FlowerServerRuntime
     @Value("${runtime.flower.tls-ext-domain:}")
     private String tlsExtDomain;
 
-    public FlowerServerRuntime() {
-        super(FlowerServerRunSpec.KIND);
-    }
+    public FlowerServerRuntime() {}
 
     @Override
     public FlowerServerRunSpec build(@NotNull Executable function, @NotNull Task task, @NotNull Run run) {
@@ -245,5 +243,10 @@ public class FlowerServerRuntime
         }
 
         return null;
+    }
+
+    @Override
+    public boolean isSupported(@NotNull Run run) {
+        return FlowerServerRunSpec.KIND.equals(run.getKind());
     }
 }

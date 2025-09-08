@@ -92,9 +92,7 @@ public class PythonRuntime extends K8sBaseRuntime<PythonFunctionSpec, PythonRunS
     @Value("${runtime.python.group-id}")
     private Integer groupId;
 
-    public PythonRuntime() {
-        super(PythonRunSpec.KIND);
-    }
+    public PythonRuntime() {}
 
     @Override
     public PythonRunSpec build(@NotNull Executable function, @NotNull Task task, @NotNull Run run) {
@@ -224,5 +222,10 @@ public class PythonRuntime extends K8sBaseRuntime<PythonFunctionSpec, PythonRunS
         }
 
         return null;
+    }
+
+    @Override
+    public boolean isSupported(@NotNull Run run) {
+        return PythonRunSpec.KIND.equals(run.getKind());
     }
 }

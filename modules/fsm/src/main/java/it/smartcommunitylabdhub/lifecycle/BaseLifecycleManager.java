@@ -82,6 +82,12 @@ public abstract class BaseLifecycleManager<
         this.eventsClass = (Class<E>) te;
     }
 
+    protected BaseLifecycleManager(Class<D> typeClass, Class<S> stateClass, Class<E> eventsClass) {
+        this.typeClass = typeClass;
+        this.stateClass = stateClass;
+        this.eventsClass = eventsClass;
+    }
+
     @Autowired(required = false)
     public void setFsmFactory(Fsm.Factory<S, E, D> fsmFactory) {
         this.fsmFactory = fsmFactory;

@@ -71,9 +71,7 @@ public class DbtRuntime extends K8sBaseRuntime<DbtFunctionSpec, DbtRunSpec, DbtR
     @Value("${runtime.dbt.image}")
     private String image;
 
-    public DbtRuntime() {
-        super(DbtRunSpec.KIND);
-    }
+    public DbtRuntime() {}
 
     @Override
     public DbtRunSpec build(@NotNull Executable function, @NotNull Task task, @NotNull Run run) {
@@ -161,5 +159,10 @@ public class DbtRuntime extends K8sBaseRuntime<DbtFunctionSpec, DbtRunSpec, DbtR
         runnable.setConfigurations(configurations);
 
         return runnable;
+    }
+
+    @Override
+    public boolean isSupported(@NotNull Run run) {
+        return DbtRunSpec.KIND.equals(run.getKind());
     }
 }

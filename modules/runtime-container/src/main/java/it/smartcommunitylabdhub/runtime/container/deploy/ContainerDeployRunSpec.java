@@ -21,30 +21,29 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.container.specs;
+package it.smartcommunitylabdhub.runtime.container.deploy;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import io.swagger.v3.oas.annotations.media.Schema;
-import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
+import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
+import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.runtime.container.ContainerRuntime;
+import it.smartcommunitylabdhub.runtime.container.specs.ContainerRunSpec;
 import java.io.Serializable;
-import java.util.List;
 import java.util.Map;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
-public class ContainerRunSpec extends RunBaseSpec {
+@SpecType(runtime = ContainerRuntime.RUNTIME, kind = ContainerDeployRunSpec.KIND, entity = EntityName.RUN)
+public class ContainerDeployRunSpec extends ContainerRunSpec {
 
-    @JsonSchemaIgnore
+    public static final String KIND = ContainerDeployTaskSpec.KIND + ":run";
+
     @JsonUnwrapped
-    private ContainerFunctionSpec functionSpec;
+    private ContainerDeployTaskSpec taskDeploySpec;
 
-    @Schema(title = "fields.container.args.title", description = "fields.container.args.description")
-    private List<String> args;
-
-    public ContainerRunSpec(Map<String, Serializable> data) {
+    public ContainerDeployRunSpec(Map<String, Serializable> data) {
         configure(data);
     }
 
@@ -52,12 +51,11 @@ public class ContainerRunSpec extends RunBaseSpec {
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
 
-        ContainerRunSpec spec = mapper.convertValue(data, ContainerRunSpec.class);
-        this.functionSpec = spec.getFunctionSpec();
-        this.args = spec.getArgs();
+        ContainerDeployRunSpec spec = mapper.convertValue(data, ContainerDeployRunSpec.class);
+        this.taskDeploySpec = spec.getTaskDeploySpec();
     }
 
-    public void setFunctionSpec(ContainerFunctionSpec functionSpec) {
-        this.functionSpec = functionSpec;
+    public void setTaskDeploySpec(ContainerDeployTaskSpec taskDeploySpec) {
+        this.taskDeploySpec = taskDeploySpec;
     }
 }

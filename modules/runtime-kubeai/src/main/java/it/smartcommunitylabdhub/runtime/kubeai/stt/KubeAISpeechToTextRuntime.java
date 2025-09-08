@@ -62,9 +62,7 @@ public class KubeAISpeechToTextRuntime
     private final String FEATURE = "SpeechToText";
     public static final String ENGINE = "FasterWhisper";
 
-    public KubeAISpeechToTextRuntime() {
-        super(KubeAISpeechToTextRunSpec.KIND);
-    }
+    public KubeAISpeechToTextRuntime() {}
 
     @Override
     public void afterPropertiesSet() throws Exception {
@@ -209,5 +207,10 @@ public class KubeAISpeechToTextRuntime
         }
 
         return status;
+    }
+
+    @Override
+    public boolean isSupported(@NotNull Run run) {
+        return KubeAISpeechToTextRunSpec.KIND.equals(run.getKind());
     }
 }

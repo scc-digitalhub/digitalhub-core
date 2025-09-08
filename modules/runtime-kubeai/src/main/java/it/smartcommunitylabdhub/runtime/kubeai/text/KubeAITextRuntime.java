@@ -62,9 +62,7 @@ public class KubeAITextRuntime extends KubeAIRuntime<KubeAITextFunctionSpec, Kub
 
     public static final String RUNTIME = "kubeai-text";
 
-    public KubeAITextRuntime() {
-        super(KubeAITextRunSpec.KIND);
-    }
+    public KubeAITextRuntime() {}
 
     @Override
     public void afterPropertiesSet() throws Exception {
@@ -217,5 +215,10 @@ public class KubeAITextRuntime extends KubeAIRuntime<KubeAITextFunctionSpec, Kub
         }
 
         return status;
+    }
+
+    @Override
+    public boolean isSupported(@NotNull Run run) {
+        return KubeAITextRunSpec.KIND.equals(run.getKind());
     }
 }

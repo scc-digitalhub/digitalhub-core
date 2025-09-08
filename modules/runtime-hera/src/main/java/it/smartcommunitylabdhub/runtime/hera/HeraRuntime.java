@@ -102,9 +102,7 @@ public class HeraRuntime extends K8sBaseRuntime<HeraWorkflowSpec, HeraRunSpec, H
 
     private Integer duration = DEFAULT_DURATION;
 
-    public HeraRuntime() {
-        super(HeraRunSpec.KIND);
-    }
+    public HeraRuntime() {}
 
     @Autowired
     public void setDuration(@Value("${runtime.hera.duration}") Integer duration) {
@@ -323,5 +321,10 @@ public class HeraRuntime extends K8sBaseRuntime<HeraWorkflowSpec, HeraRunSpec, H
             }
         }
         return null;
+    }
+
+    @Override
+    public boolean isSupported(@NotNull Run run) {
+        return HeraRunSpec.KIND.equals(run.getKind());
     }
 }

@@ -69,7 +69,7 @@ public class Run implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO {
     private String user;
 
     @NotNull
-    @Pattern(regexp = Keys.SLUG_PATTERN)
+    @Pattern(regexp = Keys.KIND_PATTERN)
     private String kind;
 
     @Builder.Default

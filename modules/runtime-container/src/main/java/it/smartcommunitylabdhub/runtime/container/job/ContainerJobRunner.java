@@ -6,24 +6,23 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
-package it.smartcommunitylabdhub.runtime.container.runners;
+package it.smartcommunitylabdhub.runtime.container.job;
 
-import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.objects.SourceCode;
@@ -33,88 +32,44 @@ import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
-import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileGenerator;
-import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileGeneratorFactory;
-import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCronJobRunnable;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runtime.container.ContainerRuntime;
-import it.smartcommunitylabdhub.runtime.container.specs.ContainerBuildTaskSpec;
 import it.smartcommunitylabdhub.runtime.container.specs.ContainerFunctionSpec;
 import it.smartcommunitylabdhub.runtime.container.specs.ContainerFunctionSpec.SourceCodeLanguages;
-import it.smartcommunitylabdhub.runtime.container.specs.ContainerRunSpec;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
-@Slf4j
-public class ContainerBuildRunner {
-
-    private static final String RUN_DEBUG =
-        "PWD=`pwd`;echo \"DEBUG: dir ${PWD}\";LS=`ls -R`;echo \"DEBUG: dir content:\" && echo \"${LS}\";";
-
-    private static final int MIN_NAME_LENGTH = 3;
-
-    private final ContainerFunctionSpec functionSpec;
-    private final Map<String, String> secretData;
+public class ContainerJobRunner {
 
     private final K8sBuilderHelper k8sBuilderHelper;
 
-    public ContainerBuildRunner(
-        ContainerFunctionSpec functionContainerSpec,
-        Map<String, String> secretData,
-        K8sBuilderHelper k8sBuilderHelper
-    ) {
-        this.functionSpec = functionContainerSpec;
-        this.secretData = secretData;
+    public ContainerJobRunner(K8sBuilderHelper k8sBuilderHelper) {
         this.k8sBuilderHelper = k8sBuilderHelper;
     }
 
-    public K8sContainerBuilderRunnable produce(Run run) {
-        ContainerRunSpec runSpec = new ContainerRunSpec(run.getSpec());
-        ContainerBuildTaskSpec taskSpec = runSpec.getTaskBuildSpec();
+    public K8sRunnable produce(Run run, Map<String, String> secretData) {
+        ContainerJobRunSpec runSpec = new ContainerJobRunSpec(run.getSpec());
+        ContainerJobTaskSpec taskSpec = runSpec.getTaskJobSpec();
+        ContainerFunctionSpec functionSpec = runSpec.getFunctionSpec();
+
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
 
         List<CoreEnv> coreEnvList = new ArrayList<>(
             List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))
         );
-
         List<CoreEnv> coreSecrets = secretData == null
             ? null
             : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
 
         Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
-
-        // Generate docker file
-        DockerfileGeneratorFactory dockerfileGenerator = DockerfileGenerator.factory();
-
-        if (!StringUtils.hasText(functionSpec.getBaseImage())) {
-            throw new IllegalArgumentException("invalid or missing baseImage");
-        }
-
-        // Add image to docker file
-        dockerfileGenerator.from(functionSpec.getBaseImage());
-
-        // copy context content to workdir
-        dockerfileGenerator.copy(".", "/shared");
-        dockerfileGenerator.workdir("/shared");
-
-        if (log.isDebugEnabled()) {
-            //add debug instructions to docker file
-            dockerfileGenerator.run(RUN_DEBUG);
-        }
-
-        // Add Instructions to docker file
-        Optional
-            .ofNullable(taskSpec.getInstructions())
-            .ifPresent(instructions -> instructions.forEach(i -> dockerfileGenerator.run(i)));
-
-        // Generate string docker file
-        String dockerfile = dockerfileGenerator.build().generate();
 
         //read source and build context
         List<ContextRef> contextRefs = null;
@@ -146,39 +101,21 @@ public class ContainerBuildRunner {
             }
         }
 
-        // Parse run spec
-        RunSpecAccessor runSpecAccessor = RunSpecAccessor.with(run.getSpec());
-
-        //build image name
-        String imageName =
-            K8sBuilderHelper.sanitizeNames(runSpecAccessor.getProject()) +
-            "-" +
-            K8sBuilderHelper.sanitizeNames(runSpecAccessor.getFunction());
-
-        //evaluate user provided image name
-        if (StringUtils.hasText(functionSpec.getImage())) {
-            String name = functionSpec.getImage().split(":")[0]; //remove tag if present
-            if (StringUtils.hasText(name) && name.length() > MIN_NAME_LENGTH) {
-                imageName = name;
-            }
-        }
-
-        // Build runnable
-        return K8sContainerBuilderRunnable
+        K8sRunnable k8sJobRunnable = K8sJobRunnable
             .builder()
-            .id(run.getId())
-            .project(run.getProject())
             .runtime(ContainerRuntime.RUNTIME)
-            .task(ContainerBuildTaskSpec.KIND)
+            .task(ContainerJobTaskSpec.KIND)
             .state(State.READY.name())
             .labels(
                 k8sBuilderHelper != null
                     ? List.of(new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction()))
                     : null
             )
-            // Base
-            .image(imageName)
+            //base
+            .image(functionSpec.getImage())
             .imagePullPolicy(functionSpec.getImagePullPolicy())
+            .command(functionSpec.getCommand())
+            .args(runSpec.getArgs() != null ? runSpec.getArgs().toArray(new String[0]) : null)
             .envs(coreEnvList)
             .secrets(coreSecrets)
             .resources(taskSpec.getResources())
@@ -188,11 +125,52 @@ public class ContainerBuildRunner {
             .tolerations(taskSpec.getTolerations())
             .runtimeClass(taskSpec.getRuntimeClass())
             .priorityClass(taskSpec.getPriorityClass())
-            // Task specific
-            .dockerFile(dockerfile)
+            .template(taskSpec.getProfile())
+            //securityContext
+            .fsGroup(taskSpec.getFsGroup())
+            .runAsGroup(taskSpec.getRunAsGroup())
+            .runAsUser(taskSpec.getRunAsUser())
+            //specific
             .contextRefs(contextRefs)
             .contextSources(contextSources)
-            // specific
             .build();
+
+        if (StringUtils.hasText(taskSpec.getSchedule())) {
+            //build a cronJob
+            k8sJobRunnable =
+                K8sCronJobRunnable
+                    .builder()
+                    .runtime(ContainerRuntime.RUNTIME)
+                    .task(ContainerJobTaskSpec.KIND)
+                    .state(State.READY.name())
+                    //base
+                    .image(functionSpec.getImage())
+                    .command(functionSpec.getCommand())
+                    .args(runSpec.getArgs() != null ? runSpec.getArgs().toArray(new String[0]) : null)
+                    .envs(coreEnvList)
+                    .secrets(coreSecrets)
+                    .resources(taskSpec.getResources())
+                    .volumes(taskSpec.getVolumes())
+                    .nodeSelector(taskSpec.getNodeSelector())
+                    .affinity(taskSpec.getAffinity())
+                    .tolerations(taskSpec.getTolerations())
+                    .runtimeClass(taskSpec.getRuntimeClass())
+                    .priorityClass(taskSpec.getPriorityClass())
+                    .template(taskSpec.getProfile())
+                    //securityContext
+                    .fsGroup(taskSpec.getFsGroup())
+                    .runAsGroup(taskSpec.getRunAsGroup())
+                    .runAsUser(taskSpec.getRunAsUser())
+                    //specific
+                    .contextRefs(contextRefs)
+                    .contextSources(contextSources)
+                    .schedule(taskSpec.getSchedule())
+                    .build();
+        }
+
+        k8sJobRunnable.setId(run.getId());
+        k8sJobRunnable.setProject(run.getProject());
+
+        return k8sJobRunnable;
     }
 }

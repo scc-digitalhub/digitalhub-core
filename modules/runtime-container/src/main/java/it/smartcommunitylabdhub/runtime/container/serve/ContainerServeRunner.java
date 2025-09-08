@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.container.runners;
+package it.smartcommunitylabdhub.runtime.container.serve;
 
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.models.enums.State;
@@ -38,8 +38,6 @@ import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
 import it.smartcommunitylabdhub.runtime.container.ContainerRuntime;
 import it.smartcommunitylabdhub.runtime.container.specs.ContainerFunctionSpec;
 import it.smartcommunitylabdhub.runtime.container.specs.ContainerFunctionSpec.SourceCodeLanguages;
-import it.smartcommunitylabdhub.runtime.container.specs.ContainerRunSpec;
-import it.smartcommunitylabdhub.runtime.container.specs.ContainerServeTaskSpec;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -51,27 +49,19 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 public class ContainerServeRunner {
 
-    private final ContainerFunctionSpec functionSpec;
-    private final Map<String, String> secretData;
-
     private final K8sBuilderHelper k8sBuilderHelper;
     private final FunctionManager functionService;
 
-    public ContainerServeRunner(
-        ContainerFunctionSpec functionContainerSpec,
-        Map<String, String> secretData,
-        K8sBuilderHelper k8sBuilderHelper,
-        FunctionManager functionService
-    ) {
-        this.functionSpec = functionContainerSpec;
-        this.secretData = secretData;
+    public ContainerServeRunner(K8sBuilderHelper k8sBuilderHelper, FunctionManager functionService) {
         this.k8sBuilderHelper = k8sBuilderHelper;
         this.functionService = functionService;
     }
 
-    public K8sServeRunnable produce(Run run) {
-        ContainerRunSpec runSpec = new ContainerRunSpec(run.getSpec());
+    public K8sServeRunnable produce(Run run, Map<String, String> secretData) {
+        ContainerServeRunSpec runSpec = new ContainerServeRunSpec(run.getSpec());
         ContainerServeTaskSpec taskSpec = runSpec.getTaskServeSpec();
+        ContainerFunctionSpec functionSpec = runSpec.getFunctionSpec();
+
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
 
         List<CoreEnv> coreEnvList = new ArrayList<>(

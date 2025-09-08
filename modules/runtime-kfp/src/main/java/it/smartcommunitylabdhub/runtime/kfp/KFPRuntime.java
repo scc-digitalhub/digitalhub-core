@@ -102,9 +102,7 @@ public class KFPRuntime extends K8sBaseRuntime<KFPWorkflowSpec, KFPRunSpec, KFPR
 
     private Integer duration = DEFAULT_DURATION;
 
-    public KFPRuntime() {
-        super(KFPRunSpec.KIND);
-    }
+    public KFPRuntime() {}
 
     @Autowired
     public void setDuration(@Value("${runtime.kfp.duration}") Integer duration) {
@@ -323,5 +321,10 @@ public class KFPRuntime extends K8sBaseRuntime<KFPWorkflowSpec, KFPRunSpec, KFPR
             }
         }
         return null;
+    }
+
+    @Override
+    public boolean isSupported(@NotNull Run run) {
+        return KFPRunSpec.KIND.equals(run.getKind());
     }
 }

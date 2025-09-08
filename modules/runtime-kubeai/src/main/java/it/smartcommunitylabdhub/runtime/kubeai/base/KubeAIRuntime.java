@@ -67,9 +67,7 @@ public abstract class KubeAIRuntime<F extends KubeAIServeFunctionSpec, R extends
     @Autowired(required = false)
     protected K8sSecretHelper k8sSecretHelper;
 
-    protected KubeAIRuntime(String kind) {
-        super(kind);
-    }
+    protected KubeAIRuntime() {}
 
     @Override
     public void afterPropertiesSet() throws Exception {

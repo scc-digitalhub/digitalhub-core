@@ -49,7 +49,6 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 @Slf4j
@@ -58,18 +57,11 @@ public abstract class AbstractBaseRuntime<
 >
     implements Runtime<S, Z, R> {
 
-    private final String kind;
-
     protected Collection<RunnableStore<R>> stores = Collections.emptyList();
 
     protected EntityRepository<Function> functionRepository;
     protected EntityRepository<Workflow> workflowRepository;
     protected EntityRepository<Task> taskRepository;
-
-    protected AbstractBaseRuntime(String kind) {
-        Assert.hasText(kind, "run kind must be specified");
-        this.kind = kind;
-    }
 
     @Autowired
     public void setFunctionRepository(EntityRepository<Function> functionRepository) {
@@ -114,17 +106,22 @@ public abstract class AbstractBaseRuntime<
         log.debug("registered stores for {}: {}", getClass().getName(), this.stores);
     }
 
+    public abstract boolean isSupported(@NotNull Run run);
+
     public abstract S build(@NotNull Executable execSpec, @NotNull Task taskSpec, @NotNull Run runSpec);
 
     @Override
     public S build(@NotNull Run run) {
+        //check run kind
+        if (!isSupported(run)) {
+            throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
+        }
+
         try {
             RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
 
             //retrieve executable
-            Task task;
-
-            task = taskRepository.get(specAccessor.getTaskId());
+            Task task = taskRepository.get(specAccessor.getTaskId());
 
             Executable function = specAccessor.getWorkflowId() != null
                 ? workflowRepository.get(specAccessor.getWorkflowId())
@@ -133,17 +130,15 @@ public abstract class AbstractBaseRuntime<
             //build
             return build(function, task, run);
         } catch (NoSuchEntityException | StoreException e) {
-            throw new CoreRuntimeException(kind + " runtime error building run spec", e);
+            throw new CoreRuntimeException("runtime error building run spec", e);
         }
     }
 
     @Override
     public R stop(@NotNull Run run) {
         //check run kind
-        if (!kind.equals(run.getKind())) {
-            throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(String.valueOf(run.getKind()), kind)
-            );
+        if (!isSupported(run)) {
+            throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
         }
 
         // Create string run accessor from task
@@ -184,10 +179,8 @@ public abstract class AbstractBaseRuntime<
     @Override
     public R resume(@NotNull Run run) {
         //check run kind
-        if (!kind.equals(run.getKind())) {
-            throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(String.valueOf(run.getKind()), kind)
-            );
+        if (!isSupported(run)) {
+            throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
         }
 
         // Create string run accessor from task
@@ -229,10 +222,8 @@ public abstract class AbstractBaseRuntime<
     @Nullable
     public R delete(@NotNull Run run) {
         //check run kind
-        if (!kind.equals(run.getKind())) {
-            throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(String.valueOf(run.getKind()), kind)
-            );
+        if (!isSupported(run)) {
+            throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
         }
 
         // Create string run accessor from task
@@ -274,10 +265,8 @@ public abstract class AbstractBaseRuntime<
     public Z onDeleted(@NotNull Run run, @Nullable RunRunnable runnable) {
         if (runnable != null) {
             //check run kind
-            if (!kind.equals(run.getKind())) {
-                throw new IllegalArgumentException(
-                    "Run kind {} unsupported, expecting {}".formatted(String.valueOf(run.getKind()), kind)
-                );
+            if (!isSupported(run)) {
+                throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
             }
 
             //check run id matches runnable

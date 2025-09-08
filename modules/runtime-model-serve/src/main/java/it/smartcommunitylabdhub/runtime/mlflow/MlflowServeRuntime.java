@@ -88,9 +88,7 @@ public class MlflowServeRuntime
     @Value("${runtime.mlflowserve.group-id}")
     private Integer groupId;
 
-    public MlflowServeRuntime() {
-        super(MlflowServeRunSpec.KIND);
-    }
+    public MlflowServeRuntime() {}
 
     @Override
     public void afterPropertiesSet() throws Exception {
@@ -184,5 +182,10 @@ public class MlflowServeRuntime
         runnable.setConfigurations(configurations);
 
         return runnable;
+    }
+
+    @Override
+    public boolean isSupported(@NotNull Run run) {
+        return MlflowServeRunSpec.KIND.equals(run.getKind());
     }
 }

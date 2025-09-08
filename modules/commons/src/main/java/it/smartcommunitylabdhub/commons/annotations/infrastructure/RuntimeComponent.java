@@ -35,5 +35,5 @@ import org.springframework.stereotype.Component;
 @Documented
 @Component
 public @interface RuntimeComponent {
-    String runtime(); // runtime can be dbt, nefertem, dss, kfp...
+    String runtime();
 }

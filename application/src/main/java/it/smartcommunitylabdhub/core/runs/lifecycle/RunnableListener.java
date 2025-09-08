@@ -134,8 +134,7 @@ public class RunnableListener {
                             store.remove(id);
                         }
                     } catch (StoreException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
+                        //ignore
                     }
                 });
             }

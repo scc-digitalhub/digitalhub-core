@@ -88,9 +88,7 @@ public class FlowerClientRuntime
     @Value("${runtime.flower.group-id}")
     private Integer groupId;
 
-    public FlowerClientRuntime() {
-        super(FlowerClientRunSpec.KIND);
-    }
+    public FlowerClientRuntime() {}
 
     @Override
     public FlowerClientRunSpec build(@NotNull Executable function, @NotNull Task task, @NotNull Run run) {
@@ -211,5 +209,10 @@ public class FlowerClientRuntime
         }
 
         return null;
+    }
+
+    @Override
+    public boolean isSupported(@NotNull Run run) {
+        return FlowerClientRunSpec.KIND.equals(run.getKind());
     }
 }

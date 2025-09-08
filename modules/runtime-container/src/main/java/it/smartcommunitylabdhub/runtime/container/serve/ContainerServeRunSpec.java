@@ -21,42 +21,29 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.container.specs;
+package it.smartcommunitylabdhub.runtime.container.serve;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.swagger.v3.oas.annotations.media.Schema;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
-import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
-import it.smartcommunitylabdhub.framework.k8s.objects.CoreServiceType;
 import it.smartcommunitylabdhub.runtime.container.ContainerRuntime;
+import it.smartcommunitylabdhub.runtime.container.specs.ContainerRunSpec;
 import java.io.Serializable;
-import java.util.List;
 import java.util.Map;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Getter
-@Setter
 @NoArgsConstructor
-@SpecType(runtime = ContainerRuntime.RUNTIME, kind = ContainerServeTaskSpec.KIND, entity = EntityName.TASK)
-public class ContainerServeTaskSpec extends ContainerDeployTaskSpec {
+@SpecType(runtime = ContainerRuntime.RUNTIME, kind = ContainerServeRunSpec.KIND, entity = EntityName.RUN)
+public class ContainerServeRunSpec extends ContainerRunSpec {
 
-    public static final String KIND = "container+serve";
+    public static final String KIND = ContainerServeTaskSpec.KIND + ":run";
 
-    // Port lists
-    @JsonProperty("service_ports")
-    private List<CorePort> servicePorts;
+    @JsonUnwrapped
+    private ContainerServeTaskSpec taskServeSpec;
 
-    @JsonProperty(value = "service_type", defaultValue = "ClusterIP")
-    @Schema(defaultValue = "ClusterIP")
-    private CoreServiceType serviceType;
-
-    @JsonProperty("service_name")
-    private String serviceName;
-
-    public ContainerServeTaskSpec(Map<String, Serializable> data) {
+    public ContainerServeRunSpec(Map<String, Serializable> data) {
         configure(data);
     }
 
@@ -64,10 +51,11 @@ public class ContainerServeTaskSpec extends ContainerDeployTaskSpec {
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
 
-        ContainerServeTaskSpec spec = mapper.convertValue(data, ContainerServeTaskSpec.class);
+        ContainerServeRunSpec spec = mapper.convertValue(data, ContainerServeRunSpec.class);
+        this.taskServeSpec = spec.getTaskServeSpec();
+    }
 
-        this.setServicePorts(spec.getServicePorts());
-        this.setServiceType(spec.getServiceType());
-        this.setServiceName(spec.getServiceName());
+    public void setTaskServeSpec(ContainerServeTaskSpec taskServeSpec) {
+        this.taskServeSpec = taskServeSpec;
     }
 }
