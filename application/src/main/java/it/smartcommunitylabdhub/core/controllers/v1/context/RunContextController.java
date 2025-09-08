@@ -215,7 +215,7 @@ public class RunContextController {
         }
 
         // via manager
-        return lifecycleManager.perform(run, action);
+        return lifecycleManager.perform(run, action.toUpperCase());
     }
 
     /*

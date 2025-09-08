@@ -156,6 +156,6 @@ public class RunController {
         Run run = runManager.getRun(id);
 
         // via manager
-        return lifecycleManager.perform(run, action);
+        return lifecycleManager.perform(run, action.toUpperCase());
     }
 }
