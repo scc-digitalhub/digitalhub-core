@@ -284,4 +284,12 @@ if [ -f "$source_dir/context-sources-map.txt" ]; then
   sync_files "$source_dir/context-sources-map.txt" "$source_dir/" "$destination_dir"
 fi
 
+FILES="$(ls -A $destination_dir)"
+if [ FILES ]; then    
+    for f in $FILES; do
+        # enforce file modes
+        chmod u=rwxX,g=rwxX -R "${destination_dir}/${f}"
+    done
+fi
+
 ls -1l "$destination_dir"
