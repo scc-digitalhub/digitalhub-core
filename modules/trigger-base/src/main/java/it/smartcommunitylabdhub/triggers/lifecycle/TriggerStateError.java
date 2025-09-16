@@ -56,7 +56,9 @@ public class TriggerStateError<X extends TriggerBaseSpec, Z extends TriggerRunBa
 
                         return Optional.empty();
                     })
-                    .build()
+                    .build(),
+                //(DELETE)->DELETED
+                toDelete().build()
             );
     }
 }

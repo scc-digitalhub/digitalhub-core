@@ -77,7 +77,9 @@ public class TriggerStateRunning<X extends TriggerBaseSpec, Z extends TriggerRun
                         //no-op, nothing happened yet
                         return Optional.empty();
                     })
-                    .build()
+                    .build(),
+                //(DELETE)->DELETED
+                toDelete().build()
             );
     }
 }

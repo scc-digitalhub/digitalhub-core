@@ -19,6 +19,7 @@ package it.smartcommunitylabdhub.triggers.lifecycle;
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvents;
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleState;
 import it.smartcommunitylabdhub.commons.models.trigger.Trigger;
+import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.fsm.FsmState;
 import it.smartcommunitylabdhub.fsm.Transition;
 import it.smartcommunitylabdhub.triggers.infrastructure.Actuator;
@@ -27,6 +28,7 @@ import it.smartcommunitylabdhub.triggers.specs.TriggerBaseSpec;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.Assert;
 
@@ -64,5 +66,22 @@ public class TriggerBaseState<
 
     public FsmState<S, E, Trigger> build() {
         return new FsmState<>(state, txs);
+    }
+
+    protected Transition.Builder<S, E, Trigger> toDelete() {
+        //(DELETE)->DELETED
+        return new Transition.Builder<S, E, Trigger>()
+            .event(Enum.valueOf(eventsClass, TriggerEvent.DELETE.name()))
+            .nextState(Enum.valueOf(stateClass, TriggerState.DELETED.name()))
+            .withInternalLogic((currentState, nextState, event, trigger, i) -> {
+                //runtime callback for stop
+                Optional
+                    .ofNullable(actuator.stop(trigger))
+                    .ifPresent(status ->
+                        trigger.setStatus(MapUtils.mergeMultipleMaps(trigger.getStatus(), status.toMap()))
+                    );
+
+                return Optional.empty();
+            });
     }
 }

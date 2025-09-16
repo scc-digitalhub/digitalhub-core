@@ -129,7 +129,7 @@ public class LifecycleActuator
 
     @Override
     public TriggerRunBaseStatus onFire(@NotNull Trigger trigger, TriggerRun<? extends TriggerJob> run) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'onFire'");
+        //nothing to add
+        return null;
     }
 }

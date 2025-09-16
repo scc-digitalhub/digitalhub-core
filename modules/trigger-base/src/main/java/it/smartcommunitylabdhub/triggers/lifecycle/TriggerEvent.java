@@ -31,4 +31,5 @@ public enum TriggerEvent implements LifecycleEvents<Trigger> {
     STOP,
     FIRE,
     ERROR,
+    DELETE
 }
