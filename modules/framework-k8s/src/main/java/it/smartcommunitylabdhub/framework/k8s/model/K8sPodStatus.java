@@ -40,22 +40,13 @@ import lombok.Setter;
 @Getter
 @Setter
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class K8sLogStatus extends BaseSpec {
+public class K8sPodStatus extends BaseSpec {
 
-    private String namespace;
-    private String pod;
-    private String container;
-
-    private List<Serializable> metrics;
+    private List<Serializable> pods;
 
     @Override
     public void configure(Map<String, Serializable> data) {
-        K8sLogStatus spec = mapper.convertValue(data, K8sLogStatus.class);
-
-        this.namespace = spec.getNamespace();
-        this.pod = spec.getPod();
-        this.container = spec.getContainer();
-
-        this.metrics = spec.getMetrics();
+        K8sPodStatus spec = mapper.convertValue(data, K8sPodStatus.class);
+        this.pods = spec.getPods();
     }
 }
