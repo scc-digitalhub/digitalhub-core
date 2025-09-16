@@ -371,6 +371,7 @@ public abstract class BaseEntityRepository<E extends BaseEntity, D extends BaseD
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<D> listAll() {
         log.debug("list all");
 
