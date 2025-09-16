@@ -62,8 +62,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 public class PythonServeRunner {
 
-    private static final int UID = 1000;
-    private static final int GID = 1000;
+    private static final int UID = 8877;
+    private static final int GID = 999;
     private static final int HTTP_PORT = 8080;
 
     private final String image;

@@ -65,8 +65,8 @@ public class PythonJobRunner {
 
     private static ObjectMapper jsonMapper = JacksonMapper.CUSTOM_OBJECT_MAPPER;
 
-    private static final int UID = 1000;
-    private static final int GID = 100;
+    private static final int UID = 8877;
+    private static final int GID = 999;
 
     private final String image;
     private final int userId;
