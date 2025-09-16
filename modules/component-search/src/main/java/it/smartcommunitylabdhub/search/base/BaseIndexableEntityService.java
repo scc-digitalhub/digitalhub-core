@@ -30,7 +30,6 @@ import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
 import it.smartcommunitylabdhub.search.service.IndexableEntityService;
-import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
@@ -38,9 +37,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
-@Transactional
+@Transactional(readOnly = true)
 @Slf4j
 public class BaseIndexableEntityService<D extends BaseDTO> implements IndexableEntityService<D>, InitializingBean {
 
@@ -62,6 +62,8 @@ public class BaseIndexableEntityService<D extends BaseDTO> implements IndexableE
         Assert.notNull(entityService, "entity service can not be null");
     }
 
+    @Override
+    @Transactional(readOnly = true)
     public void indexOne(@NotNull String id) throws NoSuchEntityException, SystemException {
         if (indexer != null) {
             log.debug("index with id {}", String.valueOf(id));
@@ -77,6 +79,7 @@ public class BaseIndexableEntityService<D extends BaseDTO> implements IndexableE
 
     @Async
     @Override
+    @Transactional(readOnly = true)
     public void reindexAll() {
         if (indexer != null) {
             log.debug("reindex all");
@@ -85,21 +88,18 @@ public class BaseIndexableEntityService<D extends BaseDTO> implements IndexableE
             indexer.clearIndex();
 
             //use pagination and batch
-            boolean hasMore = true;
+            boolean hasMore = false;
             int pageNumber = 0;
-            while (hasMore) {
-                hasMore = false;
-
+            do {
                 try {
                     Page<D> page = entityService.list(PageRequest.of(pageNumber, EntityIndexer.PAGE_MAX_SIZE));
                     indexer.indexAll(page.getContent());
                     hasMore = page.hasNext();
                 } catch (IllegalArgumentException | StoreException | SystemException e) {
                     hasMore = false;
-
                     log.error("error with indexing: {}", e.getMessage());
                 }
-            }
+            } while (hasMore);
         }
     }
 }
