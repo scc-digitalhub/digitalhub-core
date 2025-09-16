@@ -190,7 +190,7 @@ kubernetes:
       requests: ${K8S_RESOURCE_CPU_DEFAULT:100m}
       limits: ${K8S_RESOURCE_CPU_LIMIT:}
     mem:
-      requests: ${K8S_RESOURCE_MEM_DEFAULT:64Mi}
+      requests: ${K8S_RESOURCE_MEM_DEFAULT:256Mi}
       limits: ${K8S_RESOURCE_MEM_LIMIT:}
       toleration: ${K8S_RESOURCE_MEM_TOLERATION:1.1}
     gpu:
