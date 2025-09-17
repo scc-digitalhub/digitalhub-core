@@ -99,7 +99,7 @@ public class K8sBuilderHelper implements InitializingBean {
     }
 
     @Autowired
-    public void setPvcRequestsResourceDefinition(
+    public void setEphemeralRequestsResourceDefinition(
         @Value("${kubernetes.resources.ephemeral.requests}") String ephemeralResourceDefinition
     ) {
         if (StringUtils.hasText(ephemeralResourceDefinition)) {
@@ -108,7 +108,7 @@ public class K8sBuilderHelper implements InitializingBean {
     }
 
     @Autowired
-    public void setPvcLimitsResourceDefinition(
+    public void setEphemeralLimitsResourceDefinition(
         @Value("${kubernetes.resources.ephemeral.limits}") String ephemeralResourceDefinition
     ) {
         if (StringUtils.hasText(ephemeralResourceDefinition)) {

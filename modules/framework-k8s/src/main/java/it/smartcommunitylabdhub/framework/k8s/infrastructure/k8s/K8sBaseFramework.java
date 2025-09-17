@@ -133,6 +133,7 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
     protected Float memResourceToleration = DEFAULT_MEM_TOLERATION;
     protected CoreResourceDefinition pvcResourceDefinition = new CoreResourceDefinition();
     protected String pvcStorageClass;
+    protected CoreResourceDefinition ephemeralResourceDefinition = new CoreResourceDefinition();
 
     protected List<String> templateKeys = Collections.emptyList();
 
@@ -277,6 +278,28 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
     public void setPvcStorageClass(@Value("${kubernetes.resources.pvc.storage-class}") String pvcStorageClass) {
         if (StringUtils.hasText(pvcStorageClass)) {
             this.pvcStorageClass = pvcStorageClass;
+        }
+    }
+
+    public void setEphemeralResourceDefinition(CoreResourceDefinition ephemeralResourceDefinition) {
+        this.ephemeralResourceDefinition = ephemeralResourceDefinition;
+    }
+
+    @Autowired
+    public void setEphemeralRequestsResourceDefinition(
+        @Value("${kubernetes.resources.ephemeral.requests}") String ephemeralResourceDefinition
+    ) {
+        if (StringUtils.hasText(ephemeralResourceDefinition)) {
+            this.ephemeralResourceDefinition.setRequests(ephemeralResourceDefinition);
+        }
+    }
+
+    @Autowired
+    public void setEphemeralLimitsResourceDefinition(
+        @Value("${kubernetes.resources.ephemeral.limits}") String ephemeralResourceDefinition
+    ) {
+        if (StringUtils.hasText(ephemeralResourceDefinition)) {
+            this.ephemeralResourceDefinition.setLimits(ephemeralResourceDefinition);
         }
     }
 
@@ -912,6 +935,11 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
             requests.putIfAbsent("memory", Quantity.fromString(memResourceDefinition.getRequests()));
         }
 
+        if (ephemeralResourceDefinition.getRequests() != null) {
+            //merge if set
+            requests.putIfAbsent("ephemeral-storage", Quantity.fromString(ephemeralResourceDefinition.getRequests()));
+        }
+
         resources.setRequests(requests);
 
         //default limits
@@ -938,6 +966,12 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
                 //merge if missing
                 limits.putIfAbsent("memory", Quantity.fromString(memResourceDefinition.getLimits()));
             }
+        }
+
+        //ephemeral storage: enforce limit when defined
+        if (ephemeralResourceDefinition.getLimits() != null) {
+            //merge if set
+            limits.putIfAbsent("ephemeral-storage", Quantity.fromString(ephemeralResourceDefinition.getLimits()));
         }
 
         resources.setLimits(limits);
