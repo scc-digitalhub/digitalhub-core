@@ -92,9 +92,11 @@ public class BaseIndexableEntityService<D extends BaseDTO> implements IndexableE
             int pageNumber = 0;
             do {
                 try {
+                    log.trace("index page {}", pageNumber);
                     Page<D> page = entityService.list(PageRequest.of(pageNumber, EntityIndexer.PAGE_MAX_SIZE));
                     indexer.indexAll(page.getContent());
                     hasMore = page.hasNext();
+                    pageNumber++;
                 } catch (IllegalArgumentException | StoreException | SystemException e) {
                     hasMore = false;
                     log.error("error with indexing: {}", e.getMessage());
