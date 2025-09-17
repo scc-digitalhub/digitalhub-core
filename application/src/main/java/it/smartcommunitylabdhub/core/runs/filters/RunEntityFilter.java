@@ -50,6 +50,11 @@ public class RunEntityFilter extends AbstractEntityFilter<Run> {
     private String task;
 
     @Nullable
+    @Pattern(regexp = Keys.SLUG_PATTERN)
+    @Schema(example = "serve", defaultValue = "", description = "Action")
+    private String action;
+
+    @Nullable
     @Pattern(regexp = Keys.FUNCTION_PATTERN + "|" + Keys.TASK_PATTERN)
     @Schema(example = "kind://my-project/function-name:id", defaultValue = "", description = "Function key")
     private String function;
@@ -79,8 +84,16 @@ public class RunEntityFilter extends AbstractEntityFilter<Run> {
         //task exact match
         Optional
             .ofNullable(task)
-            .ifPresent(value ->
-                criteria.add(new BaseEntitySearchCriteria<>("task", value, SearchCriteria.Operation.equal))
+            .ifPresentOrElse(
+                value -> criteria.add(new BaseEntitySearchCriteria<>("task", value, SearchCriteria.Operation.equal)),
+                () -> {
+                    //if no task, check action
+                    Optional
+                        .ofNullable(action)
+                        .ifPresent(a ->
+                            criteria.add(new BaseEntitySearchCriteria<>("task", a, SearchCriteria.Operation.like))
+                        );
+                }
             );
 
         //function match

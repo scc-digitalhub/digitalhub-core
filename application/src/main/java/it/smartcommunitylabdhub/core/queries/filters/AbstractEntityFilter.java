@@ -61,7 +61,7 @@ public abstract class AbstractEntityFilter<T extends BaseDTO> {
     protected String name;
 
     @Nullable
-    @Pattern(regexp = Keys.SLUG_PATTERN)
+    @Pattern(regexp = Keys.KIND_PATTERN)
     @Schema(example = "function", defaultValue = "", description = "Kind identifier")
     protected String kind;
 
