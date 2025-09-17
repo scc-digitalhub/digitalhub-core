@@ -98,21 +98,23 @@ public class K8sBuilderHelper implements InitializingBean {
         this.ephemeralResourceDefinition = ephemeralResourceDefinition;
     }
 
+    //set ephemeral resource definition for volumes matching pvc
+    //we want to manage pvc and ephemeral volumes as "user volumes" under the same limits
     @Autowired
     public void setEphemeralRequestsResourceDefinition(
-        @Value("${kubernetes.resources.ephemeral.requests}") String ephemeralResourceDefinition
+        @Value("${kubernetes.resources.pvc.requests}") String pvcResourceDefinition
     ) {
-        if (StringUtils.hasText(ephemeralResourceDefinition)) {
-            this.ephemeralResourceDefinition.setRequests(ephemeralResourceDefinition);
+        if (StringUtils.hasText(pvcResourceDefinition)) {
+            this.ephemeralResourceDefinition.setRequests(pvcResourceDefinition);
         }
     }
 
     @Autowired
     public void setEphemeralLimitsResourceDefinition(
-        @Value("${kubernetes.resources.ephemeral.limits}") String ephemeralResourceDefinition
+        @Value("${kubernetes.resources.pvc.limits}") String pvcResourceDefinition
     ) {
-        if (StringUtils.hasText(ephemeralResourceDefinition)) {
-            this.ephemeralResourceDefinition.setLimits(ephemeralResourceDefinition);
+        if (StringUtils.hasText(pvcResourceDefinition)) {
+            this.ephemeralResourceDefinition.setLimits(pvcResourceDefinition);
         }
     }
 
