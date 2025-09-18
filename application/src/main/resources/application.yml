@@ -147,7 +147,9 @@ argoworkflows:
 # Kubernetes
 kubernetes:
   namespace: ${K8S_NAMESPACE:default}
-  logs: ${K8S_ENABLE_LOGS:true}
+  logs:
+    enable: ${K8S_ENABLE_LOGS:true}
+    max-length: ${K8S_LOGS_MAX_LENGTH:1048576}
   metrics: ${K8S_ENABLE_METRICS:true}
   # supported values for results: default,keep,disable
   results: ${K8S_ENABLE_RESULTS:default}

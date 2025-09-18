@@ -165,7 +165,7 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
     }
 
     @Autowired
-    public void setCollectLogs(@Value("${kubernetes.logs}") Boolean collectLogs) {
+    public void setCollectLogs(@Value("${kubernetes.logs.enable}") Boolean collectLogs) {
         this.collectLogs = collectLogs;
     }
 
