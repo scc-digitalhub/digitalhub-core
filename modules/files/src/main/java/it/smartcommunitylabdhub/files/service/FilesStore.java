@@ -33,7 +33,11 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
 public interface FilesStore {
-    DownloadInfo downloadAsUrl(@NotNull String path, @Nullable List<Credentials> credentials) throws StoreException;
+    DownloadInfo downloadAsUrl(
+        @NotNull String path,
+        @Nullable Integer duration,
+        @Nullable List<Credentials> credentials
+    ) throws StoreException;
 
     UploadInfo uploadAsUrl(@NotNull String path, @Nullable List<Credentials> credentials) throws StoreException;
 

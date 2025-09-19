@@ -116,7 +116,27 @@ public class FilesStoreController {
             throw new NoSuchEntityException();
         }
 
-        return store.get().downloadAsUrl(path, credentials);
+        return store.get().downloadAsUrl(path, null, credentials);
+    }
+
+    @PostMapping(path = "/download", produces = "application/json; charset=UTF-8")
+    public DownloadInfo downloadAsUrl(
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
+        @RequestParam @Valid @NotNull String path,
+        @RequestParam(required = false) Integer duration
+    ) throws NoSuchEntityException, StoreException {
+        //try to resolve credentials
+        UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
+        List<Credentials> credentials = auth != null && credentialsService != null
+            ? credentialsService.getCredentials(auth)
+            : null;
+
+        Optional<FilesStore> store = Optional.ofNullable(filesService.getStore(path));
+        if (!store.isPresent()) {
+            throw new NoSuchEntityException();
+        }
+
+        return store.get().downloadAsUrl(path, duration, credentials);
     }
 
     @DeleteMapping(path = "/delete", produces = "application/json; charset=UTF-8")

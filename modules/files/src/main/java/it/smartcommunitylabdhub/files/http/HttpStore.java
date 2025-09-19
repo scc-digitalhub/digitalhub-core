@@ -53,7 +53,11 @@ public class HttpStore implements FilesStore {
     private RestTemplate restTemplate = new RestTemplate();
 
     @Override
-    public DownloadInfo downloadAsUrl(@NotNull String path, @Nullable List<Credentials> credentials) {
+    public DownloadInfo downloadAsUrl(
+        @NotNull String path,
+        @Nullable Integer duration,
+        @Nullable List<Credentials> credentials
+    ) {
         log.debug("generate download url for {}", path);
 
         //path must be a valid url

@@ -141,8 +141,11 @@ public class FilesService implements ConfigurationProvider, InitializingBean {
         return match;
     }
 
-    public @Nullable DownloadInfo getDownloadAsUrl(@NotNull String path, @Nullable List<Credentials> credentials)
-        throws StoreException {
+    public @Nullable DownloadInfo getDownloadAsUrl(
+        @NotNull String path,
+        @Nullable Integer duration,
+        @Nullable List<Credentials> credentials
+    ) throws StoreException {
         Assert.hasText(path, "path can not be null or empty");
 
         log.debug("resolve store for {}", path);
@@ -155,7 +158,7 @@ public class FilesService implements ConfigurationProvider, InitializingBean {
 
         log.debug("found store {}", store.getClass().getName());
 
-        DownloadInfo info = store.downloadAsUrl(path, credentials);
+        DownloadInfo info = store.downloadAsUrl(path, duration, credentials);
 
         if (log.isTraceEnabled()) {
             log.trace("path resolved to download {}", info);

@@ -83,6 +83,8 @@ import software.amazon.awssdk.services.s3.presigner.model.UploadPartPresignReque
 public class S3FilesStore implements FilesStore {
 
     public static final int URL_DURATION = 3600 * 8; //8 hours
+    public static final int MAX_DURATION = 3600 * 24 * 5; //5 days
+
     public static final int MAX_KEYS = 200;
 
     private final S3Config config;
@@ -188,8 +190,11 @@ public class S3FilesStore implements FilesStore {
     }
 
     @Override
-    public DownloadInfo downloadAsUrl(@NotNull String path, @Nullable List<Credentials> credentials)
-        throws StoreException {
+    public DownloadInfo downloadAsUrl(
+        @NotNull String path,
+        @Nullable Integer duration,
+        @Nullable List<Credentials> credentials
+    ) throws StoreException {
         log.debug("generate download url for {}", path);
 
         Keys keys = parseKey(path);
@@ -197,6 +202,9 @@ public class S3FilesStore implements FilesStore {
 
         String key = keys.key;
         String bucketName = keys.bucket;
+        int expiresIn = duration != null && (duration.intValue() > 0 && duration.intValue() < MAX_DURATION)
+            ? duration.intValue()
+            : urlDuration;
 
         if (StringUtils.hasText(bucket) && !bucket.equals(bucketName)) {
             throw new StoreException("bucket mismatch");
@@ -223,7 +231,7 @@ public class S3FilesStore implements FilesStore {
 
             GetObjectPresignRequest preq = GetObjectPresignRequest
                 .builder()
-                .signatureDuration(Duration.ofSeconds(urlDuration))
+                .signatureDuration(Duration.ofSeconds(expiresIn))
                 .getObjectRequest(GetObjectRequest.builder().bucket(bucketName).key(key).build())
                 .build();
             PresignedGetObjectRequest presignedRequest = presigner.presignGetObject(preq);

@@ -137,7 +137,7 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
                 ? credentialsService.getCredentials(auth)
                 : null;
 
-            DownloadInfo info = filesService.getDownloadAsUrl(path, credentials);
+            DownloadInfo info = filesService.getDownloadAsUrl(path, null, credentials);
             if (log.isTraceEnabled()) {
                 log.trace("download url for entity with id {}: {} -> {}", id, path, info);
             }
@@ -181,7 +181,7 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
                 ? credentialsService.getCredentials(auth)
                 : null;
 
-            DownloadInfo info = filesService.getDownloadAsUrl(fullPath, credentials);
+            DownloadInfo info = filesService.getDownloadAsUrl(fullPath, null, credentials);
             if (log.isTraceEnabled()) {
                 log.trace("download url for dto with id {} and path {}: {} -> {}", id, sub, path, info);
             }
