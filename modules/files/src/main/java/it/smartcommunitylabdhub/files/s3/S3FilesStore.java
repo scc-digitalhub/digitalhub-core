@@ -41,6 +41,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpMethod;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponents;
@@ -394,6 +395,7 @@ public class S3FilesStore implements FilesStore {
             UploadInfo info = new UploadInfo();
             info.setPath(path);
             info.setUrl(presignedRequest.url().toExternalForm());
+            info.setMethod(HttpMethod.PUT);
             info.setExpiration(presignedRequest.expiration());
             return info;
         } catch (SdkException e) {
@@ -443,6 +445,7 @@ public class S3FilesStore implements FilesStore {
             UploadInfo info = new UploadInfo();
             info.setPath(path);
             info.setUploadId(response.uploadId());
+            info.setMethod(HttpMethod.POST);
             return info;
         } catch (SdkException e) {
             log.error("error with s3 for {}: {}", path, e.getMessage());
@@ -505,6 +508,8 @@ public class S3FilesStore implements FilesStore {
             UploadInfo info = new UploadInfo();
             info.setPath(path);
             info.setUrl(presignedRequest.url().toExternalForm());
+            info.setMethod(HttpMethod.PUT);
+            info.setPartNumber(partNumber);
             info.setExpiration(presignedRequest.expiration());
             return info;
         } catch (SdkException e) {
@@ -574,6 +579,7 @@ public class S3FilesStore implements FilesStore {
             UploadInfo info = new UploadInfo();
             info.setPath(path);
             info.setUploadId(uploadId);
+            info.setMethod(HttpMethod.POST);
             return info;
         } catch (SdkException e) {
             log.error("error with s3 for {}: {}", path, e.getMessage());

@@ -54,6 +54,7 @@ import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -117,7 +118,7 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
 
     @Override
     public DownloadInfo downloadFileAsUrl(@NotNull String id) throws NoSuchEntityException, SystemException {
-        log.debug("download url for model with id {}", String.valueOf(id));
+        log.debug("download url for dto with id {}", String.valueOf(id));
 
         try {
             //fetch
@@ -153,7 +154,7 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
     @Override
     public DownloadInfo downloadFileAsUrl(@NotNull String id, @NotNull String sub)
         throws NoSuchEntityException, SystemException {
-        log.debug("download url for model file with id {} and path {}", String.valueOf(id), String.valueOf(sub));
+        log.debug("download url for dto file with id {} and path {}", String.valueOf(id), String.valueOf(sub));
 
         try {
             //fetch
@@ -182,7 +183,7 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
 
             DownloadInfo info = filesService.getDownloadAsUrl(fullPath, credentials);
             if (log.isTraceEnabled()) {
-                log.trace("download url for model with id {} and path {}: {} -> {}", id, sub, path, info);
+                log.trace("download url for dto with id {} and path {}: {} -> {}", id, sub, path, info);
             }
 
             return info;
@@ -196,7 +197,7 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
 
     @Override
     public List<FileInfo> getFileInfo(@NotNull String id) throws NoSuchEntityException, SystemException {
-        log.debug("get storage metadata for model with id {}", String.valueOf(id));
+        log.debug("get storage metadata for dto with id {}", String.valueOf(id));
         try {
             //fetch
             D dto = entityService.get(id);
@@ -267,11 +268,18 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
     }
 
     @Override
-    public UploadInfo uploadFileAsUrl(@NotNull String project, @Nullable String id, @NotNull String filename)
-        throws NoSuchEntityException, SystemException {
-        log.debug("upload url for model with id {}: {}", String.valueOf(id), filename);
+    public UploadInfo uploadFileAsUrl(
+        @NotNull String project,
+        @Nullable String name,
+        @Nullable String id,
+        @NotNull String filename
+    ) throws NoSuchEntityException, SystemException {
+        log.debug("upload url for dto with id {}: {}", String.valueOf(id), filename);
 
         try {
+            //always set a subpath to avoid collisions
+            String subpath = (name != null ? name + "/" : "") + (id != null ? id : UUID.randomUUID().toString());
+
             String path =
                 filesService.getDefaultStore(projectService.get(project)) +
                 "/" +
@@ -279,18 +287,24 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
                 "/" +
                 type.name().toLowerCase() +
                 "/" +
-                id +
-                (filename.startsWith("/") ? filename : "/" + filename);
+                subpath +
+                "/";
+
+            String fullPath = filename.startsWith("/") ? path + filename.substring(1) : path + filename;
 
             //entity may not exists (yet)
             D dto = entityService.find(id);
-
             if (dto != null) {
                 //extract path from spec
                 PathAccessor accessor = PathAccessor.with(dto.getSpec());
-                path = accessor.getPath();
-                if (!StringUtils.hasText(path)) {
+                String specPath = accessor.getPath();
+                if (!StringUtils.hasText(specPath)) {
                     throw new NoSuchEntityException("file");
+                }
+
+                //path is either full or path + filename
+                if (!fullPath.equals(specPath) && !fullPath.startsWith(specPath)) {
+                    throw new IllegalArgumentException("invalid file path");
                 }
             }
 
@@ -300,9 +314,9 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
                 ? credentialsService.getCredentials(auth)
                 : null;
 
-            UploadInfo info = filesService.getUploadAsUrl(path, credentials);
+            UploadInfo info = filesService.getUploadAsUrl(fullPath, credentials);
             if (log.isTraceEnabled()) {
-                log.trace("upload url for model with id {}: {}", id, info);
+                log.trace("upload url for dto with id {}: {}", id, info);
             }
 
             return info;
@@ -313,11 +327,18 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
     }
 
     @Override
-    public UploadInfo startMultiPartUpload(@NotNull String project, @Nullable String id, @NotNull String filename)
-        throws NoSuchEntityException, SystemException {
-        log.debug("start upload url for model with id {}: {}", String.valueOf(id), filename);
+    public UploadInfo startMultiPartUpload(
+        @NotNull String project,
+        @Nullable String name,
+        @Nullable String id,
+        @NotNull String filename
+    ) throws NoSuchEntityException, SystemException {
+        log.debug("start upload url for dto with id {}: {}", String.valueOf(id), filename);
 
         try {
+            //always set a subpath to avoid collisions
+            String subpath = (name != null ? name + "/" : "") + (id != null ? id : UUID.randomUUID().toString());
+
             String path =
                 filesService.getDefaultStore(projectService.get(project)) +
                 "/" +
@@ -325,19 +346,24 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
                 "/" +
                 type.name().toLowerCase() +
                 "/" +
-                id +
-                "/" +
-                (filename.startsWith("/") ? filename : "/" + filename);
+                subpath +
+                "/";
+
+            String fullPath = filename.startsWith("/") ? path + filename.substring(1) : path + filename;
 
             //entity may not exists (yet)
             D dto = entityService.find(id);
-
             if (dto != null) {
                 //extract path from spec
                 PathAccessor accessor = PathAccessor.with(dto.getSpec());
-                path = accessor.getPath();
-                if (!StringUtils.hasText(path)) {
+                String specPath = accessor.getPath();
+                if (!StringUtils.hasText(specPath)) {
                     throw new NoSuchEntityException("file");
+                }
+
+                //path is either full or path + filename
+                if (!fullPath.equals(specPath) && !fullPath.startsWith(specPath)) {
+                    throw new IllegalArgumentException("invalid file path");
                 }
             }
 
@@ -347,9 +373,9 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
                 ? credentialsService.getCredentials(auth)
                 : null;
 
-            UploadInfo info = filesService.startMultiPartUpload(path, credentials);
+            UploadInfo info = filesService.startMultiPartUpload(fullPath, credentials);
             if (log.isTraceEnabled()) {
-                log.trace("start upload url for model with id {}: {}", id, info);
+                log.trace("start upload url for dto with id {}: {}", id, info);
             }
 
             return info;
@@ -363,32 +389,25 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
     public UploadInfo uploadMultiPart(
         @NotNull String project,
         @Nullable String id,
-        @NotNull String filename,
+        @NotNull String path,
         @NotNull String uploadId,
         @NotNull Integer partNumber
     ) throws NoSuchEntityException, SystemException {
-        log.debug("upload part url for model {}: {}", String.valueOf(id), filename);
+        log.debug("upload part url for dto {}: {}", String.valueOf(id), partNumber);
         try {
-            String path =
-                filesService.getDefaultStore(projectService.get(project)) +
-                "/" +
-                project +
-                "/" +
-                type.name().toLowerCase() +
-                "/" +
-                id +
-                "/" +
-                (filename.startsWith("/") ? filename : "/" + filename);
-
             //entity may not exists (yet)
             D dto = entityService.find(id);
-
             if (dto != null) {
                 //extract path from spec
                 PathAccessor accessor = PathAccessor.with(dto.getSpec());
-                path = accessor.getPath();
-                if (!StringUtils.hasText(path)) {
+                String specPath = accessor.getPath();
+                if (!StringUtils.hasText(specPath)) {
                     throw new NoSuchEntityException("file");
+                }
+
+                //path is either full or path + filename
+                if (!path.equals(specPath) && !path.startsWith(specPath)) {
+                    throw new IllegalArgumentException("invalid file path");
                 }
             }
 
@@ -400,7 +419,7 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
 
             UploadInfo info = filesService.uploadMultiPart(path, uploadId, partNumber, credentials);
             if (log.isTraceEnabled()) {
-                log.trace("part upload url for model with path {}: {}", path, info);
+                log.trace("part upload url for dto with path {}: {}", path, info);
             }
 
             return info;
@@ -414,32 +433,25 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
     public UploadInfo completeMultiPartUpload(
         @NotNull String project,
         @Nullable String id,
-        @NotNull String filename,
+        @NotNull String path,
         @NotNull String uploadId,
         @NotNull List<String> eTagPartList
     ) throws NoSuchEntityException, SystemException {
-        log.debug("complete upload url for model {}: {}", String.valueOf(id), filename);
+        log.debug("complete upload url for dto {}: {}", String.valueOf(id), path);
         try {
-            String path =
-                filesService.getDefaultStore(projectService.get(project)) +
-                "/" +
-                project +
-                "/" +
-                type.name().toLowerCase() +
-                "/" +
-                id +
-                "/" +
-                (filename.startsWith("/") ? filename : "/" + filename);
-
             //entity may not exists (yet)
             D dto = entityService.find(id);
-
             if (dto != null) {
                 //extract path from spec
                 PathAccessor accessor = PathAccessor.with(dto.getSpec());
-                path = accessor.getPath();
-                if (!StringUtils.hasText(path)) {
+                String specPath = accessor.getPath();
+                if (!StringUtils.hasText(specPath)) {
                     throw new NoSuchEntityException("file");
+                }
+
+                //path is either full or path + filename
+                if (!path.equals(specPath) && !path.startsWith(specPath)) {
+                    throw new IllegalArgumentException("invalid file path");
                 }
             }
 
@@ -451,7 +463,7 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
 
             UploadInfo info = filesService.completeMultiPartUpload(path, uploadId, eTagPartList, credentials);
             if (log.isTraceEnabled()) {
-                log.trace("complete upload url for model with path {}: {}", path, info);
+                log.trace("complete upload url for dto with path {}: {}", path, info);
             }
 
             return info;

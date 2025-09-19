@@ -252,52 +252,66 @@ public class ModelContextController {
     public UploadInfo uploadAsUrlById(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
+        @RequestParam(required = false) @Valid @Nullable @Pattern(regexp = Keys.SLUG_PATTERN) String name,
         @RequestParam @NotNull String filename
     ) throws NoSuchEntityException {
         Model entity = modelManager.findModel(id);
 
         //check for project and name match
-        if ((entity != null) && !entity.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
+        if (entity != null) {
+            if (!entity.getProject().equals(project)) {
+                throw new IllegalArgumentException("invalid project");
+            }
+            if ((name != null) && !entity.getName().equals(name)) {
+                throw new IllegalArgumentException("invalid name");
+            }
         }
 
-        return filesService.uploadFileAsUrl(project, id, filename);
+        return filesService.uploadFileAsUrl(project, name, id, filename);
     }
 
-    @Operation(summary = "Create a starting multipart upload url for a given entity, if available")
+    @Operation(summary = "Start a multipart upload for a given entity, if available")
     @PostMapping(path = "/{id}/files/multipart/start", produces = "application/json; charset=UTF-8")
     public UploadInfo multipartStartUploadAsUrlById(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
+        @RequestParam(required = false) @Valid @Nullable @Pattern(regexp = Keys.SLUG_PATTERN) String name,
         @RequestParam @NotNull String filename
     ) throws NoSuchEntityException {
         Model entity = modelManager.findModel(id);
 
         //check for project and name match
-        if ((entity != null) && !entity.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
+        if (entity != null) {
+            if (!entity.getProject().equals(project)) {
+                throw new IllegalArgumentException("invalid project");
+            }
+            if ((name != null) && !entity.getName().equals(name)) {
+                throw new IllegalArgumentException("invalid name");
+            }
         }
 
-        return filesService.startMultiPartUpload(project, id, filename);
+        return filesService.startMultiPartUpload(project, name, id, filename);
     }
 
-    @Operation(summary = "Create a multipart upload url for a given entity, if available")
+    @Operation(
+        summary = "Generate an upload url for a part of a given multipart upload for a given entity, if available"
+    )
     @PutMapping(path = "/{id}/files/multipart/part", produces = "application/json; charset=UTF-8")
     public UploadInfo multipartPartUploadAsUrlById(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @RequestParam @NotNull String filename,
+        @RequestParam @NotNull String path,
         @RequestParam @NotNull String uploadId,
         @RequestParam @NotNull Integer partNumber
     ) throws NoSuchEntityException {
         Model entity = modelManager.findModel(id);
 
-        //check for project and name match
+        //check for project match
         if ((entity != null) && !entity.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
 
-        return filesService.uploadMultiPart(project, id, filename, uploadId, partNumber);
+        return filesService.uploadMultiPart(project, id, path, uploadId, partNumber);
     }
 
     @Operation(summary = "Create a completing multipart upload url for a given entity, if available")
@@ -305,18 +319,18 @@ public class ModelContextController {
     public UploadInfo multipartCompleteUploadAsUrlById(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @RequestParam @NotNull String filename,
+        @RequestParam @NotNull String path,
         @RequestParam @NotNull String uploadId,
         @RequestParam @NotNull List<String> partList
     ) throws NoSuchEntityException {
         Model entity = modelManager.findModel(id);
 
-        //check for project and name match
+        //check for project match
         if ((entity != null) && !entity.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
 
-        return filesService.completeMultiPartUpload(project, id, filename, uploadId, partList);
+        return filesService.completeMultiPartUpload(project, id, path, uploadId, partList);
     }
 
     @Operation(summary = "Get file info for a given entity, if available")
