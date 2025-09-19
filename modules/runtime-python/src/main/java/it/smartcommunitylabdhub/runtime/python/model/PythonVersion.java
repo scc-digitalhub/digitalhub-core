@@ -26,7 +26,8 @@ package it.smartcommunitylabdhub.runtime.python.model;
 public enum PythonVersion {
     PYTHON3_9("3.9"),
     PYTHON3_10("3.10"),
-    PYTHON3_11("3.11");
+    PYTHON3_11("3.11"),
+    PYTHON3_12("3.12");
 
     private final String version;
 
