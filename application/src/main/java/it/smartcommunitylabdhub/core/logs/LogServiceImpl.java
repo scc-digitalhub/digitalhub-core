@@ -50,6 +50,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -63,7 +64,10 @@ import org.springframework.validation.BindException;
 @Slf4j
 public class LogServiceImpl implements LogService {
 
-    public static final int MAX_LENGTH = 30 * 1024;
+    public static final int MAX_LENGTH = 2 * 1024 * 1024; //2MB
+
+    @Value("${kubernetes.logs.max-length}")
+    private int maxLength = MAX_LENGTH;
 
     @Autowired
     private EntityService<Log> entityService;
@@ -231,9 +235,9 @@ public class LogServiceImpl implements LogService {
                 }
 
                 //check if too big and slice
-                if (dto.getContent() != null && dto.getContent().length() > MAX_LENGTH) {
-                    log.debug("log content too long, slice to {}", MAX_LENGTH);
-                    dto.setContent(dto.getContent().substring(0, MAX_LENGTH));
+                if (dto.getContent() != null && dto.getContent().length() > maxLength) {
+                    log.debug("log content too long, slice to {}", maxLength);
+                    dto.setContent(dto.getContent().substring(dto.getContent().length() - maxLength));
                 }
 
                 //create as new
@@ -268,9 +272,9 @@ public class LogServiceImpl implements LogService {
             dto.setSpec(specMap);
 
             //check if too big and slice
-            if (dto.getContent() != null && dto.getContent().length() > MAX_LENGTH) {
-                log.debug("log content too long, slice to {}", MAX_LENGTH);
-                dto.setContent(dto.getContent().substring(0, MAX_LENGTH));
+            if (dto.getContent() != null && dto.getContent().length() > maxLength) {
+                log.debug("log content too long, slice to {}", maxLength);
+                dto.setContent(dto.getContent().substring(dto.getContent().length() - maxLength));
             }
 
             //full update, log is modifiable
