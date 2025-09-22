@@ -205,7 +205,9 @@ kubernetes:
     ephemeral:
       requests: ${K8S_RESOURCE_EPHEMERAL_DEFAULT:2Gi}
       limits: ${K8S_RESOURCE_EPHEMERAL_LIMIT:}
-      storage-class: ${K8S_RESOURCE_EPHEMERAL_STORAGE_CLASS:}      
+      storage-class: ${K8S_RESOURCE_EPHEMERAL_STORAGE_CLASS:}    
+    workflow:
+      storage-class: ${K8S_RESOURCE_WORKFLOW_STORAGE_CLASS:}  
   config:
     config-map: ${DH_CONFIG_COMMON_MAPS:}
     secret: ${DH_CONFIG_COMMON_SECRETS:}
