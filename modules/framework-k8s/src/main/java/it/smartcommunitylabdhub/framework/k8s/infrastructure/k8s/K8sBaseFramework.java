@@ -1344,7 +1344,9 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
 
                     V1PersistentVolumeClaim claim = new V1PersistentVolumeClaim()
                         .metadata(
-                            new V1ObjectMeta().name(k8sBuilderHelper.getVolumeName(runnable.getId(), v.getName()))
+                            new V1ObjectMeta()
+                                .name(k8sBuilderHelper.getVolumeName(runnable.getId(), v.getName()))
+                                .labels(buildLabels(runnable))
                         )
                         .spec(
                             new V1PersistentVolumeClaimSpec()
