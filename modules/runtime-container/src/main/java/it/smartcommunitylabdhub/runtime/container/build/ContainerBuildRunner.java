@@ -35,6 +35,7 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileGenerator;
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileGeneratorFactory;
+import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileInstruction;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
 import it.smartcommunitylabdhub.runtime.container.ContainerRuntime;
 import it.smartcommunitylabdhub.runtime.container.specs.ContainerFunctionSpec;
@@ -44,6 +45,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponents;
@@ -57,10 +60,36 @@ public class ContainerBuildRunner {
 
     private static final int MIN_NAME_LENGTH = 3;
 
+    private Set<String> ALLOWED_INSTRUCTIONS = Set.of(
+        "FROM",
+        "RUN",
+        "CMD",
+        "EXPOSE",
+        "ENV",
+        "ADD",
+        "COPY",
+        "ENTRYPOINT",
+        "USER",
+        "WORKDIR",
+        "ARG",
+        "HEALTHCHECK"
+    );
+
     private final K8sBuilderHelper k8sBuilderHelper;
 
     public ContainerBuildRunner(K8sBuilderHelper k8sBuilderHelper) {
         this.k8sBuilderHelper = k8sBuilderHelper;
+    }
+
+    public void setAllowedInstructions(Set<String> allowedInstructions) {
+        if (allowedInstructions != null) {
+            ALLOWED_INSTRUCTIONS =
+                Collections.unmodifiableSet(
+                    allowedInstructions.stream().map(String::toUpperCase).collect(Collectors.toSet())
+                );
+        } else {
+            ALLOWED_INSTRUCTIONS = Collections.emptySet();
+        }
     }
 
     public K8sContainerBuilderRunnable produce(Run run, Map<String, String> secretData) {
@@ -83,29 +112,70 @@ public class ContainerBuildRunner {
         // Generate docker file
         DockerfileGeneratorFactory dockerfileGenerator = DockerfileGenerator.factory();
 
-        if (!StringUtils.hasText(functionSpec.getBaseImage())) {
-            throw new IllegalArgumentException("invalid or missing baseImage");
+        String sourceDockerfile = null;
+        if (functionSpec.getSource() != null && StringUtils.hasText(functionSpec.getSource().getBase64())) {
+            SourceCode<SourceCodeLanguages> source = functionSpec.getSource();
+            if (SourceCodeLanguages.dockerfile == source.getLang()) {
+                //read source as dockerfile
+                sourceDockerfile = new String(java.util.Base64.getDecoder().decode(source.getBase64()));
+            }
         }
 
-        // Add image to docker file
-        dockerfileGenerator.from(functionSpec.getBaseImage());
+        List<String> instructions = taskSpec.getInstructions() != null
+            ? new ArrayList<>(taskSpec.getInstructions())
+            : new ArrayList<>();
 
-        // copy context content to workdir
-        dockerfileGenerator.copy(".", "/shared");
-        dockerfileGenerator.workdir("/shared");
+        if (sourceDockerfile == null) {
+            String baseImage = functionSpec.getBaseImage();
+            if (StringUtils.hasText(baseImage)) {
+                // Add image to docker file
+                dockerfileGenerator.from(baseImage);
+            }
 
-        if (log.isDebugEnabled()) {
-            //add debug instructions to docker file
-            dockerfileGenerator.run(RUN_DEBUG);
+            // copy context content to workdir
+            dockerfileGenerator.copy(".", "/shared");
+            dockerfileGenerator.workdir("/shared");
+
+            if (log.isDebugEnabled()) {
+                //add debug instructions to docker file
+                dockerfileGenerator.run(RUN_DEBUG);
+            }
+        } else {
+            //read source dockerfile
+            String[] lines = sourceDockerfile.split("\\r?\\n");
+            for (String line : lines) {
+                if (StringUtils.hasText(line) && !line.trim().startsWith("#")) {
+                    dockerfileGenerator.read(line);
+                }
+            }
         }
 
         // Add Instructions to docker file
-        Optional
-            .ofNullable(taskSpec.getInstructions())
-            .ifPresent(instructions -> instructions.forEach(i -> dockerfileGenerator.run(i)));
+        instructions.forEach(i -> {
+            //keep only whitelisted
+            DockerfileInstruction instruction = DockerfileInstruction.read(i);
+            if (ALLOWED_INSTRUCTIONS.contains(instruction.getInstruction().name())) {
+                dockerfileGenerator.instruction(
+                    instruction.getInstruction(),
+                    instruction.getArgs(),
+                    instruction.getOpts()
+                );
+            }
+        });
+
+        // Seal generator
+        DockerfileGenerator generator = dockerfileGenerator.build();
+
+        //check first instruction is FROM
+        if (
+            generator.getInstructions().isEmpty() ||
+            DockerfileInstruction.Kind.FROM != generator.getInstructions().getFirst().getInstruction()
+        ) {
+            throw new IllegalArgumentException("instructions must start with FROM");
+        }
 
         // Generate string docker file
-        String dockerfile = dockerfileGenerator.build().generate();
+        String dockerfile = generator.generate();
 
         //read source and build context
         List<ContextRef> contextRefs = null;
