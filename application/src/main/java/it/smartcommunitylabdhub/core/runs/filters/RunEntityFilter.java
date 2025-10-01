@@ -67,19 +67,22 @@ public class RunEntityFilter extends AbstractEntityFilter<Run> {
     @Override
     public SearchFilter<Run> toSearchFilter() {
         List<SearchCriteria<Run>> criteria = new ArrayList<>();
+        List<SearchFilter<Run>> filters = new ArrayList<>();
 
         //base criteria
-        criteria.addAll(super.toSearchFilter().getCriteria());
+        SearchFilter<Run> sf = super.toSearchFilter();
+        criteria.addAll(sf.getCriteria());
+        filters.addAll(sf.getFilters());
 
-        //if name replace with id like + task like
-        criteria
-            .stream()
-            .filter(c -> c.getField().equals("name"))
-            .findFirst()
-            .ifPresent(c -> {
-                criteria.remove(c);
-                criteria.add(new BaseEntitySearchCriteria<>("id", c.getValue(), SearchCriteria.Operation.like));
-            });
+        // //if name replace with id like + task like
+        // criteria
+        //     .stream()
+        //     .filter(c -> c.getField().equals("name"))
+        //     .findFirst()
+        //     .ifPresent(c -> {
+        //         criteria.remove(c);
+        //         criteria.add(new BaseEntitySearchCriteria<>("id", c.getValue(), SearchCriteria.Operation.like));
+        //     });
 
         //task exact match
         Optional
@@ -124,6 +127,11 @@ public class RunEntityFilter extends AbstractEntityFilter<Run> {
                 }
             });
 
-        return BaseEntityFilter.<Run>builder().criteria(criteria).condition(SearchFilter.Condition.and).build();
+        return BaseEntityFilter
+            .<Run>builder()
+            .criteria(criteria)
+            .filters(filters)
+            .condition(SearchFilter.Condition.and)
+            .build();
     }
 }

@@ -70,6 +70,19 @@ public class AbstractEntityFilterConverter<D extends BaseDTO, E extends BaseEnti
             builder.criteria(criteria);
         }
 
+        if (filter.getFilters() != null) {
+            List<SearchFilter<E>> filters = new ArrayList<>();
+
+            filter
+                .getFilters()
+                .forEach(f -> {
+                    //recursively convert
+                    filters.add(this.convert(f));
+                });
+
+            builder.filters(filters);
+        }
+
         BaseEntityFilter<E> ef = builder.build();
         if (log.isTraceEnabled()) {
             log.trace("filter: {}", ef);

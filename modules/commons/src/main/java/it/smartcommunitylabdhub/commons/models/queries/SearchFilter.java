@@ -28,6 +28,7 @@ import org.springframework.data.jpa.domain.Specification;
 
 public interface SearchFilter<T> {
     List<SearchCriteria<T>> getCriteria();
+    List<SearchFilter<T>> getFilters();
 
     Condition getCondition();
 

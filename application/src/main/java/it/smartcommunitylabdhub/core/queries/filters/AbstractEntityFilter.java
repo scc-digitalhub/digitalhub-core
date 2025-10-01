@@ -28,6 +28,7 @@ import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.queries.SearchCriteria;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
+import it.smartcommunitylabdhub.commons.models.queries.SearchFilter.Condition;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
@@ -84,13 +85,24 @@ public abstract class AbstractEntityFilter<T extends BaseDTO> {
     public SearchFilter<T> toSearchFilter() {
         //build default search fields in AND
         List<SearchCriteria<T>> criteria = new ArrayList<>();
+        List<SearchFilter<T>> filters = new ArrayList<>();
 
-        //TODO handle q in OR with name+description+version
+        //handle q in OR with id+name
         Optional
             .ofNullable(q)
-            .ifPresent(value ->
-                criteria.add(new BaseEntitySearchCriteria<>("name", value, SearchCriteria.Operation.like))
-            );
+            .ifPresent(value -> {
+                BaseEntityFilter<T> qf = BaseEntityFilter
+                    .<T>builder()
+                    .condition(Condition.or)
+                    .criteria(
+                        List.of(
+                            new BaseEntitySearchCriteria<>("id", value, SearchCriteria.Operation.like),
+                            new BaseEntitySearchCriteria<>("name", value, SearchCriteria.Operation.like)
+                        )
+                    )
+                    .build();
+                filters.add(qf);
+            });
 
         Optional
             .ofNullable(name)
@@ -192,6 +204,11 @@ public abstract class AbstractEntityFilter<T extends BaseDTO> {
                 }
             });
 
-        return BaseEntityFilter.<T>builder().criteria(criteria).condition(SearchFilter.Condition.and).build();
+        return BaseEntityFilter
+            .<T>builder()
+            .criteria(criteria)
+            .filters(filters)
+            .condition(SearchFilter.Condition.and)
+            .build();
     }
 }
