@@ -159,6 +159,24 @@ public class BaseRunState<
             });
     }
 
+    protected Transition.Builder<S, E, Run> toPending() {
+        //(EXECUTE)->RUNNING
+        return new Transition.Builder<S, E, Run>()
+            .event(Enum.valueOf(eventsClass, RunEvent.SCHEDULE.name()))
+            .nextState(Enum.valueOf(stateClass, RunState.PENDING.name()))
+            .<R, R>withInternalLogic((currentState, nextState, event, run, runnable) -> {
+                RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
+                if (specAccessor.isLocalExecution()) {
+                    return Optional.empty();
+                }
+
+                //runtime callback
+                //TODO
+
+                return Optional.empty();
+            });
+    }
+
     protected Transition.Builder<S, E, Run> toRunning() {
         //(EXECUTE)->RUNNING
         return new Transition.Builder<S, E, Run>()

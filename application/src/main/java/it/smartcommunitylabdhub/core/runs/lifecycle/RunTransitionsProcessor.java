@@ -42,6 +42,8 @@ import org.springframework.stereotype.Component;
     stages = {
         "onBuilt",
         "onReady",
+        "onPending",
+        "onInitializing",
         "onRunning",
         "onCompleted",
         "onError",

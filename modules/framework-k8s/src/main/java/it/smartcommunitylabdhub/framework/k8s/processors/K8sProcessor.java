@@ -34,7 +34,7 @@ import java.util.Map;
 import org.springframework.stereotype.Component;
 
 @ProcessorType(
-    stages = { "onRunning", "onCompleted", "onError", "onStopped", "onDeleted" },
+    stages = { "onPending", "onRunning", "onCompleted", "onError", "onStopped", "onDeleted" },
     type = Run.class,
     id = K8sProcessor.ID
 )

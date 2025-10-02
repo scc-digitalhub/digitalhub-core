@@ -35,6 +35,7 @@ import it.smartcommunitylabdhub.runtimes.lifecycle.states.RunStateCreated;
 import it.smartcommunitylabdhub.runtimes.lifecycle.states.RunStateDeleted;
 import it.smartcommunitylabdhub.runtimes.lifecycle.states.RunStateDeleting;
 import it.smartcommunitylabdhub.runtimes.lifecycle.states.RunStateError;
+import it.smartcommunitylabdhub.runtimes.lifecycle.states.RunStatePending;
 import it.smartcommunitylabdhub.runtimes.lifecycle.states.RunStateReady;
 import it.smartcommunitylabdhub.runtimes.lifecycle.states.RunStateRunning;
 import it.smartcommunitylabdhub.runtimes.lifecycle.states.RunStateStop;
@@ -58,6 +59,7 @@ public class RunFsmFactory<S extends RunBaseSpec, Z extends RunBaseStatus, R ext
             new RunStateDeleting<>(runtime),
             new RunStateError<>(runtime),
             new RunStateReady<>(runtime),
+            new RunStatePending<>(runtime),
             new RunStateRunning<>(runtime),
             new RunStateStop<>(runtime),
             new RunStateStopped<>(runtime)

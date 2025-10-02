@@ -178,7 +178,7 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
         results.put("deployment", deployment);
 
         //update state
-        runnable.setState(K8sRunnableState.RUNNING.name());
+        runnable.setState(K8sRunnableState.PENDING.name());
 
         if (!"disable".equals(collectResults)) {
             //update results

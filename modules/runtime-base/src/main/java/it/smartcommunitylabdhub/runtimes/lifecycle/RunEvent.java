@@ -31,6 +31,7 @@ public enum RunEvent implements LifecycleEvents<Run> {
     COMPLETE,
     DELETE,
     ERROR,
+    SCHEDULE,
     EXECUTE,
     LOOP,
     RESUME,

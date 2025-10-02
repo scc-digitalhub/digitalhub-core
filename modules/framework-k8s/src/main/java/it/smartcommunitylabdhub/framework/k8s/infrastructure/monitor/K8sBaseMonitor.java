@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.framework.k8s.infrastructure.monitor;
@@ -29,9 +29,11 @@ import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.services.RunnableStore;
 import it.smartcommunitylabdhub.framework.k8s.jackson.KubernetesMapper;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import it.smartcommunitylabdhub.runtimes.events.RunnableChangedEvent;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
@@ -51,6 +53,12 @@ public abstract class K8sBaseMonitor<T extends K8sRunnable> implements Runnable 
     protected static final TypeReference<ArrayList<HashMap<String, Serializable>>> arrayRef = new TypeReference<
         ArrayList<HashMap<String, Serializable>>
     >() {};
+
+    protected static String[] STATES = {
+        K8sRunnableState.PENDING.name(),
+        K8sRunnableState.RUNNING.name(),
+        K8sRunnableState.DELETING.name(),
+    };
 
     protected final RunnableStore<T> store;
     protected ApplicationEventPublisher eventPublisher;
@@ -91,11 +99,11 @@ public abstract class K8sBaseMonitor<T extends K8sRunnable> implements Runnable 
     }
 
     public void monitor() {
-        log.debug("monitor all RUNNING...");
+        log.debug("monitor all active...");
         store
             .findAll()
             .stream()
-            .filter(runnable -> runnable.getState() != null && runnable.getState().equals("RUNNING"))
+            .filter(runnable -> runnable.getState() != null && Arrays.asList(STATES).contains(runnable.getState()))
             .flatMap(runnable -> {
                 log.debug("monitor run {}", runnable.getId());
 

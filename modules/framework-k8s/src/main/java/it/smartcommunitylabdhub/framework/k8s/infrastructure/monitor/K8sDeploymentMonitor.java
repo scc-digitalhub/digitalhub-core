@@ -87,6 +87,16 @@ public class K8sDeploymentMonitor extends K8sBaseMonitor<K8sDeploymentRunnable> 
                     runnable.getId()
                 );
                 pods = framework.pods(deployment);
+
+                //If we have pods, check if any is running
+                if (K8sRunnableState.PENDING.name().equals(runnable.getState()) && pods != null) {
+                    boolean running = pods
+                        .stream()
+                        .anyMatch(p -> p.getStatus() != null && "Running".equals(p.getStatus().getPhase()));
+                    if (running) {
+                        runnable.setState(K8sRunnableState.RUNNING.name());
+                    }
+                }
             } catch (K8sFrameworkException e1) {
                 log.error("error collecting pods for deployment {}: {}", runnable.getId(), e1.getMessage());
             }
