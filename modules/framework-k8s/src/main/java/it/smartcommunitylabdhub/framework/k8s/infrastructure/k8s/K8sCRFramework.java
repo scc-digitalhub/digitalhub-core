@@ -122,7 +122,7 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
             log.error(e.getMessage());
         }
         //update state
-        runnable.setState(K8sRunnableState.RUNNING.name());
+        runnable.setState(K8sRunnableState.PENDING.name());
 
         runnable.setResults(
             results.entrySet().stream().collect(Collectors.toMap(Entry::getKey, e -> mapper.convertValue(e, typeRef)))
@@ -159,7 +159,27 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
     }
 
     @Override
-    public K8sCRRunnable delete(K8sCRRunnable runnable) throws FrameworkException {
+    public K8sCRRunnable stop(K8sCRRunnable runnable) throws K8sFrameworkException {
+        log.info("stop for {}", runnable.getId());
+        if (log.isTraceEnabled()) {
+            log.trace("runnable: {}", runnable);
+        }
+
+        //stop by deleting
+        runnable = delete(runnable);
+
+        //update state
+        runnable.setState(K8sRunnableState.STOPPED.name());
+
+        if (log.isTraceEnabled()) {
+            log.trace("result: {}", runnable);
+        }
+
+        return runnable;
+    }
+
+    @Override
+    public K8sCRRunnable delete(K8sCRRunnable runnable) throws K8sFrameworkException {
         log.info("delete for {}", runnable.getId());
         if (log.isTraceEnabled()) {
             log.trace("runnable: {}", runnable);

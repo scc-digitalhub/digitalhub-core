@@ -34,7 +34,6 @@ import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sCRFramework;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
-
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -74,6 +73,9 @@ public class K8sCRMonitor extends K8sBaseMonitor<K8sCRRunnable> {
                 runnable.setState(K8sRunnableState.ERROR.name());
                 runnable.setError("CR missing or invalid");
             } else {
+                //if it's there, it's running
+                runnable.setState(K8sRunnableState.RUNNING.name());
+
                 try {
                     //explicit conversion
                     //NOTE: dko contains a GSON JsonObject which jackson *can not* convert
