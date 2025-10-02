@@ -46,6 +46,7 @@ import it.smartcommunitylabdhub.runtime.kubeai.models.OpenAIService;
 import it.smartcommunitylabdhub.runtime.kubeai.text.specs.KubeAITextFunctionSpec;
 import it.smartcommunitylabdhub.runtime.kubeai.text.specs.KubeAITextRunSpec;
 import it.smartcommunitylabdhub.runtime.kubeai.text.specs.KubeAITextServeTaskSpec;
+import it.smartcommunitylabdhub.runtimes.lifecycle.RunState;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -183,6 +184,7 @@ public class KubeAITextRuntime extends KubeAIRuntime<KubeAITextFunctionSpec, Kub
                 .orElse(new OpenAIService());
 
             //set features and persist
+            openai.setEngine(functionSpec.getEngine() != null ? functionSpec.getEngine().name() : null);
             openai.setFeatures(functionSpec.getFeatures().stream().map(KubeAIFeature::name).toList());
             status.setOpenai(openai);
         }
@@ -212,6 +214,22 @@ public class KubeAITextRuntime extends KubeAIRuntime<KubeAITextFunctionSpec, Kub
 
             service.setUrls(urls);
             status.setService(service);
+        }
+
+        //update state every time
+        if (runnable != null && runnable instanceof K8sCRRunnable) {
+            K8sCRRunnable k8sRunnable = (K8sCRRunnable) runnable;
+
+            ModelStatus modelStatus = getModelStatus(k8sRunnable);
+            if (modelStatus != null) {
+                if (modelStatus.ready() > 0) {
+                    status.setState(RunState.RUNNING.name());
+                    status.setMessage("Model %s ready".formatted(functionSpec.getModelName()));
+                } else {
+                    status.setState(RunState.PENDING.name());
+                    status.setMessage("Model %s not ready".formatted(functionSpec.getModelName()));
+                }
+            }
         }
 
         return status;

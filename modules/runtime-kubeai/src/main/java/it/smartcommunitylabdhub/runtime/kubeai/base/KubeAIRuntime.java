@@ -31,14 +31,19 @@ import it.smartcommunitylabdhub.commons.services.ModelManager;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sSecretHelper;
+import it.smartcommunitylabdhub.framework.k8s.model.K8sRunStatus;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAIAdapter;
 import it.smartcommunitylabdhub.runtime.kubeai.models.OpenAIService;
+import it.smartcommunitylabdhub.runtimes.lifecycle.RunState;
 import jakarta.validation.constraints.NotNull;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -88,7 +93,9 @@ public abstract class KubeAIRuntime<F extends KubeAIServeFunctionSpec, R extends
         if (status.getOpenai() == null) {
             OpenAIService openai = new OpenAIService();
             openai.setBaseUrl(kubeAiEndpoint + "/openai/v1");
+
             openai.setModel(functionSpec.getModelName());
+            openai.setModelUrl(functionSpec.getUrl());
 
             if (runnable != null && runnable instanceof K8sCRRunnable) {
                 //model name is set via resource name for kubeAi
@@ -137,4 +144,33 @@ public abstract class KubeAIRuntime<F extends KubeAIServeFunctionSpec, R extends
 
         return status;
     }
+
+    @SuppressWarnings("unchecked")
+    protected ModelStatus getModelStatus(K8sCRRunnable k8sRunnable) {
+        //update state every time
+        if (k8sRunnable != null) {
+            //check model replication status
+            Optional<ModelStatus> status = Optional
+                .ofNullable(k8sRunnable.getResults())
+                .map(s -> s.get("Model"))
+                .map(m -> ((Map<String, Serializable>) m).get("status"))
+                .map(m -> ((Map<String, Serializable>) m).get("replicas"))
+                .map(m -> ((Map<String, Serializable>) m).get("ready"))
+                .map(ready -> {
+                    if (ready instanceof Integer r) {
+                        return new ModelStatus(r);
+                    } else {
+                        return null;
+                    }
+                });
+
+            if (status.isPresent()) {
+                return status.get();
+            }
+        }
+
+        return null;
+    }
+
+    public record ModelStatus(int ready) {}
 }

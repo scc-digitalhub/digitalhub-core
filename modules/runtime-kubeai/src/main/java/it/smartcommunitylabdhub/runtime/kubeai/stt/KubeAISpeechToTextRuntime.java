@@ -44,6 +44,7 @@ import it.smartcommunitylabdhub.runtime.kubeai.models.OpenAIService;
 import it.smartcommunitylabdhub.runtime.kubeai.stt.specs.KubeAISpeechToTextFunctionSpec;
 import it.smartcommunitylabdhub.runtime.kubeai.stt.specs.KubeAISpeechToTextRunSpec;
 import it.smartcommunitylabdhub.runtime.kubeai.stt.specs.KubeAISpeechToTextServeTaskSpec;
+import it.smartcommunitylabdhub.runtimes.lifecycle.RunState;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -185,6 +186,7 @@ public class KubeAISpeechToTextRuntime
                 .orElse(new OpenAIService());
 
             //set features and persist
+            openai.setEngine(ENGINE);
             openai.setFeatures(List.of(FEATURE));
             status.setOpenai(openai);
         }
@@ -204,6 +206,22 @@ public class KubeAISpeechToTextRuntime
 
             service.setUrls(urls);
             status.setService(service);
+        }
+
+        //update state every time
+        if (runnable != null && runnable instanceof K8sCRRunnable) {
+            K8sCRRunnable k8sRunnable = (K8sCRRunnable) runnable;
+
+            ModelStatus modelStatus = getModelStatus(k8sRunnable);
+            if (modelStatus != null) {
+                if (modelStatus.ready() > 0) {
+                    status.setState(RunState.RUNNING.name());
+                    status.setMessage("Model %s ready".formatted(functionSpec.getModelName()));
+                } else {
+                    status.setState(RunState.PENDING.name());
+                    status.setMessage("Model %s not ready".formatted(functionSpec.getModelName()));
+                }
+            }
         }
 
         return status;

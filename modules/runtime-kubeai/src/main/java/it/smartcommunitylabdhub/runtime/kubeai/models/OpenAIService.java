@@ -39,8 +39,12 @@ import lombok.Setter;
 public class OpenAIService {
 
     private String baseUrl;
-    private String model;
-    private List<String> features;
+    private String status;
 
+    private String engine;
+    private String model;
+    private String modelUrl;
     private List<KubeAIAdapter> adapters;
+
+    private List<String> features;
 }
