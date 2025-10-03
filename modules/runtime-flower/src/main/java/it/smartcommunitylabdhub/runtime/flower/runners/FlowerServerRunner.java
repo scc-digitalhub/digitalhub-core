@@ -136,7 +136,7 @@ public class FlowerServerRunner {
         List<String> args = new LinkedList<>();
         args.addAll(List.of("/shared/server.sh", "--path_to_project", "/shared"));
 
-        if (StringUtils.hasText(caCert) && StringUtils.hasText(tlsConf)) {
+        if (!Boolean.TRUE.equals(runSpec.getInsecure()) && StringUtils.hasText(caCert) && StringUtils.hasText(tlsConf)) {
             String dns1 = k8sBuilderHelper.getServiceName("flower-server", FlowerServerTaskSpec.KIND, run.getId());
             String dns2 = k8sBuilderHelper.getServiceName(
                 "flower-server",

@@ -60,6 +60,9 @@ public class FlowerServerRunSpec extends RunBaseSpec {
     @Schema(title = "fields.flower.auth_public_keys.title", description = "fields.flower.auth_public_keys.description")
     private List<String> authPublicKeys;
 
+    @Schema(title = "fields.flower.insecure.title", description = "fields.flower.insecure.description")
+    private Boolean insecure = false;
+
     public FlowerServerRunSpec(Map<String, Serializable> data) {
         configure(data);
     }
@@ -76,6 +79,7 @@ public class FlowerServerRunSpec extends RunBaseSpec {
         this.taskBuildSpec = spec.getTaskBuildSpec();
 
         this.authPublicKeys = spec.getAuthPublicKeys();
+        this.insecure = spec.getInsecure();
     }
 
     public void setTaskDeploySpec(FlowerServerTaskSpec taskDeploySpec) {
