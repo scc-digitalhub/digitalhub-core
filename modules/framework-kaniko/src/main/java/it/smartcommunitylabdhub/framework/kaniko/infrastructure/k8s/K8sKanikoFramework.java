@@ -290,7 +290,7 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
             String configMapName = "init-config-map-" + runnable.getId();
             V1ConfigMap initConfigMap = coreV1Api.readNamespacedConfigMap(configMapName, namespace, null);
             if (initConfigMap != null) {
-                coreV1Api.deleteNamespacedConfigMap(configMapName, namespace, null, null, null, null, null, null);
+                coreV1Api.deleteNamespacedConfigMap(configMapName, namespace, null, null, null, null, null, null, null);
                 messages.add(String.format("configMap %s deleted", configMapName));
             }
         } catch (ApiException | NullPointerException e) {
@@ -336,7 +336,7 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
             String configMapName = "init-config-map-" + runnable.getId();
             V1ConfigMap initConfigMap = coreV1Api.readNamespacedConfigMap(configMapName, namespace, null);
             if (initConfigMap != null) {
-                coreV1Api.deleteNamespacedConfigMap(configMapName, namespace, null, null, null, null, null, null);
+                coreV1Api.deleteNamespacedConfigMap(configMapName, namespace, null, null, null, null, null, null, null);
                 messages.add(String.format("configMap %s deleted", configMapName));
             }
         } catch (ApiException | NullPointerException e) {
@@ -576,7 +576,7 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
             String jobName = job.getMetadata().getName();
             log.debug("delete k8s job for {}", jobName);
 
-            batchV1Api.deleteNamespacedJob(jobName, namespace, null, null, null, null, "Foreground", null);
+            batchV1Api.deleteNamespacedJob(jobName, namespace, null, null, null, null, null, "Foreground", null);
         } catch (ApiException e) {
             log.error("Error with k8s: {}", e.getResponseBody());
             if (log.isDebugEnabled()) {

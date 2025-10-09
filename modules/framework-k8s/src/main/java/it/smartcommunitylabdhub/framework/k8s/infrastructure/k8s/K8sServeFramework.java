@@ -280,7 +280,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
             String configMapName = "init-config-map-" + runnable.getId();
             V1ConfigMap initConfigMap = coreV1Api.readNamespacedConfigMap(configMapName, namespace, null);
             if (initConfigMap != null) {
-                coreV1Api.deleteNamespacedConfigMap(configMapName, namespace, null, null, null, null, null, null);
+                coreV1Api.deleteNamespacedConfigMap(configMapName, namespace, null, null, null, null, null, null, null);
                 messages.add(String.format("configMap %s deleted", configMapName));
             }
         } catch (ApiException | NullPointerException e) {
@@ -309,6 +309,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
                                 null,
                                 null,
                                 null,
+                                "Background",
                                 null
                             );
                             messages.add(String.format("pvc %s deleted", pvcName));
@@ -662,7 +663,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
             String serviceName = service.getMetadata().getName();
             log.debug("delete k8s service for {}", serviceName);
 
-            coreV1Api.deleteNamespacedService(serviceName, namespace, null, null, null, null, null, null);
+            coreV1Api.deleteNamespacedService(serviceName, namespace, null, null, null, null, null, null, null);
         } catch (ApiException e) {
             log.error("Error with k8s: {}", e.getMessage());
             if (log.isTraceEnabled()) {
@@ -882,7 +883,17 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
             String deploymentName = deployment.getMetadata().getName();
             log.debug("delete k8s deployment for {}", deploymentName);
 
-            appsV1Api.deleteNamespacedDeployment(deploymentName, namespace, null, null, null, null, "Foreground", null);
+            appsV1Api.deleteNamespacedDeployment(
+                deploymentName,
+                namespace,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "Foreground",
+                null
+            );
         } catch (ApiException e) {
             log.error("Error with k8s: {}", e.getResponseBody());
             if (log.isTraceEnabled()) {

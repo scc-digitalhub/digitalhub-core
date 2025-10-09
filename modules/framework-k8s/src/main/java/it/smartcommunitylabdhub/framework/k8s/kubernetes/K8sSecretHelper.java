@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.framework.k8s.kubernetes;
@@ -29,7 +29,6 @@ import io.kubernetes.client.custom.V1Patch;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
-import io.kubernetes.client.openapi.models.V1DeleteOptions;
 import io.kubernetes.client.openapi.models.V1EnvVar;
 import io.kubernetes.client.openapi.models.V1EnvVarSource;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
@@ -139,7 +138,7 @@ public class K8sSecretHelper {
         }
 
         //delete
-        api.deleteNamespacedSecret(secretName, namespace, null, null, 0, null, "Foreground", new V1DeleteOptions());
+        api.deleteNamespacedSecret(secretName, namespace, null, null, 0, null, null, "Foreground", null);
     }
 
     public void deleteSecretKeys(String secretName, Set<String> keys) throws JsonProcessingException, ApiException {
@@ -163,16 +162,7 @@ public class K8sSecretHelper {
 
             if (secretData.isEmpty()) {
                 //remove secret
-                api.deleteNamespacedSecret(
-                    secretName,
-                    namespace,
-                    null,
-                    null,
-                    0,
-                    null,
-                    "Foreground",
-                    new V1DeleteOptions()
-                );
+                api.deleteNamespacedSecret(secretName, namespace, null, null, 0, null, null, "Foreground", null);
             } else {
                 log.debug("patch existing secret {}", secretName);
 

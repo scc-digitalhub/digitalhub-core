@@ -234,7 +234,7 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
             String configMapName = "init-config-map-" + runnable.getId();
             V1ConfigMap initConfigMap = coreV1Api.readNamespacedConfigMap(configMapName, namespace, null);
             if (initConfigMap != null) {
-                coreV1Api.deleteNamespacedConfigMap(configMapName, namespace, null, null, null, null, null, null);
+                coreV1Api.deleteNamespacedConfigMap(configMapName, namespace, null, null, null, null, null, null, null);
                 messages.add(String.format("configMap %s deleted", configMapName));
             }
         } catch (ApiException | NullPointerException e) {
@@ -263,6 +263,7 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
                                 null,
                                 null,
                                 null,
+                                "Background",
                                 null
                             );
                             messages.add(String.format("pvc %s deleted", pvcName));
@@ -600,7 +601,17 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
             String deploymentName = deployment.getMetadata().getName();
             log.debug("delete k8s deployment for {}", deploymentName);
 
-            appsV1Api.deleteNamespacedDeployment(deploymentName, namespace, null, null, null, null, "Foreground", null);
+            appsV1Api.deleteNamespacedDeployment(
+                deploymentName,
+                namespace,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "Foreground",
+                null
+            );
         } catch (ApiException e) {
             log.error("Error with k8s: {}", e.getResponseBody());
             if (log.isTraceEnabled()) {

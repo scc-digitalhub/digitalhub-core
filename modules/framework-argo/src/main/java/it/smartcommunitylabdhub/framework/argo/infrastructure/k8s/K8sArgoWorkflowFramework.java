@@ -227,6 +227,7 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
                             null,
                             null,
                             null,
+                            null,
                             "Background",
                             null
                         );
@@ -291,6 +292,7 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
                         coreV1Api.deleteNamespacedPersistentVolumeClaim(
                             pvcName,
                             namespace,
+                            null,
                             null,
                             null,
                             null,
