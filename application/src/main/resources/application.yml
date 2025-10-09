@@ -53,15 +53,16 @@ management:
   server:
     port: ${MANAGEMENT_PORT:8081}
   endpoints:
-    enabled-by-default: false
+    access:
+      default: none
     web:
       base-path:
       exposure.include: "health,info,metrics"
   endpoint:
     info:
-      enabled: true
+      access: read-only
     health:
-      enabled: true
+      access: read-only
 
 # Runtimes
 runtime:
