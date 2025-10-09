@@ -9,32 +9,32 @@
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-      <version>1.18.34</version>
+      <version>1.18.40</version>
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot</artifactId>
-      <version>3.3.13</version>
+      <version>3.4.10</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
-      <version>3.3.13</version>
+      <version>3.4.10</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
-      <version>3.3.13</version>
+      <version>3.4.10</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-thymeleaf</artifactId>
-      <version>3.3.13</version>
+      <version>3.4.10</version>
       <scope>compile</scope>
     </dependency>
     <dependency>

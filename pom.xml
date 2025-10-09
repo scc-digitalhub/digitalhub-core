@@ -11,17 +11,18 @@
 
     <properties>
         <revision>0.14.0-SNAPSHOT</revision>
-        <project.build.outputTimestamp>2025-08-01T00:00:00Z</project.build.outputTimestamp>
+        <project.build.outputTimestamp>2025-10-01T00:00:00Z</project.build.outputTimestamp>
         <java.version>21</java.version>
         <spring-boot.version>3.4.10</spring-boot.version>
         <spring-security.version>6.4.11</spring-security.version>
         <springdoc.version>2.2.0</springdoc.version>
-        <jackson.version>2.16.2</jackson.version>
+        <jackson.version>2.18.4</jackson.version>
         <slf4j.version>2.0.9</slf4j.version>
-        <kubernetes.version>21.0.2-legacy</kubernetes.version>
+        <kubernetes.version>24.0.0-legacy</kubernetes.version>
         <maven.compiler.release>21</maven.compiler.release>
-        <lombok.version>1.18.34</lombok.version>
-        <guava.version>33.3.1-jre</guava.version>
+        <lombok.version>1.18.40</lombok.version>
+        <guava.version>33.4.8-jre</guava.version>
+        <postgresql.version>42.7.2</postgresql.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <checkstyle.config.location>checkstyle/checkstyle.xml</checkstyle.config.location>
         <checkstyle.failOnViolation>false</checkstyle.failOnViolation>
