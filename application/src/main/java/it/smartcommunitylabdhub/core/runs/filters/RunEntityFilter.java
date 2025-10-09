@@ -64,6 +64,15 @@ public class RunEntityFilter extends AbstractEntityFilter<Run> {
     @Schema(example = "kind://my-project/workflow-name:id", defaultValue = "", description = "Workflow key")
     private String workflow;
 
+    protected List<SearchCriteria<Run>> processQFields(String q) {
+        return List.of(
+            new BaseEntitySearchCriteria<>("id", q, SearchCriteria.Operation.like),
+            new BaseEntitySearchCriteria<>("name", q, SearchCriteria.Operation.like),
+            new BaseEntitySearchCriteria<>("function", q, SearchCriteria.Operation.like),
+            new BaseEntitySearchCriteria<>("workflow", q, SearchCriteria.Operation.like)
+        );
+    }
+
     @Override
     public SearchFilter<Run> toSearchFilter() {
         List<SearchCriteria<Run>> criteria = new ArrayList<>();
@@ -73,16 +82,6 @@ public class RunEntityFilter extends AbstractEntityFilter<Run> {
         SearchFilter<Run> sf = super.toSearchFilter();
         criteria.addAll(sf.getCriteria());
         filters.addAll(sf.getFilters());
-
-        // //if name replace with id like + task like
-        // criteria
-        //     .stream()
-        //     .filter(c -> c.getField().equals("name"))
-        //     .findFirst()
-        //     .ifPresent(c -> {
-        //         criteria.remove(c);
-        //         criteria.add(new BaseEntitySearchCriteria<>("id", c.getValue(), SearchCriteria.Operation.like));
-        //     });
 
         //task exact match
         Optional

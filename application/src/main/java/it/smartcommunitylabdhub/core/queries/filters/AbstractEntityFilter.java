@@ -94,12 +94,7 @@ public abstract class AbstractEntityFilter<T extends BaseDTO> {
                 BaseEntityFilter<T> qf = BaseEntityFilter
                     .<T>builder()
                     .condition(Condition.or)
-                    .criteria(
-                        List.of(
-                            new BaseEntitySearchCriteria<>("id", value, SearchCriteria.Operation.like),
-                            new BaseEntitySearchCriteria<>("name", value, SearchCriteria.Operation.like)
-                        )
-                    )
+                    .criteria(processQFields(value))
                     .build();
                 filters.add(qf);
             });
@@ -210,5 +205,12 @@ public abstract class AbstractEntityFilter<T extends BaseDTO> {
             .filters(filters)
             .condition(SearchFilter.Condition.and)
             .build();
+    }
+
+    protected List<SearchCriteria<T>> processQFields(String q) {
+        return List.of(
+            new BaseEntitySearchCriteria<>("id", q, SearchCriteria.Operation.like),
+            new BaseEntitySearchCriteria<>("name", q, SearchCriteria.Operation.like)
+        );
     }
 }
