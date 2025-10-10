@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.core.config;
@@ -78,11 +78,12 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
-@Order(16)
+@Order(SecurityConfig.SECURITY_ORDER)
 @EnableMethodSecurity(prePostEnabled = true, securedEnabled = true, jsr250Enabled = true)
 @Slf4j
 public class SecurityConfig {
 
+    public static final int SECURITY_ORDER = 30;
     public static final String API_PREFIX = "/api";
 
     @Autowired
@@ -122,7 +123,8 @@ public class SecurityConfig {
     UserAuthenticationManagerBuilder authenticationManagerBuilder;
 
     @Bean("apiSecurityFilterChain")
-    public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
+    @Order(SecurityConfig.SECURITY_ORDER)
+    SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
         //api chain
         RequestMatcher reqMatcher = new AntPathRequestMatcher(API_PREFIX + "/**");
         HttpSecurity securityChain = http
@@ -208,7 +210,8 @@ public class SecurityConfig {
     }
 
     @Bean("tokenSecurityFilterChain")
-    public SecurityFilterChain tokenSecurityFilterChain(HttpSecurity http) throws Exception {
+    @Order(SecurityConfig.SECURITY_ORDER)
+    SecurityFilterChain tokenSecurityFilterChain(HttpSecurity http) throws Exception {
         //token chain
         RequestMatcher reqMatcher = new AntPathRequestMatcher("/auth/token");
         HttpSecurity securityChain = http
@@ -250,7 +253,8 @@ public class SecurityConfig {
     }
 
     @Bean("userinfoSecurityFilterChain")
-    public SecurityFilterChain userinfoSecurityFilterChain(HttpSecurity http) throws Exception {
+    @Order(SecurityConfig.SECURITY_ORDER)
+    SecurityFilterChain userinfoSecurityFilterChain(HttpSecurity http) throws Exception {
         //userinfo chain
         RequestMatcher reqMatcher = new AntPathRequestMatcher("/auth/userinfo");
         HttpSecurity securityChain = http
@@ -294,7 +298,8 @@ public class SecurityConfig {
     }
 
     @Bean("authorizeSecurityFilterChain")
-    public SecurityFilterChain authorizeSecurityFilterChain(HttpSecurity http) throws Exception {
+    @Order(SecurityConfig.SECURITY_ORDER)
+    SecurityFilterChain authorizeSecurityFilterChain(HttpSecurity http) throws Exception {
         //authorize chain
         RequestMatcher reqMatcher = new OrRequestMatcher(
             new AntPathRequestMatcher("/auth/authorize"),
@@ -416,7 +421,8 @@ public class SecurityConfig {
     }
 
     @Bean("wellKnownSecurityFilterChain")
-    public SecurityFilterChain wellKnownSecurityFilterChain(HttpSecurity http) throws Exception {
+    @Order(SecurityConfig.SECURITY_ORDER)
+    SecurityFilterChain wellKnownSecurityFilterChain(HttpSecurity http) throws Exception {
         RequestMatcher reqMatcher = new OrRequestMatcher(
             new AntPathRequestMatcher("/.well-known/**"),
             new AntPathRequestMatcher("/auth/jwks")
@@ -443,7 +449,8 @@ public class SecurityConfig {
     }
 
     @Bean("h2SecurityFilterChain")
-    public SecurityFilterChain h2SecurityFilterChain(HttpSecurity http) throws Exception {
+    @Order(SecurityConfig.SECURITY_ORDER)
+    SecurityFilterChain h2SecurityFilterChain(HttpSecurity http) throws Exception {
         return http
             .securityMatcher(new AntPathRequestMatcher("/h2-console/**"))
             .authorizeHttpRequests(auth -> {
@@ -458,19 +465,9 @@ public class SecurityConfig {
             .build();
     }
 
-    @Bean("coreSecurityFilterChain")
-    public SecurityFilterChain coreSecurityFilterChain(HttpSecurity http) throws Exception {
-        return http
-            .authorizeHttpRequests(auth -> {
-                auth.anyRequest().permitAll();
-            })
-            // disable request cache
-            .requestCache(requestCache -> requestCache.disable())
-            .build();
-    }
-
     @Bean("monitoringSecurityFilterChain")
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    @Order(SecurityConfig.SECURITY_ORDER)
+    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         // match only actuator endpoints
         RequestMatcher reqMatcher = (HttpServletRequest request) -> managementPort == request.getLocalPort();
 
