@@ -26,6 +26,7 @@ package it.smartcommunitylabdhub.commons.infrastructure;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
+import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.lang.Nullable;
 
@@ -42,6 +43,16 @@ public interface Runtime<S extends RunBaseSpec, Z extends RunBaseStatus, R exten
 
     @Nullable
     R delete(@NotNull Run run);
+
+    @Nullable
+    default Spec onBuilt(@NotNull Run run) {
+        return null;
+    }
+
+    @Nullable
+    default Z onReady(@NotNull Run run, RunRunnable runnable) {
+        return null;
+    }
 
     @Nullable
     default Z onRunning(@NotNull Run run, RunRunnable runnable) {

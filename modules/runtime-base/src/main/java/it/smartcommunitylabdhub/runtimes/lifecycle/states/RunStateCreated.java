@@ -29,6 +29,7 @@ import it.smartcommunitylabdhub.commons.infrastructure.Runtime;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
+import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.fsm.FsmState;
 import it.smartcommunitylabdhub.fsm.Transition;
 import it.smartcommunitylabdhub.runtimes.lifecycle.RunEvent;
@@ -76,6 +77,11 @@ public class RunStateCreated<S extends RunBaseSpec, Z extends RunBaseStatus, R e
 
                 //build via runtime
                 Optional.ofNullable(runtime.build(run)).ifPresent(spec -> run.setSpec(spec.toMap()));
+
+                //callback for metadata update
+                Optional
+                    .ofNullable(runtime.onBuilt(run))
+                    .ifPresent(meta -> run.setMetadata(MapUtils.mergeMultipleMaps(run.getMetadata(), meta.toMap())));
 
                 return Optional.empty();
             });

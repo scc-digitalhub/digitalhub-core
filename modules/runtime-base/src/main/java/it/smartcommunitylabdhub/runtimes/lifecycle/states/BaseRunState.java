@@ -155,7 +155,15 @@ public class BaseRunState<
                 }
 
                 //run via runtime
-                return Optional.ofNullable(runtime.run(run));
+                Optional<R> runnable = Optional.ofNullable(runtime.run(run));
+                runnable.ifPresent(r -> {
+                    //runtime callback
+                    Optional
+                        .ofNullable(runtime.onReady(run, r))
+                        .ifPresent(status -> run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), status.toMap()))
+                        );
+                });
+                return runnable;
             });
     }
 
