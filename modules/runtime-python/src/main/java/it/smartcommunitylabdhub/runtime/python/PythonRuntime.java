@@ -32,16 +32,22 @@ import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.base.Executable;
+import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
+import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.commons.services.SecretService;
+import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
+import it.smartcommunitylabdhub.relationships.RelationshipDetail;
+import it.smartcommunitylabdhub.relationships.RelationshipName;
+import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
 import it.smartcommunitylabdhub.runtime.python.runners.PythonBuildRunner;
 import it.smartcommunitylabdhub.runtime.python.runners.PythonJobRunner;
 import it.smartcommunitylabdhub.runtime.python.runners.PythonServeRunner;
@@ -53,6 +59,7 @@ import it.smartcommunitylabdhub.runtime.python.specs.PythonRunStatus;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonServeTaskSpec;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +67,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.lang.Nullable;
 
 @Slf4j
 @RuntimeComponent(runtime = PythonRuntime.RUNTIME)
@@ -135,6 +143,38 @@ public class PythonRuntime extends K8sBaseRuntime<PythonFunctionSpec, PythonRunS
         pythonSpec.setFunctionSpec(funSpec);
 
         return pythonSpec;
+    }
+
+    @Override
+    public Spec onBuilt(@NotNull Run run) {
+        //build lineage from inputs when needed
+        PythonRunSpec runSpec = new PythonRunSpec(run.getSpec());
+        if (runSpec.getInputs() != null && !runSpec.getInputs().isEmpty()) {
+            RelationshipsMetadata lineage = RelationshipsMetadata.from(run.getMetadata());
+            List<RelationshipDetail> rels = lineage.getRelationships() != null
+                ? new ArrayList<>(lineage.getRelationships())
+                : new ArrayList<>();
+
+            runSpec
+                .getInputs()
+                .forEach((name, input) -> {
+                    if (
+                        rels
+                            .stream()
+                            .noneMatch(r -> r.getType() == RelationshipName.CONSUMES && r.getDest().equals(input))
+                    ) {
+                        //build key
+                        RelationshipDetail dr = new RelationshipDetail(RelationshipName.CONSUMES, run.getKey(), input);
+                        rels.add(dr);
+                    }
+                });
+
+            lineage.setRelationships(rels);
+
+            return lineage;
+        }
+
+        return null;
     }
 
     @Override
