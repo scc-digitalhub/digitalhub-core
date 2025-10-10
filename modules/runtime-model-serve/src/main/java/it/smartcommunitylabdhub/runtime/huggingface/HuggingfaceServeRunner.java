@@ -49,6 +49,7 @@ import it.smartcommunitylabdhub.runtime.huggingface.specs.HuggingfaceServeRunSpe
 import it.smartcommunitylabdhub.runtime.huggingface.specs.HuggingfaceServeTaskSpec;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -176,74 +177,72 @@ public class HuggingfaceServeRunner {
                 );
         }
 
+        Map<String, String> extraArgMap = new HashMap<>();
+
         // tokenizer revision
         if (StringUtils.hasText(taskSpec.getTokenizerRevision())) {
-            args.add("--tokenizer_revision");
-            args.add(taskSpec.getTokenizerRevision());
+            extraArgMap.put("--tokenizer_revision", taskSpec.getTokenizerRevision());
         }
         // max length
         if (taskSpec.getMaxLength() != null) {
-            args.add("--max_length");
-            args.add(taskSpec.getMaxLength().toString());
+            extraArgMap.put("--max_length", taskSpec.getMaxLength().toString());
         }
         // disable_lower_case
         if (taskSpec.getDisableLowerCase() != null) {
-            args.add("--disable_lower_case");
-            args.add(taskSpec.getDisableLowerCase().toString());
+            extraArgMap.put("--disable_lower_case", taskSpec.getDisableLowerCase().toString());
         }
         // disable_special_tokens
         if (taskSpec.getDisableSpecialTokens() != null) {
-            args.add("--disable_special_tokens");
-            args.add(taskSpec.getDisableSpecialTokens().toString());
+            extraArgMap.put("--disable_special_tokens", taskSpec.getDisableSpecialTokens().toString());
         }
         // trust_remote_code
         if (taskSpec.getTrustRemoteCode() != null) {
-            args.add("--trust_remote_code");
-            args.add(taskSpec.getTrustRemoteCode().toString());
+            extraArgMap.put("--trust_remote_code", taskSpec.getTrustRemoteCode().toString());
         } else {
-            args.add("--trust_remote_code");
-            args.add("true");
+            extraArgMap.put("--trust_remote_code", "true");
         }
         // tensor_input_names
         if (taskSpec.getTensorInputNames() != null) {
-            args.add("--tensor_input_names");
-            args.add(StringUtils.collectionToCommaDelimitedString(taskSpec.getTensorInputNames()));
+            extraArgMap.put("--tensor_input_names", StringUtils.collectionToCommaDelimitedString(taskSpec.getTensorInputNames()));
         }
         // task
         if (taskSpec.getHuggingfaceTask() != null) {
-            args.add("--task");
-            args.add(taskSpec.getHuggingfaceTask().getTask());
+            extraArgMap.put("--task", taskSpec.getHuggingfaceTask().getTask());
         }
         // backend
         if (taskSpec.getBackend() != null) {
-            args.add("--backend");
-            args.add(taskSpec.getBackend().getBackend());
+            extraArgMap.put("--backend", taskSpec.getBackend().getBackend());
         }
         // return_token_type_ids
         if (taskSpec.getReturnTokenTypeIds() != null) {
-            args.add("--return_token_type_ids");
-            args.add(taskSpec.getReturnTokenTypeIds().toString());
+            extraArgMap.put("--return_token_type_ids", taskSpec.getReturnTokenTypeIds().toString());
         }
         // return_probabilities
         if (taskSpec.getReturnProbabilities() != null) {
-            args.add("--return_probabilities");
-            args.add(taskSpec.getReturnProbabilities().toString());
+            extraArgMap.put("--return_probabilities", taskSpec.getReturnProbabilities().toString());
         }
         // disable_log_requests
         if (taskSpec.getDisableLogRequests() != null) {
-            args.add("--disable_log_requests");
-            args.add(taskSpec.getDisableLogRequests().toString());
+            extraArgMap.put("--disable_log_requests", taskSpec.getDisableLogRequests().toString());
         }
         // max_log_len
         if (taskSpec.getMaxLogLen() != null) {
-            args.add("--max_log_len");
-            args.add(taskSpec.getMaxLogLen().toString());
+            extraArgMap.put("--max_log_len", taskSpec.getMaxLogLen().toString());
         }
         // dtype
         if (taskSpec.getDtype() != null) {
-            args.add("--dtype");
-            args.add(taskSpec.getDtype().getDType());
+            extraArgMap.put("--dtype", taskSpec.getDtype().getDType());
         }
+
+        if (runSpec.getArgs() != null && runSpec.getArgs().size() > 0) {
+            mergeArgs(extraArgMap, args);
+        }
+
+        for (Map.Entry<String, String> arg : extraArgMap.entrySet()) {
+            args.add(arg.getKey());
+            args.add(arg.getValue());
+        }
+
 
         // if (functionSpec.getAdapters() != null && functionSpec.getAdapters().size() > 0) {
         //     contextRefs = new LinkedList<>(contextRefs);
@@ -341,5 +340,17 @@ public class HuggingfaceServeRunner {
         k8sServeRunnable.setProject(run.getProject());
 
         return k8sServeRunnable;
+    }
+
+    private void mergeArgs(Map<String, String> extraArgMap, List<String> explicitArgs) {
+        // merge explicit args into args, if not exists
+
+        // assume key value sequence
+        for (int  i = 0; i < explicitArgs.size(); i += 2) {
+            if (!extraArgMap.containsKey(explicitArgs.get(i))) {
+                extraArgMap.put(explicitArgs.get(i), explicitArgs.get(i + 1));
+            }
+
+        }
     }
 }
