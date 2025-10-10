@@ -175,9 +175,10 @@ public class TriggerLifecycleManager<
                     }
 
                     //build run from trigger template
+                    String runKind = specAccessor.getTask() + ":run"; //TODO hardcoded, to fix
                     Run taskRun = Run
                         .builder()
-                        .kind(specAccessor.getRuntime() + "+run") //TODO hardcoded, to fix
+                        .kind(runKind)
                         .project(tr.getProject())
                         .user(run.getUser())
                         .spec(MapUtils.mergeMultipleMaps(template, addSpec))
@@ -200,8 +201,7 @@ public class TriggerLifecycleManager<
                         //TODO evaluate detaching via async
                         taskRun = runManager.perform(taskRun, RunEvent.RUN.name());
                     } catch (NoSuchEntityException | SystemException | DuplicatedEntityException | BindException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
+                        log.error("Error creating run for trigger {} FIRE: {} ", tr.getId(), e.getMessage());
                     }
                 };
         }
