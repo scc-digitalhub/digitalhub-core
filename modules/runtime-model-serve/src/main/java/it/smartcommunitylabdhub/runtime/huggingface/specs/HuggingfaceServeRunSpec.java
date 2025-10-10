@@ -24,12 +24,15 @@
 package it.smartcommunitylabdhub.runtime.huggingface.specs;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
+
+import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.runtime.huggingface.HuggingfaceServeRuntime;
 import java.io.Serializable;
+import java.util.List;
 import java.util.Map;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -50,6 +53,9 @@ public class HuggingfaceServeRunSpec extends RunBaseSpec {
 
     public static final String KIND = HuggingfaceServeRuntime.RUNTIME + "+run";
 
+    @Schema(title = "fields.huggingface.args.title", description = "fields.huggingface.args.description")
+    private List<String> args;
+
     @Override
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
@@ -58,6 +64,8 @@ public class HuggingfaceServeRunSpec extends RunBaseSpec {
 
         this.functionSpec = spec.getFunctionSpec();
         this.taskServeSpec = spec.getTaskServeSpec();
+        this.args = spec.getArgs();
+        
     }
 
     public void setFunctionSpec(HuggingfaceServeFunctionSpec functionSpec) {
