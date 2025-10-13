@@ -24,10 +24,10 @@
 package it.smartcommunitylabdhub.runtime.hera.specs;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
+import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
+import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.runtime.hera.HeraRuntime;
 import java.io.Serializable;
-import java.util.HashMap;
 import java.util.Map;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -36,19 +36,15 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class HeraRunSpec extends RunBaseSpec {
+@SpecType(runtime = HeraRuntime.RUNTIME, kind = HeraPipelineRunSpec.KIND, entity = EntityName.RUN)
+public class HeraPipelineRunSpec extends HeraRunSpec {
 
-    private Map<String, String> inputs = new HashMap<>();
+    public static final String KIND = HeraPipelineTaskSpec.KIND + ":run";
 
-    private Map<String, String> outputs = new HashMap<>();
-
-    private Map<String, Serializable> parameters = new HashMap<>();
-
-    @JsonSchemaIgnore
     @JsonUnwrapped
-    private HeraWorkflowSpec workflowSpec;
+    private HeraPipelineTaskSpec taskPipelineSpec;
 
-    public HeraRunSpec(Map<String, Serializable> data) {
+    public HeraPipelineRunSpec(Map<String, Serializable> data) {
         configure(data);
     }
 
@@ -56,15 +52,11 @@ public class HeraRunSpec extends RunBaseSpec {
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
 
-        HeraRunSpec spec = mapper.convertValue(data, HeraRunSpec.class);
-        this.inputs = spec.getInputs();
-        this.outputs = spec.getOutputs();
-        this.parameters = spec.getParameters();
-
-        this.workflowSpec = spec.getWorkflowSpec();
+        HeraPipelineRunSpec spec = mapper.convertValue(data, HeraPipelineRunSpec.class);
+        this.taskPipelineSpec = spec.getTaskPipelineSpec();
     }
 
-    public void setWorkflowSpec(HeraWorkflowSpec workflowSpec) {
-        this.workflowSpec = workflowSpec;
+    public void setTaskPipelineSpec(HeraPipelineTaskSpec taskPipelineSpec) {
+        this.taskPipelineSpec = taskPipelineSpec;
     }
 }
