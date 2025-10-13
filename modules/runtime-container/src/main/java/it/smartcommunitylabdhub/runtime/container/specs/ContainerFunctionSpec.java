@@ -84,6 +84,7 @@ public class ContainerFunctionSpec extends FunctionBaseSpec {
         java,
         javascript,
         typescript,
+        dockerfile,
         markdown,
         html,
         json,
