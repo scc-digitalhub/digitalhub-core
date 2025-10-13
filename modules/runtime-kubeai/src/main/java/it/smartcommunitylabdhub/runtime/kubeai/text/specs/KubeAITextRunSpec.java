@@ -41,7 +41,7 @@ import lombok.Setter;
 @SpecType(runtime = KubeAITextRuntime.RUNTIME, kind = KubeAITextRunSpec.KIND, entity = EntityName.RUN)
 public class KubeAITextRunSpec extends KubeAIServeRunSpec {
 
-    public static final String KIND = KubeAITextRuntime.RUNTIME + "+run";
+    public static final String KIND = KubeAITextServeTaskSpec.KIND + ":run";
 
     @JsonSchemaIgnore
     @JsonUnwrapped
