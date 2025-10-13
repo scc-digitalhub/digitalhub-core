@@ -111,52 +111,55 @@ public class RunnableListener {
             log.trace("event: {}", event);
         }
 
-        // try {
-        //read event
-        String id = event.getId();
-        String state = event.getState();
+        try {
+            //read event
+            String id = event.getId();
+            String state = event.getState();
 
-        // Use service to retrieve the run and check if state is changed
-        Run run = runService.findRun(id);
-        if (run == null) {
-            log.warn("Run with id {} not found", id);
-            //orphan run, remove from store
-            if (stores != null) {
-                stores.forEach(store -> {
-                    try {
-                        RunRunnable rr = store.find(id);
-                        if (rr != null) {
-                            log.warn(
-                                "Remove orphaned runnable {} from store {}",
-                                id,
-                                store.getResolvableType().resolve().getName()
-                            );
-                            store.remove(id);
+            // Use service to retrieve the run and check if state is changed
+            Run run = runService.findRun(id);
+            if (run == null) {
+                log.warn("Run with id {} not found", id);
+                //orphan run, remove from store
+                if (stores != null) {
+                    stores.forEach(store -> {
+                        try {
+                            RunRunnable rr = store.find(id);
+                            if (rr != null) {
+                                log.warn(
+                                    "Remove orphaned runnable {} from store {}",
+                                    id,
+                                    store.getResolvableType().resolve().getName()
+                                );
+                                store.remove(id);
+                            }
+                        } catch (StoreException e) {
+                            //ignore
                         }
-                    } catch (StoreException e) {
-                        //ignore
-                    }
-                });
+                    });
+                }
+                return;
             }
-            return;
-        }
 
-        if (state == null) {
-            log.error("State is null for run id {}", id);
-            return;
-        }
+            if (state == null) {
+                log.error("State is null for run id {}", id);
+                return;
+            }
 
-        // handle with manager
-        // Note: we always handle the event, as it can be a progress update
-        // even if the state is the same (e.g., RUNNING)
-        // Moreover, some runtimes may not update the state properly
-        // and we want to be sure to handle the event
-        // Thus, we rely on the manager to handle idempotency and state checks
-        // before applying any change
-        // This also allows to handle events like STOPPED or DELETED
-        // even if the state is not changed
-        // Finally, we may want to log or track progress even if the state is the same
-        // for monitoring purposes
-        wrap(run, event.getRunnable(), (r, rb) -> runManager.handle(r, state, rb));
+            // handle with manager
+            // Note: we always handle the event, as it can be a progress update
+            // even if the state is the same (e.g., RUNNING)
+            // Moreover, some runtimes may not update the state properly
+            // and we want to be sure to handle the event
+            // Thus, we rely on the manager to handle idempotency and state checks
+            // before applying any change
+            // This also allows to handle events like STOPPED or DELETED
+            // even if the state is not changed
+            // Finally, we may want to log or track progress even if the state is the same
+            // for monitoring purposes
+            wrap(run, event.getRunnable(), (r, rb) -> runManager.handle(r, state, rb));
+        } catch (Exception e) {
+            log.error("Error handling runnable changed event: {}", e.getMessage(), e);
+        }
     }
 }
