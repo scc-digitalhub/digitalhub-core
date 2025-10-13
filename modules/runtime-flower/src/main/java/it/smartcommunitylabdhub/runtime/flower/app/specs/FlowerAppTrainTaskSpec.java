@@ -21,14 +21,17 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.flower.specs;
+package it.smartcommunitylabdhub.runtime.flower.app.specs;
 
+import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
-import it.smartcommunitylabdhub.runtime.flower.FlowerClientRuntime;
+import it.smartcommunitylabdhub.runtime.flower.app.FlowerAppRuntime;
+import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.Map;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -36,12 +39,24 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = FlowerClientRuntime.RUNTIME, kind = FlowerClientTaskSpec.KIND, entity = EntityName.TASK)
-public class FlowerClientTaskSpec extends K8sFunctionTaskBaseSpec {
+@AllArgsConstructor
+@SpecType(runtime = FlowerAppRuntime.RUNTIME, kind = FlowerAppTrainTaskSpec.KIND, entity = EntityName.TASK)
+public class FlowerAppTrainTaskSpec extends K8sFunctionTaskBaseSpec {
 
-    public static final String KIND = "flower-client+deploy";
+    public static final String KIND = "flower-app+train";
 
-    public FlowerClientTaskSpec(Map<String, Serializable> data) {
+    @Pattern(regexp = Keys.CRONTAB_PATTERN)
+    private String schedule;
+
+    public FlowerAppTrainTaskSpec(Map<String, Serializable> data) {
         configure(data);
+    }
+
+    @Override
+    public void configure(Map<String, Serializable> data) {
+        super.configure(data);
+
+        FlowerAppTrainTaskSpec spec = mapper.convertValue(data, FlowerAppTrainTaskSpec.class);
+        this.schedule = spec.getSchedule();
     }
 }

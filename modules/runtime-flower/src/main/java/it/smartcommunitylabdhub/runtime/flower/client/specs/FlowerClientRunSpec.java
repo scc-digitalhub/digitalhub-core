@@ -21,16 +21,13 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.flower.specs;
+package it.smartcommunitylabdhub.runtime.flower.client.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import io.swagger.v3.oas.annotations.media.Schema;
-import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
-import it.smartcommunitylabdhub.runtime.flower.FlowerClientRuntime;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
@@ -41,16 +38,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = FlowerClientRuntime.RUNTIME, kind = FlowerClientRunSpec.KIND, entity = EntityName.RUN)
 public class FlowerClientRunSpec extends RunBaseSpec {
-
-    public static final String KIND = FlowerClientRuntime.RUNTIME + "+run";
-
-    @JsonUnwrapped
-    private FlowerClientTaskSpec taskDeploySpec;
-
-    @JsonUnwrapped
-    private FlowerBuildClientTaskSpec taskBuildSpec;
 
     @JsonSchemaIgnore
     @JsonUnwrapped
@@ -103,21 +91,11 @@ public class FlowerClientRunSpec extends RunBaseSpec {
 
         this.functionSpec = spec.getFunctionSpec();
 
-        this.taskDeploySpec = spec.getTaskDeploySpec();
-        this.taskBuildSpec = spec.getTaskBuildSpec();
         this.superlink = spec.getSuperlink();
         this.nodeConfig = spec.getNodeConfig();
         this.rootCertificates = spec.getRootCertificates();
         this.privateKeySecret = spec.getPrivateKeySecret();
         this.publicKeySecret = spec.getPublicKeySecret();
-    }
-
-    public void setTaskDeploySpec(FlowerClientTaskSpec taskDeploySpec) {
-        this.taskDeploySpec = taskDeploySpec;
-    }
-
-    public void setTaskBuildSpec(FlowerBuildClientTaskSpec taskBuildSpec) {
-        this.taskBuildSpec = taskBuildSpec;
     }
 
     public void setFunctionSpec(FlowerClientFunctionSpec functionSpec) {

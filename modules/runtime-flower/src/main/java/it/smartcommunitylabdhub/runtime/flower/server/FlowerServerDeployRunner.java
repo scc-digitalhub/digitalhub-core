@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.flower.runners;
+package it.smartcommunitylabdhub.runtime.flower.server;
 
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
@@ -38,11 +38,10 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreServiceType;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
-import it.smartcommunitylabdhub.runtime.flower.FlowerServerRuntime;
 import it.smartcommunitylabdhub.runtime.flower.model.FABModel;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerFunctionSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerRunSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerTaskSpec;
+import it.smartcommunitylabdhub.runtime.flower.server.specs.FlowerServerDeployRunSpec;
+import it.smartcommunitylabdhub.runtime.flower.server.specs.FlowerServerDeployTaskSpec;
+import it.smartcommunitylabdhub.runtime.flower.server.specs.FlowerServerFunctionSpec;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -55,7 +54,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;
 
-public class FlowerServerRunner {
+public class FlowerServerDeployRunner {
 
     private static final int UID = 49999;
     private static final int GID = 49999;
@@ -79,7 +78,7 @@ public class FlowerServerRunner {
     private final String tlsIntDomain;
     private final String tlsExtDomain;
 
-    public FlowerServerRunner(
+    public FlowerServerDeployRunner(
         String image,
         Integer userId,
         Integer groupId,
@@ -110,8 +109,8 @@ public class FlowerServerRunner {
     }
 
     public K8sRunnable produce(Run run) {
-        FlowerServerRunSpec runSpec = new FlowerServerRunSpec(run.getSpec());
-        FlowerServerTaskSpec taskSpec = runSpec.getTaskDeploySpec();
+        FlowerServerDeployRunSpec runSpec = new FlowerServerDeployRunSpec(run.getSpec());
+        FlowerServerDeployTaskSpec taskSpec = runSpec.getTaskDeploySpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
 
         List<CoreEnv> coreEnvList = new ArrayList<>(
@@ -136,8 +135,14 @@ public class FlowerServerRunner {
         List<String> args = new LinkedList<>();
         args.addAll(List.of("/shared/server.sh", "--path_to_project", "/shared"));
 
-        if (!Boolean.TRUE.equals(runSpec.getInsecure()) && StringUtils.hasText(caCert) && StringUtils.hasText(tlsConf)) {
-            String dns1 = k8sBuilderHelper.getServiceName("flower-server", FlowerServerTaskSpec.KIND, run.getId());
+        if (
+            !Boolean.TRUE.equals(runSpec.getInsecure()) && StringUtils.hasText(caCert) && StringUtils.hasText(tlsConf)
+        ) {
+            String dns1 = k8sBuilderHelper.getServiceName(
+                "flower-server",
+                FlowerServerDeployTaskSpec.KIND,
+                run.getId()
+            );
             String dns2 = k8sBuilderHelper.getServiceName(
                 "flower-server",
                 run.getProject(),
@@ -235,7 +240,7 @@ public class FlowerServerRunner {
         K8sRunnable k8sServeRunnable = K8sServeRunnable
             .builder()
             .runtime(FlowerServerRuntime.RUNTIME)
-            .task(FlowerServerTaskSpec.KIND)
+            .task(FlowerServerDeployTaskSpec.KIND)
             .state(State.READY.name())
             .labels(
                 k8sBuilderHelper != null

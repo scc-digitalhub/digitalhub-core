@@ -21,17 +21,15 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.flower.specs;
+package it.smartcommunitylabdhub.runtime.flower.server.specs;
 
-import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
-import it.smartcommunitylabdhub.runtime.flower.FlowerAppRuntime;
-import jakarta.validation.constraints.Pattern;
+import it.smartcommunitylabdhub.runtime.flower.server.FlowerServerRuntime;
 import java.io.Serializable;
+import java.util.List;
 import java.util.Map;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -39,16 +37,14 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@SpecType(runtime = FlowerAppRuntime.RUNTIME, kind = FlowerAppTrainTaskSpec.KIND, entity = EntityName.TASK)
-public class FlowerAppTrainTaskSpec extends K8sFunctionTaskBaseSpec {
+@SpecType(runtime = FlowerServerRuntime.RUNTIME, kind = FlowerServerBuildTaskSpec.KIND, entity = EntityName.TASK)
+public class FlowerServerBuildTaskSpec extends K8sFunctionTaskBaseSpec {
 
-    public static final String KIND = "flower-app+train";
+    public static final String KIND = "flower-server+build";
 
-    @Pattern(regexp = Keys.CRONTAB_PATTERN)
-    private String schedule;
+    private List<String> instructions;
 
-    public FlowerAppTrainTaskSpec(Map<String, Serializable> data) {
+    public FlowerServerBuildTaskSpec(Map<String, Serializable> data) {
         configure(data);
     }
 
@@ -56,7 +52,7 @@ public class FlowerAppTrainTaskSpec extends K8sFunctionTaskBaseSpec {
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
 
-        FlowerAppTrainTaskSpec spec = mapper.convertValue(data, FlowerAppTrainTaskSpec.class);
-        this.schedule = spec.getSchedule();
+        FlowerServerBuildTaskSpec spec = mapper.convertValue(data, FlowerServerBuildTaskSpec.class);
+        this.instructions = spec.getInstructions();
     }
 }

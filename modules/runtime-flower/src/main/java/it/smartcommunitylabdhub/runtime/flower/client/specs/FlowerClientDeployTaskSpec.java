@@ -21,12 +21,12 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.flower.specs;
+package it.smartcommunitylabdhub.runtime.flower.client.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
-import it.smartcommunitylabdhub.runtime.flower.FlowerServerRuntime;
+import it.smartcommunitylabdhub.runtime.flower.client.FlowerClientRuntime;
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;
@@ -36,12 +36,12 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = FlowerServerRuntime.RUNTIME, kind = FlowerServerTaskSpec.KIND, entity = EntityName.TASK)
-public class FlowerServerTaskSpec extends K8sFunctionTaskBaseSpec {
+@SpecType(runtime = FlowerClientRuntime.RUNTIME, kind = FlowerClientDeployTaskSpec.KIND, entity = EntityName.TASK)
+public class FlowerClientDeployTaskSpec extends K8sFunctionTaskBaseSpec {
 
-    public static final String KIND = "flower-server+deploy";
+    public static final String KIND = "flower-client+deploy";
 
-    public FlowerServerTaskSpec(Map<String, Serializable> data) {
+    public FlowerClientDeployTaskSpec(Map<String, Serializable> data) {
         configure(data);
     }
 }

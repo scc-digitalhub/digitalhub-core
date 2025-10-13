@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.flower.runners;
+package it.smartcommunitylabdhub.runtime.flower.app;
 
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
@@ -36,12 +36,11 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCronJobRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
-import it.smartcommunitylabdhub.runtime.flower.FlowerAppRuntime;
+import it.smartcommunitylabdhub.runtime.flower.app.specs.FlowerAppFunctionSpec;
+import it.smartcommunitylabdhub.runtime.flower.app.specs.FlowerAppRunSpec;
+import it.smartcommunitylabdhub.runtime.flower.app.specs.FlowerAppTrainTaskSpec;
 import it.smartcommunitylabdhub.runtime.flower.model.FABModel;
 import it.smartcommunitylabdhub.runtime.flower.model.FlowerSourceCode;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerAppFunctionSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerAppRunSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerAppTrainTaskSpec;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;

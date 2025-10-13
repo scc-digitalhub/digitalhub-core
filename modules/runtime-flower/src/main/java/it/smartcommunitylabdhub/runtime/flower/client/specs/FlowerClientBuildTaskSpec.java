@@ -21,12 +21,12 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.flower.specs;
+package it.smartcommunitylabdhub.runtime.flower.client.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
-import it.smartcommunitylabdhub.runtime.flower.FlowerClientRuntime;
+import it.smartcommunitylabdhub.runtime.flower.client.FlowerClientRuntime;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -37,14 +37,14 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = FlowerClientRuntime.RUNTIME, kind = FlowerBuildClientTaskSpec.KIND, entity = EntityName.TASK)
-public class FlowerBuildClientTaskSpec extends K8sFunctionTaskBaseSpec {
+@SpecType(runtime = FlowerClientRuntime.RUNTIME, kind = FlowerClientBuildTaskSpec.KIND, entity = EntityName.TASK)
+public class FlowerClientBuildTaskSpec extends K8sFunctionTaskBaseSpec {
 
     public static final String KIND = "flower-client+build";
 
     private List<String> instructions;
 
-    public FlowerBuildClientTaskSpec(Map<String, Serializable> data) {
+    public FlowerClientBuildTaskSpec(Map<String, Serializable> data) {
         configure(data);
     }
 
@@ -52,7 +52,7 @@ public class FlowerBuildClientTaskSpec extends K8sFunctionTaskBaseSpec {
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
 
-        FlowerBuildClientTaskSpec spec = mapper.convertValue(data, FlowerBuildClientTaskSpec.class);
+        FlowerClientBuildTaskSpec spec = mapper.convertValue(data, FlowerClientBuildTaskSpec.class);
         this.instructions = spec.getInstructions();
     }
 }

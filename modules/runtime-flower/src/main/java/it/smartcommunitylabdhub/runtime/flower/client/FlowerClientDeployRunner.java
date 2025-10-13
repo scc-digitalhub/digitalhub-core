@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.flower.runners;
+package it.smartcommunitylabdhub.runtime.flower.client;
 
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
@@ -35,12 +35,11 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sDeploymentRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
-import it.smartcommunitylabdhub.runtime.flower.FlowerClientRuntime;
+import it.smartcommunitylabdhub.runtime.flower.client.specs.FlowerClientDeployRunSpec;
+import it.smartcommunitylabdhub.runtime.flower.client.specs.FlowerClientDeployTaskSpec;
+import it.smartcommunitylabdhub.runtime.flower.client.specs.FlowerClientFunctionSpec;
+import it.smartcommunitylabdhub.runtime.flower.client.specs.FlowerClientRunSpec.IsolationType;
 import it.smartcommunitylabdhub.runtime.flower.model.FABModel;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientFunctionSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientRunSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientRunSpec.IsolationType;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientTaskSpec;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -55,7 +54,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;
 
-public class FlowerClientRunner {
+public class FlowerClientDeployRunner {
 
     private static final int UID = 49999;
     private static final int GID = 49999;
@@ -70,7 +69,7 @@ public class FlowerClientRunner {
 
     private final Resource entrypoint = new ClassPathResource("runtime-flower/docker/client.sh");
 
-    public FlowerClientRunner(
+    public FlowerClientDeployRunner(
         String image,
         Integer userId,
         Integer groupId,
@@ -88,8 +87,8 @@ public class FlowerClientRunner {
     }
 
     public K8sRunnable produce(Run run) {
-        FlowerClientRunSpec runSpec = new FlowerClientRunSpec(run.getSpec());
-        FlowerClientTaskSpec taskSpec = runSpec.getTaskDeploySpec();
+        FlowerClientDeployRunSpec runSpec = new FlowerClientDeployRunSpec(run.getSpec());
+        FlowerClientDeployTaskSpec taskSpec = runSpec.getTaskDeploySpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
 
         List<CoreEnv> coreEnvList = new ArrayList<>(
@@ -219,7 +218,7 @@ public class FlowerClientRunner {
         K8sRunnable k8sDeploymentRunnable = K8sDeploymentRunnable
             .builder()
             .runtime(FlowerClientRuntime.RUNTIME)
-            .task(FlowerClientTaskSpec.KIND)
+            .task(FlowerClientDeployTaskSpec.KIND)
             .state(State.READY.name())
             .labels(
                 k8sBuilderHelper != null

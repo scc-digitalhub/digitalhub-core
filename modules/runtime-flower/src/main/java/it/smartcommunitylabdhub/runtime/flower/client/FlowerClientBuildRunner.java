@@ -21,12 +21,13 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.flower.runners;
+package it.smartcommunitylabdhub.runtime.flower.client;
 
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.run.Run;
+import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
@@ -35,11 +36,10 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileGenerator;
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileGeneratorFactory;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
-import it.smartcommunitylabdhub.runtime.flower.FlowerServerRuntime;
+import it.smartcommunitylabdhub.runtime.flower.client.specs.FlowerClientBuildRunSpec;
+import it.smartcommunitylabdhub.runtime.flower.client.specs.FlowerClientBuildTaskSpec;
+import it.smartcommunitylabdhub.runtime.flower.client.specs.FlowerClientFunctionSpec;
 import it.smartcommunitylabdhub.runtime.flower.model.FABModel;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerBuildServerTaskSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerFunctionSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerRunSpec;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -51,38 +51,39 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 
 @Slf4j
-public class FlowerBuildServerRunner {
+public class FlowerClientBuildRunner {
 
     private final String image;
     private final String command;
-    private final FlowerServerFunctionSpec functionSpec;
-    private final Map<String, String> secretData;
+    private final FlowerClientFunctionSpec functionSpec;
+    private final SecretService secretService;
 
     private final K8sBuilderHelper k8sBuilderHelper;
 
-    public FlowerBuildServerRunner(
+    public FlowerClientBuildRunner(
         String image,
         String command,
-        FlowerServerFunctionSpec functionPythonSpec,
-        Map<String, String> secretData,
+        FlowerClientFunctionSpec functionPythonSpec,
+        SecretService secretService,
         K8sBuilderHelper k8sBuilderHelper
     ) {
         this.image = image;
         this.command = command;
         this.functionSpec = functionPythonSpec;
-        this.secretData = secretData;
+        this.secretService = secretService;
         this.k8sBuilderHelper = k8sBuilderHelper;
     }
 
     public K8sContainerBuilderRunnable produce(Run run) {
-        FlowerServerRunSpec runSpec = new FlowerServerRunSpec(run.getSpec());
-        FlowerBuildServerTaskSpec taskSpec = runSpec.getTaskBuildSpec();
+        FlowerClientBuildRunSpec runSpec = new FlowerClientBuildRunSpec(run.getSpec());
+        FlowerClientBuildTaskSpec taskSpec = runSpec.getTaskBuildSpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
 
         List<CoreEnv> coreEnvList = new ArrayList<>(
             List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))
         );
 
+        Map<String, String> secretData = secretService.getSecretData(run.getProject(), taskSpec.getSecrets());
         List<CoreEnv> coreSecrets = secretData == null
             ? null
             : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
@@ -157,8 +158,8 @@ public class FlowerBuildServerRunner {
             .builder()
             .id(run.getId())
             .project(run.getProject())
-            .runtime(FlowerServerRuntime.RUNTIME)
-            .task(FlowerBuildServerTaskSpec.KIND)
+            .runtime(FlowerClientRuntime.RUNTIME)
+            .task(FlowerClientBuildTaskSpec.KIND)
             .state(State.READY.name())
             .labels(
                 k8sBuilderHelper != null

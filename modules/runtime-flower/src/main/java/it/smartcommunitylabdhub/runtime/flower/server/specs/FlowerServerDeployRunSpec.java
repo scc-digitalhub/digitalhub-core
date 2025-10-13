@@ -21,14 +21,13 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.flower.specs;
+package it.smartcommunitylabdhub.runtime.flower.server.specs;
 
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
-import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
-import it.smartcommunitylabdhub.runtime.flower.FlowerServerRuntime;
+import it.smartcommunitylabdhub.runtime.flower.server.FlowerServerRuntime;
 import java.io.Serializable;
-import java.util.List;
 import java.util.Map;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -37,14 +36,15 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = FlowerServerRuntime.RUNTIME, kind = FlowerBuildServerTaskSpec.KIND, entity = EntityName.TASK)
-public class FlowerBuildServerTaskSpec extends K8sFunctionTaskBaseSpec {
+@SpecType(runtime = FlowerServerRuntime.RUNTIME, kind = FlowerServerDeployRunSpec.KIND, entity = EntityName.RUN)
+public class FlowerServerDeployRunSpec extends FlowerServerRunSpec {
 
-    public static final String KIND = "flower-server+build";
+    public static final String KIND = FlowerServerDeployTaskSpec.KIND + ":run";
 
-    private List<String> instructions;
+    @JsonUnwrapped
+    private FlowerServerDeployTaskSpec taskDeploySpec;
 
-    public FlowerBuildServerTaskSpec(Map<String, Serializable> data) {
+    public FlowerServerDeployRunSpec(Map<String, Serializable> data) {
         configure(data);
     }
 
@@ -52,7 +52,11 @@ public class FlowerBuildServerTaskSpec extends K8sFunctionTaskBaseSpec {
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
 
-        FlowerBuildServerTaskSpec spec = mapper.convertValue(data, FlowerBuildServerTaskSpec.class);
-        this.instructions = spec.getInstructions();
+        FlowerServerDeployRunSpec spec = mapper.convertValue(data, FlowerServerDeployRunSpec.class);
+        this.taskDeploySpec = spec.getTaskDeploySpec();
+    }
+
+    public void setTaskDeploySpec(FlowerServerDeployTaskSpec taskDeploySpec) {
+        this.taskDeploySpec = taskDeploySpec;
     }
 }

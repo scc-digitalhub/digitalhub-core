@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.flower;
+package it.smartcommunitylabdhub.runtime.flower.app;
 
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.CredentialsService;
@@ -38,10 +38,9 @@ import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
-import it.smartcommunitylabdhub.runtime.flower.runners.FlowerAppTrainRunner;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerAppFunctionSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerAppRunSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerAppTrainTaskSpec;
+import it.smartcommunitylabdhub.runtime.flower.app.specs.FlowerAppFunctionSpec;
+import it.smartcommunitylabdhub.runtime.flower.app.specs.FlowerAppRunSpec;
+import it.smartcommunitylabdhub.runtime.flower.app.specs.FlowerAppTrainTaskSpec;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerRunStatus;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
