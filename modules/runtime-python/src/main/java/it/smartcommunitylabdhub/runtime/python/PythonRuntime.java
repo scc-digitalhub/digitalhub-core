@@ -32,7 +32,6 @@ import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.base.Executable;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
@@ -41,8 +40,8 @@ import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.commons.services.SecretService;
-import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
 import it.smartcommunitylabdhub.relationships.RelationshipDetail;
@@ -51,15 +50,19 @@ import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
 import it.smartcommunitylabdhub.runtime.python.runners.PythonBuildRunner;
 import it.smartcommunitylabdhub.runtime.python.runners.PythonJobRunner;
 import it.smartcommunitylabdhub.runtime.python.runners.PythonServeRunner;
+import it.smartcommunitylabdhub.runtime.python.specs.PythonBuildRunSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonBuildTaskSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonFunctionSpec;
+import it.smartcommunitylabdhub.runtime.python.specs.PythonJobRunSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonJobTaskSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonRunSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonRunStatus;
+import it.smartcommunitylabdhub.runtime.python.specs.PythonServeRunSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonServeTaskSpec;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,13 +70,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.lang.Nullable;
 
 @Slf4j
 @RuntimeComponent(runtime = PythonRuntime.RUNTIME)
 public class PythonRuntime extends K8sBaseRuntime<PythonFunctionSpec, PythonRunSpec, PythonRunStatus, K8sRunnable> {
 
     public static final String RUNTIME = "python";
+    public static final String[] KINDS = { PythonJobRunSpec.KIND, PythonServeRunSpec.KIND, PythonBuildRunSpec.KIND };
 
     @Autowired
     private SecretService secretService;
@@ -105,20 +108,24 @@ public class PythonRuntime extends K8sBaseRuntime<PythonFunctionSpec, PythonRunS
     @Override
     public PythonRunSpec build(@NotNull Executable function, @NotNull Task task, @NotNull Run run) {
         //check run kind
-        if (!PythonRunSpec.KIND.equals(run.getKind())) {
-            throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(String.valueOf(run.getKind()), PythonRunSpec.KIND)
-            );
+        if (!isSupported(run)) {
+            throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
         }
 
         PythonFunctionSpec funSpec = new PythonFunctionSpec(function.getSpec());
-        PythonRunSpec runSpec = new PythonRunSpec(run.getSpec());
-
-        String kind = task.getKind();
+        PythonRunSpec runSpec =
+            switch (run.getKind()) {
+                case PythonJobRunSpec.KIND -> new PythonJobRunSpec(run.getSpec());
+                case PythonServeRunSpec.KIND -> new PythonServeRunSpec(run.getSpec());
+                case PythonBuildRunSpec.KIND -> new PythonBuildRunSpec(run.getSpec());
+                default -> throw new IllegalArgumentException(
+                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+                );
+            };
 
         //build task spec as defined
         TaskBaseSpec taskSpec =
-            switch (kind) {
+            switch (task.getKind()) {
                 case PythonJobTaskSpec.KIND -> {
                     yield new PythonJobTaskSpec(task.getSpec());
                 }
@@ -180,13 +187,16 @@ public class PythonRuntime extends K8sBaseRuntime<PythonFunctionSpec, PythonRunS
     @Override
     public K8sRunnable run(@NotNull Run run) {
         //check run kind
-        if (!PythonRunSpec.KIND.equals(run.getKind())) {
-            throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(String.valueOf(run.getKind()), PythonRunSpec.KIND)
-            );
+        if (!isSupported(run)) {
+            throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
         }
 
         PythonRunSpec runPythonSpec = new PythonRunSpec(run.getSpec());
+
+        //read base task spec to extract secrets
+        K8sFunctionTaskBaseSpec taskSpec = new K8sFunctionTaskBaseSpec();
+        taskSpec.configure(run.getSpec());
+        Map<String, String> secrets = secretService.getSecretData(run.getProject(), taskSpec.getSecrets());
 
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
@@ -199,7 +209,7 @@ public class PythonRuntime extends K8sBaseRuntime<PythonFunctionSpec, PythonRunS
                     groupId,
                     command,
                     runPythonSpec.getFunctionSpec(),
-                    secretService.getSecretData(run.getProject(), runPythonSpec.getTaskJobSpec().getSecrets()),
+                    secrets,
                     k8sBuilderHelper
                 )
                     .produce(run);
@@ -209,7 +219,7 @@ public class PythonRuntime extends K8sBaseRuntime<PythonFunctionSpec, PythonRunS
                     groupId,
                     command,
                     runPythonSpec.getFunctionSpec(),
-                    secretService.getSecretData(run.getProject(), runPythonSpec.getTaskJobSpec().getSecrets()),
+                    secrets,
                     k8sBuilderHelper,
                     functionService
                 )
@@ -218,7 +228,7 @@ public class PythonRuntime extends K8sBaseRuntime<PythonFunctionSpec, PythonRunS
                     images.get(runPythonSpec.getFunctionSpec().getPythonVersion().name()),
                     command,
                     runPythonSpec.getFunctionSpec(),
-                    secretService.getSecretData(run.getProject(), runPythonSpec.getTaskBuildSpec().getSecrets()),
+                    secrets,
                     k8sBuilderHelper
                 )
                     .produce(run);
@@ -266,6 +276,6 @@ public class PythonRuntime extends K8sBaseRuntime<PythonFunctionSpec, PythonRunS
 
     @Override
     public boolean isSupported(@NotNull Run run) {
-        return PythonRunSpec.KIND.equals(run.getKind());
+        return Arrays.asList(KINDS).contains(run.getKind());
     }
 }
