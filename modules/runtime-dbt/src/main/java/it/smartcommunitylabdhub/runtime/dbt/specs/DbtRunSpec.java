@@ -42,7 +42,7 @@ import lombok.Setter;
 @SpecType(runtime = DbtRuntime.RUNTIME, kind = DbtRunSpec.KIND, entity = EntityName.RUN)
 public class DbtRunSpec extends RunBaseSpec {
 
-    public static final String KIND = DbtRuntime.RUNTIME + "+run";
+    public static final String KIND = DbtRuntime.RUNTIME + ":run";
 
     private Map<String, String> inputs = new HashMap<>();
 

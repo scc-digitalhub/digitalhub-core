@@ -21,12 +21,12 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.flower.specs;
+package it.smartcommunitylabdhub.runtime.hera.specs;
 
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
-import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
-import it.smartcommunitylabdhub.runtime.flower.FlowerServerRuntime;
+import it.smartcommunitylabdhub.runtime.hera.HeraRuntime;
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;
@@ -36,12 +36,27 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = FlowerServerRuntime.RUNTIME, kind = FlowerServerTaskSpec.KIND, entity = EntityName.TASK)
-public class FlowerServerTaskSpec extends K8sFunctionTaskBaseSpec {
+@SpecType(runtime = HeraRuntime.RUNTIME, kind = HeraPipelineRunSpec.KIND, entity = EntityName.RUN)
+public class HeraPipelineRunSpec extends HeraRunSpec {
 
-    public static final String KIND = "flower-server+deploy";
+    public static final String KIND = HeraPipelineTaskSpec.KIND + ":run";
 
-    public FlowerServerTaskSpec(Map<String, Serializable> data) {
+    @JsonUnwrapped
+    private HeraPipelineTaskSpec taskPipelineSpec;
+
+    public HeraPipelineRunSpec(Map<String, Serializable> data) {
         configure(data);
+    }
+
+    @Override
+    public void configure(Map<String, Serializable> data) {
+        super.configure(data);
+
+        HeraPipelineRunSpec spec = mapper.convertValue(data, HeraPipelineRunSpec.class);
+        this.taskPipelineSpec = spec.getTaskPipelineSpec();
+    }
+
+    public void setTaskPipelineSpec(HeraPipelineTaskSpec taskPipelineSpec) {
+        this.taskPipelineSpec = taskPipelineSpec;
     }
 }

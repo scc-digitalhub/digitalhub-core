@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.flower.runners;
+package it.smartcommunitylabdhub.runtime.flower.server;
 
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
@@ -35,11 +35,10 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileGenerator;
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileGeneratorFactory;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
-import it.smartcommunitylabdhub.runtime.flower.FlowerClientRuntime;
 import it.smartcommunitylabdhub.runtime.flower.model.FABModel;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerBuildClientTaskSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientFunctionSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerClientRunSpec;
+import it.smartcommunitylabdhub.runtime.flower.server.specs.FlowerServerBuildRunSpec;
+import it.smartcommunitylabdhub.runtime.flower.server.specs.FlowerServerBuildTaskSpec;
+import it.smartcommunitylabdhub.runtime.flower.server.specs.FlowerServerFunctionSpec;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -51,19 +50,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 
 @Slf4j
-public class FlowerBuildClientRunner {
+public class FlowerServerBuildRunner {
 
     private final String image;
     private final String command;
-    private final FlowerClientFunctionSpec functionSpec;
+    private final FlowerServerFunctionSpec functionSpec;
     private final Map<String, String> secretData;
 
     private final K8sBuilderHelper k8sBuilderHelper;
 
-    public FlowerBuildClientRunner(
+    public FlowerServerBuildRunner(
         String image,
         String command,
-        FlowerClientFunctionSpec functionPythonSpec,
+        FlowerServerFunctionSpec functionPythonSpec,
         Map<String, String> secretData,
         K8sBuilderHelper k8sBuilderHelper
     ) {
@@ -75,8 +74,8 @@ public class FlowerBuildClientRunner {
     }
 
     public K8sContainerBuilderRunnable produce(Run run) {
-        FlowerClientRunSpec runSpec = new FlowerClientRunSpec(run.getSpec());
-        FlowerBuildClientTaskSpec taskSpec = runSpec.getTaskBuildSpec();
+        FlowerServerBuildRunSpec runSpec = new FlowerServerBuildRunSpec(run.getSpec());
+        FlowerServerBuildTaskSpec taskSpec = runSpec.getTaskBuildSpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
 
         List<CoreEnv> coreEnvList = new ArrayList<>(
@@ -157,8 +156,8 @@ public class FlowerBuildClientRunner {
             .builder()
             .id(run.getId())
             .project(run.getProject())
-            .runtime(FlowerClientRuntime.RUNTIME)
-            .task(FlowerBuildClientTaskSpec.KIND)
+            .runtime(FlowerServerRuntime.RUNTIME)
+            .task(FlowerServerBuildTaskSpec.KIND)
             .state(State.READY.name())
             .labels(
                 k8sBuilderHelper != null

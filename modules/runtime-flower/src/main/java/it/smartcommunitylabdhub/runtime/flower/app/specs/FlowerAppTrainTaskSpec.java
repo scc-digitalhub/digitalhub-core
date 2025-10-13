@@ -21,14 +21,17 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.kfp.specs;
+package it.smartcommunitylabdhub.runtime.flower.app.specs;
 
-import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
+import it.smartcommunitylabdhub.commons.Keys;
+import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
+import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
+import it.smartcommunitylabdhub.runtime.flower.app.FlowerAppRuntime;
+import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
-import java.util.HashMap;
 import java.util.Map;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -36,19 +39,16 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class KFPRunSpec extends RunBaseSpec {
+@AllArgsConstructor
+@SpecType(runtime = FlowerAppRuntime.RUNTIME, kind = FlowerAppTrainTaskSpec.KIND, entity = EntityName.TASK)
+public class FlowerAppTrainTaskSpec extends K8sFunctionTaskBaseSpec {
 
-    private Map<String, String> inputs = new HashMap<>();
+    public static final String KIND = "flower-app+train";
 
-    private Map<String, String> outputs = new HashMap<>();
+    @Pattern(regexp = Keys.CRONTAB_PATTERN)
+    private String schedule;
 
-    private Map<String, Serializable> parameters = new HashMap<>();
-
-    @JsonSchemaIgnore
-    @JsonUnwrapped
-    private KFPWorkflowSpec workflowSpec;
-
-    public KFPRunSpec(Map<String, Serializable> data) {
+    public FlowerAppTrainTaskSpec(Map<String, Serializable> data) {
         configure(data);
     }
 
@@ -56,15 +56,7 @@ public class KFPRunSpec extends RunBaseSpec {
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
 
-        KFPRunSpec spec = mapper.convertValue(data, KFPRunSpec.class);
-        this.inputs = spec.getInputs();
-        this.outputs = spec.getOutputs();
-        this.parameters = spec.getParameters();
-
-        this.workflowSpec = spec.getWorkflowSpec();
-    }
-
-    public void setWorkflowSpec(KFPWorkflowSpec workflowSpec) {
-        this.workflowSpec = workflowSpec;
+        FlowerAppTrainTaskSpec spec = mapper.convertValue(data, FlowerAppTrainTaskSpec.class);
+        this.schedule = spec.getSchedule();
     }
 }

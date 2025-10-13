@@ -21,14 +21,13 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.flower.specs;
+package it.smartcommunitylabdhub.runtime.python.specs;
 
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
-import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
-import it.smartcommunitylabdhub.runtime.flower.FlowerClientRuntime;
+import it.smartcommunitylabdhub.runtime.python.PythonRuntime;
 import java.io.Serializable;
-import java.util.List;
 import java.util.Map;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -37,14 +36,15 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = FlowerClientRuntime.RUNTIME, kind = FlowerBuildClientTaskSpec.KIND, entity = EntityName.TASK)
-public class FlowerBuildClientTaskSpec extends K8sFunctionTaskBaseSpec {
+@SpecType(runtime = PythonRuntime.RUNTIME, kind = PythonBuildRunSpec.KIND, entity = EntityName.RUN)
+public class PythonBuildRunSpec extends PythonRunSpec {
 
-    public static final String KIND = "flower-client+build";
+    public static final String KIND = PythonBuildTaskSpec.KIND + ":run";
 
-    private List<String> instructions;
+    @JsonUnwrapped
+    private PythonBuildTaskSpec taskBuildSpec;
 
-    public FlowerBuildClientTaskSpec(Map<String, Serializable> data) {
+    public PythonBuildRunSpec(Map<String, Serializable> data) {
         configure(data);
     }
 
@@ -52,7 +52,11 @@ public class FlowerBuildClientTaskSpec extends K8sFunctionTaskBaseSpec {
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
 
-        FlowerBuildClientTaskSpec spec = mapper.convertValue(data, FlowerBuildClientTaskSpec.class);
-        this.instructions = spec.getInstructions();
+        PythonBuildRunSpec spec = mapper.convertValue(data, PythonBuildRunSpec.class);
+        this.taskBuildSpec = spec.getTaskBuildSpec();
+    }
+
+    public void setTaskBuildSpec(PythonBuildTaskSpec buildTaskSpec) {
+        this.taskBuildSpec = buildTaskSpec;
     }
 }

@@ -21,15 +21,14 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.flower.specs;
+package it.smartcommunitylabdhub.runtime.flower.server.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.function.FunctionBaseSpec;
-import it.smartcommunitylabdhub.runtime.flower.FlowerAppRuntime;
-import it.smartcommunitylabdhub.runtime.flower.model.FlowerSourceCode;
+import it.smartcommunitylabdhub.runtime.flower.server.FlowerServerRuntime;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -40,12 +39,8 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = FlowerAppRuntime.RUNTIME, kind = FlowerAppRuntime.RUNTIME, entity = EntityName.FUNCTION)
-public class FlowerAppFunctionSpec extends FunctionBaseSpec {
-
-    @JsonProperty("fab_source")
-    @Schema(title = "fields.flower.sourceCode.title", description = "fields.flower.sourceCode.description")
-    private FlowerSourceCode fabSource;
+@SpecType(runtime = FlowerServerRuntime.RUNTIME, kind = FlowerServerRuntime.RUNTIME, entity = EntityName.FUNCTION)
+public class FlowerServerFunctionSpec extends FunctionBaseSpec {
 
     @JsonProperty("image")
     @Schema(title = "fields.flower.image.title", description = "fields.flower.image.description")
@@ -58,7 +53,7 @@ public class FlowerAppFunctionSpec extends FunctionBaseSpec {
     @Schema(title = "fields.python.requirements.title", description = "fields.python.requirements.description")
     private List<String> requirements;
 
-    public FlowerAppFunctionSpec(Map<String, Serializable> data) {
+    public FlowerServerFunctionSpec(Map<String, Serializable> data) {
         configure(data);
     }
 
@@ -66,9 +61,8 @@ public class FlowerAppFunctionSpec extends FunctionBaseSpec {
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
 
-        FlowerAppFunctionSpec spec = mapper.convertValue(data, FlowerAppFunctionSpec.class);
+        FlowerServerFunctionSpec spec = mapper.convertValue(data, FlowerServerFunctionSpec.class);
         this.requirements = spec.getRequirements();
-        this.fabSource = spec.getFabSource();
         this.image = spec.getImage();
         this.baseImage = spec.getBaseImage();
     }

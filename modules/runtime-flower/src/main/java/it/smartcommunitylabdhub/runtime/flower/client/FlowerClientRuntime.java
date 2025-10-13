@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.flower;
+package it.smartcommunitylabdhub.runtime.flower.client;
 
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.CredentialsService;
@@ -42,16 +42,16 @@ import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
-import it.smartcommunitylabdhub.runtime.flower.runners.FlowerBuildServerRunner;
-import it.smartcommunitylabdhub.runtime.flower.runners.FlowerServerRunner;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerBuildServerTaskSpec;
+import it.smartcommunitylabdhub.runtime.flower.client.specs.FlowerClientBuildRunSpec;
+import it.smartcommunitylabdhub.runtime.flower.client.specs.FlowerClientBuildTaskSpec;
+import it.smartcommunitylabdhub.runtime.flower.client.specs.FlowerClientDeployRunSpec;
+import it.smartcommunitylabdhub.runtime.flower.client.specs.FlowerClientDeployTaskSpec;
+import it.smartcommunitylabdhub.runtime.flower.client.specs.FlowerClientFunctionSpec;
+import it.smartcommunitylabdhub.runtime.flower.client.specs.FlowerClientRunSpec;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerRunStatus;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerFunctionSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerRunSpec;
-import it.smartcommunitylabdhub.runtime.flower.specs.FlowerServerTaskSpec;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
-import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,14 +59,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
 
 @Slf4j
-@RuntimeComponent(runtime = FlowerServerRuntime.RUNTIME)
-public class FlowerServerRuntime
-    extends K8sBaseRuntime<FlowerServerFunctionSpec, FlowerServerRunSpec, FlowerRunStatus, K8sRunnable> {
+@RuntimeComponent(runtime = FlowerClientRuntime.RUNTIME)
+public class FlowerClientRuntime
+    extends K8sBaseRuntime<FlowerClientFunctionSpec, FlowerClientRunSpec, FlowerRunStatus, K8sRunnable> {
 
-    public static final String RUNTIME = "flower-server";
+    public static final String RUNTIME = "flower-client";
+    public static final String[] KINDS = { FlowerClientBuildRunSpec.KIND, FlowerClientDeployRunSpec.KIND };
 
     @Autowired
     private SecretService secretService;
@@ -90,48 +90,37 @@ public class FlowerServerRuntime
     @Value("${runtime.flower.group-id}")
     private Integer groupId;
 
-    @Value("${runtime.flower.tls-ca-cert:}")
-    private Resource caCert;
-
-    @Value("${runtime.flower.tls-ca-key:}")
-    private Resource caKey;
-
-    @Value("${runtime.flower.tls-conf:}")
-    private Resource tlsConf;
-
-    @Value("${runtime.flower.tls-int-domain:}")
-    private String tlsIntDomain;
-
-    @Value("${runtime.flower.tls-ext-domain:}")
-    private String tlsExtDomain;
-
-    public FlowerServerRuntime() {}
-
     @Override
-    public FlowerServerRunSpec build(@NotNull Executable function, @NotNull Task task, @NotNull Run run) {
+    public FlowerClientRunSpec build(@NotNull Executable function, @NotNull Task task, @NotNull Run run) {
         //check run kind
-        if (!FlowerServerRunSpec.KIND.equals(run.getKind())) {
-            throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(
-                        String.valueOf(run.getKind()),
-                        FlowerServerRunSpec.KIND
-                    )
-            );
+        if (!isSupported(run)) {
+            throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
         }
 
-        FlowerServerFunctionSpec funSpec = new FlowerServerFunctionSpec(function.getSpec());
-        FlowerServerRunSpec runSpec = new FlowerServerRunSpec(run.getSpec());
+        FlowerClientFunctionSpec funSpec = new FlowerClientFunctionSpec(function.getSpec());
 
-        String kind = task.getKind();
+        //build run spec as defined
+        FlowerClientRunSpec runSpec =
+            switch (run.getKind()) {
+                case FlowerClientDeployRunSpec.KIND -> {
+                    yield new FlowerClientDeployRunSpec(run.getSpec());
+                }
+                case FlowerClientBuildTaskSpec.KIND -> {
+                    yield new FlowerClientBuildRunSpec(run.getSpec());
+                }
+                default -> throw new IllegalArgumentException(
+                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+                );
+            };
 
         //build task spec as defined
         TaskBaseSpec taskSpec =
-            switch (kind) {
-                case FlowerServerTaskSpec.KIND -> {
-                    yield new FlowerServerTaskSpec(task.getSpec());
+            switch (task.getKind()) {
+                case FlowerClientDeployTaskSpec.KIND -> {
+                    yield new FlowerClientDeployTaskSpec(task.getSpec());
                 }
-                case FlowerBuildServerTaskSpec.KIND -> {
-                    yield new FlowerBuildServerTaskSpec(task.getSpec());
+                case FlowerClientBuildTaskSpec.KIND -> {
+                    yield new FlowerClientBuildTaskSpec(task.getSpec());
                 }
                 default -> throw new IllegalArgumentException(
                     "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
@@ -143,63 +132,41 @@ public class FlowerServerRuntime
         map.putAll(runSpec.toMap());
         taskSpec.toMap().forEach(map::putIfAbsent);
 
-        FlowerServerRunSpec pythonSpec = new FlowerServerRunSpec(map);
+        FlowerClientRunSpec flowerSpec = new FlowerClientRunSpec(map);
         //ensure function is not modified
-        pythonSpec.setFunctionSpec(funSpec);
+        flowerSpec.setFunctionSpec(funSpec);
 
-        return pythonSpec;
+        return flowerSpec;
     }
 
     @Override
     public K8sRunnable run(@NotNull Run run) {
         //check run kind
-        if (!FlowerServerRunSpec.KIND.equals(run.getKind())) {
-            throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(
-                        String.valueOf(run.getKind()),
-                        FlowerServerRunSpec.KIND
-                    )
-            );
+        if (!isSupported(run)) {
+            throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
         }
 
-        FlowerServerRunSpec runFlowerSpec = new FlowerServerRunSpec(run.getSpec());
+        FlowerClientRunSpec runFlowerSpec = new FlowerClientRunSpec(run.getSpec());
 
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
-        String caCertContent = null;
-        String caKeyContent = null;
-        String tlsConfContent = null;
-        try {
-            caCertContent = caCert == null ? null : caCert.getContentAsString(StandardCharsets.UTF_8);
-            caKeyContent = caKey == null ? null : caKey.getContentAsString(StandardCharsets.UTF_8);
-            tlsConfContent = tlsConf == null ? null : tlsConf.getContentAsString(StandardCharsets.UTF_8);
-        } catch (java.io.IOException e) {
-            throw new RuntimeException("Failed to read certificate files", e);
-        }
-
         K8sRunnable runnable =
             switch (runAccessor.getTask()) {
-                case FlowerServerTaskSpec.KIND -> new FlowerServerRunner(
-                    images.get("server"),
+                case FlowerClientDeployTaskSpec.KIND -> new FlowerClientDeployRunner(
+                    images.get("client"),
                     userId,
                     groupId,
-                    caCertContent,
-                    caKeyContent,
-                    tlsConfContent,
-                    tlsIntDomain,
-                    tlsExtDomain,
                     runFlowerSpec.getFunctionSpec(),
-                    secretService.getSecretData(run.getProject(), runFlowerSpec.getTaskDeploySpec().getSecrets()),
-                    k8sBuilderHelper,
-                    functionService
+                    secretService,
+                    k8sBuilderHelper
                 )
                     .produce(run);
-                case FlowerBuildServerTaskSpec.KIND -> new FlowerBuildServerRunner(
-                    images.get("server"),
-                    "flower-superlink",
+                case FlowerClientBuildTaskSpec.KIND -> new FlowerClientBuildRunner(
+                    images.get("client"),
+                    "flower-supernode",
                     runFlowerSpec.getFunctionSpec(),
-                    secretService.getSecretData(run.getProject(), runFlowerSpec.getTaskBuildSpec().getSecrets()),
+                    secretService,
                     k8sBuilderHelper
                 )
                     .produce(run);
@@ -234,7 +201,7 @@ public class FlowerServerRuntime
 
             log.debug("update function {} spec to use built image: {}", functionId, image);
 
-            FlowerServerFunctionSpec funSpec = new FlowerServerFunctionSpec(function.getSpec());
+            FlowerClientFunctionSpec funSpec = new FlowerClientFunctionSpec(function.getSpec());
             if (!image.equals(funSpec.getImage())) {
                 funSpec.setImage(image);
                 function.setSpec(funSpec.toMap());
@@ -247,6 +214,6 @@ public class FlowerServerRuntime
 
     @Override
     public boolean isSupported(@NotNull Run run) {
-        return FlowerServerRunSpec.KIND.equals(run.getKind());
+        return Arrays.asList(KINDS).contains(run.getKind());
     }
 }

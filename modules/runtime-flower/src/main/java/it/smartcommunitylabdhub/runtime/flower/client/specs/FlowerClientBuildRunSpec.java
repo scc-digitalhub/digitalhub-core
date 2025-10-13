@@ -21,13 +21,13 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.kfp.specs;
+package it.smartcommunitylabdhub.runtime.flower.client.specs;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
+import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
+import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.runtime.flower.client.FlowerClientRuntime;
 import java.io.Serializable;
-import java.util.HashMap;
 import java.util.Map;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -36,19 +36,15 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class KFPRunSpec extends RunBaseSpec {
+@SpecType(runtime = FlowerClientRuntime.RUNTIME, kind = FlowerClientBuildRunSpec.KIND, entity = EntityName.RUN)
+public class FlowerClientBuildRunSpec extends FlowerClientRunSpec {
 
-    private Map<String, String> inputs = new HashMap<>();
+    public static final String KIND = FlowerClientBuildTaskSpec.KIND + ":run";
 
-    private Map<String, String> outputs = new HashMap<>();
-
-    private Map<String, Serializable> parameters = new HashMap<>();
-
-    @JsonSchemaIgnore
     @JsonUnwrapped
-    private KFPWorkflowSpec workflowSpec;
+    private FlowerClientBuildTaskSpec taskBuildSpec;
 
-    public KFPRunSpec(Map<String, Serializable> data) {
+    public FlowerClientBuildRunSpec(Map<String, Serializable> data) {
         configure(data);
     }
 
@@ -56,15 +52,11 @@ public class KFPRunSpec extends RunBaseSpec {
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
 
-        KFPRunSpec spec = mapper.convertValue(data, KFPRunSpec.class);
-        this.inputs = spec.getInputs();
-        this.outputs = spec.getOutputs();
-        this.parameters = spec.getParameters();
-
-        this.workflowSpec = spec.getWorkflowSpec();
+        FlowerClientBuildRunSpec spec = mapper.convertValue(data, FlowerClientBuildRunSpec.class);
+        this.taskBuildSpec = spec.getTaskBuildSpec();
     }
 
-    public void setWorkflowSpec(KFPWorkflowSpec workflowSpec) {
-        this.workflowSpec = workflowSpec;
+    public void setTaskBuildSpec(FlowerClientBuildTaskSpec taskBuildSpec) {
+        this.taskBuildSpec = taskBuildSpec;
     }
 }

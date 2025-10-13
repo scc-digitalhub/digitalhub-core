@@ -21,12 +21,12 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.flower.specs;
+package it.smartcommunitylabdhub.runtime.flower.server.specs;
 
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
-import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
-import it.smartcommunitylabdhub.runtime.flower.FlowerClientRuntime;
+import it.smartcommunitylabdhub.runtime.flower.server.FlowerServerRuntime;
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;
@@ -36,12 +36,27 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = FlowerClientRuntime.RUNTIME, kind = FlowerClientTaskSpec.KIND, entity = EntityName.TASK)
-public class FlowerClientTaskSpec extends K8sFunctionTaskBaseSpec {
+@SpecType(runtime = FlowerServerRuntime.RUNTIME, kind = FlowerServerDeployRunSpec.KIND, entity = EntityName.RUN)
+public class FlowerServerDeployRunSpec extends FlowerServerRunSpec {
 
-    public static final String KIND = "flower-client+deploy";
+    public static final String KIND = FlowerServerDeployTaskSpec.KIND + ":run";
 
-    public FlowerClientTaskSpec(Map<String, Serializable> data) {
+    @JsonUnwrapped
+    private FlowerServerDeployTaskSpec taskDeploySpec;
+
+    public FlowerServerDeployRunSpec(Map<String, Serializable> data) {
         configure(data);
+    }
+
+    @Override
+    public void configure(Map<String, Serializable> data) {
+        super.configure(data);
+
+        FlowerServerDeployRunSpec spec = mapper.convertValue(data, FlowerServerDeployRunSpec.class);
+        this.taskDeploySpec = spec.getTaskDeploySpec();
+    }
+
+    public void setTaskDeploySpec(FlowerServerDeployTaskSpec taskDeploySpec) {
+        this.taskDeploySpec = taskDeploySpec;
     }
 }

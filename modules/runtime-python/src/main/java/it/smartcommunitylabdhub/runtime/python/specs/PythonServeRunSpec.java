@@ -21,14 +21,12 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.kubeai.text.specs;
+package it.smartcommunitylabdhub.runtime.python.specs;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
-import it.smartcommunitylabdhub.runtime.kubeai.base.KubeAIServeRunSpec;
-import it.smartcommunitylabdhub.runtime.kubeai.text.KubeAITextRuntime;
+import it.smartcommunitylabdhub.runtime.python.PythonRuntime;
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;
@@ -38,38 +36,27 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = KubeAITextRuntime.RUNTIME, kind = KubeAITextRunSpec.KIND, entity = EntityName.RUN)
-public class KubeAITextRunSpec extends KubeAIServeRunSpec {
+@SpecType(runtime = PythonRuntime.RUNTIME, kind = PythonServeRunSpec.KIND, entity = EntityName.RUN)
+public class PythonServeRunSpec extends PythonRunSpec {
 
-    public static final String KIND = KubeAITextServeTaskSpec.KIND + ":run";
-
-    @JsonSchemaIgnore
-    @JsonUnwrapped
-    private KubeAITextFunctionSpec functionSpec;
+    public static final String KIND = PythonServeTaskSpec.KIND + ":run";
 
     @JsonUnwrapped
-    private KubeAITextServeTaskSpec taskServeSpec;
+    private PythonServeTaskSpec taskServeSpec;
+
+    public PythonServeRunSpec(Map<String, Serializable> data) {
+        configure(data);
+    }
 
     @Override
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
 
-        KubeAITextRunSpec spec = mapper.convertValue(data, KubeAITextRunSpec.class);
-        this.functionSpec = spec.getFunctionSpec();
+        PythonServeRunSpec spec = mapper.convertValue(data, PythonServeRunSpec.class);
         this.taskServeSpec = spec.getTaskServeSpec();
     }
 
-    public void setFunctionSpec(KubeAITextFunctionSpec functionSpec) {
-        this.functionSpec = functionSpec;
-    }
-
-    public void setTaskServeSpec(KubeAITextServeTaskSpec taskServeSpec) {
+    public void setTaskServeSpec(PythonServeTaskSpec taskServeSpec) {
         this.taskServeSpec = taskServeSpec;
-    }
-
-    public static KubeAITextRunSpec with(Map<String, Serializable> data) {
-        KubeAITextRunSpec spec = new KubeAITextRunSpec();
-        spec.configure(data);
-        return spec;
     }
 }

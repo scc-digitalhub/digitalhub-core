@@ -21,14 +21,15 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.flower.specs;
+package it.smartcommunitylabdhub.runtime.flower.client.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.function.FunctionBaseSpec;
-import it.smartcommunitylabdhub.runtime.flower.FlowerServerRuntime;
+import it.smartcommunitylabdhub.runtime.flower.client.FlowerClientRuntime;
+import it.smartcommunitylabdhub.runtime.flower.server.specs.FlowerServerFunctionSpec;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -39,8 +40,8 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = FlowerServerRuntime.RUNTIME, kind = FlowerServerRuntime.RUNTIME, entity = EntityName.FUNCTION)
-public class FlowerServerFunctionSpec extends FunctionBaseSpec {
+@SpecType(runtime = FlowerClientRuntime.RUNTIME, kind = FlowerClientRuntime.RUNTIME, entity = EntityName.FUNCTION)
+public class FlowerClientFunctionSpec extends FunctionBaseSpec {
 
     @JsonProperty("image")
     @Schema(title = "fields.flower.image.title", description = "fields.flower.image.description")
@@ -53,7 +54,7 @@ public class FlowerServerFunctionSpec extends FunctionBaseSpec {
     @Schema(title = "fields.python.requirements.title", description = "fields.python.requirements.description")
     private List<String> requirements;
 
-    public FlowerServerFunctionSpec(Map<String, Serializable> data) {
+    public FlowerClientFunctionSpec(Map<String, Serializable> data) {
         configure(data);
     }
 

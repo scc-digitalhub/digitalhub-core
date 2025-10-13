@@ -21,16 +21,13 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.flower.specs;
+package it.smartcommunitylabdhub.runtime.flower.server.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import io.swagger.v3.oas.annotations.media.Schema;
-import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
-import it.smartcommunitylabdhub.runtime.flower.FlowerServerRuntime;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -41,16 +38,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = FlowerServerRuntime.RUNTIME, kind = FlowerServerRunSpec.KIND, entity = EntityName.RUN)
 public class FlowerServerRunSpec extends RunBaseSpec {
-
-    public static final String KIND = FlowerServerRuntime.RUNTIME + "+run";
-
-    @JsonUnwrapped
-    private FlowerServerTaskSpec taskDeploySpec;
-
-    @JsonUnwrapped
-    private FlowerBuildServerTaskSpec taskBuildSpec;
 
     @JsonSchemaIgnore
     @JsonUnwrapped
@@ -74,20 +62,8 @@ public class FlowerServerRunSpec extends RunBaseSpec {
         FlowerServerRunSpec spec = mapper.convertValue(data, FlowerServerRunSpec.class);
 
         this.functionSpec = spec.getFunctionSpec();
-
-        this.taskDeploySpec = spec.getTaskDeploySpec();
-        this.taskBuildSpec = spec.getTaskBuildSpec();
-
         this.authPublicKeys = spec.getAuthPublicKeys();
         this.insecure = spec.getInsecure();
-    }
-
-    public void setTaskDeploySpec(FlowerServerTaskSpec taskDeploySpec) {
-        this.taskDeploySpec = taskDeploySpec;
-    }
-
-    public void setTaskBuildSpec(FlowerBuildServerTaskSpec taskBuildSpec) {
-        this.taskBuildSpec = taskBuildSpec;
     }
 
     public void setFunctionSpec(FlowerServerFunctionSpec functionSpec) {

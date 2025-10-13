@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.runtime.python.runners;
@@ -39,9 +39,9 @@ import it.smartcommunitylabdhub.runtime.python.PythonRuntime;
 import it.smartcommunitylabdhub.runtime.python.model.NuclioFunctionBuilder;
 import it.smartcommunitylabdhub.runtime.python.model.NuclioFunctionSpec;
 import it.smartcommunitylabdhub.runtime.python.model.PythonSourceCode;
+import it.smartcommunitylabdhub.runtime.python.specs.PythonBuildRunSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonBuildTaskSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonFunctionSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonRunSpec;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -81,7 +81,7 @@ public class PythonBuildRunner {
     }
 
     public K8sContainerBuilderRunnable produce(Run run) {
-        PythonRunSpec runSpec = new PythonRunSpec(run.getSpec());
+        PythonBuildRunSpec runSpec = new PythonBuildRunSpec(run.getSpec());
         PythonBuildTaskSpec taskSpec = runSpec.getTaskBuildSpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
 

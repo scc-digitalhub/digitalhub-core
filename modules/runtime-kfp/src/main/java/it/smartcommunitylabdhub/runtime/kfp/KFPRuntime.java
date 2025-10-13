@@ -48,13 +48,16 @@ import it.smartcommunitylabdhub.commons.services.WorkflowManager;
 import it.smartcommunitylabdhub.framework.argo.objects.K8sWorkflowObject;
 import it.smartcommunitylabdhub.framework.argo.runnables.K8sArgoWorkflowRunnable;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.jackson.KubernetesMapper;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runtime.kfp.dtos.NodeStatusDTO;
 import it.smartcommunitylabdhub.runtime.kfp.mapper.NodeStatusMapper;
 import it.smartcommunitylabdhub.runtime.kfp.runners.KFPBuildRunner;
 import it.smartcommunitylabdhub.runtime.kfp.runners.KFPPipelineRunner;
+import it.smartcommunitylabdhub.runtime.kfp.specs.KFPBuildRunSpec;
 import it.smartcommunitylabdhub.runtime.kfp.specs.KFPBuildTaskSpec;
+import it.smartcommunitylabdhub.runtime.kfp.specs.KFPPipelineRunSpec;
 import it.smartcommunitylabdhub.runtime.kfp.specs.KFPPipelineTaskSpec;
 import it.smartcommunitylabdhub.runtime.kfp.specs.KFPRunSpec;
 import it.smartcommunitylabdhub.runtime.kfp.specs.KFPRunStatus;
@@ -63,6 +66,7 @@ import it.smartcommunitylabdhub.runtime.kfp.specs.KFPWorkflowSpec.KFPWorkflowCod
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -79,6 +83,7 @@ public class KFPRuntime extends K8sBaseRuntime<KFPWorkflowSpec, KFPRunSpec, KFPR
     public static final Integer MIN_DURATION = 300; // 5 minutes
 
     public static final String RUNTIME = "kfp";
+    public static final String[] KINDS = { KFPBuildRunSpec.KIND, KFPPipelineRunSpec.KIND };
 
     @Autowired
     SecretService secretService;
@@ -117,20 +122,24 @@ public class KFPRuntime extends K8sBaseRuntime<KFPWorkflowSpec, KFPRunSpec, KFPR
 
     @Override
     public KFPRunSpec build(@NotNull Executable workflow, @NotNull Task task, @NotNull Run run) {
-        if (!KFPRunSpec.KIND.equals(run.getKind())) {
-            throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(String.valueOf(run.getKind()), KFPRunSpec.KIND)
-            );
+        //check run kind
+        if (!isSupported(run)) {
+            throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
         }
 
         KFPWorkflowSpec workSpec = new KFPWorkflowSpec(workflow.getSpec());
-        KFPRunSpec runSpec = new KFPRunSpec(run.getSpec());
-
-        String kind = task.getKind();
+        KFPRunSpec runSpec =
+            switch (run.getKind()) {
+                case KFPPipelineRunSpec.KIND -> new KFPPipelineRunSpec(run.getSpec());
+                case KFPBuildRunSpec.KIND -> new KFPBuildRunSpec(run.getSpec());
+                default -> throw new IllegalArgumentException(
+                    "Kind not recognized. Cannot retrieve the right Spec for Run."
+                );
+            };
 
         //build task spec as defined
         TaskBaseSpec taskSpec =
-            switch (kind) {
+            switch (task.getKind()) {
                 case KFPPipelineTaskSpec.KIND -> {
                     yield new KFPPipelineTaskSpec(task.getSpec());
                 }
@@ -157,14 +166,14 @@ public class KFPRuntime extends K8sBaseRuntime<KFPWorkflowSpec, KFPRunSpec, KFPR
     @Override
     public K8sRunnable run(@NotNull Run run) {
         //check run kind
-        if (!KFPRunSpec.KIND.equals(run.getKind())) {
-            throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(String.valueOf(run.getKind()), KFPRunSpec.KIND)
-            );
+        if (!isSupported(run)) {
+            throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
         }
 
-        // Create spec for run
-        KFPRunSpec runKfpSpec = new KFPRunSpec(run.getSpec());
+        //read base task spec to extract secrets
+        K8sFunctionTaskBaseSpec taskSpec = new K8sFunctionTaskBaseSpec();
+        taskSpec.configure(run.getSpec());
+        Map<String, String> secrets = secretService.getSecretData(run.getProject(), taskSpec.getSecrets());
 
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
@@ -172,11 +181,7 @@ public class KFPRuntime extends K8sBaseRuntime<KFPWorkflowSpec, KFPRunSpec, KFPR
         K8sRunnable runnable =
             switch (runAccessor.getTask()) {
                 case KFPPipelineTaskSpec.KIND -> new KFPPipelineRunner().produce(run);
-                case KFPBuildTaskSpec.KIND -> new KFPBuildRunner(
-                    image,
-                    secretService.getSecretData(run.getProject(), runKfpSpec.getTaskBuildSpec().getSecrets())
-                )
-                    .produce(run);
+                case KFPBuildTaskSpec.KIND -> new KFPBuildRunner(image, secrets).produce(run);
                 default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
             };
 
@@ -325,6 +330,6 @@ public class KFPRuntime extends K8sBaseRuntime<KFPWorkflowSpec, KFPRunSpec, KFPR
 
     @Override
     public boolean isSupported(@NotNull Run run) {
-        return KFPRunSpec.KIND.equals(run.getKind());
+        return Arrays.asList(KINDS).contains(run.getKind());
     }
 }

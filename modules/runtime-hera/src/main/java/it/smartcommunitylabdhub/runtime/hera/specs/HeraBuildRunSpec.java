@@ -21,13 +21,13 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.kfp.specs;
+package it.smartcommunitylabdhub.runtime.hera.specs;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
+import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
+import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.runtime.hera.HeraRuntime;
 import java.io.Serializable;
-import java.util.HashMap;
 import java.util.Map;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -36,19 +36,15 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class KFPRunSpec extends RunBaseSpec {
+@SpecType(runtime = HeraRuntime.RUNTIME, kind = HeraBuildRunSpec.KIND, entity = EntityName.RUN)
+public class HeraBuildRunSpec extends HeraRunSpec {
 
-    private Map<String, String> inputs = new HashMap<>();
+    public static final String KIND = HeraBuildTaskSpec.KIND + ":run";
 
-    private Map<String, String> outputs = new HashMap<>();
-
-    private Map<String, Serializable> parameters = new HashMap<>();
-
-    @JsonSchemaIgnore
     @JsonUnwrapped
-    private KFPWorkflowSpec workflowSpec;
+    private HeraBuildTaskSpec taskBuildSpec;
 
-    public KFPRunSpec(Map<String, Serializable> data) {
+    public HeraBuildRunSpec(Map<String, Serializable> data) {
         configure(data);
     }
 
@@ -56,15 +52,11 @@ public class KFPRunSpec extends RunBaseSpec {
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
 
-        KFPRunSpec spec = mapper.convertValue(data, KFPRunSpec.class);
-        this.inputs = spec.getInputs();
-        this.outputs = spec.getOutputs();
-        this.parameters = spec.getParameters();
-
-        this.workflowSpec = spec.getWorkflowSpec();
+        HeraBuildRunSpec spec = mapper.convertValue(data, HeraBuildRunSpec.class);
+        this.taskBuildSpec = spec.getTaskBuildSpec();
     }
 
-    public void setWorkflowSpec(KFPWorkflowSpec workflowSpec) {
-        this.workflowSpec = workflowSpec;
+    public void setTaskBuildSpec(HeraBuildTaskSpec taskBuildSpec) {
+        this.taskBuildSpec = taskBuildSpec;
     }
 }

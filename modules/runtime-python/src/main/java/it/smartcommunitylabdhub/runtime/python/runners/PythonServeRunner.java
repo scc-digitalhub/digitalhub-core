@@ -42,7 +42,7 @@ import it.smartcommunitylabdhub.runtime.python.model.NuclioFunctionBuilder;
 import it.smartcommunitylabdhub.runtime.python.model.NuclioFunctionSpec;
 import it.smartcommunitylabdhub.runtime.python.model.PythonSourceCode;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonFunctionSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonRunSpec;
+import it.smartcommunitylabdhub.runtime.python.specs.PythonServeRunSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonServeTaskSpec;
 import java.io.IOException;
 import java.io.Serializable;
@@ -100,7 +100,7 @@ public class PythonServeRunner {
     }
 
     public K8sRunnable produce(Run run) {
-        PythonRunSpec runSpec = new PythonRunSpec(run.getSpec());
+        PythonServeRunSpec runSpec = new PythonServeRunSpec(run.getSpec());
         PythonServeTaskSpec taskSpec = runSpec.getTaskServeSpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
 

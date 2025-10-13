@@ -48,13 +48,16 @@ import it.smartcommunitylabdhub.commons.services.WorkflowManager;
 import it.smartcommunitylabdhub.framework.argo.objects.K8sWorkflowObject;
 import it.smartcommunitylabdhub.framework.argo.runnables.K8sArgoWorkflowRunnable;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.jackson.KubernetesMapper;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runtime.hera.dtos.NodeStatusDTO;
 import it.smartcommunitylabdhub.runtime.hera.mapper.NodeStatusMapper;
 import it.smartcommunitylabdhub.runtime.hera.runners.HeraBuildRunner;
 import it.smartcommunitylabdhub.runtime.hera.runners.HeraPipelineRunner;
+import it.smartcommunitylabdhub.runtime.hera.specs.HeraBuildRunSpec;
 import it.smartcommunitylabdhub.runtime.hera.specs.HeraBuildTaskSpec;
+import it.smartcommunitylabdhub.runtime.hera.specs.HeraPipelineRunSpec;
 import it.smartcommunitylabdhub.runtime.hera.specs.HeraPipelineTaskSpec;
 import it.smartcommunitylabdhub.runtime.hera.specs.HeraRunSpec;
 import it.smartcommunitylabdhub.runtime.hera.specs.HeraRunStatus;
@@ -63,6 +66,7 @@ import it.smartcommunitylabdhub.runtime.hera.specs.HeraWorkflowSpec.HeraWorkflow
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -79,6 +83,7 @@ public class HeraRuntime extends K8sBaseRuntime<HeraWorkflowSpec, HeraRunSpec, H
     public static final Integer MIN_DURATION = 300; // 5 minutes
 
     public static final String RUNTIME = "hera";
+    public static final String[] KINDS = { HeraBuildRunSpec.KIND, HeraPipelineRunSpec.KIND };
 
     @Autowired
     SecretService secretService;
@@ -117,20 +122,24 @@ public class HeraRuntime extends K8sBaseRuntime<HeraWorkflowSpec, HeraRunSpec, H
 
     @Override
     public HeraRunSpec build(@NotNull Executable workflow, @NotNull Task task, @NotNull Run run) {
-        if (!HeraRunSpec.KIND.equals(run.getKind())) {
-            throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(String.valueOf(run.getKind()), HeraRunSpec.KIND)
-            );
+        //check run kind
+        if (!isSupported(run)) {
+            throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
         }
 
         HeraWorkflowSpec workSpec = new HeraWorkflowSpec(workflow.getSpec());
-        HeraRunSpec runSpec = new HeraRunSpec(run.getSpec());
-
-        String kind = task.getKind();
+        HeraRunSpec runSpec =
+            switch (run.getKind()) {
+                case HeraPipelineRunSpec.KIND -> new HeraPipelineRunSpec(run.getSpec());
+                case HeraBuildRunSpec.KIND -> new HeraBuildRunSpec(run.getSpec());
+                default -> throw new IllegalArgumentException(
+                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+                );
+            };
 
         //build task spec as defined
         TaskBaseSpec taskSpec =
-            switch (kind) {
+            switch (task.getKind()) {
                 case HeraPipelineTaskSpec.KIND -> {
                     yield new HeraPipelineTaskSpec(task.getSpec());
                 }
@@ -157,14 +166,14 @@ public class HeraRuntime extends K8sBaseRuntime<HeraWorkflowSpec, HeraRunSpec, H
     @Override
     public K8sRunnable run(@NotNull Run run) {
         //check run kind
-        if (!HeraRunSpec.KIND.equals(run.getKind())) {
-            throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(String.valueOf(run.getKind()), HeraRunSpec.KIND)
-            );
+        if (!isSupported(run)) {
+            throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
         }
 
-        // Create spec for run
-        HeraRunSpec runHeraSpec = new HeraRunSpec(run.getSpec());
+        //read base task spec to extract secrets
+        K8sFunctionTaskBaseSpec taskSpec = new K8sFunctionTaskBaseSpec();
+        taskSpec.configure(run.getSpec());
+        Map<String, String> secrets = secretService.getSecretData(run.getProject(), taskSpec.getSecrets());
 
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
@@ -172,11 +181,7 @@ public class HeraRuntime extends K8sBaseRuntime<HeraWorkflowSpec, HeraRunSpec, H
         K8sRunnable runnable =
             switch (runAccessor.getTask()) {
                 case HeraPipelineTaskSpec.KIND -> new HeraPipelineRunner().produce(run);
-                case HeraBuildTaskSpec.KIND -> new HeraBuildRunner(
-                    image,
-                    secretService.getSecretData(run.getProject(), runHeraSpec.getTaskBuildSpec().getSecrets())
-                )
-                    .produce(run);
+                case HeraBuildTaskSpec.KIND -> new HeraBuildRunner(image, secrets).produce(run);
                 default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
             };
 
@@ -325,6 +330,6 @@ public class HeraRuntime extends K8sBaseRuntime<HeraWorkflowSpec, HeraRunSpec, H
 
     @Override
     public boolean isSupported(@NotNull Run run) {
-        return HeraRunSpec.KIND.equals(run.getKind());
+        return Arrays.asList(KINDS).contains(run.getKind());
     }
 }
