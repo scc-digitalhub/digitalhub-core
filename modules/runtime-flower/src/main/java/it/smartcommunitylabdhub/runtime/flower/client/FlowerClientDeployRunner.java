@@ -62,9 +62,8 @@ public class FlowerClientDeployRunner {
     private final int userId;
     private final int groupId;
     private final String image;
-    private final FlowerClientFunctionSpec functionSpec;
-    private final SecretService secretService;
 
+    private final SecretService secretService;
     private final K8sBuilderHelper k8sBuilderHelper;
 
     private final Resource entrypoint = new ClassPathResource("runtime-flower/docker/client.sh");
@@ -73,12 +72,10 @@ public class FlowerClientDeployRunner {
         String image,
         Integer userId,
         Integer groupId,
-        FlowerClientFunctionSpec functionPythonSpec,
         SecretService secretService,
         K8sBuilderHelper k8sBuilderHelper
     ) {
         this.image = image;
-        this.functionSpec = functionPythonSpec;
         this.secretService = secretService;
         this.k8sBuilderHelper = k8sBuilderHelper;
 
@@ -86,10 +83,11 @@ public class FlowerClientDeployRunner {
         this.groupId = groupId != null ? groupId : GID;
     }
 
-    public K8sRunnable produce(Run run) {
+    public K8sRunnable produce(Run run, Map<String, String> secretData) {
         FlowerClientDeployRunSpec runSpec = new FlowerClientDeployRunSpec(run.getSpec());
         FlowerClientDeployTaskSpec taskSpec = runSpec.getTaskDeploySpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
+        FlowerClientFunctionSpec functionSpec = runSpec.getFunctionSpec();
 
         List<CoreEnv> coreEnvList = new ArrayList<>(
             List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))
@@ -97,7 +95,6 @@ public class FlowerClientDeployRunner {
 
         coreEnvList.add(new CoreEnv("PYTHONPATH", "${PYTHONPATH}:/shared/"));
 
-        Map<String, String> secretData = secretService.getSecretData(run.getProject(), taskSpec.getSecrets());
         List<CoreEnv> coreSecrets = secretData == null
             ? null
             : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();

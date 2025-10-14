@@ -66,34 +66,25 @@ public class FlowerAppTrainRunner {
     private final String image;
     private final int userId;
     private final int groupId;
-    private final FlowerAppFunctionSpec functionSpec;
-    private final Map<String, String> secretData;
 
     private final K8sBuilderHelper k8sBuilderHelper;
 
     private final Resource entrypoint = new ClassPathResource("runtime-flower/docker/app.sh");
 
-    public FlowerAppTrainRunner(
-        String image,
-        Integer userId,
-        Integer groupId,
-        FlowerAppFunctionSpec functionPythonSpec,
-        Map<String, String> secretData,
-        K8sBuilderHelper k8sBuilderHelper
-    ) {
+    public FlowerAppTrainRunner(String image, Integer userId, Integer groupId, K8sBuilderHelper k8sBuilderHelper) {
         this.image = image;
-        this.functionSpec = functionPythonSpec;
-        this.secretData = secretData;
+
         this.k8sBuilderHelper = k8sBuilderHelper;
 
         this.userId = userId != null ? userId : UID;
         this.groupId = groupId != null ? groupId : GID;
     }
 
-    public K8sRunnable produce(Run run) {
+    public K8sRunnable produce(Run run, Map<String, String> secretData) {
         FlowerAppRunSpec runSpec = new FlowerAppRunSpec(run.getSpec());
         FlowerAppTrainTaskSpec taskSpec = runSpec.getTaskTrainSpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
+        FlowerAppFunctionSpec functionSpec = runSpec.getFunctionSpec();
 
         List<CoreEnv> coreEnvList = new ArrayList<>(
             List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))

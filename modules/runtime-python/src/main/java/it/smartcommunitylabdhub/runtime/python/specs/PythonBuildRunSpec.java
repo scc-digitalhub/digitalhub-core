@@ -25,6 +25,7 @@ package it.smartcommunitylabdhub.runtime.python.specs;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
+import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.runtime.python.PythonRuntime;
 import java.io.Serializable;
@@ -37,9 +38,13 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @SpecType(runtime = PythonRuntime.RUNTIME, kind = PythonBuildRunSpec.KIND, entity = EntityName.RUN)
-public class PythonBuildRunSpec extends PythonRunSpec {
+public final class PythonBuildRunSpec extends PythonRunSpec {
 
     public static final String KIND = PythonBuildTaskSpec.KIND + ":run";
+
+    @JsonSchemaIgnore
+    @JsonUnwrapped
+    private PythonFunctionSpec functionSpec;
 
     @JsonUnwrapped
     private PythonBuildTaskSpec taskBuildSpec;
@@ -53,7 +58,12 @@ public class PythonBuildRunSpec extends PythonRunSpec {
         super.configure(data);
 
         PythonBuildRunSpec spec = mapper.convertValue(data, PythonBuildRunSpec.class);
+        this.functionSpec = spec.getFunctionSpec();
         this.taskBuildSpec = spec.getTaskBuildSpec();
+    }
+
+    public void setFunctionSpec(PythonFunctionSpec functionSpec) {
+        this.functionSpec = functionSpec;
     }
 
     public void setTaskBuildSpec(PythonBuildTaskSpec buildTaskSpec) {

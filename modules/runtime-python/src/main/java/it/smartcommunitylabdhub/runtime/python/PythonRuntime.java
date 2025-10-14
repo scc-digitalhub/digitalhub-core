@@ -36,7 +36,6 @@ import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.models.task.Task;
-import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.commons.services.SecretService;
@@ -124,16 +123,16 @@ public class PythonRuntime extends K8sBaseRuntime<PythonFunctionSpec, PythonRunS
             };
 
         //build task spec as defined
-        TaskBaseSpec taskSpec =
+        Map<String, Serializable> taskSpec =
             switch (task.getKind()) {
                 case PythonJobTaskSpec.KIND -> {
-                    yield new PythonJobTaskSpec(task.getSpec());
+                    yield new PythonJobTaskSpec(task.getSpec()).toMap();
                 }
                 case PythonServeTaskSpec.KIND -> {
-                    yield new PythonServeTaskSpec(task.getSpec());
+                    yield new PythonServeTaskSpec(task.getSpec()).toMap();
                 }
                 case PythonBuildTaskSpec.KIND -> {
-                    yield new PythonBuildTaskSpec(task.getSpec());
+                    yield new PythonBuildTaskSpec(task.getSpec()).toMap();
                 }
                 default -> throw new IllegalArgumentException(
                     "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
@@ -143,13 +142,14 @@ public class PythonRuntime extends K8sBaseRuntime<PythonFunctionSpec, PythonRunS
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
         map.putAll(runSpec.toMap());
-        taskSpec.toMap().forEach(map::putIfAbsent);
-
-        PythonRunSpec pythonSpec = new PythonRunSpec(map);
+        taskSpec.forEach(map::putIfAbsent);
         //ensure function is not modified
-        pythonSpec.setFunctionSpec(funSpec);
+        map.putAll(funSpec.toMap());
 
-        return pythonSpec;
+        //reconfigure run spec
+        runSpec.configure(map);
+
+        return runSpec;
     }
 
     @Override
@@ -191,8 +191,6 @@ public class PythonRuntime extends K8sBaseRuntime<PythonFunctionSpec, PythonRunS
             throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
         }
 
-        PythonRunSpec runPythonSpec = new PythonRunSpec(run.getSpec());
-
         //read base task spec to extract secrets
         K8sFunctionTaskBaseSpec taskSpec = new K8sFunctionTaskBaseSpec();
         taskSpec.configure(run.getSpec());
@@ -203,35 +201,19 @@ public class PythonRuntime extends K8sBaseRuntime<PythonFunctionSpec, PythonRunS
 
         K8sRunnable runnable =
             switch (runAccessor.getTask()) {
-                case PythonJobTaskSpec.KIND -> new PythonJobRunner(
-                    images.get(runPythonSpec.getFunctionSpec().getPythonVersion().name()),
-                    userId,
-                    groupId,
-                    command,
-                    runPythonSpec.getFunctionSpec(),
-                    secrets,
-                    k8sBuilderHelper
-                )
-                    .produce(run);
+                case PythonJobTaskSpec.KIND -> new PythonJobRunner(images, userId, groupId, command, k8sBuilderHelper)
+                    .produce(run, secrets);
                 case PythonServeTaskSpec.KIND -> new PythonServeRunner(
-                    images.get(runPythonSpec.getFunctionSpec().getPythonVersion().name()),
+                    images,
                     userId,
                     groupId,
                     command,
-                    runPythonSpec.getFunctionSpec(),
-                    secrets,
                     k8sBuilderHelper,
                     functionService
                 )
-                    .produce(run);
-                case PythonBuildTaskSpec.KIND -> new PythonBuildRunner(
-                    images.get(runPythonSpec.getFunctionSpec().getPythonVersion().name()),
-                    command,
-                    runPythonSpec.getFunctionSpec(),
-                    secrets,
-                    k8sBuilderHelper
-                )
-                    .produce(run);
+                    .produce(run, secrets);
+                case PythonBuildTaskSpec.KIND -> new PythonBuildRunner(images, command, k8sBuilderHelper)
+                    .produce(run, secrets);
                 default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
             };
 

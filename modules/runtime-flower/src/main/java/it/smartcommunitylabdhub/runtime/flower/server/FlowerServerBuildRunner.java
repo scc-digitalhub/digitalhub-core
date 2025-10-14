@@ -54,29 +54,21 @@ public class FlowerServerBuildRunner {
 
     private final String image;
     private final String command;
-    private final FlowerServerFunctionSpec functionSpec;
-    private final Map<String, String> secretData;
 
     private final K8sBuilderHelper k8sBuilderHelper;
 
-    public FlowerServerBuildRunner(
-        String image,
-        String command,
-        FlowerServerFunctionSpec functionPythonSpec,
-        Map<String, String> secretData,
-        K8sBuilderHelper k8sBuilderHelper
-    ) {
+    public FlowerServerBuildRunner(String image, String command, K8sBuilderHelper k8sBuilderHelper) {
         this.image = image;
         this.command = command;
-        this.functionSpec = functionPythonSpec;
-        this.secretData = secretData;
+
         this.k8sBuilderHelper = k8sBuilderHelper;
     }
 
-    public K8sContainerBuilderRunnable produce(Run run) {
+    public K8sContainerBuilderRunnable produce(Run run, Map<String, String> secretData) {
         FlowerServerBuildRunSpec runSpec = new FlowerServerBuildRunSpec(run.getSpec());
         FlowerServerBuildTaskSpec taskSpec = runSpec.getTaskBuildSpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
+        FlowerServerFunctionSpec functionSpec = runSpec.getFunctionSpec();
 
         List<CoreEnv> coreEnvList = new ArrayList<>(
             List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))

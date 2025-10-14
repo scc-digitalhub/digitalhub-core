@@ -23,9 +23,7 @@
 
 package it.smartcommunitylabdhub.runtime.container.specs;
 
-import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import io.swagger.v3.oas.annotations.media.Schema;
-import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import java.io.Serializable;
 import java.util.List;
@@ -36,10 +34,6 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class ContainerRunSpec extends RunBaseSpec {
-
-    @JsonSchemaIgnore
-    @JsonUnwrapped
-    private ContainerFunctionSpec functionSpec;
 
     @Schema(title = "fields.container.args.title", description = "fields.container.args.description")
     private List<String> args;
@@ -53,11 +47,6 @@ public class ContainerRunSpec extends RunBaseSpec {
         super.configure(data);
 
         ContainerRunSpec spec = mapper.convertValue(data, ContainerRunSpec.class);
-        this.functionSpec = spec.getFunctionSpec();
         this.args = spec.getArgs();
-    }
-
-    public void setFunctionSpec(ContainerFunctionSpec functionSpec) {
-        this.functionSpec = functionSpec;
     }
 }

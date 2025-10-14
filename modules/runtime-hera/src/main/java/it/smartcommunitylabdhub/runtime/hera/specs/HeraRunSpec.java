@@ -23,8 +23,6 @@
 
 package it.smartcommunitylabdhub.runtime.hera.specs;
 
-import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import java.io.Serializable;
 import java.util.HashMap;
@@ -44,10 +42,6 @@ public class HeraRunSpec extends RunBaseSpec {
 
     private Map<String, Serializable> parameters = new HashMap<>();
 
-    @JsonSchemaIgnore
-    @JsonUnwrapped
-    private HeraWorkflowSpec workflowSpec;
-
     public HeraRunSpec(Map<String, Serializable> data) {
         configure(data);
     }
@@ -60,11 +54,5 @@ public class HeraRunSpec extends RunBaseSpec {
         this.inputs = spec.getInputs();
         this.outputs = spec.getOutputs();
         this.parameters = spec.getParameters();
-
-        this.workflowSpec = spec.getWorkflowSpec();
-    }
-
-    public void setWorkflowSpec(HeraWorkflowSpec workflowSpec) {
-        this.workflowSpec = workflowSpec;
     }
 }

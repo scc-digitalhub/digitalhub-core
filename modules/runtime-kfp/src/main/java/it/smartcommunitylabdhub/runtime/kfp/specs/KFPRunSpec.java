@@ -23,8 +23,6 @@
 
 package it.smartcommunitylabdhub.runtime.kfp.specs;
 
-import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import java.io.Serializable;
 import java.util.HashMap;
@@ -44,10 +42,6 @@ public class KFPRunSpec extends RunBaseSpec {
 
     private Map<String, Serializable> parameters = new HashMap<>();
 
-    @JsonSchemaIgnore
-    @JsonUnwrapped
-    private KFPWorkflowSpec workflowSpec;
-
     public KFPRunSpec(Map<String, Serializable> data) {
         configure(data);
     }
@@ -60,11 +54,5 @@ public class KFPRunSpec extends RunBaseSpec {
         this.inputs = spec.getInputs();
         this.outputs = spec.getOutputs();
         this.parameters = spec.getParameters();
-
-        this.workflowSpec = spec.getWorkflowSpec();
-    }
-
-    public void setWorkflowSpec(KFPWorkflowSpec workflowSpec) {
-        this.workflowSpec = workflowSpec;
     }
 }

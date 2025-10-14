@@ -59,31 +59,24 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Slf4j
 public class PythonBuildRunner {
 
-    private final String image;
+    private final Map<String, String> images;
     private final String command;
-    private final PythonFunctionSpec functionSpec;
-    private final Map<String, String> secretData;
 
     private final K8sBuilderHelper k8sBuilderHelper;
 
-    public PythonBuildRunner(
-        String image,
-        String command,
-        PythonFunctionSpec functionPythonSpec,
-        Map<String, String> secretData,
-        K8sBuilderHelper k8sBuilderHelper
-    ) {
-        this.image = image;
+    public PythonBuildRunner(Map<String, String> images, String command, K8sBuilderHelper k8sBuilderHelper) {
+        this.images = images;
         this.command = command;
-        this.functionSpec = functionPythonSpec;
-        this.secretData = secretData;
         this.k8sBuilderHelper = k8sBuilderHelper;
     }
 
-    public K8sContainerBuilderRunnable produce(Run run) {
+    public K8sContainerBuilderRunnable produce(Run run, Map<String, String> secretData) {
         PythonBuildRunSpec runSpec = new PythonBuildRunSpec(run.getSpec());
         PythonBuildTaskSpec taskSpec = runSpec.getTaskBuildSpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
+        PythonFunctionSpec functionSpec = runSpec.getFunctionSpec();
+
+        String image = images.get(functionSpec.getPythonVersion().name());
 
         List<CoreEnv> coreEnvList = new ArrayList<>(
             List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))

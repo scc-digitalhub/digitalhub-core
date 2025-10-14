@@ -66,12 +66,11 @@ public class PythonServeRunner {
     private static final int GID = 999;
     private static final int HTTP_PORT = 8080;
 
-    private final String image;
+    private final Map<String, String> images;
+
     private final int userId;
     private final int groupId;
     private final String command;
-    private final PythonFunctionSpec functionSpec;
-    private final Map<String, String> secretData;
 
     private final K8sBuilderHelper k8sBuilderHelper;
     private final FunctionManager functionService;
@@ -79,19 +78,16 @@ public class PythonServeRunner {
     private final Resource entrypoint = new ClassPathResource("runtime-python/docker/entrypoint.sh");
 
     public PythonServeRunner(
-        String image,
+        Map<String, String> images,
         Integer userId,
         Integer groupId,
         String command,
-        PythonFunctionSpec functionPythonSpec,
-        Map<String, String> secretData,
         K8sBuilderHelper k8sBuilderHelper,
         FunctionManager functionService
     ) {
-        this.image = image;
+        this.images = images;
         this.command = command;
-        this.functionSpec = functionPythonSpec;
-        this.secretData = secretData;
+
         this.k8sBuilderHelper = k8sBuilderHelper;
         this.functionService = functionService;
 
@@ -99,10 +95,13 @@ public class PythonServeRunner {
         this.groupId = groupId != null ? groupId : GID;
     }
 
-    public K8sRunnable produce(Run run) {
+    public K8sRunnable produce(Run run, Map<String, String> secretData) {
         PythonServeRunSpec runSpec = new PythonServeRunSpec(run.getSpec());
         PythonServeTaskSpec taskSpec = runSpec.getTaskServeSpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
+        PythonFunctionSpec functionSpec = runSpec.getFunctionSpec();
+
+        String image = images.get(functionSpec.getPythonVersion().name());
 
         List<CoreEnv> coreEnvList = new ArrayList<>(
             List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))

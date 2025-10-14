@@ -64,8 +64,6 @@ public class FlowerServerDeployRunner {
     private final int userId;
     private final int groupId;
     private final String image;
-    private final FlowerServerFunctionSpec functionSpec;
-    private final Map<String, String> secretData;
 
     private final K8sBuilderHelper k8sBuilderHelper;
     private final FunctionManager functionService;
@@ -87,14 +85,11 @@ public class FlowerServerDeployRunner {
         String tlsConf,
         String tlsIntDomain,
         String tlsExtDomain,
-        FlowerServerFunctionSpec functionPythonSpec,
-        Map<String, String> secretData,
         K8sBuilderHelper k8sBuilderHelper,
         FunctionManager functionService
     ) {
         this.image = image;
-        this.functionSpec = functionPythonSpec;
-        this.secretData = secretData;
+
         this.k8sBuilderHelper = k8sBuilderHelper;
         this.functionService = functionService;
 
@@ -108,10 +103,11 @@ public class FlowerServerDeployRunner {
         this.tlsExtDomain = tlsExtDomain;
     }
 
-    public K8sRunnable produce(Run run) {
+    public K8sRunnable produce(Run run, Map<String, String> secretData) {
         FlowerServerDeployRunSpec runSpec = new FlowerServerDeployRunSpec(run.getSpec());
         FlowerServerDeployTaskSpec taskSpec = runSpec.getTaskDeploySpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
+        FlowerServerFunctionSpec functionSpec = runSpec.getFunctionSpec();
 
         List<CoreEnv> coreEnvList = new ArrayList<>(
             List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))

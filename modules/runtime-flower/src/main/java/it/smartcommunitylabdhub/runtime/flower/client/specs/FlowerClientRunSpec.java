@@ -24,9 +24,7 @@
 package it.smartcommunitylabdhub.runtime.flower.client.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import io.swagger.v3.oas.annotations.media.Schema;
-import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import java.io.Serializable;
 import java.util.HashMap;
@@ -39,10 +37,6 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class FlowerClientRunSpec extends RunBaseSpec {
-
-    @JsonSchemaIgnore
-    @JsonUnwrapped
-    private FlowerClientFunctionSpec functionSpec;
 
     @Schema(title = "fields.flower.superlink.title", description = "fields.flower.superlink.description")
     private String superlink;
@@ -89,17 +83,11 @@ public class FlowerClientRunSpec extends RunBaseSpec {
 
         FlowerClientRunSpec spec = mapper.convertValue(data, FlowerClientRunSpec.class);
 
-        this.functionSpec = spec.getFunctionSpec();
-
         this.superlink = spec.getSuperlink();
         this.nodeConfig = spec.getNodeConfig();
         this.rootCertificates = spec.getRootCertificates();
         this.privateKeySecret = spec.getPrivateKeySecret();
         this.publicKeySecret = spec.getPublicKeySecret();
-    }
-
-    public void setFunctionSpec(FlowerClientFunctionSpec functionSpec) {
-        this.functionSpec = functionSpec;
     }
 
     public enum IsolationType {

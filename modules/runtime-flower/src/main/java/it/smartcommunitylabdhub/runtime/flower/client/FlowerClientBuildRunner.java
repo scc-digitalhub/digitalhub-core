@@ -27,7 +27,6 @@ import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.run.Run;
-import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
@@ -55,35 +54,25 @@ public class FlowerClientBuildRunner {
 
     private final String image;
     private final String command;
-    private final FlowerClientFunctionSpec functionSpec;
-    private final SecretService secretService;
 
     private final K8sBuilderHelper k8sBuilderHelper;
 
-    public FlowerClientBuildRunner(
-        String image,
-        String command,
-        FlowerClientFunctionSpec functionPythonSpec,
-        SecretService secretService,
-        K8sBuilderHelper k8sBuilderHelper
-    ) {
+    public FlowerClientBuildRunner(String image, String command, K8sBuilderHelper k8sBuilderHelper) {
         this.image = image;
         this.command = command;
-        this.functionSpec = functionPythonSpec;
-        this.secretService = secretService;
         this.k8sBuilderHelper = k8sBuilderHelper;
     }
 
-    public K8sContainerBuilderRunnable produce(Run run) {
+    public K8sContainerBuilderRunnable produce(Run run, Map<String, String> secretData) {
         FlowerClientBuildRunSpec runSpec = new FlowerClientBuildRunSpec(run.getSpec());
         FlowerClientBuildTaskSpec taskSpec = runSpec.getTaskBuildSpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
+        FlowerClientFunctionSpec functionSpec = runSpec.getFunctionSpec();
 
         List<CoreEnv> coreEnvList = new ArrayList<>(
             List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))
         );
 
-        Map<String, String> secretData = secretService.getSecretData(run.getProject(), taskSpec.getSecrets());
         List<CoreEnv> coreSecrets = secretData == null
             ? null
             : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();

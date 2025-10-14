@@ -68,39 +68,37 @@ public class PythonJobRunner {
     private static final int UID = 8877;
     private static final int GID = 999;
 
-    private final String image;
+    private final Map<String, String> images;
     private final int userId;
     private final int groupId;
     private final String command;
-    private final PythonFunctionSpec functionSpec;
-    private final Map<String, String> secretData;
 
     private final K8sBuilderHelper k8sBuilderHelper;
     private final Resource entrypoint = new ClassPathResource("runtime-python/docker/entrypoint.sh");
 
     public PythonJobRunner(
-        String image,
+        Map<String, String> images,
         Integer userId,
         Integer groupId,
         String command,
-        PythonFunctionSpec functionPythonSpec,
-        Map<String, String> secretData,
         K8sBuilderHelper k8sBuilderHelper
     ) {
-        this.image = image;
+        this.images = images;
         this.command = command;
-        this.functionSpec = functionPythonSpec;
-        this.secretData = secretData;
+
         this.k8sBuilderHelper = k8sBuilderHelper;
 
         this.userId = userId != null ? userId : UID;
         this.groupId = groupId != null ? groupId : GID;
     }
 
-    public K8sRunnable produce(Run run) {
+    public K8sRunnable produce(Run run, Map<String, String> secretData) {
         PythonJobRunSpec runSpec = new PythonJobRunSpec(run.getSpec());
         PythonJobTaskSpec taskSpec = runSpec.getTaskJobSpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
+        PythonFunctionSpec functionSpec = runSpec.getFunctionSpec();
+
+        String image = images.get(functionSpec.getPythonVersion().name());
 
         try {
             List<CoreEnv> coreEnvList = new ArrayList<>(

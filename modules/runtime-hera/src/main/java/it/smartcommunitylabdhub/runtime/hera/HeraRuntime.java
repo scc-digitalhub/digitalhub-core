@@ -40,7 +40,6 @@ import it.smartcommunitylabdhub.commons.models.base.Executable;
 import it.smartcommunitylabdhub.commons.models.objects.SourceCode;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
-import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
 import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
@@ -138,13 +137,13 @@ public class HeraRuntime extends K8sBaseRuntime<HeraWorkflowSpec, HeraRunSpec, H
             };
 
         //build task spec as defined
-        TaskBaseSpec taskSpec =
+        Map<String, Serializable> taskSpec =
             switch (task.getKind()) {
                 case HeraPipelineTaskSpec.KIND -> {
-                    yield new HeraPipelineTaskSpec(task.getSpec());
+                    yield new HeraPipelineTaskSpec(task.getSpec()).toMap();
                 }
                 case HeraBuildTaskSpec.KIND -> {
-                    yield new HeraBuildTaskSpec(task.getSpec());
+                    yield new HeraBuildTaskSpec(task.getSpec()).toMap();
                 }
                 default -> throw new IllegalArgumentException(
                     "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
@@ -154,13 +153,15 @@ public class HeraRuntime extends K8sBaseRuntime<HeraWorkflowSpec, HeraRunSpec, H
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
         map.putAll(runSpec.toMap());
-        taskSpec.toMap().forEach(map::putIfAbsent);
+        taskSpec.forEach(map::putIfAbsent);
 
-        HeraRunSpec heraSpec = new HeraRunSpec(map);
-        //ensure function is not modified
-        heraSpec.setWorkflowSpec(workSpec);
+        //ensure workflow is not modified
+        map.putAll(workSpec.toMap());
 
-        return heraSpec;
+        //update run spec
+        runSpec.configure(map);
+
+        return runSpec;
     }
 
     @Override

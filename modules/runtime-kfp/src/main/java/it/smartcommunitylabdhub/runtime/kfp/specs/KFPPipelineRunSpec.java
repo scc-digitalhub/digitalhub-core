@@ -25,6 +25,7 @@ package it.smartcommunitylabdhub.runtime.kfp.specs;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
+import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.runtime.kfp.KFPRuntime;
 import java.io.Serializable;
@@ -41,6 +42,10 @@ public class KFPPipelineRunSpec extends KFPRunSpec {
 
     public static final String KIND = KFPPipelineTaskSpec.KIND + ":run";
 
+    @JsonSchemaIgnore
+    @JsonUnwrapped
+    private KFPWorkflowSpec workflowSpec;
+
     @JsonUnwrapped
     private KFPPipelineTaskSpec taskPipelineSpec;
 
@@ -53,7 +58,12 @@ public class KFPPipelineRunSpec extends KFPRunSpec {
         super.configure(data);
 
         KFPPipelineRunSpec spec = mapper.convertValue(data, KFPPipelineRunSpec.class);
+        this.workflowSpec = spec.getWorkflowSpec();
         this.taskPipelineSpec = spec.getTaskPipelineSpec();
+    }
+
+    public void setWorkflowSpec(KFPWorkflowSpec workflowSpec) {
+        this.workflowSpec = workflowSpec;
     }
 
     public void setTaskPipelineSpec(KFPPipelineTaskSpec taskPipelineSpec) {

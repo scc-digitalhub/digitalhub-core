@@ -25,6 +25,7 @@ package it.smartcommunitylabdhub.runtime.flower.server.specs;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
+import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.runtime.flower.server.FlowerServerRuntime;
 import java.io.Serializable;
@@ -41,6 +42,10 @@ public class FlowerServerDeployRunSpec extends FlowerServerRunSpec {
 
     public static final String KIND = FlowerServerDeployTaskSpec.KIND + ":run";
 
+    @JsonSchemaIgnore
+    @JsonUnwrapped
+    private FlowerServerFunctionSpec functionSpec;
+
     @JsonUnwrapped
     private FlowerServerDeployTaskSpec taskDeploySpec;
 
@@ -53,7 +58,12 @@ public class FlowerServerDeployRunSpec extends FlowerServerRunSpec {
         super.configure(data);
 
         FlowerServerDeployRunSpec spec = mapper.convertValue(data, FlowerServerDeployRunSpec.class);
+        this.functionSpec = spec.getFunctionSpec();
         this.taskDeploySpec = spec.getTaskDeploySpec();
+    }
+
+    public void setFunctionSpec(FlowerServerFunctionSpec functionSpec) {
+        this.functionSpec = functionSpec;
     }
 
     public void setTaskDeploySpec(FlowerServerDeployTaskSpec taskDeploySpec) {

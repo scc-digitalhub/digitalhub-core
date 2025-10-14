@@ -25,6 +25,7 @@ package it.smartcommunitylabdhub.runtime.hera.specs;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
+import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.runtime.hera.HeraRuntime;
 import java.io.Serializable;
@@ -41,6 +42,10 @@ public class HeraBuildRunSpec extends HeraRunSpec {
 
     public static final String KIND = HeraBuildTaskSpec.KIND + ":run";
 
+    @JsonSchemaIgnore
+    @JsonUnwrapped
+    private HeraWorkflowSpec workflowSpec;
+
     @JsonUnwrapped
     private HeraBuildTaskSpec taskBuildSpec;
 
@@ -53,7 +58,12 @@ public class HeraBuildRunSpec extends HeraRunSpec {
         super.configure(data);
 
         HeraBuildRunSpec spec = mapper.convertValue(data, HeraBuildRunSpec.class);
+        this.workflowSpec = spec.getWorkflowSpec();
         this.taskBuildSpec = spec.getTaskBuildSpec();
+    }
+
+    public void setWorkflowSpec(HeraWorkflowSpec workflowSpec) {
+        this.workflowSpec = workflowSpec;
     }
 
     public void setTaskBuildSpec(HeraBuildTaskSpec taskBuildSpec) {

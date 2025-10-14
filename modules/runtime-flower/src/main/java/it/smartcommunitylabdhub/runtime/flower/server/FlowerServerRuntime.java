@@ -35,7 +35,6 @@ import it.smartcommunitylabdhub.commons.models.base.Executable;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
-import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.commons.services.SecretService;
@@ -134,13 +133,13 @@ public class FlowerServerRuntime
             };
 
         //build task spec as defined
-        TaskBaseSpec taskSpec =
+        Map<String, Serializable> taskSpec =
             switch (task.getKind()) {
                 case FlowerServerDeployTaskSpec.KIND -> {
-                    yield new FlowerServerDeployTaskSpec(task.getSpec());
+                    yield new FlowerServerDeployTaskSpec(task.getSpec()).toMap();
                 }
                 case FlowerServerBuildTaskSpec.KIND -> {
-                    yield new FlowerServerBuildTaskSpec(task.getSpec());
+                    yield new FlowerServerBuildTaskSpec(task.getSpec()).toMap();
                 }
                 default -> throw new IllegalArgumentException(
                     "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
@@ -150,13 +149,14 @@ public class FlowerServerRuntime
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
         map.putAll(runSpec.toMap());
-        taskSpec.toMap().forEach(map::putIfAbsent);
-
-        FlowerServerRunSpec pythonSpec = new FlowerServerRunSpec(map);
+        taskSpec.forEach(map::putIfAbsent);
         //ensure function is not modified
-        pythonSpec.setFunctionSpec(funSpec);
+        map.putAll(funSpec.toMap());
 
-        return pythonSpec;
+        //update run spec
+        runSpec.configure(map);
+
+        return runSpec;
     }
 
     @Override
@@ -165,8 +165,6 @@ public class FlowerServerRuntime
         if (!isSupported(run)) {
             throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
         }
-
-        FlowerServerRunSpec runFlowerSpec = new FlowerServerRunSpec(run.getSpec());
 
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
@@ -198,20 +196,16 @@ public class FlowerServerRuntime
                     tlsConfContent,
                     tlsIntDomain,
                     tlsExtDomain,
-                    runFlowerSpec.getFunctionSpec(),
-                    secrets,
                     k8sBuilderHelper,
                     functionService
                 )
-                    .produce(run);
+                    .produce(run, secrets);
                 case FlowerServerBuildTaskSpec.KIND -> new FlowerServerBuildRunner(
                     images.get("server"),
                     "flower-superlink",
-                    runFlowerSpec.getFunctionSpec(),
-                    secrets,
                     k8sBuilderHelper
                 )
-                    .produce(run);
+                    .produce(run, secrets);
                 default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
             };
 

@@ -40,7 +40,6 @@ import it.smartcommunitylabdhub.commons.models.base.Executable;
 import it.smartcommunitylabdhub.commons.models.objects.SourceCode;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
-import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
 import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
@@ -138,13 +137,13 @@ public class KFPRuntime extends K8sBaseRuntime<KFPWorkflowSpec, KFPRunSpec, KFPR
             };
 
         //build task spec as defined
-        TaskBaseSpec taskSpec =
+        Map<String, Serializable> taskSpec =
             switch (task.getKind()) {
                 case KFPPipelineTaskSpec.KIND -> {
-                    yield new KFPPipelineTaskSpec(task.getSpec());
+                    yield new KFPPipelineTaskSpec(task.getSpec()).toMap();
                 }
                 case KFPBuildTaskSpec.KIND -> {
-                    yield new KFPBuildTaskSpec(task.getSpec());
+                    yield new KFPBuildTaskSpec(task.getSpec()).toMap();
                 }
                 default -> throw new IllegalArgumentException(
                     "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
@@ -154,13 +153,13 @@ public class KFPRuntime extends K8sBaseRuntime<KFPWorkflowSpec, KFPRunSpec, KFPR
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
         map.putAll(runSpec.toMap());
-        taskSpec.toMap().forEach(map::putIfAbsent);
+        taskSpec.forEach(map::putIfAbsent);
+        //ensure workflow is not modified
+        map.putAll(workSpec.toMap());
 
-        KFPRunSpec kfpSpec = new KFPRunSpec(map);
-        //ensure function is not modified
-        kfpSpec.setWorkflowSpec(workSpec);
+        runSpec.configure(map);
 
-        return kfpSpec;
+        return runSpec;
     }
 
     @Override

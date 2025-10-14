@@ -25,8 +25,10 @@ package it.smartcommunitylabdhub.runtime.container.build;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
+import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.runtime.container.ContainerRuntime;
+import it.smartcommunitylabdhub.runtime.container.specs.ContainerFunctionSpec;
 import it.smartcommunitylabdhub.runtime.container.specs.ContainerRunSpec;
 import java.io.Serializable;
 import java.util.Map;
@@ -40,6 +42,10 @@ public class ContainerBuildRunSpec extends ContainerRunSpec {
 
     public static final String KIND = ContainerBuildTaskSpec.KIND + ":run";
 
+    @JsonSchemaIgnore
+    @JsonUnwrapped
+    private ContainerFunctionSpec functionSpec;
+
     @JsonUnwrapped
     private ContainerBuildTaskSpec taskBuildSpec;
 
@@ -52,7 +58,12 @@ public class ContainerBuildRunSpec extends ContainerRunSpec {
         super.configure(data);
 
         ContainerBuildRunSpec spec = mapper.convertValue(data, ContainerBuildRunSpec.class);
+        this.functionSpec = spec.getFunctionSpec();
         this.taskBuildSpec = spec.getTaskBuildSpec();
+    }
+
+    public void setFunctionSpec(ContainerFunctionSpec functionSpec) {
+        this.functionSpec = functionSpec;
     }
 
     public void setTaskBuildSpec(ContainerBuildTaskSpec taskBuildSpec) {

@@ -33,7 +33,6 @@ import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.models.base.Executable;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
-import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
@@ -95,10 +94,10 @@ public class FlowerAppRuntime
         String kind = task.getKind();
 
         //build task spec as defined
-        TaskBaseSpec taskSpec =
+        Map<String, Serializable> taskSpec =
             switch (kind) {
                 case FlowerAppTrainTaskSpec.KIND -> {
-                    yield new FlowerAppTrainTaskSpec(task.getSpec());
+                    yield new FlowerAppTrainTaskSpec(task.getSpec()).toMap();
                 }
                 default -> throw new IllegalArgumentException(
                     "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
@@ -108,7 +107,7 @@ public class FlowerAppRuntime
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
         map.putAll(runSpec.toMap());
-        taskSpec.toMap().forEach(map::putIfAbsent);
+        taskSpec.forEach(map::putIfAbsent);
 
         FlowerAppRunSpec appSpec = new FlowerAppRunSpec(map);
         //ensure function is not modified
@@ -137,11 +136,12 @@ public class FlowerAppRuntime
                     images.get("runner"),
                     userId,
                     groupId,
-                    runFlowerSpec.getFunctionSpec(),
-                    secretService.getSecretData(run.getProject(), runFlowerSpec.getTaskTrainSpec().getSecrets()),
                     k8sBuilderHelper
                 )
-                    .produce(run);
+                    .produce(
+                        run,
+                        secretService.getSecretData(run.getProject(), runFlowerSpec.getTaskTrainSpec().getSecrets())
+                    );
                 default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
             };
 

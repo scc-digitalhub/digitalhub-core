@@ -24,8 +24,6 @@
 package it.smartcommunitylabdhub.runtime.python.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import java.io.Serializable;
 import java.util.HashMap;
@@ -38,10 +36,6 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class PythonRunSpec extends RunBaseSpec {
-
-    @JsonSchemaIgnore
-    @JsonUnwrapped
-    private PythonFunctionSpec functionSpec;
 
     private Map<String, String> inputs = new HashMap<>();
 
@@ -62,15 +56,10 @@ public class PythonRunSpec extends RunBaseSpec {
         super.configure(data);
 
         PythonRunSpec spec = mapper.convertValue(data, PythonRunSpec.class);
-        this.functionSpec = spec.getFunctionSpec();
 
         this.inputs = spec.getInputs();
         // this.outputs = spec.getOutputs();
         this.parameters = spec.getParameters();
         this.initParameters = spec.getInitParameters();
-    }
-
-    public void setFunctionSpec(PythonFunctionSpec functionSpec) {
-        this.functionSpec = functionSpec;
     }
 }

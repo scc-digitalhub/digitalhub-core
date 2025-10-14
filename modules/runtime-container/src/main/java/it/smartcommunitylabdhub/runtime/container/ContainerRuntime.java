@@ -35,7 +35,6 @@ import it.smartcommunitylabdhub.commons.models.base.Executable;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
-import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.commons.services.SecretService;
@@ -122,19 +121,19 @@ public class ContainerRuntime
             };
 
         //build task spec as defined
-        TaskBaseSpec taskSpec =
+        Map<String, Serializable> taskSpec =
             switch (task.getKind()) {
                 case ContainerDeployTaskSpec.KIND -> {
-                    yield new ContainerDeployTaskSpec(task.getSpec());
+                    yield new ContainerDeployTaskSpec(task.getSpec()).toMap();
                 }
                 case ContainerJobTaskSpec.KIND -> {
-                    yield new ContainerJobTaskSpec(task.getSpec());
+                    yield new ContainerJobTaskSpec(task.getSpec()).toMap();
                 }
                 case ContainerServeTaskSpec.KIND -> {
-                    yield new ContainerServeTaskSpec(task.getSpec());
+                    yield new ContainerServeTaskSpec(task.getSpec()).toMap();
                 }
                 case ContainerBuildTaskSpec.KIND -> {
-                    yield new ContainerBuildTaskSpec(task.getSpec());
+                    yield new ContainerBuildTaskSpec(task.getSpec()).toMap();
                 }
                 default -> throw new IllegalArgumentException(
                     "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
@@ -144,11 +143,11 @@ public class ContainerRuntime
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
         map.putAll(runSpec.toMap());
-        taskSpec.toMap().forEach(map::putIfAbsent);
+        taskSpec.forEach(map::putIfAbsent);
+        //ensure function is not modified
+        map.putAll(funSpec.toMap());
 
         runSpec.configure(map);
-        //ensure function is not modified
-        runSpec.setFunctionSpec(funSpec);
 
         return runSpec;
     }
