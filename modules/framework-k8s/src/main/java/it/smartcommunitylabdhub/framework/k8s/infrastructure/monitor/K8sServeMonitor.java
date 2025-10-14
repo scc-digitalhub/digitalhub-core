@@ -103,7 +103,7 @@ public class K8sServeMonitor extends K8sBaseMonitor<K8sServeRunnable> {
                 if (K8sRunnableState.PENDING.name().equals(runnable.getState()) && pods != null) {
                     boolean running = pods
                         .stream()
-                        .anyMatch(p -> p.getStatus() != null && "Running".equals(p.getStatus().getPhase()));
+                        .anyMatch(p -> p.getStatus() != null && "Ready".equals(p.getStatus().getPhase()));
                     if (running) {
                         runnable.setState(K8sRunnableState.RUNNING.name());
                     }
