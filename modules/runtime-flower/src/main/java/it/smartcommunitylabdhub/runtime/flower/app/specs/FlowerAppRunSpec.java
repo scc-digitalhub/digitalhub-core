@@ -45,7 +45,7 @@ import lombok.Setter;
 @SpecType(runtime = FlowerAppRuntime.RUNTIME, kind = FlowerAppRunSpec.KIND, entity = EntityName.RUN)
 public class FlowerAppRunSpec extends RunBaseSpec {
 
-    public static final String KIND = FlowerAppRuntime.RUNTIME + ":run";
+    public static final String KIND = FlowerAppTrainTaskSpec.KIND + ":run";
 
     @JsonUnwrapped
     private FlowerAppTrainTaskSpec taskTrainSpec;
