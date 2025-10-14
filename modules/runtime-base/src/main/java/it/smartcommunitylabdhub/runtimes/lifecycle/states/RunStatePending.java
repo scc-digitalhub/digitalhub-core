@@ -43,6 +43,8 @@ public class RunStatePending<S extends RunBaseSpec, Z extends RunBaseStatus, R e
             List.of(
                 //(EXECUTE)->RUNNING
                 toRunning().build(),
+                //(COMPLETE)->COMPLETED
+                toCompleted().build(),
                 //(ERROR)->ERROR
                 toError().build(),
                 //(DELETE)->DELETING
