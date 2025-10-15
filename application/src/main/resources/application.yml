@@ -277,8 +277,8 @@ event-queue:
 
 # Managing monitors delay and other information
 monitors:
-  min-delay: 60
-  delay: ${MONITORS_DELAY:60}
+  min-delay: 10
+  delay: ${MONITORS_DELAY:10}
 
 # Solr configuration
 solr:
