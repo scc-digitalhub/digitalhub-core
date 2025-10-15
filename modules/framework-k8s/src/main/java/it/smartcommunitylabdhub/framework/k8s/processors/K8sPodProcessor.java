@@ -26,11 +26,11 @@ package it.smartcommunitylabdhub.framework.k8s.processors;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kubernetes.client.openapi.models.V1Pod;
-import io.kubernetes.client.openapi.models.V1PodCondition;
 import it.smartcommunitylabdhub.commons.annotations.common.ProcessorType;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.infrastructure.Processor;
 import it.smartcommunitylabdhub.commons.models.run.Run;
+import it.smartcommunitylabdhub.commons.models.status.Status;
 import it.smartcommunitylabdhub.framework.k8s.jackson.KubernetesMapper;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sPodStatus;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
@@ -43,16 +43,11 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-@ProcessorType(
-    stages = { "onRunning", "onCompleted", "onError", "onStopped" },
-    type = Run.class,
-    id = K8sPodProcessor.ID
-)
-@Component(K8sPodProcessor.ID)
+@ProcessorType(stages = { "onRunning", "onCompleted", "onError", "onStopped" }, type = Run.class, spec = Status.class)
+@Component
 @Slf4j
 public class K8sPodProcessor implements Processor<Run, K8sPodStatus> {
 
-    public static final String ID = "k8sPodProcessor";
     protected static final ObjectMapper mapper = KubernetesMapper.OBJECT_MAPPER;
     protected static final TypeReference<ArrayList<V1Pod>> arrayRef = new TypeReference<ArrayList<V1Pod>>() {};
 

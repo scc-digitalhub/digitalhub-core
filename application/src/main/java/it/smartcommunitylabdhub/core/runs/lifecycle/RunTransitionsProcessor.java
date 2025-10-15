@@ -27,9 +27,9 @@ import it.smartcommunitylabdhub.commons.annotations.common.ProcessorType;
 import it.smartcommunitylabdhub.commons.infrastructure.Processor;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
+import it.smartcommunitylabdhub.commons.models.status.Status;
 import it.smartcommunitylabdhub.core.runs.specs.RunTransitionsSpec;
 import it.smartcommunitylabdhub.core.runs.specs.RunTransitionsSpec.Transition;
-import it.smartcommunitylabdhub.framework.k8s.processors.K8sProcessor;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -54,13 +54,11 @@ import org.springframework.stereotype.Component;
         "onDeleted",
     },
     type = Run.class,
-    id = K8sProcessor.ID
+    spec = Status.class
 )
-@Component(RunTransitionsProcessor.ID)
+@Component
 @Slf4j
 public class RunTransitionsProcessor implements Processor<Run, RunTransitionsSpec> {
-
-    public static final String ID = "transitionsProcessor";
 
     @Override
     public RunTransitionsSpec process(String stage, Run run, Object input) {

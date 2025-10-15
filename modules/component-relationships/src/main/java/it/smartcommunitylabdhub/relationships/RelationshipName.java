@@ -29,7 +29,8 @@ import com.fasterxml.jackson.annotation.JsonValue;
 public enum RelationshipName {
     PRODUCEDBY("produced_by"),
     CONSUMES("consumes"),
-    RUN_OF("run_of");
+    RUN_OF("run_of"),
+    STEP_OF("step_of");
 
     private final String value;
 
@@ -59,6 +60,8 @@ public enum RelationshipName {
                 return "consumes";
             case RUN_OF:
                 return "run_of";
+            case STEP_OF:
+                return "step_of";
             default:
                 return null;
         }

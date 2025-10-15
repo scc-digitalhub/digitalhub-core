@@ -16,6 +16,7 @@
 
 package it.smartcommunitylabdhub.core.runs.lifecycle;
 
+import it.smartcommunitylabdhub.commons.models.metadata.Metadata;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.core.components.infrastructure.processors.ProcessorRegistryImpl;
 import lombok.extern.slf4j.Slf4j;
@@ -24,9 +25,9 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-public class RunProcessorRegistry extends ProcessorRegistryImpl<Run> {
+public class RunMetadataProcessorRegistry extends ProcessorRegistryImpl<Run, Metadata> {
 
-    public RunProcessorRegistry(ApplicationContext applicationContext) {
+    public RunMetadataProcessorRegistry(ApplicationContext applicationContext) {
         super(applicationContext);
     }
 }

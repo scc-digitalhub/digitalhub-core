@@ -17,29 +17,20 @@
 package it.smartcommunitylabdhub.lifecycle;
 
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
-import it.smartcommunitylabdhub.commons.infrastructure.ProcessorRegistry;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
-import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import jakarta.validation.constraints.NotNull;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.util.Assert;
 
 @Slf4j
-public class KindAwareLifecycleManager<D extends BaseDTO & SpecDTO & StatusDTO>
-    implements LifecycleManager<D>, InitializingBean {
+public class KindAwareLifecycleManager<D extends BaseDTO & SpecDTO & StatusDTO> implements LifecycleManager<D> {
 
     protected Map<String, LifecycleManager<D>> managers;
-    protected EntityRepository<D> entityRepository;
-    protected ApplicationEventPublisher eventPublisher;
-    protected ProcessorRegistry<D> processorRegistry;
 
     public KindAwareLifecycleManager() {
         this.managers = new HashMap<>();
@@ -48,27 +39,6 @@ public class KindAwareLifecycleManager<D extends BaseDTO & SpecDTO & StatusDTO>
     public KindAwareLifecycleManager(Map<String, LifecycleManager<D>> managers) {
         Assert.notEmpty(managers, "lifecycle managers are required");
         this.managers = managers;
-    }
-
-    @Autowired
-    public void setEventPublisher(ApplicationEventPublisher eventPublisher) {
-        this.eventPublisher = eventPublisher;
-    }
-
-    @Autowired
-    public void setEntityRepository(EntityRepository<D> entityService) {
-        this.entityRepository = entityService;
-    }
-
-    @Autowired(required = false)
-    public void setProcessorRegistry(ProcessorRegistry<D> processorRegistry) {
-        this.processorRegistry = processorRegistry;
-    }
-
-    @Override
-    public void afterPropertiesSet() throws Exception {
-        Assert.notNull(entityRepository, "entity service is required");
-        Assert.notNull(eventPublisher, "event publisher is required");
     }
 
     protected String resolve(@NotNull D dto) {

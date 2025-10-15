@@ -18,13 +18,17 @@ package it.smartcommunitylabdhub.core.runs.lifecycle;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
+import it.smartcommunitylabdhub.commons.infrastructure.ProcessorRegistry;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.infrastructure.Runtime;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.metadata.Metadata;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
+import it.smartcommunitylabdhub.commons.models.status.Status;
+import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.core.CoreApplication;
 import it.smartcommunitylabdhub.lifecycle.KindAwareLifecycleManager;
 import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
@@ -41,12 +45,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
+import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 @Slf4j
@@ -56,6 +62,12 @@ public class KindAwareRunLifecycleManager extends KindAwareLifecycleManager<Run>
 
     private Map<String, Runtime<? extends RunBaseSpec, ? extends RunBaseStatus, ? extends RunRunnable>> runtimes;
     List<Pair<SpecType, Class<? extends Spec>>> specs = new ArrayList<>();
+
+    protected EntityRepository<Run> entityRepository;
+    protected ApplicationEventPublisher eventPublisher;
+    protected ProcessorRegistry<Run, Metadata> metadataProcessorRegistry;
+    protected ProcessorRegistry<Run, Spec> specProcessorRegistry;
+    protected ProcessorRegistry<Run, Status> statusProcessorRegistry;
 
     @Autowired(required = false)
     public void setRuntimes(
@@ -68,6 +80,31 @@ public class KindAwareRunLifecycleManager extends KindAwareLifecycleManager<Run>
     public void setManagers(List<LifecycleManager<Run>> managers) {
         this.managers =
             new HashMap<>(managers.stream().collect(Collectors.toMap(r -> getRuntimeFromAnnotation(r), r -> r)));
+    }
+
+    @Autowired
+    public void setEventPublisher(ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
+    }
+
+    @Autowired
+    public void setEntityRepository(EntityRepository<Run> entityService) {
+        this.entityRepository = entityService;
+    }
+
+    @Autowired(required = false)
+    public void setMetadataProcessorRegistry(ProcessorRegistry<Run, Metadata> metadataProcessorRegistry) {
+        this.metadataProcessorRegistry = metadataProcessorRegistry;
+    }
+
+    @Autowired(required = false)
+    public void setSpecProcessorRegistry(ProcessorRegistry<Run, Spec> specProcessorRegistry) {
+        this.specProcessorRegistry = specProcessorRegistry;
+    }
+
+    @Autowired(required = false)
+    public void setStatusProcessorRegistry(ProcessorRegistry<Run, Status> statusProcessorRegistry) {
+        this.statusProcessorRegistry = statusProcessorRegistry;
     }
 
     @PostConstruct
@@ -116,6 +153,9 @@ public class KindAwareRunLifecycleManager extends KindAwareLifecycleManager<Run>
 
     @Override
     public void afterPropertiesSet() throws Exception {
+        Assert.notNull(entityRepository, "entity service is required");
+        Assert.notNull(eventPublisher, "event publisher is required");
+
         //check managers and build default if missing
         if (specs != null) {
             for (Pair<SpecType, Class<? extends Spec>> p : specs) {
@@ -135,7 +175,9 @@ public class KindAwareRunLifecycleManager extends KindAwareLifecycleManager<Run>
                     //inject deps
                     m.setEntityRepository(this.entityRepository);
                     m.setEventPublisher(this.eventPublisher);
-                    m.setProcessorRegistry(this.processorRegistry);
+                    m.setMetadataProcessorRegistry(metadataProcessorRegistry);
+                    m.setSpecProcessorRegistry(specProcessorRegistry);
+                    m.setStatusProcessorRegistry(statusProcessorRegistry);
 
                     managers.put(kind, m);
                 }

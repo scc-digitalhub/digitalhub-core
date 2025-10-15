@@ -32,6 +32,7 @@ import it.smartcommunitylabdhub.commons.annotations.common.ProcessorType;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.infrastructure.Processor;
 import it.smartcommunitylabdhub.commons.models.run.Run;
+import it.smartcommunitylabdhub.commons.models.status.Status;
 import it.smartcommunitylabdhub.framework.k8s.jackson.KubernetesMapper;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceStatus;
@@ -45,12 +46,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-@ProcessorType(stages = { "onRunning" }, type = Run.class, id = K8sServiceProcessor.ID)
-@Component(K8sServiceProcessor.ID)
+@ProcessorType(stages = { "onRunning" }, type = Run.class, spec = Status.class)
+@Component
 @Slf4j
 public class K8sServiceProcessor implements Processor<Run, K8sServiceStatus> {
-
-    public static final String ID = "k8sServiceProcessor";
 
     @Override
     public <I> K8sServiceStatus process(String stage, Run run, I input) throws CoreRuntimeException {
