@@ -32,9 +32,7 @@ import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
-import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCronJobRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
-import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runtime.container.ContainerRuntime;
 import it.smartcommunitylabdhub.runtime.container.specs.ContainerFunctionSpec;
 import it.smartcommunitylabdhub.runtime.container.specs.ContainerFunctionSpec.SourceCodeLanguages;
@@ -55,7 +53,7 @@ public class ContainerJobRunner {
         this.k8sBuilderHelper = k8sBuilderHelper;
     }
 
-    public K8sRunnable produce(Run run, Map<String, String> secretData) {
+    public K8sJobRunnable produce(Run run, Map<String, String> secretData) {
         ContainerJobRunSpec runSpec = new ContainerJobRunSpec(run.getSpec());
         ContainerJobTaskSpec taskSpec = runSpec.getTaskJobSpec();
         ContainerFunctionSpec functionSpec = runSpec.getFunctionSpec();
@@ -101,7 +99,7 @@ public class ContainerJobRunner {
             }
         }
 
-        K8sRunnable k8sJobRunnable = K8sJobRunnable
+        K8sJobRunnable k8sJobRunnable = K8sJobRunnable
             .builder()
             .runtime(ContainerRuntime.RUNTIME)
             .task(ContainerJobTaskSpec.KIND)
@@ -134,39 +132,6 @@ public class ContainerJobRunner {
             .contextRefs(contextRefs)
             .contextSources(contextSources)
             .build();
-
-        if (StringUtils.hasText(taskSpec.getSchedule())) {
-            //build a cronJob
-            k8sJobRunnable =
-                K8sCronJobRunnable
-                    .builder()
-                    .runtime(ContainerRuntime.RUNTIME)
-                    .task(ContainerJobTaskSpec.KIND)
-                    .state(State.READY.name())
-                    //base
-                    .image(functionSpec.getImage())
-                    .command(functionSpec.getCommand())
-                    .args(runSpec.getArgs() != null ? runSpec.getArgs().toArray(new String[0]) : null)
-                    .envs(coreEnvList)
-                    .secrets(coreSecrets)
-                    .resources(taskSpec.getResources())
-                    .volumes(taskSpec.getVolumes())
-                    .nodeSelector(taskSpec.getNodeSelector())
-                    .affinity(taskSpec.getAffinity())
-                    .tolerations(taskSpec.getTolerations())
-                    .runtimeClass(taskSpec.getRuntimeClass())
-                    .priorityClass(taskSpec.getPriorityClass())
-                    .template(taskSpec.getProfile())
-                    //securityContext
-                    .fsGroup(taskSpec.getFsGroup())
-                    .runAsGroup(taskSpec.getRunAsGroup())
-                    .runAsUser(taskSpec.getRunAsUser())
-                    //specific
-                    .contextRefs(contextRefs)
-                    .contextSources(contextSources)
-                    .schedule(taskSpec.getSchedule())
-                    .build();
-        }
 
         k8sJobRunnable.setId(run.getId());
         k8sJobRunnable.setProject(run.getProject());
