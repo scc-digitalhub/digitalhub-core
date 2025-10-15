@@ -155,10 +155,6 @@ public class K8sBuilderHelper implements InitializingBean {
     public List<V1EnvVar> getV1EnvVar() {
         List<V1EnvVar> vars = new ArrayList<>();
 
-        //always inject the core endpoint + namespace
-        vars.add(new V1EnvVar().name("DHCORE_ENDPOINT").value(coreEndpoint));
-        vars.add(new V1EnvVar().name("DHCORE_NAMESPACE").value(namespace));
-
         // add shared config maps
         if (sharedConfigMaps != null) {
             sharedConfigMaps
@@ -189,6 +185,14 @@ public class K8sBuilderHelper implements InitializingBean {
                         }
                     }
                 });
+        }
+
+        //always inject core endpoint + namespace when missing
+        if (vars.stream().noneMatch(v -> v.getName().equals("DHCORE_ENDPOINT"))) {
+            vars.add(new V1EnvVar().name("DHCORE_ENDPOINT").value(coreEndpoint));
+        }
+        if (vars.stream().noneMatch(v -> v.getName().equals("DHCORE_NAMESPACE"))) {
+            vars.add(new V1EnvVar().name("DHCORE_NAMESPACE").value(namespace));
         }
 
         return vars;
