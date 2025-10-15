@@ -33,9 +33,7 @@ import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
-import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCronJobRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
-import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runtime.flower.app.specs.FlowerAppFunctionSpec;
 import it.smartcommunitylabdhub.runtime.flower.app.specs.FlowerAppRunSpec;
 import it.smartcommunitylabdhub.runtime.flower.app.specs.FlowerAppTrainTaskSpec;
@@ -80,7 +78,7 @@ public class FlowerAppTrainRunner {
         this.groupId = groupId != null ? groupId : GID;
     }
 
-    public K8sRunnable produce(Run run, Map<String, String> secretData) {
+    public K8sJobRunnable produce(Run run, Map<String, String> secretData) {
         FlowerAppRunSpec runSpec = new FlowerAppRunSpec(run.getSpec());
         FlowerAppTrainTaskSpec taskSpec = runSpec.getTaskTrainSpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
@@ -220,7 +218,7 @@ public class FlowerAppTrainRunner {
 
         String cmd = "/bin/bash";
 
-        K8sRunnable k8sJobRunnable = K8sJobRunnable
+        K8sJobRunnable k8sJobRunnable = K8sJobRunnable
             .builder()
             .runtime(FlowerAppRuntime.RUNTIME)
             .task(FlowerAppTrainTaskSpec.KIND)
@@ -251,46 +249,6 @@ public class FlowerAppTrainRunner {
             .runAsGroup(groupId)
             .runAsUser(userId)
             .build();
-
-        if (StringUtils.hasText(taskSpec.getSchedule())) {
-            //build a cronJob
-            k8sJobRunnable =
-                K8sCronJobRunnable
-                    .builder()
-                    .runtime(FlowerAppRuntime.RUNTIME)
-                    .task(FlowerAppTrainTaskSpec.KIND)
-                    .state(State.READY.name())
-                    .labels(
-                        k8sBuilderHelper != null
-                            ? List.of(
-                                new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction())
-                            )
-                            : null
-                    )
-                    //base
-                    .image(image)
-                    .command("flwr")
-                    .args(args.toArray(new String[0]))
-                    .contextRefs(contextRefs)
-                    .contextSources(contextSources)
-                    .envs(coreEnvList)
-                    .secrets(coreSecrets)
-                    .resources(taskSpec.getResources())
-                    .volumes(taskSpec.getVolumes())
-                    .nodeSelector(taskSpec.getNodeSelector())
-                    .affinity(taskSpec.getAffinity())
-                    .tolerations(taskSpec.getTolerations())
-                    .runtimeClass(taskSpec.getRuntimeClass())
-                    .priorityClass(taskSpec.getPriorityClass())
-                    .template(taskSpec.getProfile())
-                    //securityContext
-                    .fsGroup(groupId)
-                    .runAsGroup(groupId)
-                    .runAsUser(userId)
-                    //specific
-                    .schedule(taskSpec.getSchedule())
-                    .build();
-        }
 
         k8sJobRunnable.setId(run.getId());
         k8sJobRunnable.setProject(run.getProject());

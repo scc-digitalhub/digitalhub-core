@@ -35,9 +35,7 @@ import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
-import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCronJobRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
-import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runtime.python.PythonRuntime;
 import it.smartcommunitylabdhub.runtime.python.model.NuclioFunctionBuilder;
 import it.smartcommunitylabdhub.runtime.python.model.NuclioFunctionSpec;
@@ -92,7 +90,7 @@ public class PythonJobRunner {
         this.groupId = groupId != null ? groupId : GID;
     }
 
-    public K8sRunnable produce(Run run, Map<String, String> secretData) {
+    public K8sJobRunnable produce(Run run, Map<String, String> secretData) {
         PythonJobRunSpec runSpec = new PythonJobRunSpec(run.getSpec());
         PythonJobTaskSpec taskSpec = runSpec.getTaskJobSpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
@@ -213,7 +211,7 @@ public class PythonJobRunner {
             //merge env with PYTHON path override
             coreEnvList.add(new CoreEnv("PYTHONPATH", "${PYTHONPATH}:/shared/"));
 
-            K8sRunnable k8sJobRunnable = K8sJobRunnable
+            K8sJobRunnable k8sJobRunnable = K8sJobRunnable
                 .builder()
                 .runtime(PythonRuntime.RUNTIME)
                 .task(PythonJobTaskSpec.KIND)
@@ -244,46 +242,6 @@ public class PythonJobRunner {
                 .runAsGroup(groupId)
                 .runAsUser(userId)
                 .build();
-
-            if (StringUtils.hasText(taskSpec.getSchedule())) {
-                //build a cronJob
-                k8sJobRunnable =
-                    K8sCronJobRunnable
-                        .builder()
-                        .runtime(PythonRuntime.RUNTIME)
-                        .task(PythonJobTaskSpec.KIND)
-                        .state(State.READY.name())
-                        .labels(
-                            k8sBuilderHelper != null
-                                ? List.of(
-                                    new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction())
-                                )
-                                : null
-                        )
-                        //base
-                        .image(StringUtils.hasText(functionSpec.getImage()) ? functionSpec.getImage() : image)
-                        .command("/bin/bash")
-                        .args(args.toArray(new String[0]))
-                        .contextRefs(contextRefs)
-                        .contextSources(contextSources)
-                        .envs(coreEnvList)
-                        .secrets(coreSecrets)
-                        .resources(taskSpec.getResources())
-                        .volumes(taskSpec.getVolumes())
-                        .nodeSelector(taskSpec.getNodeSelector())
-                        .affinity(taskSpec.getAffinity())
-                        .tolerations(taskSpec.getTolerations())
-                        .runtimeClass(taskSpec.getRuntimeClass())
-                        .priorityClass(taskSpec.getPriorityClass())
-                        .template(taskSpec.getProfile())
-                        //securityContext
-                        .fsGroup(groupId)
-                        .runAsGroup(groupId)
-                        .runAsUser(userId)
-                        //specific
-                        .schedule(taskSpec.getSchedule())
-                        .build();
-            }
 
             k8sJobRunnable.setId(run.getId());
             k8sJobRunnable.setProject(run.getProject());
