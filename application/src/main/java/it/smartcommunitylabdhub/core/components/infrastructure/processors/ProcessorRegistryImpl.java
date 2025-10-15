@@ -44,13 +44,13 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 
-public class ProcessorRegistryImpl<D extends BaseDTO & SpecDTO & StatusDTO>
-    implements ProcessorRegistry<D>, ApplicationListener<ContextRefreshedEvent> {
+public class ProcessorRegistryImpl<D extends BaseDTO & SpecDTO & StatusDTO, Z extends Spec>
+    implements ProcessorRegistry<D, Z>, ApplicationListener<ContextRefreshedEvent> {
 
     protected final Class<D> typeClass;
+    protected final Class<Z> specClass;
 
-    private final Map<String, List<Map.Entry<String, Processor<D, ? extends Spec>>>> registry =
-        new ConcurrentHashMap<>();
+    private final Map<String, List<Map.Entry<String, Processor<D, ? extends Z>>>> registry = new ConcurrentHashMap<>();
 
     private final ApplicationContext applicationContext;
 
@@ -61,6 +61,8 @@ public class ProcessorRegistryImpl<D extends BaseDTO & SpecDTO & StatusDTO>
         // resolve generics type via subclass trick
         Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
         this.typeClass = (Class<D>) t;
+        Type s = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+        this.specClass = (Class<Z>) s;
     }
 
     @Override
@@ -75,20 +77,20 @@ public class ProcessorRegistryImpl<D extends BaseDTO & SpecDTO & StatusDTO>
                 ProcessorType annotation = bean.getClass().getAnnotation(ProcessorType.class);
 
                 if (bean instanceof Processor && (annotation != null)) {
-                    if (annotation.type() != typeClass) {
+                    if (annotation.type() != typeClass || annotation.spec() != specClass) {
                         // skip if not matching type
                         return;
                     }
 
                     for (String stage : annotation.stages()) {
                         //register if missing
-                        List<Entry<String, Processor<D, ? extends Spec>>> processors = registry.computeIfAbsent(
+                        List<Entry<String, Processor<D, ? extends Z>>> processors = registry.computeIfAbsent(
                             stage,
                             k -> new ArrayList<>()
                         );
 
                         if (processors.stream().noneMatch(p -> name.equals(p.getKey()))) {
-                            processors.add(Map.entry(name, (Processor<D, ? extends Spec>) bean));
+                            processors.add(Map.entry(name, (Processor<D, Z>) bean));
                         }
                     }
                 }
@@ -96,7 +98,7 @@ public class ProcessorRegistryImpl<D extends BaseDTO & SpecDTO & StatusDTO>
     }
 
     @Override
-    public List<Processor<D, ? extends Spec>> getProcessors(String stage) {
+    public List<Processor<D, ? extends Z>> getProcessors(String stage) {
         return registry
             .getOrDefault(stage, Collections.emptyList())
             .stream()

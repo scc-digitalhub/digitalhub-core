@@ -25,6 +25,7 @@ package it.smartcommunitylabdhub.framework.k8s.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import it.smartcommunitylabdhub.commons.models.base.BaseSpec;
+import it.smartcommunitylabdhub.commons.models.status.Status;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +41,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class K8sPodStatus extends BaseSpec {
+public class K8sPodStatus extends BaseSpec implements Status {
 
     private List<Serializable> pods;
 

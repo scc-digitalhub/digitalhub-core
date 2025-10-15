@@ -18,6 +18,7 @@ package it.smartcommunitylabdhub.core.triggers.lifecycle;
 
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.trigger.Trigger;
+import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.commons.services.RunManager;
 import it.smartcommunitylabdhub.commons.services.TaskService;
 import it.smartcommunitylabdhub.commons.services.TemplateProcessor;
@@ -36,6 +37,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
@@ -43,6 +45,9 @@ import org.springframework.stereotype.Component;
 @Component
 @Primary
 public class KindAwareTriggerLifecycleManager extends KindAwareLifecycleManager<Trigger> implements InitializingBean {
+
+    protected EntityRepository<Trigger> entityRepository;
+    protected ApplicationEventPublisher eventPublisher;
 
     private TaskService taskService;
     private RunManager runService;
@@ -65,6 +70,16 @@ public class KindAwareTriggerLifecycleManager extends KindAwareLifecycleManager<
     public void setManagers(List<LifecycleManager<Trigger>> managers) {
         this.managers =
             new HashMap<>(managers.stream().collect(Collectors.toMap(r -> getKindFromAnnotation(r), r -> r)));
+    }
+
+    @Autowired
+    public void setEventPublisher(ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
+    }
+
+    @Autowired
+    public void setEntityRepository(EntityRepository<Trigger> entityService) {
+        this.entityRepository = entityService;
     }
 
     @Autowired
@@ -100,7 +115,6 @@ public class KindAwareTriggerLifecycleManager extends KindAwareLifecycleManager<
                     //inject deps
                     m.setEntityRepository(this.entityRepository);
                     m.setEventPublisher(this.eventPublisher);
-                    m.setProcessorRegistry(this.processorRegistry);
                     m.setTaskService(taskService);
                     m.setRunService(runService);
                     m.setRunManager(runManager);

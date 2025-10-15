@@ -23,16 +23,18 @@
 package it.smartcommunitylabdhub.lifecycle;
 
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
-import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
+import it.smartcommunitylabdhub.commons.infrastructure.Processor;
 import it.smartcommunitylabdhub.commons.infrastructure.ProcessorRegistry;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvent;
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvents;
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleState;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
+import it.smartcommunitylabdhub.commons.models.metadata.Metadata;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
+import it.smartcommunitylabdhub.commons.models.status.Status;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.events.EntityAction;
@@ -68,7 +70,10 @@ public abstract class BaseLifecycleManager<
     protected final Class<S> stateClass;
     protected final Class<E> eventsClass;
 
-    protected ProcessorRegistry<D> processorRegistry;
+    protected ProcessorRegistry<D, Metadata> metadataProcessorRegistry;
+    protected ProcessorRegistry<D, Spec> specProcessorRegistry;
+    protected ProcessorRegistry<D, Status> statusProcessorRegistry;
+
     protected Fsm.Factory<S, E, D> fsmFactory;
 
     @SuppressWarnings("unchecked")
@@ -94,8 +99,18 @@ public abstract class BaseLifecycleManager<
     }
 
     @Autowired(required = false)
-    public void setProcessorRegistry(ProcessorRegistry<D> processorRegistry) {
-        this.processorRegistry = processorRegistry;
+    public void setMetadataProcessorRegistry(ProcessorRegistry<D, Metadata> metadataProcessorRegistry) {
+        this.metadataProcessorRegistry = metadataProcessorRegistry;
+    }
+
+    @Autowired(required = false)
+    public void setSpecProcessorRegistry(ProcessorRegistry<D, Spec> specProcessorRegistry) {
+        this.specProcessorRegistry = specProcessorRegistry;
+    }
+
+    @Autowired(required = false)
+    public void setStatusProcessorRegistry(ProcessorRegistry<D, Status> statusProcessorRegistry) {
+        this.statusProcessorRegistry = statusProcessorRegistry;
     }
 
     protected Fsm<S, E, D> fsm(D dto) {
@@ -288,46 +303,35 @@ public abstract class BaseLifecycleManager<
                     //update status from fsm output
                     Map<String, Serializable> baseStatus = Map.of("state", state.name());
 
-                    //merge action context into status
-                    //NOTE: we let transition fully modify status
-                    //TODO evaluate enforcing spec compliance and merging with old values
-                    d.setStatus(MapUtils.mergeMultipleMaps(context.getStatus(), baseStatus));
+                    //merge action context into spec
+                    //NOTE: we let transition fully modify metadata
+                    d.setMetadata(context.getMetadata());
 
                     //merge action context into spec
                     //NOTE: we let transition fully modify spec
                     //TODO evaluate enforcing spec compliance and merging with old values
                     d.setSpec(context.getSpec());
 
-                    //merge action context into spec
-                    //NOTE: we let transition fully modify metadata
-                    //TODO evaluate enforcing spec compliance and merging with old values
-                    d.setMetadata(context.getMetadata());
+                    //merge action context into status
+                    //NOTE: we let transition fully modify status
+                    d.setStatus(MapUtils.mergeMultipleMaps(context.getStatus(), baseStatus));
 
                     //let processors parse the result
-                    if (processorRegistry != null) {
-                        String stage = "on" + StringUtils.capitalize(state.name().toLowerCase());
-                        // Iterate over all processor and store all RunBaseStatus as optional
+                    if (metadataProcessorRegistry != null) {
+                        Map<String, Serializable> psm = postProcess(d, state, input, metadataProcessorRegistry);
 
-                        List<? extends Spec> processorsStatus = processorRegistry
-                            .getProcessors(stage)
-                            .stream()
-                            .map(processor -> {
-                                try {
-                                    //deepclone dto to avoid side effects
-                                    D cd = JacksonMapper.deepClone(d, typeClass);
-                                    return processor.process(stage, cd, input);
-                                } catch (IOException | CoreRuntimeException e) {
-                                    log.error("Error processing stage {} for {}", stage, dto.getId(), e);
-                                    return null;
-                                }
-                            })
-                            .filter(s -> s != null)
-                            .toList();
+                        //merge metadata
+                        d.setMetadata(MapUtils.mergeMultipleMaps(context.getMetadata(), psm));
+                    }
+                    if (specProcessorRegistry != null) {
+                        Map<String, Serializable> psm = postProcess(d, state, input, specProcessorRegistry);
 
-                        Map<String, Serializable> psm = processorsStatus
-                            .stream()
-                            .map(Spec::toMap)
-                            .reduce(new HashMap<>(), MapUtils::mergeMultipleMaps);
+                        //merge spec
+                        //TODO evaluate enforcing spec compliance and merging with old values
+                        d.setSpec(MapUtils.mergeMultipleMaps(context.getSpec(), psm));
+                    }
+                    if (statusProcessorRegistry != null) {
+                        Map<String, Serializable> psm = postProcess(d, state, input, statusProcessorRegistry);
 
                         //merge and enforce correct status
                         d.setStatus(MapUtils.mergeMultipleMaps(context.getStatus(), psm, baseStatus));
@@ -346,5 +350,38 @@ public abstract class BaseLifecycleManager<
                 }
             }
         );
+    }
+
+    protected <I> Map<String, Serializable> postProcess(
+        @NotNull D dto,
+        @NotNull S state,
+        @Nullable I input,
+        @NotNull ProcessorRegistry<D, ? extends Spec> processorRegistry
+    ) {
+        String stage = "on" + StringUtils.capitalize(state.name().toLowerCase());
+        // Iterate over all processor and store all RunBaseStatus as optional
+        List<Processor<D, ? extends Spec>> list = processorRegistry.getProcessors(stage);
+
+        List<? extends Spec> res = list
+            .stream()
+            .map(processor -> {
+                try {
+                    //deepclone dto to avoid side effects
+                    D cd = JacksonMapper.deepClone(dto, typeClass);
+                    return processor.process(stage, cd, input);
+                } catch (IOException | RuntimeException e) {
+                    log.error("Error processing stage {} for {}", stage, dto.getId(), e);
+                    return null;
+                }
+            })
+            .filter(s -> s != null)
+            .toList();
+
+        Map<String, Serializable> map = res
+            .stream()
+            .map(Spec::toMap)
+            .reduce(new HashMap<>(), MapUtils::mergeMultipleMaps);
+
+        return map;
     }
 }

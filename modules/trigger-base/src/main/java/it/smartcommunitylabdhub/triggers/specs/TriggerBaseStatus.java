@@ -25,6 +25,7 @@ package it.smartcommunitylabdhub.triggers.specs;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import it.smartcommunitylabdhub.commons.models.base.BaseSpec;
+import it.smartcommunitylabdhub.commons.models.status.Status;
 import java.io.Serializable;
 import java.util.Map;
 import lombok.AllArgsConstructor;
@@ -39,7 +40,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class TriggerBaseStatus extends BaseSpec {
+public class TriggerBaseStatus extends BaseSpec implements Status {
 
     private String state;
     private String message;

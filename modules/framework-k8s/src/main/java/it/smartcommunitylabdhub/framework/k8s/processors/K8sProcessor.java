@@ -27,6 +27,7 @@ import it.smartcommunitylabdhub.commons.annotations.common.ProcessorType;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.infrastructure.Processor;
 import it.smartcommunitylabdhub.commons.models.run.Run;
+import it.smartcommunitylabdhub.commons.models.status.Status;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sRunStatus;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import java.io.Serializable;
@@ -36,12 +37,10 @@ import org.springframework.stereotype.Component;
 @ProcessorType(
     stages = { "onPending", "onRunning", "onCompleted", "onError", "onStopped", "onDeleted" },
     type = Run.class,
-    id = K8sProcessor.ID
+    spec = Status.class
 )
-@Component(K8sProcessor.ID)
+@Component
 public class K8sProcessor implements Processor<Run, K8sRunStatus> {
-
-    public static final String ID = "k8sProcessor";
 
     @Override
     public <I> K8sRunStatus process(String stage, Run run, I input) throws CoreRuntimeException {

@@ -33,6 +33,7 @@ import it.smartcommunitylabdhub.commons.models.log.Log;
 import it.smartcommunitylabdhub.commons.models.log.LogSpec;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
+import it.smartcommunitylabdhub.commons.models.status.Status;
 import it.smartcommunitylabdhub.commons.services.LogService;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sLogStatus;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLog;
@@ -54,12 +55,10 @@ import org.springframework.validation.BindException;
 @ProcessorType(
     stages = { "onRunning", "onCompleted", "onError", "onStopped", "onDeleted" },
     type = Run.class,
-    id = K8sLogProcessor.ID
+    spec = Status.class
 )
-@Component(K8sLogProcessor.ID)
+@Component
 public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
-
-    public static final String ID = "k8sLogProcessor";
 
     //TODO make configurable
     public static final int MAX_METRICS = 300;
