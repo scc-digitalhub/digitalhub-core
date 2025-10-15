@@ -360,27 +360,24 @@ public abstract class BaseLifecycleManager<
     ) {
         String stage = "on" + StringUtils.capitalize(state.name().toLowerCase());
         // Iterate over all processor and store all RunBaseStatus as optional
-        List<Processor<D, ? extends Spec>> list = processorRegistry.getProcessors(stage);
 
-        List<? extends Spec> res = list
+        List<Map<String, Serializable>> res = processorRegistry
+            .getProcessors(stage)
             .stream()
             .map(processor -> {
                 try {
                     //deepclone dto to avoid side effects
                     D cd = JacksonMapper.deepClone(dto, typeClass);
-                    return processor.process(stage, cd, input);
+                    Spec s = processor.process(stage, cd, input);
+                    return s != null ? s.toMap() : null;
                 } catch (IOException | RuntimeException e) {
                     log.error("Error processing stage {} for {}", stage, dto.getId(), e);
                     return null;
                 }
             })
-            .filter(s -> s != null)
             .toList();
 
-        Map<String, Serializable> map = res
-            .stream()
-            .map(Spec::toMap)
-            .reduce(new HashMap<>(), MapUtils::mergeMultipleMaps);
+        Map<String, Serializable> map = res.stream().reduce(new HashMap<>(), MapUtils::mergeMultipleMaps);
 
         return map;
     }
