@@ -25,10 +25,8 @@ package it.smartcommunitylabdhub.runtime.kfp.runners;
 
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.run.Run;
-import it.smartcommunitylabdhub.framework.argo.runnables.K8sArgoCronWorkflowRunnable;
 import it.smartcommunitylabdhub.framework.argo.runnables.K8sArgoWorkflowRunnable;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
-import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runtime.kfp.KFPRuntime;
 import it.smartcommunitylabdhub.runtime.kfp.specs.KFPPipelineRunSpec;
 import it.smartcommunitylabdhub.runtime.kfp.specs.KFPPipelineTaskSpec;
@@ -41,11 +39,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import org.springframework.util.StringUtils;
 
 public class KFPPipelineRunner {
 
-    public K8sRunnable produce(Run run) {
+    public K8sArgoWorkflowRunnable produce(Run run) {
         KFPPipelineRunSpec runSpec = new KFPPipelineRunSpec(run.getSpec());
         KFPPipelineTaskSpec taskSpec = runSpec.getTaskPipelineSpec();
         KFPWorkflowSpec workflowSpec = runSpec.getWorkflowSpec();
@@ -68,7 +65,7 @@ public class KFPPipelineRunner {
             StandardCharsets.UTF_8
         );
 
-        K8sRunnable argoRunnable = K8sArgoWorkflowRunnable
+        K8sArgoWorkflowRunnable argoRunnable = K8sArgoWorkflowRunnable
             .builder()
             .runtime(KFPRuntime.RUNTIME)
             .task(KFPPipelineTaskSpec.KIND)
@@ -76,20 +73,6 @@ public class KFPPipelineRunner {
             .workflowSpec(argoSpec)
             .parameters(parameters)
             .build();
-
-        if (StringUtils.hasText(taskSpec.getSchedule())) {
-            //build a cronJob
-            argoRunnable =
-                K8sArgoCronWorkflowRunnable
-                    .builder()
-                    .runtime(KFPRuntime.RUNTIME)
-                    .state(State.READY.name())
-                    .task(KFPPipelineTaskSpec.KIND)
-                    .workflowSpec(argoSpec)
-                    .parameters(parameters)
-                    .schedule(taskSpec.getSchedule())
-                    .build();
-        }
 
         argoRunnable.setId(run.getId());
         argoRunnable.setProject(run.getProject());
