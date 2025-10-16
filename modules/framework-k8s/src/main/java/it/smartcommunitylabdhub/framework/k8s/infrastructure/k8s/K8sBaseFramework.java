@@ -105,6 +105,7 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
 
     public static final String DEFAULT_TEMPLATE = "default";
     public static final float DEFAULT_MEM_TOLERATION = 1.1f;
+    public static final int MIN_MEM = 64 * 1024 * 1024; //64Mi
 
     //custom object mapper with mixIn for IntOrString
     protected static final ObjectMapper mapper = KubernetesMapper.OBJECT_MAPPER;
@@ -129,7 +130,7 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
 
     protected String gpuResourceKey;
     protected CoreResourceDefinition cpuResourceDefinition = new CoreResourceDefinition();
-    protected CoreResourceDefinition memResourceDefinition = new CoreResourceDefinition();
+    protected CoreResourceDefinition memResourceDefinition = new CoreResourceDefinition(MIN_MEM + "Mi", null);
     protected Float memResourceToleration = DEFAULT_MEM_TOLERATION;
     protected CoreResourceDefinition pvcResourceDefinition = new CoreResourceDefinition();
     protected String pvcStorageClass;
@@ -232,7 +233,13 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
         @Value("${kubernetes.resources.mem.requests}") String memResourceDefinition
     ) {
         if (StringUtils.hasText(memResourceDefinition)) {
-            this.memResourceDefinition.setRequests(memResourceDefinition);
+            //check request is a valid measure for memory
+            Quantity q = Quantity.fromString(memResourceDefinition);
+            if (q.getNumber().compareTo(new BigDecimal(MIN_MEM)) >= 0) {
+                this.memResourceDefinition.setRequests(memResourceDefinition);
+            } else {
+                log.warn("Memory requests must be at least {} bytes", MIN_MEM);
+            }
         }
     }
 
@@ -241,7 +248,13 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
         @Value("${kubernetes.resources.mem.limits}") String memResourceDefinition
     ) {
         if (StringUtils.hasText(memResourceDefinition)) {
-            this.memResourceDefinition.setLimits(memResourceDefinition);
+            //check request is a valid measure for memory
+            Quantity q = Quantity.fromString(memResourceDefinition);
+            if (q.getNumber().compareTo(new BigDecimal(MIN_MEM)) >= 0) {
+                this.memResourceDefinition.setLimits(memResourceDefinition);
+            } else {
+                log.warn("Memory limits must be at least {} bytes", MIN_MEM);
+            }
         }
     }
 
