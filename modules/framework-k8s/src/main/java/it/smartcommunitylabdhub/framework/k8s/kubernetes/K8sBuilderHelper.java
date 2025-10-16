@@ -45,12 +45,14 @@ import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
 import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreResourceDefinition;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume.VolumeType;
 import jakarta.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -239,8 +241,8 @@ public class K8sBuilderHelper implements InitializingBean {
 
     public V1Volume getVolume(String id, @NotNull CoreVolume coreVolume) {
         V1Volume volume = new V1Volume().name(coreVolume.getName());
-        String type = coreVolume.getVolumeType().name();
-        Map<String, String> spec = coreVolume.getSpec();
+        VolumeType type = coreVolume.getVolumeType();
+        Map<String, String> spec = Optional.ofNullable(coreVolume.getSpec()).orElse(Collections.emptyMap());
         switch (type) {
             // TODO: support items
             //DISABLED: users should not be able to mount arbitrary config maps
@@ -266,12 +268,17 @@ public class K8sBuilderHelper implements InitializingBean {
             //                     .toList()
             //             )
             //     );
-            case "persistent_volume_claim":
+            case VolumeType.shared_volume:
+                return volume.persistentVolumeClaim(
+                    new V1PersistentVolumeClaimVolumeSource()
+                        .claimName(spec.getOrDefault("claimName", coreVolume.getName()))
+                );
+            case VolumeType.persistent_volume_claim:
                 return volume.persistentVolumeClaim(
                     new V1PersistentVolumeClaimVolumeSource().claimName(getVolumeName(id, coreVolume.getName()))
                     // .claimName(spec.getOrDefault("claimName", coreVolume.getName()))
                 );
-            case "ephemeral":
+            case VolumeType.ephemeral:
                 //build claim
                 Quantity quantity = Quantity.fromString(
                     spec.getOrDefault("size", ephemeralResourceDefinition.getRequests())
@@ -300,7 +307,7 @@ public class K8sBuilderHelper implements InitializingBean {
                                 )
                         )
                 );
-            case "empty_dir":
+            case VolumeType.empty_dir:
                 return volume.emptyDir(
                     new V1EmptyDirVolumeSource()
                         .medium(emptyDirDefaultMedium) //configured by admin only!

@@ -89,6 +89,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -1396,6 +1397,35 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
                     log.warn("Volumes defined in templates are not fully supported");
                 });
         }
+
+        return volumes;
+    }
+
+    public List<V1PersistentVolumeClaim> buildSharedVolumeClaims(T runnable) throws K8sFrameworkException {
+        // Volumes to attach to the pod based on the volume spec with the additional volume_type
+        List<V1PersistentVolumeClaim> volumes = new LinkedList<>();
+        if (runnable.getVolumes() != null) {
+            runnable
+                .getVolumes()
+                .stream()
+                .filter(v -> v.getVolumeType() == CoreVolume.VolumeType.shared_volume)
+                .forEach(v -> {
+                    //build claim
+                    Map<String, String> spec = Optional.ofNullable(v.getSpec()).orElse(Collections.emptyMap());
+                    String name = spec.getOrDefault("claimName", v.getName());
+
+                    //static build definition
+                    V1PersistentVolumeClaim claim = new V1PersistentVolumeClaim()
+                        .metadata(new V1ObjectMeta().name(name).labels(buildLabels(runnable)))
+                        .spec(new V1PersistentVolumeClaimSpec().volumeMode("Filesystem"));
+
+                    volumes.add(claim);
+                });
+        }
+
+        //volumes defined in template
+        //TODO evaluate support
+        // K8sRunnable template = null;
 
         return volumes;
     }

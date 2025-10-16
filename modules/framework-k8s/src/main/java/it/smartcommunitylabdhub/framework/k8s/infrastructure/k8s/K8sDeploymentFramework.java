@@ -24,7 +24,6 @@
 package it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import io.kubernetes.client.common.KubernetesObject;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.AppsV1Api;
@@ -124,7 +123,7 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
             log.trace("runnable: {}", runnable);
         }
 
-        Map<String, KubernetesObject> results = new HashMap<>();
+        Map<String, Object> results = new HashMap<>();
         V1Deployment deployment = build(runnable);
 
         //secrets
@@ -156,12 +155,19 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
         //pvcs
         List<V1PersistentVolumeClaim> pvcs = buildPersistentVolumeClaims(runnable);
         if (pvcs != null) {
+            List<V1PersistentVolumeClaim> pvcsFinal = new ArrayList<>();
             for (V1PersistentVolumeClaim pvc : pvcs) {
                 log.info("create pvc for {}", String.valueOf(pvc.getMetadata().getName()));
                 try {
-                    coreV1Api.createNamespacedPersistentVolumeClaim(namespace, pvc, null, null, null, null);
-                    //store
-                    results.put("pvc", pvc);
+                    V1PersistentVolumeClaim v = coreV1Api.createNamespacedPersistentVolumeClaim(
+                        namespace,
+                        pvc,
+                        null,
+                        null,
+                        null,
+                        null
+                    );
+                    pvcsFinal.add(v);
                 } catch (ApiException e) {
                     log.error("Error with k8s: {}", e.getMessage());
                     if (log.isTraceEnabled()) {
@@ -171,6 +177,48 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
                     throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
                 }
             }
+
+            //store
+            results.put("pvcs", pvcs);
+        }
+
+        //shared volumes
+        List<V1PersistentVolumeClaim> sharedPvcs = buildSharedVolumeClaims(runnable);
+        //shared volumes are already created, we check permissions
+        if (sharedPvcs != null) {
+            List<V1PersistentVolumeClaim> sharedPvcsFinal = new ArrayList<>();
+            for (V1PersistentVolumeClaim pvc : sharedPvcs) {
+                String pvcName = pvc.getMetadata().getName();
+                try {
+                    V1PersistentVolumeClaim v = coreV1Api.readNamespacedPersistentVolumeClaim(pvcName, namespace, null);
+                    if (v == null) {
+                        throw new K8sFrameworkException("Shared volume " + pvcName + " not found");
+                    }
+
+                    //check project label matches this runnable
+                    Map.Entry<String, String> label = k8sLabelHelper.buildCoreLabel("project", runnable.getProject());
+                    if (v != null && v.getMetadata() != null && v.getMetadata().getLabels() != null) {
+                        if (!label.getValue().equals(v.getMetadata().getLabels().get(label.getKey()))) {
+                            throw new K8sFrameworkException("Shared volume project mismatch");
+                        }
+                    } else {
+                        throw new K8sFrameworkException("Shared volume " + pvcName + "invalid");
+                    }
+
+                    //keep updated definition
+                    sharedPvcsFinal.add(v);
+                } catch (ApiException e) {
+                    log.error("Error with k8s: {}", e.getMessage());
+                    if (log.isTraceEnabled()) {
+                        log.trace("k8s api response: {}", e.getResponseBody());
+                    }
+
+                    throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+                }
+            }
+
+            //store
+            results.put("sharedPvs", sharedPvcsFinal);
         }
 
         log.info("create deployment for {}", String.valueOf(deployment.getMetadata().getName()));

@@ -75,6 +75,7 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
     private String serviceAccountName;
     private Integer runAsUser;
     protected String pvcStorageClass;
+    protected String pvcAccessMode = "ReadWriteMany";
 
     private static final TypeReference<HashMap<String, Serializable>> typeRef = new TypeReference<
         HashMap<String, Serializable>
@@ -111,6 +112,11 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
         if (StringUtils.hasText(pvcStorageClass)) {
             this.pvcStorageClass = pvcStorageClass;
         }
+    }
+
+    @Autowired
+    public void setPvcAccessMode(@Value("${kubernetes.resources.workflow.access-mode}") String pvcAccessMode) {
+        this.pvcAccessMode = pvcAccessMode;
     }
 
     @Override
@@ -690,7 +696,7 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
 
                 //set access mode+storage class
                 if (pvc.getSpec() != null) {
-                    pvc.getSpec().setAccessModes(List.of("ReadWriteMany"));
+                    pvc.getSpec().setAccessModes(List.of(pvcAccessMode));
                     if (StringUtils.hasText(pvcStorageClass)) {
                         pvc.getSpec().setStorageClassName(pvcStorageClass);
                     }

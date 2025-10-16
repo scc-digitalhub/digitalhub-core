@@ -72,6 +72,9 @@ public class HeraPipelineRunner {
             .state(State.READY.name())
             .workflowSpec(argoSpec)
             .parameters(parameters)
+            .envs(coreEnvList)
+            //support shared volumes
+            .volumes(taskSpec.getVolumes())
             .build();
 
         argoRunnable.setId(run.getId());

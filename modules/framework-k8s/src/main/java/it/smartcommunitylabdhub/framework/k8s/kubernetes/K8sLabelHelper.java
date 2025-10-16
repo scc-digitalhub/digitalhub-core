@@ -86,6 +86,11 @@ public class K8sLabelHelper {
         );
     }
 
+    public Map.Entry<String, String> buildCoreLabel(@NotNull String label, String value) {
+        String prefix = getCoreLabelsNamespace() + "/";
+        return Map.entry(prefix + label, K8sBuilderHelper.sanitizeNames(value));
+    }
+
     public String getCoreLabelsNamespace() {
         return "dhcore." + K8sBuilderHelper.sanitizeNames(applicationProperties.getName());
     }

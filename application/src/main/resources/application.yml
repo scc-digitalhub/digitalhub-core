@@ -209,6 +209,7 @@ kubernetes:
       storage-class: ${K8S_RESOURCE_EPHEMERAL_STORAGE_CLASS:}    
     workflow:
       storage-class: ${K8S_RESOURCE_WORKFLOW_STORAGE_CLASS:}  
+      access-mode: ${K8S_RESOURCE_WORKFLOW_ACCESS_MODE:ReadWriteMany}
   config:
     config-map: ${DH_CONFIG_COMMON_MAPS:}
     secret: ${DH_CONFIG_COMMON_SECRETS:}

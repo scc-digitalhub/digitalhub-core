@@ -24,16 +24,20 @@ import it.smartcommunitylabdhub.commons.infrastructure.Processor;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
+import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sWorkflowTaskBaseSpec;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume.VolumeType;
 import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipName;
 import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,11 +46,15 @@ import org.springframework.util.StringUtils;
 
 @ProcessorType(stages = { "onBuilt" }, type = Run.class, spec = Spec.class)
 @Component
+@ConditionalOnKubernetes
 @Slf4j
 public class WorkflowStepRunProcessor implements Processor<Run, K8sFunctionTaskBaseSpec> {
 
     @Autowired
     private EntityRepository<Run> runRepository;
+
+    @Autowired
+    protected K8sBuilderHelper k8sBuilderHelper;
 
     @Override
     public <I> K8sFunctionTaskBaseSpec process(String stage, Run dto, I input) throws CoreRuntimeException {
@@ -65,7 +73,8 @@ public class WorkflowStepRunProcessor implements Processor<Run, K8sFunctionTaskB
                 try {
                     //load run to get spec
                     KeyAccessor ka = KeyAccessor.with(rd.getDest());
-                    Run run = runRepository.find(ka.getId());
+                    String workflowRunId = ka.getId();
+                    Run run = runRepository.find(workflowRunId);
 
                     if (run != null) {
                         //sanity check: ownership+project must match
@@ -154,11 +163,32 @@ public class WorkflowStepRunProcessor implements Processor<Run, K8sFunctionTaskB
                             rspec.setSecrets(secrets);
                         }
 
-                        //volumes merge
+                        //shared volumes
                         if (wspec.getVolumes() != null) {
-                            List<CoreVolume> volumes = new ArrayList<>(wspec.getVolumes());
+                            List<CoreVolume> volumes = new ArrayList<>();
                             if (rspec.getVolumes() != null) {
                                 volumes.addAll(rspec.getVolumes());
+                            }
+
+                            if (wspec.getVolumes() != null) {
+                                //add pvc as shared volume with explicit claimName
+                                wspec
+                                    .getVolumes()
+                                    .stream()
+                                    .filter(v -> VolumeType.persistent_volume_claim == v.getVolumeType())
+                                    .forEach(v -> {
+                                        volumes.add(
+                                            new CoreVolume(
+                                                VolumeType.shared_volume,
+                                                v.getMountPath(),
+                                                v.getName(),
+                                                Map.of(
+                                                    "claimName",
+                                                    k8sBuilderHelper.getVolumeName(workflowRunId, v.getName())
+                                                )
+                                            )
+                                        );
+                                    });
                             }
 
                             rspec.setVolumes(volumes);
