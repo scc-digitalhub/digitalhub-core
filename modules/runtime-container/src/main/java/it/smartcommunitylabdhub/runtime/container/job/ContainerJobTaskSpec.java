@@ -67,7 +67,7 @@ public class ContainerJobTaskSpec extends K8sFunctionTaskBaseSpec {
 
         ContainerJobTaskSpec spec = mapper.convertValue(data, ContainerJobTaskSpec.class);
         this.fsGroup = spec.getFsGroup();
-        this.runAsGroup = spec.getRunAsUser();
+        this.runAsUser = spec.getRunAsUser();
         this.runAsGroup = spec.getRunAsGroup();
     }
 }

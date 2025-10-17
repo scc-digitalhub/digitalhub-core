@@ -69,7 +69,7 @@ public class ContainerDeployTaskSpec extends K8sFunctionTaskBaseSpec {
         ContainerDeployTaskSpec spec = mapper.convertValue(data, ContainerDeployTaskSpec.class);
         this.replicas = spec.getReplicas();
         this.fsGroup = spec.getFsGroup();
-        this.runAsGroup = spec.getRunAsUser();
+        this.runAsUser = spec.getRunAsUser();
         this.runAsGroup = spec.getRunAsGroup();
     }
 }
