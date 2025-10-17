@@ -59,7 +59,7 @@ fi
 if [[ -n "${requirements}" ]]; then
     if  [[ -f "${requirements}" ]]; then
         echo "Installing requirements from ${requirements}..."
-        ${PYTHON_BIN} -m pip install -r "${requirements}"
+        ${PYTHON_BIN} -m pip install --user -r "${requirements}"
         if ! [ $? -eq 0 ]; then
             die "Error installing requirements from ${requirements}"
         fi
