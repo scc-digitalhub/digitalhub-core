@@ -89,7 +89,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -131,7 +130,7 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
 
     protected String gpuResourceKey;
     protected CoreResourceDefinition cpuResourceDefinition = new CoreResourceDefinition();
-    protected CoreResourceDefinition memResourceDefinition = new CoreResourceDefinition(MIN_MEM + "Mi", null);
+    protected CoreResourceDefinition memResourceDefinition = new CoreResourceDefinition(String.valueOf(MIN_MEM), null);
     protected Float memResourceToleration = DEFAULT_MEM_TOLERATION;
     protected CoreResourceDefinition pvcResourceDefinition = new CoreResourceDefinition();
     protected String pvcStorageClass;
