@@ -260,6 +260,7 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
             log.trace("runnable: {}", runnable);
         }
 
+        K8sFrameworkException exception = null;
         List<String> messages = new ArrayList<>();
 
         V1Deployment deployment;
@@ -270,9 +271,15 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
             return runnable;
         }
 
-        log.info("delete deployment for {}", String.valueOf(deployment.getMetadata().getName()));
-        delete(deployment);
-        messages.add(String.format("deployment %s deleted", deployment.getMetadata().getName()));
+        try {
+            log.info("delete deployment for {}", String.valueOf(deployment.getMetadata().getName()));
+            delete(deployment);
+            messages.add(String.format("deployment %s deleted", deployment.getMetadata().getName()));
+        } catch (K8sFrameworkException | NullPointerException e) {
+            //collect but keep going
+            log.error("error deleting deployment {}: {}", runnable.getId(), e.getMessage());
+            exception = new K8sFrameworkException(e.getMessage());
+        }
 
         //secrets
         cleanRunSecret(runnable);
@@ -346,6 +353,10 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
 
         if (log.isTraceEnabled()) {
             log.trace("result: {}", runnable);
+        }
+
+        if (exception != null) {
+            throw exception;
         }
 
         return runnable;

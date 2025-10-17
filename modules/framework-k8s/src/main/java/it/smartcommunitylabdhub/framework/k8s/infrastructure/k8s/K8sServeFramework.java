@@ -303,6 +303,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
             log.trace("runnable: {}", runnable);
         }
 
+        K8sFrameworkException exception = null;
         List<String> messages = new ArrayList<>();
 
         V1Deployment deployment;
@@ -314,10 +315,16 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
         }
 
         if (deployment != null) {
-            // Delete the deployment
-            log.info("delete deployment for {}", String.valueOf(deployment.getMetadata().getName()));
-            delete(deployment);
-            messages.add(String.format("deployment %s deleted", deployment.getMetadata().getName()));
+            try {
+                // Delete the deployment
+                log.info("delete deployment for {}", String.valueOf(deployment.getMetadata().getName()));
+                delete(deployment);
+                messages.add(String.format("deployment %s deleted", deployment.getMetadata().getName()));
+            } catch (K8sFrameworkException | NullPointerException e) {
+                //collect but keep going
+                log.error("error deleting deployment {}: {}", runnable.getId(), e.getMessage());
+                exception = new K8sFrameworkException(e.getMessage());
+            }
         }
 
         //secrets
@@ -437,6 +444,10 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
 
         if (log.isTraceEnabled()) {
             log.trace("result: {}", runnable);
+        }
+
+        if (exception != null) {
+            throw exception;
         }
 
         return runnable;

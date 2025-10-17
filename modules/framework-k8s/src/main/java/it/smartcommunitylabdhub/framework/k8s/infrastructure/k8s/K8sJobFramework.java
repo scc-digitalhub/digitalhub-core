@@ -285,13 +285,20 @@ public class K8sJobFramework extends K8sBaseFramework<K8sJobRunnable, V1Job> {
         }
 
         List<String> messages = new ArrayList<>();
+        K8sFrameworkException exception = null;
 
         V1Job job = get(build(runnable));
 
         //stop by deleting
-        log.info("delete job for {}", String.valueOf(job.getMetadata().getName()));
-        delete(job);
-        messages.add(String.format("job %s deleted", job.getMetadata().getName()));
+        try {
+            log.info("delete job for {}", String.valueOf(job.getMetadata().getName()));
+            delete(job);
+            messages.add(String.format("job %s deleted", job.getMetadata().getName()));
+        } catch (K8sFrameworkException | NullPointerException e) {
+            //collect but keep going
+            log.error("error deleting job {}: {}", runnable.getId(), e.getMessage());
+            exception = new K8sFrameworkException(e.getMessage());
+        }
 
         //secrets
         cleanRunSecret(runnable);
@@ -349,6 +356,10 @@ public class K8sJobFramework extends K8sBaseFramework<K8sJobRunnable, V1Job> {
             log.trace("result: {}", runnable);
         }
 
+        if (exception != null) {
+            throw exception;
+        }
+
         return runnable;
     }
 
@@ -359,18 +370,27 @@ public class K8sJobFramework extends K8sBaseFramework<K8sJobRunnable, V1Job> {
             log.trace("runnable: {}", runnable);
         }
 
-        V1Job job;
+        K8sFrameworkException exception = null;
+        List<String> messages = new ArrayList<>();
+
+        V1Job job = null;
         try {
             job = get(build(runnable));
         } catch (K8sFrameworkException | IllegalArgumentException e) {
             runnable.setState(K8sRunnableState.DELETED.name());
-            return runnable;
         }
 
-        List<String> messages = new ArrayList<>();
-        log.info("delete job for {}", String.valueOf(job.getMetadata().getName()));
-        delete(job);
-        messages.add(String.format("job %s deleted", job.getMetadata().getName()));
+        if (job != null) {
+            try {
+                log.info("delete job for {}", String.valueOf(job.getMetadata().getName()));
+                delete(job);
+                messages.add(String.format("job %s deleted", job.getMetadata().getName()));
+            } catch (K8sFrameworkException | NullPointerException e) {
+                //collect but keep going
+                log.error("error deleting job {}: {}", runnable.getId(), e.getMessage());
+                exception = new K8sFrameworkException(e.getMessage());
+            }
+        }
 
         //secrets
         cleanRunSecret(runnable);
@@ -445,6 +465,10 @@ public class K8sJobFramework extends K8sBaseFramework<K8sJobRunnable, V1Job> {
 
         if (log.isTraceEnabled()) {
             log.trace("result: {}", runnable);
+        }
+
+        if (exception != null) {
+            throw exception;
         }
 
         return runnable;
