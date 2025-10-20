@@ -23,6 +23,7 @@
 
 package it.smartcommunitylabdhub.framework.k8s.infrastructure.monitor;
 
+import io.kubernetes.client.openapi.models.EventsV1Event;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.util.generic.dynamic.DynamicKubernetesApi;
 import io.kubernetes.client.util.generic.dynamic.DynamicKubernetesObject;
@@ -87,12 +88,26 @@ public class K8sCRMonitor extends K8sBaseMonitor<K8sCRRunnable> {
                 }
             }
 
+            //fetch events
+            List<EventsV1Event> events = null;
+            try {
+                events = framework.events(cr);
+                if (events != null) {
+                    log.debug("Fetched {} events for CR {}", events.size(), runnable.getId());
+                    runnable.setEvents(new ArrayList<>(mapper.convertValue(events, arrayRef)));
+                } else {
+                    log.debug("No events found for CR {}", runnable.getId());
+                }
+            } catch (IllegalArgumentException e) {
+                log.error("error reading k8s events: {}", e.getMessage());
+            }
+
             //try to fetch pods
             List<V1Pod> pods = null;
             try {
                 pods = framework.pods(cr);
             } catch (K8sFrameworkException e1) {
-                log.error("error collecting pods for job {}: {}", runnable.getId(), e1.getMessage());
+                log.error("error collecting pods for CR {}: {}", runnable.getId(), e1.getMessage());
             }
 
             //update results

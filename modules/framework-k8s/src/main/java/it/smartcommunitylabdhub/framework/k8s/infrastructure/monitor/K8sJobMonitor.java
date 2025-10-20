@@ -23,6 +23,7 @@
 
 package it.smartcommunitylabdhub.framework.k8s.infrastructure.monitor;
 
+import io.kubernetes.client.openapi.models.EventsV1Event;
 import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1JobCondition;
 import io.kubernetes.client.openapi.models.V1Pod;
@@ -95,6 +96,20 @@ public class K8sJobMonitor extends K8sBaseMonitor<K8sJobRunnable> {
                         break;
                     }
                 }
+            }
+
+            //fetch events
+            List<EventsV1Event> events = null;
+            try {
+                events = framework.events(job);
+                if (events != null) {
+                    log.debug("Fetched {} events for job {}", events.size(), runnable.getId());
+                    runnable.setEvents(new ArrayList<>(mapper.convertValue(events, arrayRef)));
+                } else {
+                    log.debug("No events found for job {}", runnable.getId());
+                }
+            } catch (IllegalArgumentException e) {
+                log.error("error reading k8s events: {}", e.getMessage());
             }
 
             //try to fetch pods

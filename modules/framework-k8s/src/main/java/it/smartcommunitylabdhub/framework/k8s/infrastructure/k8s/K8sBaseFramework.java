@@ -32,6 +32,9 @@ import io.kubernetes.client.custom.Quantity;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
+import io.kubernetes.client.openapi.apis.EventsV1Api;
+import io.kubernetes.client.openapi.models.EventsV1Event;
+import io.kubernetes.client.openapi.models.EventsV1EventList;
 import io.kubernetes.client.openapi.models.V1Affinity;
 import io.kubernetes.client.openapi.models.V1Capabilities;
 import io.kubernetes.client.openapi.models.V1ConfigMap;
@@ -54,6 +57,7 @@ import io.kubernetes.client.openapi.models.V1Toleration;
 import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;
 import io.kubernetes.client.openapi.models.V1VolumeResourceRequirements;
+import io.kubernetes.client.openapi.models.V1WatchEvent;
 import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
 import it.smartcommunitylabdhub.commons.infrastructure.Framework;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
@@ -87,6 +91,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -436,6 +441,40 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
     /*
      * K8s methods
      */
+
+    public List<EventsV1Event> events(K object) throws K8sFrameworkException {
+        if (object == null || object.getMetadata() == null) {
+            return null;
+        }
+
+        String fieldSelector = "regarding.name=" + object.getMetadata().getName();
+        try {
+            EventsV1Api eventsApi = new EventsV1Api(coreV1Api.getApiClient());
+            EventsV1EventList events = eventsApi.listNamespacedEvent(
+                namespace,
+                null,
+                null,
+                null,
+                fieldSelector,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            );
+
+            return events.getItems();
+        } catch (ApiException e) {
+            log.error("Error with k8s: {}", e.getMessage());
+            if (log.isTraceEnabled()) {
+                log.trace("k8s api response: {}", e.getResponseBody());
+            }
+
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+        }
+    }
 
     public List<V1Pod> pods(K object) throws K8sFrameworkException {
         if (object == null || object.getMetadata() == null) {

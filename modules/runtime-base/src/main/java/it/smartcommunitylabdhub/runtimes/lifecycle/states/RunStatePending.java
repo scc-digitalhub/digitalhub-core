@@ -23,13 +23,17 @@
 
 package it.smartcommunitylabdhub.runtimes.lifecycle.states;
 
+import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.infrastructure.Runtime;
+import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
+import it.smartcommunitylabdhub.fsm.Transition;
 import it.smartcommunitylabdhub.runtimes.lifecycle.RunEvent;
 import it.smartcommunitylabdhub.runtimes.lifecycle.RunState;
 import java.util.List;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -41,6 +45,8 @@ public class RunStatePending<S extends RunBaseSpec, Z extends RunBaseStatus, R e
         //transitions
         txs =
             List.of(
+                //(LOOP)->PENDING
+                loopPending().build(),
                 //(EXECUTE)->RUNNING
                 toRunning().build(),
                 //(COMPLETE)->COMPLETED
@@ -50,5 +56,23 @@ public class RunStatePending<S extends RunBaseSpec, Z extends RunBaseStatus, R e
                 //(DELETE)->DELETING
                 toDeleting().build()
             );
+    }
+
+    protected Transition.Builder<RunState, RunEvent, Run> loopPending() {
+        //(EXECUTE)->RUNNING
+        return new Transition.Builder<RunState, RunEvent, Run>()
+            .event(Enum.valueOf(eventsClass, RunEvent.LOOP.name()))
+            .nextState(Enum.valueOf(stateClass, RunState.PENDING.name()))
+            .<R, R>withInternalLogic((currentState, nextState, event, run, runnable) -> {
+                RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
+                if (specAccessor.isLocalExecution()) {
+                    return Optional.empty();
+                }
+
+                //runtime callback
+                //TODO
+
+                return Optional.empty();
+            });
     }
 }

@@ -23,6 +23,7 @@
 
 package it.smartcommunitylabdhub.framework.k8s.infrastructure.monitor;
 
+import io.kubernetes.client.openapi.models.EventsV1Event;
 import io.kubernetes.client.openapi.models.V1Deployment;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1Service;
@@ -87,6 +88,20 @@ public class K8sServeMonitor extends K8sBaseMonitor<K8sServeRunnable> {
             log.debug("service status: {}", service.getStatus());
             if (log.isTraceEnabled()) {
                 log.trace("deployment status: {}", deployment.getStatus().toString());
+            }
+
+            //fetch events
+            List<EventsV1Event> events = null;
+            try {
+                events = deploymentFramework.events(deployment);
+                if (events != null) {
+                    log.debug("Fetched {} events for deployment {}", events.size(), runnable.getId());
+                    runnable.setEvents(new ArrayList<>(mapper.convertValue(events, arrayRef)));
+                } else {
+                    log.debug("No events found for deployment {}", runnable.getId());
+                }
+            } catch (IllegalArgumentException e) {
+                log.error("error reading k8s events: {}", e.getMessage());
             }
 
             //try to fetch pods

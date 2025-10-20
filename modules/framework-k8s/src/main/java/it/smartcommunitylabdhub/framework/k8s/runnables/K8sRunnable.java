@@ -117,6 +117,7 @@ public class K8sRunnable implements RunRunnable, SecuredRunnable, ConfigurableRu
     private String message;
 
     private Map<String, Serializable> results;
+    private List<Map<String, Serializable>> events;
 
     @JsonIgnore
     @ToString.Exclude
