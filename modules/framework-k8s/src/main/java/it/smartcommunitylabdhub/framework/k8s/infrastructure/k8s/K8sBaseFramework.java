@@ -240,6 +240,9 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
             } else {
                 log.warn("Memory requests must be at least {} bytes", MIN_MEM);
             }
+        } else {
+            log.warn("Memory requests not set, removing default value");
+            this.memResourceDefinition.setRequests(null);
         }
     }
 
