@@ -40,8 +40,6 @@ if not res["success"]: sys.exit(res["error-message"])
 with open("flwr_run_id", "w") as f:
     f.write(str(res["run-id"]))
 
-os.environ["DHCORE_ENDPOINT"] = "http://host.docker.internal:8080"
-
 url = f"{os.environ["DHCORE_ENDPOINT"]}/api/v1/-/{os.environ.get("PROJECT_NAME")}/runs/{os.environ.get("RUN_ID")}"
 headers = {"Authorization": f"Bearer {os.environ.get("DHCORE_ACCESS_TOKEN")}"}
 try:
