@@ -74,8 +74,13 @@ public class K8sEventsProcessor implements Processor<Run, K8sEventsStatus> {
 
                             if (e.get("metadata") instanceof Map) {
                                 Map<String, Serializable> metadata = (Map<String, Serializable>) e.get("metadata");
-                                event.put("name", metadata.get("name"));
                                 event.put("timestamp", metadata.get("creationTimestamp"));
+                            }
+
+                            if (e.get("regarding") instanceof Map) {
+                                Map<String, Serializable> regarding = (Map<String, Serializable>) e.get("regarding");
+                                event.put("kind", regarding.get("kind"));
+                                event.put("name", regarding.get("name"));
                             }
 
                             return event;

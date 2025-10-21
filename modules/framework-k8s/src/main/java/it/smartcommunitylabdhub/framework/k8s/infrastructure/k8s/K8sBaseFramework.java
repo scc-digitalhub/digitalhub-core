@@ -57,7 +57,6 @@ import io.kubernetes.client.openapi.models.V1Toleration;
 import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;
 import io.kubernetes.client.openapi.models.V1VolumeResourceRequirements;
-import io.kubernetes.client.openapi.models.V1WatchEvent;
 import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
 import it.smartcommunitylabdhub.commons.infrastructure.Framework;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
@@ -91,7 +90,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -442,7 +440,7 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
      * K8s methods
      */
 
-    public List<EventsV1Event> events(K object) throws K8sFrameworkException {
+    public List<EventsV1Event> events(KubernetesObject object) throws K8sFrameworkException {
         if (object == null || object.getMetadata() == null) {
             return null;
         }

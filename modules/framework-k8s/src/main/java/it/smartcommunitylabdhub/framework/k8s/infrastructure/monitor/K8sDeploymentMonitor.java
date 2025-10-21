@@ -85,7 +85,6 @@ public class K8sDeploymentMonitor extends K8sBaseMonitor<K8sDeploymentRunnable> 
                 events = framework.events(deployment);
                 if (events != null) {
                     log.debug("Fetched {} events for deployment {}", events.size(), runnable.getId());
-                    runnable.setEvents(new ArrayList<>(mapper.convertValue(events, arrayRef)));
                 } else {
                     log.debug("No events found for deployment {}", runnable.getId());
                 }
@@ -102,6 +101,26 @@ public class K8sDeploymentMonitor extends K8sBaseMonitor<K8sDeploymentRunnable> 
                     runnable.getId()
                 );
                 pods = framework.pods(deployment);
+
+                //collect events for pods as well
+                if (pods != null) {
+                    events = new ArrayList<>(events != null ? events : new ArrayList<>());
+                    for (V1Pod pod : pods) {
+                        try {
+                            List<EventsV1Event> podEvents = framework.events(pod);
+                            if (podEvents != null && !podEvents.isEmpty()) {
+                                log.debug("Adding {} events for pod {}", podEvents.size(), pod.getMetadata().getName());
+                                events.addAll(podEvents);
+                            }
+                        } catch (K8sFrameworkException e1) {
+                            log.error(
+                                "error collecting events for pod {}: {}",
+                                pod.getMetadata().getName(),
+                                e1.getMessage()
+                            );
+                        }
+                    }
+                }
 
                 //If we have pods, check if any is running
                 if (K8sRunnableState.PENDING.name().equals(runnable.getState()) && pods != null) {
@@ -146,6 +165,10 @@ public class K8sDeploymentMonitor extends K8sBaseMonitor<K8sDeploymentRunnable> 
                     runnable.setState(K8sRunnableState.ERROR.name());
                     runnable.setError("Multiple pod restarts");
                 }
+            }
+
+            if (events != null) {
+                runnable.setEvents(new ArrayList<>(mapper.convertValue(events, arrayRef)));
             }
 
             if (!"disable".equals(collectResults)) {

@@ -104,7 +104,6 @@ public class K8sJobMonitor extends K8sBaseMonitor<K8sJobRunnable> {
                 events = framework.events(job);
                 if (events != null) {
                     log.debug("Fetched {} events for job {}", events.size(), runnable.getId());
-                    runnable.setEvents(new ArrayList<>(mapper.convertValue(events, arrayRef)));
                 } else {
                     log.debug("No events found for job {}", runnable.getId());
                 }
@@ -112,11 +111,44 @@ public class K8sJobMonitor extends K8sBaseMonitor<K8sJobRunnable> {
                 log.error("error reading k8s events: {}", e.getMessage());
             }
 
+            //check if we have a failed event for job
+            if (events != null) {
+                for (EventsV1Event event : events) {
+                    //TODO check for additional reasons
+                    if ("FailedCreate".equals(event.getReason())) {
+                        log.debug("Job event failed for {}", runnable.getId());
+                        runnable.setState(K8sRunnableState.ERROR.name());
+                        runnable.setError("Job event failed: " + event.getNote());
+                        break;
+                    }
+                }
+            }
+
             //try to fetch pods
             List<V1Pod> pods = null;
             try {
                 log.debug("Collect pods for job {} for run {}", job.getMetadata().getName(), runnable.getId());
                 pods = framework.pods(job);
+
+                //collect events for pods as well
+                if (pods != null) {
+                    events = new ArrayList<>(events != null ? events : new ArrayList<>());
+                    for (V1Pod pod : pods) {
+                        try {
+                            List<EventsV1Event> podEvents = framework.events(pod);
+                            if (podEvents != null && !podEvents.isEmpty()) {
+                                log.debug("Adding {} events for pod {}", podEvents.size(), pod.getMetadata().getName());
+                                events.addAll(podEvents);
+                            }
+                        } catch (K8sFrameworkException e1) {
+                            log.error(
+                                "error collecting events for pod {}: {}",
+                                pod.getMetadata().getName(),
+                                e1.getMessage()
+                            );
+                        }
+                    }
+                }
 
                 //If we have pods, check if any is running
                 if (K8sRunnableState.PENDING.name().equals(runnable.getState()) && pods != null) {
@@ -129,6 +161,10 @@ public class K8sJobMonitor extends K8sBaseMonitor<K8sJobRunnable> {
                 }
             } catch (K8sFrameworkException e1) {
                 log.error("error collecting pods for job {}: {}", runnable.getId(), e1.getMessage());
+            }
+
+            if (events != null) {
+                runnable.setEvents(new ArrayList<>(mapper.convertValue(events, arrayRef)));
             }
 
             if (!"disable".equals(collectResults)) {

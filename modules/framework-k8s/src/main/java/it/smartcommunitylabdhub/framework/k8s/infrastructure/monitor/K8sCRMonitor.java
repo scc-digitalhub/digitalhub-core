@@ -106,10 +106,33 @@ public class K8sCRMonitor extends K8sBaseMonitor<K8sCRRunnable> {
             List<V1Pod> pods = null;
             try {
                 pods = framework.pods(cr);
+
+                //collect events for pods as well
+                if (pods != null) {
+                    events = new ArrayList<>(events != null ? events : new ArrayList<>());
+                    for (V1Pod pod : pods) {
+                        try {
+                            List<EventsV1Event> podEvents = framework.events(pod);
+                            if (podEvents != null && !podEvents.isEmpty()) {
+                                log.debug("Adding {} events for pod {}", podEvents.size(), pod.getMetadata().getName());
+                                events.addAll(podEvents);
+                            }
+                        } catch (K8sFrameworkException e1) {
+                            log.error(
+                                "error collecting events for pod {}: {}",
+                                pod.getMetadata().getName(),
+                                e1.getMessage()
+                            );
+                        }
+                    }
+                }
             } catch (K8sFrameworkException e1) {
                 log.error("error collecting pods for CR {}: {}", runnable.getId(), e1.getMessage());
             }
 
+            if (events != null) {
+                runnable.setEvents(new ArrayList<>(mapper.convertValue(events, arrayRef)));
+            }
             //update results
             try {
                 runnable.setResults(
