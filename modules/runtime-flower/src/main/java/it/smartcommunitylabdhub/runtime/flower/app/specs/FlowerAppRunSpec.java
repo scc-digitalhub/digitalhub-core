@@ -60,7 +60,6 @@ public class FlowerAppRunSpec extends RunBaseSpec {
     private String federation;
 
     @Schema(title = "fields.flower.superlink.title", description = "fields.flower.superlink.description")
-    @NotNull
     private String superlink;
 
     @JsonProperty("root_certificates")
