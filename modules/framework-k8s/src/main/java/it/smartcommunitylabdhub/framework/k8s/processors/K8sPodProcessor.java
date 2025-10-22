@@ -43,7 +43,11 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-@ProcessorType(stages = { "onRunning", "onCompleted", "onError", "onStopped" }, type = Run.class, spec = Status.class)
+@ProcessorType(
+    stages = { "onPending", "onRunning", "onCompleted", "onError", "onStopped" },
+    type = Run.class,
+    spec = Status.class
+)
 @Component
 @Slf4j
 public class K8sPodProcessor implements Processor<Run, K8sPodStatus> {

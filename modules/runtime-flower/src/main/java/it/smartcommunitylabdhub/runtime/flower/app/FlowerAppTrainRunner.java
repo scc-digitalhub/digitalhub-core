@@ -236,7 +236,7 @@ public class FlowerAppTrainRunner {
             .contextSources(contextSources)
             .envs(coreEnvList)
             .secrets(coreSecrets)
-            .resources(taskSpec.getResources())
+            .requests(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(taskSpec.getResources()) : null)
             .volumes(taskSpec.getVolumes())
             .nodeSelector(taskSpec.getNodeSelector())
             .affinity(taskSpec.getAffinity())

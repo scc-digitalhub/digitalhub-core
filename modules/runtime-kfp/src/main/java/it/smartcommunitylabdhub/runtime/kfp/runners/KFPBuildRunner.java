@@ -79,7 +79,7 @@ public class KFPBuildRunner {
             .image(image)
             .command("python")
             .args(List.of("wrapper.py").toArray(String[]::new))
-            .resources(taskSpec.getResources())
+            // .resources(taskSpec.getResources())
             .nodeSelector(taskSpec.getNodeSelector())
             .volumes(taskSpec.getVolumes())
             .secrets(coreSecrets)

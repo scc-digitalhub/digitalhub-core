@@ -6,27 +6,30 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.runtime.dbt.runners;
 
+import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.run.Run;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
 import it.smartcommunitylabdhub.runtime.dbt.DbtRuntime;
 import it.smartcommunitylabdhub.runtime.dbt.specs.DbtRunSpec;
@@ -46,21 +49,22 @@ import java.util.Optional;
  */
 public class DbtTransformRunner {
 
+    private final K8sBuilderHelper k8sBuilderHelper;
     private final String image;
-    private final Map<String, String> secretData;
 
-    public DbtTransformRunner(String image, Map<String, String> secretData) {
+    public DbtTransformRunner(String image, K8sBuilderHelper k8sBuilderHelper) {
         this.image = image;
-        this.secretData = secretData;
+        this.k8sBuilderHelper = k8sBuilderHelper;
     }
 
-    public K8sJobRunnable produce(Run run) {
+    public K8sJobRunnable produce(Run run, Map<String, String> secretData) {
         // Retrieve information about RunDbtSpec
         DbtRunSpec runSpec = new DbtRunSpec(run.getSpec());
         DbtTransformSpec taskSpec = runSpec.getTaskSpec();
         if (taskSpec == null) {
             throw new CoreRuntimeException("null or empty task definition");
         }
+        TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
 
         List<CoreEnv> coreEnvList = new ArrayList<>(
             List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))
@@ -76,10 +80,15 @@ public class DbtTransformRunner {
             .builder()
             .runtime(DbtRuntime.RUNTIME)
             .task(DbtTransformSpec.KIND)
+            .labels(
+                k8sBuilderHelper != null
+                    ? List.of(new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction()))
+                    : null
+            )
             .image(image)
             .command("python")
             .args(List.of("wrapper.py").toArray(String[]::new))
-            .resources(taskSpec.getResources())
+            .requests(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(taskSpec.getResources()) : null)
             .nodeSelector(taskSpec.getNodeSelector())
             .volumes(taskSpec.getVolumes())
             .secrets(coreSecrets)

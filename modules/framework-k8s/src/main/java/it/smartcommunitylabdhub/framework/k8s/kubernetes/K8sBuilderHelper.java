@@ -43,6 +43,7 @@ import io.kubernetes.client.openapi.models.V1VolumeMount;
 import io.kubernetes.client.openapi.models.V1VolumeResourceRequirements;
 import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
 import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreResource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreResourceDefinition;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume.VolumeType;
@@ -51,10 +52,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -90,6 +89,9 @@ public class K8sBuilderHelper implements InitializingBean {
     @Value("${kubernetes.namespace}")
     private String namespace;
 
+    @Value("${kubernetes.resources.gpu.key}")
+    String gpuResourceKey;
+
     private String emptyDirDefaultSize = "128Mi";
     private String emptyDirDefaultMedium = null;
 
@@ -107,16 +109,7 @@ public class K8sBuilderHelper implements InitializingBean {
         @Value("${kubernetes.resources.pvc.requests}") String pvcResourceDefinition
     ) {
         if (StringUtils.hasText(pvcResourceDefinition)) {
-            this.ephemeralResourceDefinition.setRequests(pvcResourceDefinition);
-        }
-    }
-
-    @Autowired
-    public void setEphemeralLimitsResourceDefinition(
-        @Value("${kubernetes.resources.pvc.limits}") String pvcResourceDefinition
-    ) {
-        if (StringUtils.hasText(pvcResourceDefinition)) {
-            this.ephemeralResourceDefinition.setLimits(pvcResourceDefinition);
+            this.ephemeralResourceDefinition.setValue(pvcResourceDefinition);
         }
     }
 
@@ -281,17 +274,17 @@ public class K8sBuilderHelper implements InitializingBean {
             case VolumeType.ephemeral:
                 //build claim
                 Quantity quantity = Quantity.fromString(
-                    spec.getOrDefault("size", ephemeralResourceDefinition.getRequests())
+                    spec.getOrDefault("size", ephemeralResourceDefinition.getValue())
                 );
                 V1VolumeResourceRequirements req = new V1VolumeResourceRequirements()
                     .requests(Map.of("storage", quantity));
 
                 //enforce limit
                 //TODO check if valid!
-                if (ephemeralResourceDefinition.getLimits() != null) {
-                    Quantity limit = Quantity.fromString(ephemeralResourceDefinition.getLimits());
-                    req.setLimits(Map.of("storage", limit));
-                }
+                // if (ephemeralResourceDefinition.getLimits() != null) {
+                //     Quantity limit = Quantity.fromString(ephemeralResourceDefinition.getLimits());
+                //     req.setLimits(Map.of("storage", limit));
+                // }
 
                 return volume.ephemeral(
                     new V1EphemeralVolumeSource()
@@ -322,12 +315,20 @@ public class K8sBuilderHelper implements InitializingBean {
         return new V1VolumeMount().name(coreVolume.getName()).mountPath(coreVolume.getMountPath());
     }
 
-    public Map<String, Quantity> convertResources(Map<String, String> map) {
-        return map
-            .entrySet()
-            .stream()
-            .map(entry -> Map.entry(entry.getKey(), Quantity.fromString(entry.getValue())))
-            .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+    public List<CoreResourceDefinition> convertResources(CoreResource resource) {
+        List<CoreResourceDefinition> definitions = new ArrayList<>();
+        if (resource != null) {
+            if (resource.getCpu() != null) {
+                definitions.add(new CoreResourceDefinition("cpu", resource.getCpu()));
+            }
+            if (resource.getMem() != null) {
+                definitions.add(new CoreResourceDefinition("memory", resource.getMem()));
+            }
+            if (resource.getGpu() != null) {
+                definitions.add(new CoreResourceDefinition(gpuResourceKey, resource.getGpu()));
+            }
+        }
+        return definitions;
     }
 
     /*

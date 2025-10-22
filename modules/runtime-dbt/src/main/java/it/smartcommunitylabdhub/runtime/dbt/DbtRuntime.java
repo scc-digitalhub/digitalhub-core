@@ -137,11 +137,8 @@ public class DbtRuntime extends K8sBaseRuntime<DbtFunctionSpec, DbtRunSpec, DbtR
                         throw new CoreRuntimeException("null or empty task definition");
                     }
 
-                    yield new DbtTransformRunner(
-                        image,
-                        secretService.getSecretData(run.getProject(), taskSpec.getSecrets())
-                    )
-                        .produce(run);
+                    yield new DbtTransformRunner(image, k8sBuilderHelper)
+                        .produce(run, secretService.getSecretData(run.getProject(), taskSpec.getSecrets()));
                 }
                 default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
             };
