@@ -105,7 +105,7 @@ public class FlowerClientRuntime
                 case FlowerClientDeployRunSpec.KIND -> {
                     yield new FlowerClientDeployRunSpec(run.getSpec());
                 }
-                case FlowerClientBuildTaskSpec.KIND -> {
+                case FlowerClientBuildRunSpec.KIND -> {
                     yield new FlowerClientBuildRunSpec(run.getSpec());
                 }
                 default -> throw new IllegalArgumentException(
