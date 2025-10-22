@@ -984,8 +984,13 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
 
         //CPU
         //TODO evaluate auto-calculation based on factor
-        if (StringUtils.hasText(cpuLimitResourceDefinition.getValue())) {
-            limits.putIfAbsent("cpu", Quantity.fromString(cpuLimitResourceDefinition.getValue()));
+        if (!limits.containsKey("cpu")) {
+            if (StringUtils.hasText(cpuLimitResourceDefinition.getValue())) {
+                limits.putIfAbsent("cpu", Quantity.fromString(cpuLimitResourceDefinition.getValue()));
+            } else if (requests.containsKey("cpu")) {
+                //set equal to request when missing
+                limits.put("cpu", requests.get("cpu"));
+            }
         }
 
         //MEM
