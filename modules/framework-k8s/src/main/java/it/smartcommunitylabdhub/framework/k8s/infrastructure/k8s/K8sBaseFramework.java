@@ -919,9 +919,10 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
 
         //translate requests
         Map<String, Quantity> requests = new HashMap<>();
-        if (runnable.getRequests() != null) {
+        if (runnable.getResources() != null && runnable.getResources().getRequests() != null) {
             //copy all definitions
             runnable
+                .getResources()
                 .getRequests()
                 .stream()
                 .filter(r -> r != null)
@@ -933,8 +934,9 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
                 });
         }
 
-        if (template != null && template.getRequests() != null) {
+        if (template != null && template.getResources() != null && template.getResources().getRequests() != null) {
             template
+                .getResources()
                 .getRequests()
                 .stream()
                 .filter(r -> r != null)
@@ -967,8 +969,9 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
 
         //limits are either in template or calculated
         Map<String, Quantity> limits = new HashMap<>();
-        if (template != null && template.getLimits() != null) {
+        if (template != null && template.getResources() != null && template.getResources().getLimits() != null) {
             template
+                .getResources()
                 .getLimits()
                 .stream()
                 .filter(r -> r != null)

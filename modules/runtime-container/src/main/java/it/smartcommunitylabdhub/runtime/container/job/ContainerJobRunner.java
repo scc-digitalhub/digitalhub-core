@@ -116,7 +116,7 @@ public class ContainerJobRunner {
             .args(runSpec.getArgs() != null ? runSpec.getArgs().toArray(new String[0]) : null)
             .envs(coreEnvList)
             .secrets(coreSecrets)
-            .requests(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(taskSpec.getResources()) : null)
+            .resources(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(taskSpec.getResources()) : null)
             .volumes(taskSpec.getVolumes())
             .nodeSelector(taskSpec.getNodeSelector())
             .affinity(taskSpec.getAffinity())

@@ -88,7 +88,7 @@ public class DbtTransformRunner {
             .image(image)
             .command("python")
             .args(List.of("wrapper.py").toArray(String[]::new))
-            .requests(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(taskSpec.getResources()) : null)
+            .resources(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(taskSpec.getResources()) : null)
             .nodeSelector(taskSpec.getNodeSelector())
             .volumes(taskSpec.getVolumes())
             .secrets(coreSecrets)

@@ -45,6 +45,7 @@ import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
 import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreResource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreResourceDefinition;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreResources;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume.VolumeType;
 import jakarta.validation.constraints.NotNull;
@@ -315,7 +316,12 @@ public class K8sBuilderHelper implements InitializingBean {
         return new V1VolumeMount().name(coreVolume.getName()).mountPath(coreVolume.getMountPath());
     }
 
-    public List<CoreResourceDefinition> convertResources(CoreResource resource) {
+    public CoreResources convertResources(CoreResource resource) {
+        if (resource == null) {
+            return null;
+        }
+
+        CoreResources resources = new CoreResources();
         List<CoreResourceDefinition> definitions = new ArrayList<>();
         if (resource != null) {
             if (resource.getCpu() != null) {
@@ -328,7 +334,8 @@ public class K8sBuilderHelper implements InitializingBean {
                 definitions.add(new CoreResourceDefinition(gpuResourceKey, resource.getGpu()));
             }
         }
-        return definitions;
+        resources.setRequests(definitions);
+        return resources;
     }
 
     /*

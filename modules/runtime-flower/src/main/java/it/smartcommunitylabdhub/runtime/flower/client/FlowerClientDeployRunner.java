@@ -230,7 +230,7 @@ public class FlowerClientDeployRunner {
             .contextSources(contextSources)
             .envs(coreEnvList)
             .secrets(coreSecrets)
-            .requests(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(taskSpec.getResources()) : null)
+            .resources(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(taskSpec.getResources()) : null)
             .volumes(taskSpec.getVolumes())
             .nodeSelector(taskSpec.getNodeSelector())
             .affinity(taskSpec.getAffinity())

@@ -40,6 +40,7 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreLog;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreMetric;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreNodeSelector;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreResourceDefinition;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreResources;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreToleration;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import java.io.Serializable;
@@ -84,8 +85,7 @@ public class K8sRunnable implements RunRunnable, SecuredRunnable, ConfigurableRu
 
     private List<CoreEnv> secrets;
 
-    private List<CoreResourceDefinition> requests;
-    private List<CoreResourceDefinition> limits;
+    private CoreResources resources;
 
     private List<CoreVolume> volumes;
 
