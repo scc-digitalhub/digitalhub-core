@@ -30,6 +30,7 @@ import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
+import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.base.Executable;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
@@ -39,6 +40,7 @@ import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.commons.services.ModelManager;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
+import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runtime.mlflow.specs.MlflowServeFunctionSpec;
 import it.smartcommunitylabdhub.runtime.mlflow.specs.MlflowServeRunSpec;
@@ -46,14 +48,18 @@ import it.smartcommunitylabdhub.runtime.mlflow.specs.MlflowServeTaskSpec;
 import it.smartcommunitylabdhub.runtime.modelserve.specs.ModelServeRunStatus;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @RuntimeComponent(runtime = MlflowServeRuntime.RUNTIME)
@@ -182,6 +188,39 @@ public class MlflowServeRuntime
         runnable.setConfigurations(configurations);
 
         return runnable;
+    }
+
+    @Override
+    public ModelServeRunStatus onRunning(@NotNull Run run, RunRunnable runnable) {
+        ModelServeRunStatus status = ModelServeRunStatus.with(run.getStatus());
+
+        MlflowServeFunctionSpec funSpec = MlflowServeFunctionSpec.with(run.getSpec());
+        String modelName = StringUtils.hasText(funSpec.getModelName()) ? funSpec.getModelName() : "model";
+
+        if (status.getService() != null && status.getService().getUrl() != null) {
+            //add additional urls  for inference v2
+            K8sServiceInfo service = status.getService();
+            String baseUrl = service.getUrl() + "/v2";
+
+            Set<String> urls = new HashSet<>();
+            if (service.getUrls() != null) {
+                urls.addAll(service.getUrls());
+            }
+
+            // Server Metadata
+            urls.add(baseUrl + "/v2");
+
+            // Model Metadata
+            urls.add(baseUrl + "/v2/models/" + modelName);
+
+            // Inference
+            urls.add(baseUrl + "/v2/models/" + modelName + "/infer");
+
+            service.setUrls(new ArrayList<>(urls));
+            status.setService(service);
+        }
+
+        return status;
     }
 
     @Override
