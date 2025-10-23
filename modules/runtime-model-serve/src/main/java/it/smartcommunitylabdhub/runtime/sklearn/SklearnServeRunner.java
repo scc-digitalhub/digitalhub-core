@@ -51,6 +51,7 @@ import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
 import it.smartcommunitylabdhub.runtime.mlflow.models.MLServerSettingsParameters;
 import it.smartcommunitylabdhub.runtime.mlflow.models.MLServerSettingsSpec;
 import it.smartcommunitylabdhub.runtime.modelserve.specs.ModelServeServeTaskSpec;
+import it.smartcommunitylabdhub.runtime.sklearn.specs.SKLearnModelSpec;
 import it.smartcommunitylabdhub.runtime.sklearn.specs.SklearnServeFunctionSpec;
 import it.smartcommunitylabdhub.runtime.sklearn.specs.SklearnServeRunSpec;
 import it.smartcommunitylabdhub.runtime.sklearn.specs.SklearnServeTaskSpec;
@@ -269,24 +270,36 @@ public class SklearnServeRunner {
      * @throws CoreRuntimeException if the model files are not present or the model file is not found
      */
     private String getFilePath(Model model) {
+        SKLearnModelSpec spec = new SKLearnModelSpec();
+        spec.configure(model.getSpec());
+
+        String path = spec.getPath();
+
+        if (!StringUtils.hasText(path)) {
+            throw new IllegalArgumentException("model path is missing or invalid");
+        }
+
+        if (!path.endsWith("/")) {
+            //use as-is
+            return path;
+        }
+
+        //lookup for a compatible model in folder
         TypeReference<List<FileInfo>> typeRef = new TypeReference<List<FileInfo>>() {};
         List<FileInfo> files = JacksonMapper.CUSTOM_OBJECT_MAPPER.convertValue(model.getStatus().get("files"), typeRef);
         if (files == null || files.isEmpty()) {
-            throw new CoreRuntimeException("model files not found");
+            throw new IllegalArgumentException("model files not found");
         }
+
         FileInfo modelFile = files
             .stream()
             .filter(f -> f.getName().matches(".*\\.pkl$|.*\\.joblib$"))
             .findFirst()
             .orElse(null);
         if (modelFile == null) {
-            throw new CoreRuntimeException("model file not found");
+            throw new IllegalArgumentException("model file not found");
         }
-        String path = (String) model.getSpec().get("path");
-        if (!path.endsWith("/")) {
-            path += "/";
-        }
-        path += modelFile.getPath();
-        return path;
+
+        return path + modelFile.getPath();
     }
 }
