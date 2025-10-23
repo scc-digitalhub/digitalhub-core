@@ -109,7 +109,7 @@ public abstract class LuceneBaseEntityIndexer<D extends BaseDTO> implements Enti
         doc.add(new StringField("keyGroup", keyGroup, Field.Store.YES));
         doc.add(new SortedDocValuesField("keyGroup", new BytesRef(doc.get("keyGroup"))));
 
-        doc.add(new StringField("type", type.name(), Field.Store.YES));
+        doc.add(new StringField("type", type.name().toLowerCase(), Field.Store.YES));
         doc.add(new SortedDocValuesField("type", new BytesRef(doc.get("type"))));
 
         //base doc
