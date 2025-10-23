@@ -27,6 +27,7 @@ import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.triggers.specs.TriggerBaseSpec;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.Map;
@@ -39,6 +40,7 @@ import lombok.Setter;
 public class SchedulerTriggerSpec extends TriggerBaseSpec {
 
     @Pattern(regexp = Keys.CRONTAB_PATTERN)
+    @NotBlank
     private String schedule;
 
     @Override
