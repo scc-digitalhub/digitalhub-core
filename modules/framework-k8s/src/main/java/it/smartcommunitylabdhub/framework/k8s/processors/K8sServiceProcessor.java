@@ -56,7 +56,8 @@ public class K8sServiceProcessor implements Processor<Run, K8sServiceStatus> {
         if (input instanceof K8sRunnable) {
             Map<String, Serializable> res = ((K8sRunnable) input).getResults();
             //extract k8s details for svc
-            if (res != null && res.containsKey("service")) {
+            //note: build only if missing, we don't update service info
+            if (res != null && res.containsKey("service") && run.getStatus().get("service") == null) {
                 try {
                     Map<String, Serializable> s = (Map<String, Serializable>) res.get("service");
                     V1Service service = KubernetesMapper.OBJECT_MAPPER.convertValue(s, V1Service.class);
