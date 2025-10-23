@@ -23,7 +23,7 @@
 package it.smartcommunitylabdhub.lifecycle;
 
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
-import it.smartcommunitylabdhub.commons.infrastructure.Processor;
+import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.infrastructure.ProcessorRegistry;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvent;
@@ -188,7 +188,17 @@ public abstract class BaseLifecycleManager<
 
         //handle event via FSM
         E lifecycleEvent = Enum.valueOf(eventsClass, event);
-        D res = transition(dto, fsm -> fsm.perform(lifecycleEvent, input), input, effect);
+        D res = dto;
+        try {
+            res = transition(dto, fsm -> fsm.perform(lifecycleEvent, input), input, effect);
+        } catch (CoreRuntimeException e) {
+            //on ex try transitioning to ERROR
+            log.debug("entity {} transition to {} generated an exception, move to ERROR", dto.getId());
+            //merge message
+            dto.setStatus(MapUtils.mergeMultipleMaps(dto.getStatus(), Map.of("message", e.getMessage())));
+            //transition
+            res = transition(dto, fsm -> fsm.goToState(Enum.valueOf(stateClass, "ERROR"), input), input, effect);
+        }
 
         StatusFieldAccessor status = StatusFieldAccessor.with(res.getStatus());
         if ("DELETED".equals(status.getState())) {
@@ -249,8 +259,17 @@ public abstract class BaseLifecycleManager<
 
         //transition to next state via FSM
         S nextState = Enum.valueOf(stateClass, nextStateValue);
-        D res = transition(dto, fsm -> fsm.goToState(nextState, input), input, effect);
-
+        D res = dto;
+        try {
+            res = transition(dto, fsm -> fsm.goToState(nextState, input), input, effect);
+        } catch (CoreRuntimeException e) {
+            //on ex try transitioning to ERROR
+            log.debug("entity {} transition to {} generated an exception, move to ERROR", dto.getId());
+            //merge message
+            dto.setStatus(MapUtils.mergeMultipleMaps(dto.getStatus(), Map.of("message", e.getMessage())));
+            //transition
+            res = transition(dto, fsm -> fsm.goToState(Enum.valueOf(stateClass, "ERROR"), input), input, effect);
+        }
         StatusFieldAccessor status = StatusFieldAccessor.with(res.getStatus());
         if ("DELETED".equals(status.getState())) {
             //custom handle DELETED: we have already performed cleanup either via logic or side effects
@@ -347,6 +366,9 @@ public abstract class BaseLifecycleManager<
                     log.debug("Invalid transition {} -> {}", e.getFromState(), e.getToState());
                     //TODO evaluate if we want to throw an exception here to avoid UPDATE on db
                     return d;
+                } catch (RuntimeException ex) {
+                    log.debug("Error performing transition on {}: {}", d.getId(), ex.getMessage());
+                    throw new CoreRuntimeException(ex.getMessage());
                 }
             }
         );
