@@ -29,6 +29,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StreamUtils;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 @Component
@@ -91,16 +92,45 @@ public class ProxyService {
         }
         HttpEntity<byte[]> httpEntity = new HttpEntity<>(body, headers);
 
+        ResponseEntity<String> response = null;
         // Send request
-        ResponseEntity<String> response = restTemplate.exchange(targetUrl, method, httpEntity, String.class);
+        try {
+            response = restTemplate.exchange(targetUrl, method, httpEntity, String.class);
 
-        // Validate content type
-        MediaType contentType = response.getHeaders().getContentType();
-        if (
-            contentType == null ||
-            !(MediaType.TEXT_PLAIN.includes(contentType) || MediaType.APPLICATION_JSON.includes(contentType))
-        ) {
-            throw new IllegalStateException("Unsupported Content-Type: " + contentType);
+            // Validate content type
+            MediaType contentType = response.getHeaders().getContentType();
+            if (contentType == null) {
+                throw new IllegalStateException("Missing or invalid Content-Type");
+            }
+
+            MediaType textType = new MediaType("text", "*");
+            if (
+                !MediaType.TEXT_PLAIN.includes(contentType) &&
+                !MediaType.APPLICATION_JSON.includes(contentType) &&
+                !MediaType.TEXT_HTML.includes(contentType) &&
+                !textType.includes(contentType)
+            ) {
+                throw new IllegalStateException("Unsupported Content-Type: " + contentType);
+            }
+        } catch (HttpClientErrorException hte) {
+            //catch exception and build response
+            response = new ResponseEntity<>(hte.getStatusCode());
+
+            // Validate content type
+            MediaType contentType = response.getHeaders().getContentType();
+            MediaType textType = new MediaType("text", "*");
+            if (
+                MediaType.TEXT_PLAIN.includes(contentType) ||
+                MediaType.APPLICATION_JSON.includes(contentType) ||
+                MediaType.TEXT_HTML.includes(contentType) ||
+                textType.includes(contentType)
+            ) {
+                //collect body
+                response = new ResponseEntity<>(response.getBody(), response.getHeaders(), response.getStatusCode());
+            } else {
+                //pass headers only
+                response = new ResponseEntity<>(response.getHeaders(), response.getStatusCode());
+            }
         }
 
         return response;

@@ -56,7 +56,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.jetty.http.HttpHeader;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -64,6 +63,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.SortDefault;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -377,8 +378,31 @@ public class RunContextController {
 
         //build response
         MultiValueMap<String, String> headers = new LinkedMultiValueMap<>();
-        MediaType contentType = response.getHeaders().getContentType();
-        headers.add(HttpHeader.CONTENT_TYPE.asString(), contentType.toString());
-        return new ResponseEntity<>(response.getBody(), headers, response.getStatusCode());
+        if (response.getHeaders() != null) {
+            //keep content type
+            MediaType contentType = response.getHeaders().getContentType() != null
+                ? response.getHeaders().getContentType()
+                : MediaType.TEXT_PLAIN;
+            headers.add(HttpHeaders.CONTENT_TYPE, contentType.toString());
+
+            //copy everything else as X-Proxy response
+            response
+                .getHeaders()
+                .entrySet()
+                .forEach(e -> {
+                    String h = "X-Proxy-" + e.getKey();
+                    headers.put(h, e.getValue());
+                    //make sure all X-Proxy headers are exposed
+                    headers.add(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, h);
+                });
+
+            //append status code
+            if (response.getStatusCode() != null) {
+                headers.add("X-Proxy-Status", response.getStatusCode().toString());
+                //make sure all X-Proxy headers are exposed
+                headers.add(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "X-Proxy-Status");
+            }
+        }
+        return new ResponseEntity<>(response.getBody(), headers, HttpStatus.OK);
     }
 }
