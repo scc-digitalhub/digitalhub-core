@@ -6,27 +6,30 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.authorization.controllers;
 
+import it.smartcommunitylabdhub.authorization.model.OAuth2EnvConfig;
 import it.smartcommunitylabdhub.authorization.model.OpenIdConfig;
 import it.smartcommunitylabdhub.authorization.model.OpenIdConfig.OpenIdConfigBuilder;
 import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
 import it.smartcommunitylabdhub.commons.config.SecurityProperties;
+import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
+import it.smartcommunitylabdhub.commons.infrastructure.ConfigurationProvider;
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.List;
@@ -37,12 +40,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.Nullable;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-public class OAuth2ConfigurationEndpoint {
+public class OAuth2ConfigurationEndpoint implements ConfigurationProvider {
 
     @Autowired
     private ApplicationProperties applicationProperties;
@@ -114,5 +118,15 @@ public class OAuth2ConfigurationEndpoint {
         builder.tokenEndpointAuthMethodsSupported(authMethods);
 
         return builder.build();
+    }
+
+    @Override
+    @Nullable
+    public Configuration getConfig() {
+        if (config == null) {
+            config = generate();
+        }
+
+        return OAuth2EnvConfig.from(config);
     }
 }
