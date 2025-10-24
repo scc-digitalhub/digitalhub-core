@@ -15,7 +15,7 @@
         <java.version>21</java.version>
         <spring-boot.version>3.4.10</spring-boot.version>
         <spring-security.version>6.4.11</spring-security.version>
-        <springdoc.version>2.2.0</springdoc.version>
+        <springdoc.version>2.7.0</springdoc.version>
         <jackson.version>2.18.4</jackson.version>
         <slf4j.version>2.0.9</slf4j.version>
         <kubernetes.version>24.0.0-legacy</kubernetes.version>
