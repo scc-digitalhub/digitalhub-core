@@ -346,6 +346,7 @@ public class LuceneManager {
                 "metadata.labels",
             };
             MultiFieldQueryParser parser = new MultiFieldQueryParser(fields, analyzer);
+            parser.setAllowLeadingWildcard(true);
             Query query = parser.parse(q.trim());
             builder.add(query, BooleanClause.Occur.MUST);
             result.setHighlightQuery(query);
