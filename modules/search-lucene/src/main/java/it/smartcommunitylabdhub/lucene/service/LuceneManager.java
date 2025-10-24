@@ -158,6 +158,8 @@ public class LuceneManager {
         try {
             synchronized (iwriter) {
                 for (Document doc : docs) {
+                    Term term = new Term("id", doc.get("id"));
+                    iwriter.deleteDocuments(term);
                     iwriter.addDocument(doc);
                 }
                 iwriter.commit();
