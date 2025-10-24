@@ -1,17 +1,6 @@
 {
   "$schema" : "https://json-schema.org/draft/2020-12/schema",
   "$defs" : {
-    "ArrayField" : {
-      "type" : "array",
-      "items" : {
-        "$ref" : "#/$defs/Serializable"
-      },
-      "title" : "array"
-    },
-    "BooleanField" : {
-      "type" : "boolean",
-      "title" : "boolean"
-    },
     "CoreAffinity" : {
       "type" : "object",
       "properties" : {
@@ -69,38 +58,28 @@
       "type" : "object",
       "properties" : {
         "cpu" : {
-          "$ref" : "#/$defs/CoreResourceDefinition",
+          "type" : "string",
           "title" : "fields.cpu.title",
-          "description" : "fields.cpu.description"
+          "description" : "fields.cpu.description",
+          "pattern" : "[\\d]+|^([0-9])+([a-zA-Z])+$"
         },
         "gpu" : {
-          "$ref" : "#/$defs/CoreResourceDefinition",
+          "type" : "string",
           "title" : "fields.gpu.title",
-          "description" : "fields.gpu.description"
+          "description" : "fields.gpu.description",
+          "pattern" : "[\\d]+|^([0-9])+([a-zA-Z])+$"
         },
         "mem" : {
-          "$ref" : "#/$defs/CoreResourceDefinition",
+          "type" : "string",
           "title" : "fields.mem.title",
-          "description" : "fields.mem.description"
+          "description" : "fields.mem.description",
+          "pattern" : "[\\d]+|^([0-9])+([a-zA-Z])+$"
         }
       }
     },
-    "CoreResourceDefinition" : {
-      "type" : "object",
-      "properties" : {
-        "limits" : {
-          "type" : "string",
-          "title" : "fields.limits.title",
-          "description" : "fields.limits.description",
-          "pattern" : "[\\d]+|^([0-9])+([a-zA-Z])+$"
-        },
-        "requests" : {
-          "type" : "string",
-          "title" : "fields.requests.title",
-          "description" : "fields.requests.description",
-          "pattern" : "[\\d]+|^([0-9])+([a-zA-Z])+$"
-        }
-      }
+    "CoreServiceType" : {
+      "type" : "string",
+      "enum" : [ "ExternalName", "ClusterIP", "NodePort", "LoadBalancer" ]
     },
     "CoreToleration" : {
       "type" : "object",
@@ -165,43 +144,23 @@
       },
       "required" : [ "mount_path", "name", "volume_type" ]
     },
-    "Map_String.Serializable_" : {
-      "type" : "object",
-      "additionalProperties" : {
-        "$ref" : "#/$defs/Serializable"
-      }
+    "HuggingfaceBackend" : {
+      "type" : "string",
+      "enum" : [ "AUTO", "VLLM", "HUGGINGFACE" ]
+    },
+    "HuggingfaceDType" : {
+      "type" : "string",
+      "enum" : [ "AUTO", "FLOAT16", "FLOAT32", "BFLOAT16", "FLOAT", "HALF" ]
+    },
+    "HuggingfaceTask" : {
+      "type" : "string",
+      "enum" : [ "sequence_classification", "token_classification", "fill_mask", "text_generation", "text2text_generation", "text_embedding" ]
     },
     "Map_String.String_" : {
       "type" : "object",
       "additionalProperties" : {
         "type" : "string"
       }
-    },
-    "NumberField" : {
-      "type" : "number",
-      "title" : "number"
-    },
-    "ObjectField" : {
-      "type" : "object",
-      "title" : "object"
-    },
-    "Serializable" : {
-      "anyOf" : [ {
-        "$ref" : "#/$defs/StringField"
-      }, {
-        "$ref" : "#/$defs/NumberField"
-      }, {
-        "$ref" : "#/$defs/BooleanField"
-      }, {
-        "$ref" : "#/$defs/ObjectField"
-      }, {
-        "$ref" : "#/$defs/ArrayField"
-      } ],
-      "title" : "object"
-    },
-    "StringField" : {
-      "type" : "string",
-      "title" : "string"
     },
     "V1LabelSelector" : {
       "type" : "object",
@@ -470,45 +429,25 @@
     },
     "VolumeType" : {
       "type" : "string",
-      "enum" : [ "persistent_volume_claim", "empty_dir" ]
+      "enum" : [ "shared_volume", "persistent_volume_claim", "ephemeral", "empty_dir" ]
     }
   },
   "type" : "object",
   "properties" : {
-    "inputs" : {
-      "$ref" : "#/$defs/Map_String.String_",
-      "title" : "fields.inputs.title",
-      "description" : "fields.inputs.description",
-      "additionalProperties" : {
+    "args" : {
+      "title" : "fields.huggingface.args.title",
+      "description" : "fields.huggingface.args.description",
+      "type" : "array",
+      "items" : {
         "type" : "string",
-        "title" : "fields.inputs.item.title",
-        "description" : "fields.inputs.item.description"
+        "title" : "fields.args.item.title",
+        "description" : "fields.args.item.description"
       }
     },
     "local_execution" : {
       "type" : "boolean",
       "title" : "fields.localExecution.title",
       "description" : "fields.localExecution.description"
-    },
-    "outputs" : {
-      "$ref" : "#/$defs/Map_String.String_",
-      "title" : "fields.outputs.title",
-      "description" : "fields.outputs.description",
-      "additionalProperties" : {
-        "type" : "string",
-        "title" : "fields.outputs.item.title",
-        "description" : "fields.outputs.item.description"
-      }
-    },
-    "parameters" : {
-      "$ref" : "#/$defs/Map_String.Serializable_",
-      "title" : "fields.parameters.title",
-      "description" : "fields.parameters.description",
-      "additionalProperties" : {
-        "$ref" : "#/$defs/Serializable",
-        "title" : "fields.parameters.item.title",
-        "description" : "fields.parameters.item.description"
-      }
     },
     "task" : {
       "type" : "string",
@@ -518,8 +457,8 @@
     }
   },
   "required" : [ "task" ],
-  "title" : "specs.dbt+run.title",
-  "description" : "specs.dbt+run.description",
+  "title" : "specs.huggingfaceserve+serve:run.title",
+  "description" : "specs.huggingfaceserve+serve:run.description",
   "allOf" : [ {
     "type" : "object",
     "properties" : {
@@ -527,6 +466,31 @@
         "$ref" : "#/$defs/CoreAffinity",
         "title" : "fields.affinity.title",
         "description" : "fields.affinity.description"
+      },
+      "backend" : {
+        "$ref" : "#/$defs/HuggingfaceBackend",
+        "title" : "fields.huggingface.backend.title",
+        "description" : "fields.huggingface.backend.description"
+      },
+      "disable_log_requests" : {
+        "type" : "boolean",
+        "title" : "fields.huggingface.disablelogrequests.title",
+        "description" : "fields.huggingface.disablelogrequests.description"
+      },
+      "disable_lower_case" : {
+        "type" : "boolean",
+        "title" : "fields.huggingface.disablelowercase.title",
+        "description" : "fields.huggingface.disablelowercase.description"
+      },
+      "disable_special_tokens" : {
+        "type" : "boolean",
+        "title" : "fields.huggingface.disablespecialtokens.title",
+        "description" : "fields.huggingface.disablespecialtokens.description"
+      },
+      "dtype" : {
+        "$ref" : "#/$defs/HuggingfaceDType",
+        "title" : "fields.huggingface.dtype.title",
+        "description" : "fields.huggingface.dtype.description"
       },
       "envs" : {
         "title" : "fields.envs.title",
@@ -543,6 +507,21 @@
         "title" : "fields.function.title",
         "description" : "fields.function.description",
         "minLength" : 1
+      },
+      "huggingface_task" : {
+        "$ref" : "#/$defs/HuggingfaceTask",
+        "title" : "fields.huggingface.task.title",
+        "description" : "fields.huggingface.task.description"
+      },
+      "max_length" : {
+        "type" : "integer",
+        "title" : "fields.huggingface.maxlength.title",
+        "description" : "fields.huggingface.maxlength.description"
+      },
+      "max_log_len" : {
+        "type" : "integer",
+        "title" : "fields.huggingface.maxloglen.title",
+        "description" : "fields.huggingface.maxloglen.description"
       },
       "node_selector" : {
         "title" : "fields.nodeSelector.title",
@@ -564,10 +543,26 @@
         "title" : "fields.profile.title",
         "description" : "fields.profile.description"
       },
+      "replicas" : {
+        "type" : "integer",
+        "title" : "fields.replicas.title",
+        "description" : "fields.replicas.description",
+        "minimum" : 0
+      },
       "resources" : {
         "$ref" : "#/$defs/CoreResource",
         "title" : "fields.resources.title",
         "description" : "fields.resources.description"
+      },
+      "return_probabilities" : {
+        "type" : "boolean",
+        "title" : "fields.huggingface.returnprobabilities.title",
+        "description" : "fields.huggingface.returnprobabilities.description"
+      },
+      "return_token_type_ids" : {
+        "type" : "boolean",
+        "title" : "fields.huggingface.returntokentypeids.title",
+        "description" : "fields.huggingface.returntokentypeids.description"
       },
       "runtime_class" : {
         "type" : "string",
@@ -584,6 +579,32 @@
           "description" : "fields.secrets.item.description"
         }
       },
+      "service_name" : {
+        "type" : "string",
+        "title" : "fields.serviceName.title",
+        "description" : "fields.serviceName.description"
+      },
+      "service_type" : {
+        "$ref" : "#/$defs/CoreServiceType",
+        "title" : "fields.serviceType.title",
+        "description" : "fields.serviceType.description",
+        "default" : "ClusterIP"
+      },
+      "tensor_input_names" : {
+        "title" : "fields.huggingface.tensorinputnames.title",
+        "description" : "fields.huggingface.tensorinputnames.description",
+        "type" : "array",
+        "items" : {
+          "type" : "string",
+          "title" : "fields.tensorInputNames.item.title",
+          "description" : "fields.tensorInputNames.item.description"
+        }
+      },
+      "tokenizer_revision" : {
+        "type" : "string",
+        "title" : "fields.huggingface.tokenizerrevision.title",
+        "description" : "fields.huggingface.tokenizerrevision.description"
+      },
       "tolerations" : {
         "title" : "fields.tolerations.title",
         "description" : "fields.tolerations.description",
@@ -593,6 +614,11 @@
           "title" : "fields.tolerations.item.title",
           "description" : "fields.tolerations.item.description"
         }
+      },
+      "trust_remote_code" : {
+        "type" : "boolean",
+        "title" : "fields.huggingface.trustremotecode.title",
+        "description" : "fields.huggingface.trustremotecode.description"
       },
       "volumes" : {
         "title" : "fields.volumes.title",
@@ -606,7 +632,7 @@
       }
     },
     "required" : [ "function" ],
-    "title" : "specs.dbt+transform.title",
-    "description" : "specs.dbt+transform.description"
+    "title" : "specs.huggingfaceserve+serve.title",
+    "description" : "specs.huggingfaceserve+serve.description"
   } ]
 }

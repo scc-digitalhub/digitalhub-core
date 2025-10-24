@@ -1,0 +1,28 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "type" : "object",
+  "properties" : {
+    "base_image" : {
+      "type" : "string",
+      "title" : "fields.flower.baseImage.title",
+      "description" : "fields.flower.baseImage.description"
+    },
+    "image" : {
+      "type" : "string",
+      "title" : "fields.flower.image.title",
+      "description" : "fields.flower.image.description"
+    },
+    "requirements" : {
+      "title" : "fields.python.requirements.title",
+      "description" : "fields.python.requirements.description",
+      "type" : "array",
+      "items" : {
+        "type" : "string",
+        "title" : "fields.requirements.item.title",
+        "description" : "fields.requirements.item.description"
+      }
+    }
+  },
+  "title" : "specs.flower-server.title",
+  "description" : "specs.flower-server.description"
+}

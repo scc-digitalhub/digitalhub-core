@@ -1,6 +1,17 @@
 {
   "$schema" : "https://json-schema.org/draft/2020-12/schema",
   "$defs" : {
+    "ArrayField" : {
+      "type" : "array",
+      "items" : {
+        "$ref" : "#/$defs/Serializable"
+      },
+      "title" : "array"
+    },
+    "BooleanField" : {
+      "type" : "boolean",
+      "title" : "boolean"
+    },
     "CoreAffinity" : {
       "type" : "object",
       "properties" : {
@@ -77,10 +88,6 @@
         }
       }
     },
-    "CoreServiceType" : {
-      "type" : "string",
-      "enum" : [ "ExternalName", "ClusterIP", "NodePort", "LoadBalancer" ]
-    },
     "CoreToleration" : {
       "type" : "object",
       "properties" : {
@@ -144,11 +151,43 @@
       },
       "required" : [ "mount_path", "name", "volume_type" ]
     },
+    "Map_String.Serializable_" : {
+      "type" : "object",
+      "additionalProperties" : {
+        "$ref" : "#/$defs/Serializable"
+      }
+    },
     "Map_String.String_" : {
       "type" : "object",
       "additionalProperties" : {
         "type" : "string"
       }
+    },
+    "NumberField" : {
+      "type" : "number",
+      "title" : "number"
+    },
+    "ObjectField" : {
+      "type" : "object",
+      "title" : "object"
+    },
+    "Serializable" : {
+      "anyOf" : [ {
+        "$ref" : "#/$defs/StringField"
+      }, {
+        "$ref" : "#/$defs/NumberField"
+      }, {
+        "$ref" : "#/$defs/BooleanField"
+      }, {
+        "$ref" : "#/$defs/ObjectField"
+      }, {
+        "$ref" : "#/$defs/ArrayField"
+      } ],
+      "title" : "object"
+    },
+    "StringField" : {
+      "type" : "string",
+      "title" : "string"
     },
     "V1LabelSelector" : {
       "type" : "object",
@@ -422,106 +461,148 @@
   },
   "type" : "object",
   "properties" : {
-    "affinity" : {
-      "$ref" : "#/$defs/CoreAffinity",
-      "title" : "fields.affinity.title",
-      "description" : "fields.affinity.description"
-    },
-    "envs" : {
-      "title" : "fields.envs.title",
-      "description" : "fields.envs.description",
-      "type" : "array",
-      "items" : {
-        "$ref" : "#/$defs/CoreEnv",
-        "title" : "fields.envs.item.title",
-        "description" : "fields.envs.item.description"
+    "init_parameters" : {
+      "$ref" : "#/$defs/Map_String.Serializable_",
+      "title" : "fields.initParameters.title",
+      "description" : "fields.initParameters.description",
+      "additionalProperties" : {
+        "$ref" : "#/$defs/Serializable",
+        "title" : "fields.initParameters.item.title",
+        "description" : "fields.initParameters.item.description"
       }
     },
-    "function" : {
-      "type" : "string",
-      "title" : "fields.function.title",
-      "description" : "fields.function.description",
-      "minLength" : 1
-    },
-    "node_selector" : {
-      "title" : "fields.nodeSelector.title",
-      "description" : "fields.nodeSelector.description",
-      "type" : "array",
-      "items" : {
-        "$ref" : "#/$defs/CoreNodeSelector",
-        "title" : "fields.nodeSelector.item.title",
-        "description" : "fields.nodeSelector.item.description"
-      }
-    },
-    "priority_class" : {
-      "type" : "string",
-      "title" : "fields.priorityClass.title",
-      "description" : "fields.priorityClass.description"
-    },
-    "profile" : {
-      "type" : "string",
-      "title" : "fields.profile.title",
-      "description" : "fields.profile.description"
-    },
-    "replicas" : {
-      "type" : "integer",
-      "title" : "fields.replicas.title",
-      "description" : "fields.replicas.description",
-      "minimum" : 0
-    },
-    "resources" : {
-      "$ref" : "#/$defs/CoreResource",
-      "title" : "fields.resources.title",
-      "description" : "fields.resources.description"
-    },
-    "runtime_class" : {
-      "type" : "string",
-      "title" : "fields.runtimeClass.title",
-      "description" : "fields.runtimeClass.description"
-    },
-    "secrets" : {
-      "title" : "fields.secrets.title",
-      "description" : "fields.secrets.description",
-      "type" : "array",
-      "items" : {
+    "inputs" : {
+      "$ref" : "#/$defs/Map_String.String_",
+      "title" : "fields.inputs.title",
+      "description" : "fields.inputs.description",
+      "additionalProperties" : {
         "type" : "string",
-        "title" : "fields.secrets.item.title",
-        "description" : "fields.secrets.item.description"
+        "title" : "fields.inputs.item.title",
+        "description" : "fields.inputs.item.description"
       }
     },
-    "service_name" : {
+    "local_execution" : {
+      "type" : "boolean",
+      "title" : "fields.localExecution.title",
+      "description" : "fields.localExecution.description"
+    },
+    "parameters" : {
+      "$ref" : "#/$defs/Map_String.Serializable_",
+      "title" : "fields.parameters.title",
+      "description" : "fields.parameters.description",
+      "additionalProperties" : {
+        "$ref" : "#/$defs/Serializable",
+        "title" : "fields.parameters.item.title",
+        "description" : "fields.parameters.item.description"
+      }
+    },
+    "task" : {
       "type" : "string",
-      "title" : "fields.serviceName.title",
-      "description" : "fields.serviceName.description"
-    },
-    "service_type" : {
-      "$ref" : "#/$defs/CoreServiceType",
-      "title" : "fields.serviceType.title",
-      "description" : "fields.serviceType.description",
-      "default" : "ClusterIP"
-    },
-    "tolerations" : {
-      "title" : "fields.tolerations.title",
-      "description" : "fields.tolerations.description",
-      "type" : "array",
-      "items" : {
-        "$ref" : "#/$defs/CoreToleration",
-        "title" : "fields.tolerations.item.title",
-        "description" : "fields.tolerations.item.description"
-      }
-    },
-    "volumes" : {
-      "title" : "fields.volumes.title",
-      "description" : "fields.volumes.description",
-      "type" : "array",
-      "items" : {
-        "$ref" : "#/$defs/CoreVolume",
-        "title" : "fields.volumes.item.title",
-        "description" : "fields.volumes.item.description"
-      }
+      "title" : "fields.task.title",
+      "description" : "fields.task.description",
+      "minLength" : 1
     }
   },
-  "required" : [ "function" ],
-  "title" : "specs.mlflowserve+serve.title",
-  "description" : "specs.mlflowserve+serve.description"
+  "required" : [ "task" ],
+  "title" : "specs.python+build:run.title",
+  "description" : "specs.python+build:run.description",
+  "allOf" : [ {
+    "type" : "object",
+    "properties" : {
+      "affinity" : {
+        "$ref" : "#/$defs/CoreAffinity",
+        "title" : "fields.affinity.title",
+        "description" : "fields.affinity.description"
+      },
+      "envs" : {
+        "title" : "fields.envs.title",
+        "description" : "fields.envs.description",
+        "type" : "array",
+        "items" : {
+          "$ref" : "#/$defs/CoreEnv",
+          "title" : "fields.envs.item.title",
+          "description" : "fields.envs.item.description"
+        }
+      },
+      "function" : {
+        "type" : "string",
+        "title" : "fields.function.title",
+        "description" : "fields.function.description",
+        "minLength" : 1
+      },
+      "instructions" : {
+        "title" : "fields.instructions.title",
+        "description" : "fields.instructions.description",
+        "type" : "array",
+        "items" : {
+          "type" : "string",
+          "title" : "fields.instructions.item.title",
+          "description" : "fields.instructions.item.description"
+        }
+      },
+      "node_selector" : {
+        "title" : "fields.nodeSelector.title",
+        "description" : "fields.nodeSelector.description",
+        "type" : "array",
+        "items" : {
+          "$ref" : "#/$defs/CoreNodeSelector",
+          "title" : "fields.nodeSelector.item.title",
+          "description" : "fields.nodeSelector.item.description"
+        }
+      },
+      "priority_class" : {
+        "type" : "string",
+        "title" : "fields.priorityClass.title",
+        "description" : "fields.priorityClass.description"
+      },
+      "profile" : {
+        "type" : "string",
+        "title" : "fields.profile.title",
+        "description" : "fields.profile.description"
+      },
+      "resources" : {
+        "$ref" : "#/$defs/CoreResource",
+        "title" : "fields.resources.title",
+        "description" : "fields.resources.description"
+      },
+      "runtime_class" : {
+        "type" : "string",
+        "title" : "fields.runtimeClass.title",
+        "description" : "fields.runtimeClass.description"
+      },
+      "secrets" : {
+        "title" : "fields.secrets.title",
+        "description" : "fields.secrets.description",
+        "type" : "array",
+        "items" : {
+          "type" : "string",
+          "title" : "fields.secrets.item.title",
+          "description" : "fields.secrets.item.description"
+        }
+      },
+      "tolerations" : {
+        "title" : "fields.tolerations.title",
+        "description" : "fields.tolerations.description",
+        "type" : "array",
+        "items" : {
+          "$ref" : "#/$defs/CoreToleration",
+          "title" : "fields.tolerations.item.title",
+          "description" : "fields.tolerations.item.description"
+        }
+      },
+      "volumes" : {
+        "title" : "fields.volumes.title",
+        "description" : "fields.volumes.description",
+        "type" : "array",
+        "items" : {
+          "$ref" : "#/$defs/CoreVolume",
+          "title" : "fields.volumes.item.title",
+          "description" : "fields.volumes.item.description"
+        }
+      }
+    },
+    "required" : [ "function" ],
+    "title" : "specs.python+build.title",
+    "description" : "specs.python+build.description"
+  } ]
 }

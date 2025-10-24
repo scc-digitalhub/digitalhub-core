@@ -1,0 +1,65 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "$defs" : {
+    "FlowerSourceCode" : {
+      "type" : "object",
+      "properties" : {
+        "clientapp" : {
+          "type" : "string",
+          "title" : "fields.flowerSourceCode.clientapp.title",
+          "description" : "fields.flowerSourceCode.clientapp.description"
+        },
+        "clientbase64" : {
+          "type" : "string",
+          "title" : "fields.flowerSourceCode.clientbase64.title",
+          "description" : "fields.flowerSourceCode.clientbase64.description"
+        },
+        "serverapp" : {
+          "type" : "string",
+          "title" : "fields.flowerSourceCode.serverapp.title",
+          "description" : "fields.flowerSourceCode.serverapp.description"
+        },
+        "serverbase64" : {
+          "type" : "string",
+          "title" : "fields.flowerSourceCode.serverbase64.title",
+          "description" : "fields.flowerSourceCode.serverbase64.description"
+        },
+        "source" : {
+          "type" : "string",
+          "title" : "fields.flowerSourceCode.source.title",
+          "description" : "fields.flowerSourceCode.source.description"
+        }
+      }
+    }
+  },
+  "type" : "object",
+  "properties" : {
+    "base_image" : {
+      "type" : "string",
+      "title" : "fields.flower.baseImage.title",
+      "description" : "fields.flower.baseImage.description"
+    },
+    "fab_source" : {
+      "$ref" : "#/$defs/FlowerSourceCode",
+      "title" : "fields.flower.sourceCode.title",
+      "description" : "fields.flower.sourceCode.description"
+    },
+    "image" : {
+      "type" : "string",
+      "title" : "fields.flower.image.title",
+      "description" : "fields.flower.image.description"
+    },
+    "requirements" : {
+      "title" : "fields.python.requirements.title",
+      "description" : "fields.python.requirements.description",
+      "type" : "array",
+      "items" : {
+        "type" : "string",
+        "title" : "fields.requirements.item.title",
+        "description" : "fields.requirements.item.description"
+      }
+    }
+  },
+  "title" : "specs.flower-app.title",
+  "description" : "specs.flower-app.description"
+}

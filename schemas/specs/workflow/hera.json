@@ -1,15 +1,11 @@
 {
   "$schema" : "https://json-schema.org/draft/2020-12/schema",
   "$defs" : {
-    "CoreImagePullPolicy" : {
+    "HeraSourceCodeLanguages" : {
       "type" : "string",
-      "enum" : [ "IfNotPresent", "Always", "Never" ]
+      "enum" : [ "python" ]
     },
-    "SourceCodeLanguages" : {
-      "type" : "string",
-      "enum" : [ "python", "java", "javascript", "typescript", "dockerfile", "markdown", "html", "json", "sql", "css", "yaml", "text", "sh" ]
-    },
-    "SourceCode_SourceCodeLanguages_" : {
+    "SourceCode_HeraSourceCodeLanguages_" : {
       "type" : "object",
       "properties" : {
         "base64" : {
@@ -23,9 +19,10 @@
           "description" : "fields.sourceCode.handler.description"
         },
         "lang" : {
-          "$ref" : "#/$defs/SourceCodeLanguages",
+          "$ref" : "#/$defs/HeraSourceCodeLanguages",
           "title" : "fields.sourceCode.lang.title",
-          "description" : "fields.sourceCode.lang.description"
+          "description" : "fields.sourceCode.lang.description",
+          "default" : "python"
         },
         "source" : {
           "type" : "string",
@@ -37,32 +34,23 @@
   },
   "type" : "object",
   "properties" : {
-    "base_image" : {
-      "type" : "string",
-      "title" : "fields.container.baseImage.title",
-      "description" : "fields.container.baseImage.description"
-    },
-    "command" : {
-      "type" : "string",
-      "title" : "fields.container.command.title",
-      "description" : "fields.container.command.description"
-    },
     "image" : {
       "type" : "string",
       "title" : "fields.container.image.title",
       "description" : "fields.container.image.description"
     },
-    "image_pull_policy" : {
-      "$ref" : "#/$defs/CoreImagePullPolicy",
-      "title" : "fields.container.imagePullPolicy.title",
-      "description" : "fields.container.imagePullPolicy.description"
-    },
     "source" : {
-      "$ref" : "#/$defs/SourceCode_SourceCodeLanguages_",
+      "$ref" : "#/$defs/SourceCode_HeraSourceCodeLanguages_",
       "title" : "fields.sourceCode.title",
       "description" : "fields.sourceCode.description"
+    },
+    "tag" : {
+      "type" : "string",
+      "title" : "fields.container.tag.title",
+      "description" : "fields.container.tag.description"
     }
   },
-  "title" : "specs.container.title",
-  "description" : "specs.container.description"
+  "required" : [ "source" ],
+  "title" : "specs.hera.title",
+  "description" : "specs.hera.description"
 }

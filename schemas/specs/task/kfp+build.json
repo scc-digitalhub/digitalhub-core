@@ -58,35 +58,21 @@
       "type" : "object",
       "properties" : {
         "cpu" : {
-          "$ref" : "#/$defs/CoreResourceDefinition",
-          "title" : "fields.cpu.title",
-          "description" : "fields.cpu.description"
-        },
-        "gpu" : {
-          "$ref" : "#/$defs/CoreResourceDefinition",
-          "title" : "fields.gpu.title",
-          "description" : "fields.gpu.description"
-        },
-        "mem" : {
-          "$ref" : "#/$defs/CoreResourceDefinition",
-          "title" : "fields.mem.title",
-          "description" : "fields.mem.description"
-        }
-      }
-    },
-    "CoreResourceDefinition" : {
-      "type" : "object",
-      "properties" : {
-        "limits" : {
           "type" : "string",
-          "title" : "fields.limits.title",
-          "description" : "fields.limits.description",
+          "title" : "fields.cpu.title",
+          "description" : "fields.cpu.description",
           "pattern" : "[\\d]+|^([0-9])+([a-zA-Z])+$"
         },
-        "requests" : {
+        "gpu" : {
           "type" : "string",
-          "title" : "fields.requests.title",
-          "description" : "fields.requests.description",
+          "title" : "fields.gpu.title",
+          "description" : "fields.gpu.description",
+          "pattern" : "[\\d]+|^([0-9])+([a-zA-Z])+$"
+        },
+        "mem" : {
+          "type" : "string",
+          "title" : "fields.mem.title",
+          "description" : "fields.mem.description",
           "pattern" : "[\\d]+|^([0-9])+([a-zA-Z])+$"
         }
       }
@@ -427,7 +413,7 @@
     },
     "VolumeType" : {
       "type" : "string",
-      "enum" : [ "persistent_volume_claim", "empty_dir" ]
+      "enum" : [ "shared_volume", "persistent_volume_claim", "ephemeral", "empty_dir" ]
     }
   },
   "type" : "object",

@@ -7,6 +7,11 @@
       "title" : "fields.function.title",
       "description" : "fields.function.description",
       "minLength" : 1
+    },
+    "profile" : {
+      "type" : "string",
+      "title" : "fields.kubeai.resourceprofile.title",
+      "description" : "fields.kubeai.resourceprofile.description"
     }
   },
   "required" : [ "function" ],

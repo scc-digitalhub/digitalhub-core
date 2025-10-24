@@ -24,7 +24,7 @@
     },
     "RelationshipName" : {
       "type" : "string",
-      "enum" : [ "produced_by", "consumes", "run_of" ]
+      "enum" : [ "produced_by", "consumes", "run_of", "step_of" ]
     }
   },
   "type" : "object",

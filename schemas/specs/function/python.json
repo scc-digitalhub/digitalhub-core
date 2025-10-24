@@ -38,7 +38,7 @@
     },
     "PythonVersion" : {
       "type" : "string",
-      "enum" : [ "PYTHON3_9", "PYTHON3_10" ]
+      "enum" : [ "PYTHON3_9", "PYTHON3_10", "PYTHON3_11", "PYTHON3_12" ]
     }
   },
   "type" : "object",

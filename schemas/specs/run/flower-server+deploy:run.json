@@ -77,10 +77,6 @@
         }
       }
     },
-    "CoreServiceType" : {
-      "type" : "string",
-      "enum" : [ "ExternalName", "ClusterIP", "NodePort", "LoadBalancer" ]
-    },
     "CoreToleration" : {
       "type" : "object",
       "properties" : {
@@ -422,106 +418,123 @@
   },
   "type" : "object",
   "properties" : {
-    "affinity" : {
-      "$ref" : "#/$defs/CoreAffinity",
-      "title" : "fields.affinity.title",
-      "description" : "fields.affinity.description"
-    },
-    "envs" : {
-      "title" : "fields.envs.title",
-      "description" : "fields.envs.description",
-      "type" : "array",
-      "items" : {
-        "$ref" : "#/$defs/CoreEnv",
-        "title" : "fields.envs.item.title",
-        "description" : "fields.envs.item.description"
-      }
-    },
-    "function" : {
-      "type" : "string",
-      "title" : "fields.function.title",
-      "description" : "fields.function.description",
-      "minLength" : 1
-    },
-    "node_selector" : {
-      "title" : "fields.nodeSelector.title",
-      "description" : "fields.nodeSelector.description",
-      "type" : "array",
-      "items" : {
-        "$ref" : "#/$defs/CoreNodeSelector",
-        "title" : "fields.nodeSelector.item.title",
-        "description" : "fields.nodeSelector.item.description"
-      }
-    },
-    "priority_class" : {
-      "type" : "string",
-      "title" : "fields.priorityClass.title",
-      "description" : "fields.priorityClass.description"
-    },
-    "profile" : {
-      "type" : "string",
-      "title" : "fields.profile.title",
-      "description" : "fields.profile.description"
-    },
-    "replicas" : {
-      "type" : "integer",
-      "title" : "fields.replicas.title",
-      "description" : "fields.replicas.description",
-      "minimum" : 0
-    },
-    "resources" : {
-      "$ref" : "#/$defs/CoreResource",
-      "title" : "fields.resources.title",
-      "description" : "fields.resources.description"
-    },
-    "runtime_class" : {
-      "type" : "string",
-      "title" : "fields.runtimeClass.title",
-      "description" : "fields.runtimeClass.description"
-    },
-    "secrets" : {
-      "title" : "fields.secrets.title",
-      "description" : "fields.secrets.description",
+    "auth_public_keys" : {
+      "title" : "fields.flower.auth_public_keys.title",
+      "description" : "fields.flower.auth_public_keys.description",
       "type" : "array",
       "items" : {
         "type" : "string",
-        "title" : "fields.secrets.item.title",
-        "description" : "fields.secrets.item.description"
+        "title" : "fields.authPublicKeys.item.title",
+        "description" : "fields.authPublicKeys.item.description"
       }
     },
-    "service_name" : {
+    "insecure" : {
+      "type" : "boolean",
+      "title" : "fields.flower.insecure.title",
+      "description" : "fields.flower.insecure.description"
+    },
+    "local_execution" : {
+      "type" : "boolean",
+      "title" : "fields.localExecution.title",
+      "description" : "fields.localExecution.description"
+    },
+    "task" : {
       "type" : "string",
-      "title" : "fields.serviceName.title",
-      "description" : "fields.serviceName.description"
-    },
-    "service_type" : {
-      "$ref" : "#/$defs/CoreServiceType",
-      "title" : "fields.serviceType.title",
-      "description" : "fields.serviceType.description",
-      "default" : "ClusterIP"
-    },
-    "tolerations" : {
-      "title" : "fields.tolerations.title",
-      "description" : "fields.tolerations.description",
-      "type" : "array",
-      "items" : {
-        "$ref" : "#/$defs/CoreToleration",
-        "title" : "fields.tolerations.item.title",
-        "description" : "fields.tolerations.item.description"
-      }
-    },
-    "volumes" : {
-      "title" : "fields.volumes.title",
-      "description" : "fields.volumes.description",
-      "type" : "array",
-      "items" : {
-        "$ref" : "#/$defs/CoreVolume",
-        "title" : "fields.volumes.item.title",
-        "description" : "fields.volumes.item.description"
-      }
+      "title" : "fields.task.title",
+      "description" : "fields.task.description",
+      "minLength" : 1
     }
   },
-  "required" : [ "function" ],
-  "title" : "specs.mlflowserve+serve.title",
-  "description" : "specs.mlflowserve+serve.description"
+  "required" : [ "task" ],
+  "title" : "specs.flower-server+deploy:run.title",
+  "description" : "specs.flower-server+deploy:run.description",
+  "allOf" : [ {
+    "type" : "object",
+    "properties" : {
+      "affinity" : {
+        "$ref" : "#/$defs/CoreAffinity",
+        "title" : "fields.affinity.title",
+        "description" : "fields.affinity.description"
+      },
+      "envs" : {
+        "title" : "fields.envs.title",
+        "description" : "fields.envs.description",
+        "type" : "array",
+        "items" : {
+          "$ref" : "#/$defs/CoreEnv",
+          "title" : "fields.envs.item.title",
+          "description" : "fields.envs.item.description"
+        }
+      },
+      "function" : {
+        "type" : "string",
+        "title" : "fields.function.title",
+        "description" : "fields.function.description",
+        "minLength" : 1
+      },
+      "node_selector" : {
+        "title" : "fields.nodeSelector.title",
+        "description" : "fields.nodeSelector.description",
+        "type" : "array",
+        "items" : {
+          "$ref" : "#/$defs/CoreNodeSelector",
+          "title" : "fields.nodeSelector.item.title",
+          "description" : "fields.nodeSelector.item.description"
+        }
+      },
+      "priority_class" : {
+        "type" : "string",
+        "title" : "fields.priorityClass.title",
+        "description" : "fields.priorityClass.description"
+      },
+      "profile" : {
+        "type" : "string",
+        "title" : "fields.profile.title",
+        "description" : "fields.profile.description"
+      },
+      "resources" : {
+        "$ref" : "#/$defs/CoreResource",
+        "title" : "fields.resources.title",
+        "description" : "fields.resources.description"
+      },
+      "runtime_class" : {
+        "type" : "string",
+        "title" : "fields.runtimeClass.title",
+        "description" : "fields.runtimeClass.description"
+      },
+      "secrets" : {
+        "title" : "fields.secrets.title",
+        "description" : "fields.secrets.description",
+        "type" : "array",
+        "items" : {
+          "type" : "string",
+          "title" : "fields.secrets.item.title",
+          "description" : "fields.secrets.item.description"
+        }
+      },
+      "tolerations" : {
+        "title" : "fields.tolerations.title",
+        "description" : "fields.tolerations.description",
+        "type" : "array",
+        "items" : {
+          "$ref" : "#/$defs/CoreToleration",
+          "title" : "fields.tolerations.item.title",
+          "description" : "fields.tolerations.item.description"
+        }
+      },
+      "volumes" : {
+        "title" : "fields.volumes.title",
+        "description" : "fields.volumes.description",
+        "type" : "array",
+        "items" : {
+          "$ref" : "#/$defs/CoreVolume",
+          "title" : "fields.volumes.item.title",
+          "description" : "fields.volumes.item.description"
+        }
+      }
+    },
+    "required" : [ "function" ],
+    "title" : "specs.flower-server+deploy.title",
+    "description" : "specs.flower-server+deploy.description"
+  } ]
 }

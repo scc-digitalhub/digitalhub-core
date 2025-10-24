@@ -1,6 +1,17 @@
 {
   "$schema" : "https://json-schema.org/draft/2020-12/schema",
   "$defs" : {
+    "ArrayField" : {
+      "type" : "array",
+      "items" : {
+        "$ref" : "#/$defs/Serializable"
+      },
+      "title" : "array"
+    },
+    "BooleanField" : {
+      "type" : "boolean",
+      "title" : "boolean"
+    },
     "CoreAffinity" : {
       "type" : "object",
       "properties" : {
@@ -54,61 +65,28 @@
         }
       }
     },
-    "CorePort" : {
-      "type" : "object",
-      "properties" : {
-        "port" : {
-          "type" : "integer",
-          "title" : "fields.port.title",
-          "description" : "fields.port.description"
-        },
-        "target_port" : {
-          "type" : "integer",
-          "title" : "fields.targetPort.title",
-          "description" : "fields.targetPort.description"
-        }
-      }
-    },
     "CoreResource" : {
       "type" : "object",
       "properties" : {
         "cpu" : {
-          "$ref" : "#/$defs/CoreResourceDefinition",
+          "type" : "string",
           "title" : "fields.cpu.title",
-          "description" : "fields.cpu.description"
+          "description" : "fields.cpu.description",
+          "pattern" : "[\\d]+|^([0-9])+([a-zA-Z])+$"
         },
         "gpu" : {
-          "$ref" : "#/$defs/CoreResourceDefinition",
+          "type" : "string",
           "title" : "fields.gpu.title",
-          "description" : "fields.gpu.description"
+          "description" : "fields.gpu.description",
+          "pattern" : "[\\d]+|^([0-9])+([a-zA-Z])+$"
         },
         "mem" : {
-          "$ref" : "#/$defs/CoreResourceDefinition",
+          "type" : "string",
           "title" : "fields.mem.title",
-          "description" : "fields.mem.description"
-        }
-      }
-    },
-    "CoreResourceDefinition" : {
-      "type" : "object",
-      "properties" : {
-        "limits" : {
-          "type" : "string",
-          "title" : "fields.limits.title",
-          "description" : "fields.limits.description",
-          "pattern" : "[\\d]+|^([0-9])+([a-zA-Z])+$"
-        },
-        "requests" : {
-          "type" : "string",
-          "title" : "fields.requests.title",
-          "description" : "fields.requests.description",
+          "description" : "fields.mem.description",
           "pattern" : "[\\d]+|^([0-9])+([a-zA-Z])+$"
         }
       }
-    },
-    "CoreServiceType" : {
-      "type" : "string",
-      "enum" : [ "ExternalName", "ClusterIP", "NodePort", "LoadBalancer" ]
     },
     "CoreToleration" : {
       "type" : "object",
@@ -173,11 +151,43 @@
       },
       "required" : [ "mount_path", "name", "volume_type" ]
     },
+    "Map_String.Serializable_" : {
+      "type" : "object",
+      "additionalProperties" : {
+        "$ref" : "#/$defs/Serializable"
+      }
+    },
     "Map_String.String_" : {
       "type" : "object",
       "additionalProperties" : {
         "type" : "string"
       }
+    },
+    "NumberField" : {
+      "type" : "number",
+      "title" : "number"
+    },
+    "ObjectField" : {
+      "type" : "object",
+      "title" : "object"
+    },
+    "Serializable" : {
+      "anyOf" : [ {
+        "$ref" : "#/$defs/StringField"
+      }, {
+        "$ref" : "#/$defs/NumberField"
+      }, {
+        "$ref" : "#/$defs/BooleanField"
+      }, {
+        "$ref" : "#/$defs/ObjectField"
+      }, {
+        "$ref" : "#/$defs/ArrayField"
+      } ],
+      "title" : "object"
+    },
+    "StringField" : {
+      "type" : "string",
+      "title" : "string"
     },
     "V1LabelSelector" : {
       "type" : "object",
@@ -446,25 +456,45 @@
     },
     "VolumeType" : {
       "type" : "string",
-      "enum" : [ "persistent_volume_claim", "empty_dir" ]
+      "enum" : [ "shared_volume", "persistent_volume_claim", "ephemeral", "empty_dir" ]
     }
   },
   "type" : "object",
   "properties" : {
-    "args" : {
-      "title" : "fields.container.args.title",
-      "description" : "fields.container.args.description",
-      "type" : "array",
-      "items" : {
+    "inputs" : {
+      "$ref" : "#/$defs/Map_String.String_",
+      "title" : "fields.inputs.title",
+      "description" : "fields.inputs.description",
+      "additionalProperties" : {
         "type" : "string",
-        "title" : "fields.args.item.title",
-        "description" : "fields.args.item.description"
+        "title" : "fields.inputs.item.title",
+        "description" : "fields.inputs.item.description"
       }
     },
     "local_execution" : {
       "type" : "boolean",
       "title" : "fields.localExecution.title",
       "description" : "fields.localExecution.description"
+    },
+    "outputs" : {
+      "$ref" : "#/$defs/Map_String.String_",
+      "title" : "fields.outputs.title",
+      "description" : "fields.outputs.description",
+      "additionalProperties" : {
+        "type" : "string",
+        "title" : "fields.outputs.item.title",
+        "description" : "fields.outputs.item.description"
+      }
+    },
+    "parameters" : {
+      "$ref" : "#/$defs/Map_String.Serializable_",
+      "title" : "fields.parameters.title",
+      "description" : "fields.parameters.description",
+      "additionalProperties" : {
+        "$ref" : "#/$defs/Serializable",
+        "title" : "fields.parameters.item.title",
+        "description" : "fields.parameters.item.description"
+      }
     },
     "task" : {
       "type" : "string",
@@ -474,8 +504,8 @@
     }
   },
   "required" : [ "task" ],
-  "title" : "specs.container+run.title",
-  "description" : "specs.container+run.description",
+  "title" : "specs.kfp+pipeline:run.title",
+  "description" : "specs.kfp+pipeline:run.description",
   "allOf" : [ {
     "type" : "object",
     "properties" : {
@@ -494,374 +524,6 @@
           "description" : "fields.envs.item.description"
         }
       },
-      "fs_group" : {
-        "type" : "integer",
-        "title" : "fields.fsGroup.title",
-        "description" : "fields.fsGroup.description",
-        "minimum" : 1
-      },
-      "function" : {
-        "type" : "string",
-        "title" : "fields.function.title",
-        "description" : "fields.function.description",
-        "minLength" : 1
-      },
-      "node_selector" : {
-        "title" : "fields.nodeSelector.title",
-        "description" : "fields.nodeSelector.description",
-        "type" : "array",
-        "items" : {
-          "$ref" : "#/$defs/CoreNodeSelector",
-          "title" : "fields.nodeSelector.item.title",
-          "description" : "fields.nodeSelector.item.description"
-        }
-      },
-      "priority_class" : {
-        "type" : "string",
-        "title" : "fields.priorityClass.title",
-        "description" : "fields.priorityClass.description"
-      },
-      "profile" : {
-        "type" : "string",
-        "title" : "fields.profile.title",
-        "description" : "fields.profile.description"
-      },
-      "resources" : {
-        "$ref" : "#/$defs/CoreResource",
-        "title" : "fields.resources.title",
-        "description" : "fields.resources.description"
-      },
-      "run_as_group" : {
-        "type" : "integer",
-        "title" : "fields.runAsGroup.title",
-        "description" : "fields.runAsGroup.description",
-        "minimum" : 1
-      },
-      "run_as_user" : {
-        "type" : "integer",
-        "title" : "fields.runAsUser.title",
-        "description" : "fields.runAsUser.description",
-        "minimum" : 1
-      },
-      "runtime_class" : {
-        "type" : "string",
-        "title" : "fields.runtimeClass.title",
-        "description" : "fields.runtimeClass.description"
-      },
-      "schedule" : {
-        "type" : "string",
-        "title" : "fields.schedule.title",
-        "description" : "fields.schedule.description",
-        "pattern" : "((((\\d+,)+\\d+|(\\d+(\\/|-|#)\\d+)|\\d+L?|\\*(\\/\\d+)?|L(-\\d+)?|\\?|[A-Z]{3}(-[A-Z]{3})?) ?){5,7})|(@(annually|yearly|monthly|weekly|daily|hourly))"
-      },
-      "secrets" : {
-        "title" : "fields.secrets.title",
-        "description" : "fields.secrets.description",
-        "type" : "array",
-        "items" : {
-          "type" : "string",
-          "title" : "fields.secrets.item.title",
-          "description" : "fields.secrets.item.description"
-        }
-      },
-      "tolerations" : {
-        "title" : "fields.tolerations.title",
-        "description" : "fields.tolerations.description",
-        "type" : "array",
-        "items" : {
-          "$ref" : "#/$defs/CoreToleration",
-          "title" : "fields.tolerations.item.title",
-          "description" : "fields.tolerations.item.description"
-        }
-      },
-      "volumes" : {
-        "title" : "fields.volumes.title",
-        "description" : "fields.volumes.description",
-        "type" : "array",
-        "items" : {
-          "$ref" : "#/$defs/CoreVolume",
-          "title" : "fields.volumes.item.title",
-          "description" : "fields.volumes.item.description"
-        }
-      }
-    },
-    "required" : [ "function" ],
-    "title" : "specs.container+job.title",
-    "description" : "specs.container+job.description"
-  }, {
-    "type" : "object",
-    "properties" : {
-      "affinity" : {
-        "$ref" : "#/$defs/CoreAffinity",
-        "title" : "fields.affinity.title",
-        "description" : "fields.affinity.description"
-      },
-      "envs" : {
-        "title" : "fields.envs.title",
-        "description" : "fields.envs.description",
-        "type" : "array",
-        "items" : {
-          "$ref" : "#/$defs/CoreEnv",
-          "title" : "fields.envs.item.title",
-          "description" : "fields.envs.item.description"
-        }
-      },
-      "fs_group" : {
-        "type" : "integer",
-        "title" : "fields.fsGroup.title",
-        "description" : "fields.fsGroup.description",
-        "minimum" : 1
-      },
-      "function" : {
-        "type" : "string",
-        "title" : "fields.function.title",
-        "description" : "fields.function.description",
-        "minLength" : 1
-      },
-      "node_selector" : {
-        "title" : "fields.nodeSelector.title",
-        "description" : "fields.nodeSelector.description",
-        "type" : "array",
-        "items" : {
-          "$ref" : "#/$defs/CoreNodeSelector",
-          "title" : "fields.nodeSelector.item.title",
-          "description" : "fields.nodeSelector.item.description"
-        }
-      },
-      "priority_class" : {
-        "type" : "string",
-        "title" : "fields.priorityClass.title",
-        "description" : "fields.priorityClass.description"
-      },
-      "profile" : {
-        "type" : "string",
-        "title" : "fields.profile.title",
-        "description" : "fields.profile.description"
-      },
-      "replicas" : {
-        "type" : "integer",
-        "title" : "fields.replicas.title",
-        "description" : "fields.replicas.description",
-        "minimum" : 1
-      },
-      "resources" : {
-        "$ref" : "#/$defs/CoreResource",
-        "title" : "fields.resources.title",
-        "description" : "fields.resources.description"
-      },
-      "run_as_group" : {
-        "type" : "integer",
-        "title" : "fields.runAsGroup.title",
-        "description" : "fields.runAsGroup.description",
-        "minimum" : 1
-      },
-      "run_as_user" : {
-        "type" : "integer",
-        "title" : "fields.runAsUser.title",
-        "description" : "fields.runAsUser.description",
-        "minimum" : 1
-      },
-      "runtime_class" : {
-        "type" : "string",
-        "title" : "fields.runtimeClass.title",
-        "description" : "fields.runtimeClass.description"
-      },
-      "secrets" : {
-        "title" : "fields.secrets.title",
-        "description" : "fields.secrets.description",
-        "type" : "array",
-        "items" : {
-          "type" : "string",
-          "title" : "fields.secrets.item.title",
-          "description" : "fields.secrets.item.description"
-        }
-      },
-      "tolerations" : {
-        "title" : "fields.tolerations.title",
-        "description" : "fields.tolerations.description",
-        "type" : "array",
-        "items" : {
-          "$ref" : "#/$defs/CoreToleration",
-          "title" : "fields.tolerations.item.title",
-          "description" : "fields.tolerations.item.description"
-        }
-      },
-      "volumes" : {
-        "title" : "fields.volumes.title",
-        "description" : "fields.volumes.description",
-        "type" : "array",
-        "items" : {
-          "$ref" : "#/$defs/CoreVolume",
-          "title" : "fields.volumes.item.title",
-          "description" : "fields.volumes.item.description"
-        }
-      }
-    },
-    "required" : [ "function" ],
-    "title" : "specs.container+deploy.title",
-    "description" : "specs.container+deploy.description"
-  }, {
-    "type" : "object",
-    "properties" : {
-      "affinity" : {
-        "$ref" : "#/$defs/CoreAffinity",
-        "title" : "fields.affinity.title",
-        "description" : "fields.affinity.description"
-      },
-      "envs" : {
-        "title" : "fields.envs.title",
-        "description" : "fields.envs.description",
-        "type" : "array",
-        "items" : {
-          "$ref" : "#/$defs/CoreEnv",
-          "title" : "fields.envs.item.title",
-          "description" : "fields.envs.item.description"
-        }
-      },
-      "fs_group" : {
-        "type" : "integer",
-        "title" : "fields.fsGroup.title",
-        "description" : "fields.fsGroup.description",
-        "minimum" : 1
-      },
-      "function" : {
-        "type" : "string",
-        "title" : "fields.function.title",
-        "description" : "fields.function.description",
-        "minLength" : 1
-      },
-      "node_selector" : {
-        "title" : "fields.nodeSelector.title",
-        "description" : "fields.nodeSelector.description",
-        "type" : "array",
-        "items" : {
-          "$ref" : "#/$defs/CoreNodeSelector",
-          "title" : "fields.nodeSelector.item.title",
-          "description" : "fields.nodeSelector.item.description"
-        }
-      },
-      "priority_class" : {
-        "type" : "string",
-        "title" : "fields.priorityClass.title",
-        "description" : "fields.priorityClass.description"
-      },
-      "profile" : {
-        "type" : "string",
-        "title" : "fields.profile.title",
-        "description" : "fields.profile.description"
-      },
-      "replicas" : {
-        "type" : "integer",
-        "title" : "fields.replicas.title",
-        "description" : "fields.replicas.description",
-        "minimum" : 1
-      },
-      "resources" : {
-        "$ref" : "#/$defs/CoreResource",
-        "title" : "fields.resources.title",
-        "description" : "fields.resources.description"
-      },
-      "run_as_group" : {
-        "type" : "integer",
-        "title" : "fields.runAsGroup.title",
-        "description" : "fields.runAsGroup.description",
-        "minimum" : 1
-      },
-      "run_as_user" : {
-        "type" : "integer",
-        "title" : "fields.runAsUser.title",
-        "description" : "fields.runAsUser.description",
-        "minimum" : 1
-      },
-      "runtime_class" : {
-        "type" : "string",
-        "title" : "fields.runtimeClass.title",
-        "description" : "fields.runtimeClass.description"
-      },
-      "secrets" : {
-        "title" : "fields.secrets.title",
-        "description" : "fields.secrets.description",
-        "type" : "array",
-        "items" : {
-          "type" : "string",
-          "title" : "fields.secrets.item.title",
-          "description" : "fields.secrets.item.description"
-        }
-      },
-      "service_ports" : {
-        "title" : "fields.servicePorts.title",
-        "description" : "fields.servicePorts.description",
-        "type" : "array",
-        "items" : {
-          "$ref" : "#/$defs/CorePort",
-          "title" : "fields.servicePorts.item.title",
-          "description" : "fields.servicePorts.item.description"
-        }
-      },
-      "service_type" : {
-        "$ref" : "#/$defs/CoreServiceType",
-        "title" : "fields.serviceType.title",
-        "description" : "fields.serviceType.description",
-        "default" : "ClusterIP"
-      },
-      "tolerations" : {
-        "title" : "fields.tolerations.title",
-        "description" : "fields.tolerations.description",
-        "type" : "array",
-        "items" : {
-          "$ref" : "#/$defs/CoreToleration",
-          "title" : "fields.tolerations.item.title",
-          "description" : "fields.tolerations.item.description"
-        }
-      },
-      "volumes" : {
-        "title" : "fields.volumes.title",
-        "description" : "fields.volumes.description",
-        "type" : "array",
-        "items" : {
-          "$ref" : "#/$defs/CoreVolume",
-          "title" : "fields.volumes.item.title",
-          "description" : "fields.volumes.item.description"
-        }
-      }
-    },
-    "required" : [ "function" ],
-    "title" : "specs.container+serve.title",
-    "description" : "specs.container+serve.description"
-  }, {
-    "type" : "object",
-    "properties" : {
-      "affinity" : {
-        "$ref" : "#/$defs/CoreAffinity",
-        "title" : "fields.affinity.title",
-        "description" : "fields.affinity.description"
-      },
-      "envs" : {
-        "title" : "fields.envs.title",
-        "description" : "fields.envs.description",
-        "type" : "array",
-        "items" : {
-          "$ref" : "#/$defs/CoreEnv",
-          "title" : "fields.envs.item.title",
-          "description" : "fields.envs.item.description"
-        }
-      },
-      "function" : {
-        "type" : "string",
-        "title" : "fields.function.title",
-        "description" : "fields.function.description",
-        "minLength" : 1
-      },
-      "instructions" : {
-        "title" : "fields.container.instructions.title",
-        "description" : "fields.container.instructions.description",
-        "type" : "array",
-        "items" : {
-          "type" : "string",
-          "title" : "fields.instructions.item.title",
-          "description" : "fields.instructions.item.description"
-        }
-      },
       "node_selector" : {
         "title" : "fields.nodeSelector.title",
         "description" : "fields.nodeSelector.description",
@@ -921,10 +583,16 @@
           "title" : "fields.volumes.item.title",
           "description" : "fields.volumes.item.description"
         }
+      },
+      "workflow" : {
+        "type" : "string",
+        "title" : "fields.workflow.title",
+        "description" : "fields.workflow.description",
+        "minLength" : 1
       }
     },
-    "required" : [ "function" ],
-    "title" : "specs.container+build.title",
-    "description" : "specs.container+build.description"
+    "required" : [ "workflow" ],
+    "title" : "specs.kfp+pipeline.title",
+    "description" : "specs.kfp+pipeline.description"
   } ]
 }

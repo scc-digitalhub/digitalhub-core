@@ -77,10 +77,6 @@
         }
       }
     },
-    "CoreServiceType" : {
-      "type" : "string",
-      "enum" : [ "ExternalName", "ClusterIP", "NodePort", "LoadBalancer" ]
-    },
     "CoreToleration" : {
       "type" : "object",
       "properties" : {
@@ -463,12 +459,6 @@
       "title" : "fields.profile.title",
       "description" : "fields.profile.description"
     },
-    "replicas" : {
-      "type" : "integer",
-      "title" : "fields.replicas.title",
-      "description" : "fields.replicas.description",
-      "minimum" : 0
-    },
     "resources" : {
       "$ref" : "#/$defs/CoreResource",
       "title" : "fields.resources.title",
@@ -488,17 +478,6 @@
         "title" : "fields.secrets.item.title",
         "description" : "fields.secrets.item.description"
       }
-    },
-    "service_name" : {
-      "type" : "string",
-      "title" : "fields.serviceName.title",
-      "description" : "fields.serviceName.description"
-    },
-    "service_type" : {
-      "$ref" : "#/$defs/CoreServiceType",
-      "title" : "fields.serviceType.title",
-      "description" : "fields.serviceType.description",
-      "default" : "ClusterIP"
     },
     "tolerations" : {
       "title" : "fields.tolerations.title",
@@ -522,6 +501,6 @@
     }
   },
   "required" : [ "function" ],
-  "title" : "specs.mlflowserve+serve.title",
-  "description" : "specs.mlflowserve+serve.description"
+  "title" : "specs.flower-client+deploy.title",
+  "description" : "specs.flower-client+deploy.description"
 }

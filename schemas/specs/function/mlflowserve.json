@@ -18,7 +18,7 @@
       "type" : "string",
       "title" : "fields.path.title",
       "description" : "fields.mlflow.path.description",
-      "pattern" : "^(store://([^/]+)/model/mlflow/.*)|.*\\/$|.*\\.zip$"
+      "pattern" : "^(store://([^/]+)/model/mlflow/.*)|.*/$|.*\\.zip$"
     }
   },
   "required" : [ "path" ],

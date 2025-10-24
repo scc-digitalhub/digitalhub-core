@@ -77,10 +77,6 @@
         }
       }
     },
-    "CoreServiceType" : {
-      "type" : "string",
-      "enum" : [ "ExternalName", "ClusterIP", "NodePort", "LoadBalancer" ]
-    },
     "CoreToleration" : {
       "type" : "object",
       "properties" : {
@@ -437,12 +433,6 @@
         "description" : "fields.envs.item.description"
       }
     },
-    "function" : {
-      "type" : "string",
-      "title" : "fields.function.title",
-      "description" : "fields.function.description",
-      "minLength" : 1
-    },
     "node_selector" : {
       "title" : "fields.nodeSelector.title",
       "description" : "fields.nodeSelector.description",
@@ -462,12 +452,6 @@
       "type" : "string",
       "title" : "fields.profile.title",
       "description" : "fields.profile.description"
-    },
-    "replicas" : {
-      "type" : "integer",
-      "title" : "fields.replicas.title",
-      "description" : "fields.replicas.description",
-      "minimum" : 0
     },
     "resources" : {
       "$ref" : "#/$defs/CoreResource",
@@ -489,17 +473,6 @@
         "description" : "fields.secrets.item.description"
       }
     },
-    "service_name" : {
-      "type" : "string",
-      "title" : "fields.serviceName.title",
-      "description" : "fields.serviceName.description"
-    },
-    "service_type" : {
-      "$ref" : "#/$defs/CoreServiceType",
-      "title" : "fields.serviceType.title",
-      "description" : "fields.serviceType.description",
-      "default" : "ClusterIP"
-    },
     "tolerations" : {
       "title" : "fields.tolerations.title",
       "description" : "fields.tolerations.description",
@@ -519,9 +492,15 @@
         "title" : "fields.volumes.item.title",
         "description" : "fields.volumes.item.description"
       }
+    },
+    "workflow" : {
+      "type" : "string",
+      "title" : "fields.workflow.title",
+      "description" : "fields.workflow.description",
+      "minLength" : 1
     }
   },
-  "required" : [ "function" ],
-  "title" : "specs.mlflowserve+serve.title",
-  "description" : "specs.mlflowserve+serve.description"
+  "required" : [ "workflow" ],
+  "title" : "specs.hera+build.title",
+  "description" : "specs.hera+build.description"
 }

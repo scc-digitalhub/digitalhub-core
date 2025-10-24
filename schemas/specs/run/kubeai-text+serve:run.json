@@ -150,11 +150,6 @@
       "title" : "fields.kubeai.processors.title",
       "description" : "fields.kubeai.processors.description"
     },
-    "profile" : {
-      "type" : "string",
-      "title" : "fields.kubeai.resourceprofile.title",
-      "description" : "fields.kubeai.resourceprofile.description"
-    },
     "scaling" : {
       "$ref" : "#/$defs/KubeAIScaling",
       "title" : "fields.kubeai.scaling.title",
@@ -178,8 +173,8 @@
     }
   },
   "required" : [ "task" ],
-  "title" : "specs.kubeai-text+run.title",
-  "description" : "specs.kubeai-text+run.description",
+  "title" : "specs.kubeai-text+serve:run.title",
+  "description" : "specs.kubeai-text+serve:run.description",
   "allOf" : [ {
     "type" : "object",
     "properties" : {
@@ -188,6 +183,11 @@
         "title" : "fields.function.title",
         "description" : "fields.function.description",
         "minLength" : 1
+      },
+      "profile" : {
+        "type" : "string",
+        "title" : "fields.kubeai.resourceprofile.title",
+        "description" : "fields.kubeai.resourceprofile.description"
       }
     },
     "required" : [ "function" ],

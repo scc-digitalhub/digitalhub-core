@@ -56,7 +56,8 @@
       "type" : "string",
       "title" : "fields.schedule.title",
       "description" : "fields.schedule.description",
-      "pattern" : "((((\\d+,)+\\d+|(\\d+(\\/|-|#)\\d+)|\\d+L?|\\*(\\/\\d+)?|L(-\\d+)?|\\?|[A-Z]{3}(-[A-Z]{3})?) ?){5,7})|(@(annually|yearly|monthly|weekly|daily|hourly))"
+      "minLength" : 1,
+      "pattern" : "((((\\d+,)+\\d+|(\\d+(\\/|-|#)\\d+)|\\d+L?|\\*(\\/\\d+)?|L(-\\d+)?|\\?|[A-Z]{3}(-[A-Z]{3})?) ?){5,7})|(@(yearly|monthly|weekly|daily|hourly))"
     },
     "task" : {
       "type" : "string",
@@ -81,7 +82,7 @@
       "description" : "fields.workflow.description"
     }
   },
-  "required" : [ "task", "template" ],
+  "required" : [ "schedule", "task", "template" ],
   "title" : "specs.scheduler.title",
   "description" : "specs.scheduler.description"
 }
