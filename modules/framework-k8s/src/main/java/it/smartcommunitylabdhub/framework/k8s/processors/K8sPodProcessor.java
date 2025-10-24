@@ -148,7 +148,9 @@ public class K8sPodProcessor implements Processor<Run, K8sPodStatus> {
                                                                         .toString()
                                                                     : "unknown") +
                                                             " exitCode: " +
-                                                            s.getState().getTerminated().getExitCode()
+                                                            s.getState().getTerminated().getExitCode() +
+                                                            " reason: " +
+                                                            String.valueOf(s.getState().getTerminated().getReason())
                                                         );
                                                     } else if (s.getState().getWaiting() != null) {
                                                         c.put(
