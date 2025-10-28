@@ -233,10 +233,6 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
                 .secretKey(response.secretKey())
                 .sessionToken(response.sessionToken())
                 .expiration(exp)
-                .endpoint(endpointUrl)
-                .region(region)
-                .bucket(bucket)
-                .signatureVersion("s3v4")
                 .build();
         } catch (NoSuchAlgorithmException | ProviderException e) {
             //error, no recovery

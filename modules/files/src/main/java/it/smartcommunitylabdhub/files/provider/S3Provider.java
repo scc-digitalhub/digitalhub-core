@@ -125,16 +125,7 @@ public class S3Provider implements ConfigurationProvider, CredentialsProvider, I
         log.debug("generate credentials for user authentication {} via STS service", auth.getName());
 
         //static credentials shared
-        return S3Credentials
-            .builder()
-            .accessKey(accessKey)
-            .secretKey(secretKey)
-            .endpoint(endpoint)
-            .region(region)
-            .bucket(bucket)
-            .signatureVersion(signatureVersion)
-            .pathStyle(pathStyleAccess)
-            .build();
+        return S3Credentials.builder().accessKey(accessKey).secretKey(secretKey).build();
     }
 
     @Override

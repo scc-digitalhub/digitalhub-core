@@ -138,7 +138,7 @@ public class S3FilesStore implements FilesStore {
                 .endpointOverride(URI.create(endpoint))
                 //also enable path style for endpoint by default
                 .forcePathStyle(config.getPathStyle() != null ? config.getPathStyle().booleanValue() : true)
-                .region(s3Credentials.getRegion() != null ? Region.of(s3Credentials.getRegion()) : null)
+                .region(config.getRegion() != null ? Region.of(config.getRegion()) : null)
                 .build();
         } else {
             return S3Client.builder().credentialsProvider(StaticCredentialsProvider.create(credentials)).build();
@@ -165,7 +165,7 @@ public class S3FilesStore implements FilesStore {
                         .build()
                 )
                 .endpointOverride(URI.create(endpoint))
-                .region(s3Credentials.getRegion() != null ? Region.of(s3Credentials.getRegion()) : null)
+                .region(config.getRegion() != null ? Region.of(config.getRegion()) : null)
                 .build();
         } else {
             return S3Presigner.builder().credentialsProvider(StaticCredentialsProvider.create(credentials)).build();
@@ -180,11 +180,12 @@ public class S3FilesStore implements FilesStore {
                 .stream()
                 .filter(S3Credentials.class::isInstance)
                 .map(c -> (S3Credentials) c)
-                //pick either matching or global credentials
-                .filter(c ->
-                    (c.getBucket() == null || c.getBucket().equals(bucket)) &&
-                    (c.getEndpoint() == null || c.getEndpoint().equals(endpoint))
-                )
+                //DISABLED: only single provider supported for now
+                // //pick either matching or global credentials
+                // .filter(c ->
+                //     (c.getBucket() == null || c.getBucket().equals(bucket)) &&
+                //     (c.getEndpoint() == null || c.getEndpoint().equals(endpoint))
+                // )
                 .findFirst()
                 .orElse(null);
     }
