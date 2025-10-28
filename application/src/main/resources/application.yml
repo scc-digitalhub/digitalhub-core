@@ -332,6 +332,9 @@ credentials:
       path-style-access: ${S3_PATH_STYLE_ACCESS:}
     db:
       enable: ${DB_CREDENTIALS_PROVIDER:false}
+      platform: ${DB_CREDENTIALS_PLATFORM:postgresql}
+      host: ${DB_CREDENTIALS_HOST:}
+      port: ${DB_CREDENTIALS_PORT:}
       database: ${DB_CREDENTIALS_DATABASE:}
       endpoint: ${DB_CREDENTIALS_ENDPOINT:}
       claim: ${DB_CREDENTIALS_CLAIM:db/role}
