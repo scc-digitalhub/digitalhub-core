@@ -95,6 +95,10 @@ runtime:
     image: ${RUNTIME_HUGGINGFACE_SERVE_IMAGE:kserve/huggingfaceserver:latest}
     user-id: ${RUNTIME_HUGGINGFACE_USER_ID:${kubernetes.security.user}}
     group-id: ${RUNTIME_HUGGINGFACE_GROUP_ID:${kubernetes.security.group}}
+  vllmserve:
+    image: ${RUNTIME_VLLM_SERVE_IMAGE:vllm/vllm-openai:latest}
+    user-id: ${RUNTIME_VLLM_USER_ID:${kubernetes.security.user}}
+    group-id: ${RUNTIME_VLLM_GROUP_ID:${kubernetes.security.group}}
   kubeai:
     endpoint: ${RUNTIME_KUBEAI_ENDPOINT:}
   flower:
@@ -142,14 +146,8 @@ builder:
       name: ${BUILDKIT_CLIENT_SECRET_NAME:}
       mount-path: ${BUILDKIT_CLIENT_SECRET_MOUNT_PATH:/certs/client}
 
-
-
-# MLRun config
-mlrun:
-  base-image: ${MLRUN_BASE_IMAGE:mlrun/mlrun}
-  image-prefix: ${MLRUN_IMAGE_PREFIX:dhcore}
-  image-registry: ${MLRUN_IMAGE_REGISTRY:}
-
+llm:
+  otel-endpoint: ${LLM_OTEL_ENDPOINT:}
 
 
 argoworkflows:
