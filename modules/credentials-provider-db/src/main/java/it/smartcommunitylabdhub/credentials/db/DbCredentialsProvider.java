@@ -29,7 +29,10 @@ import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.CredentialsProvider;
 import it.smartcommunitylabdhub.authorization.services.JwtTokenService;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
+import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
+import it.smartcommunitylabdhub.commons.infrastructure.ConfigurationProvider;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
+import it.smartcommunitylabdhub.credentials.db.DbConfig.DbConfigBuilder;
 import jakarta.annotation.Nonnull;
 import jakarta.validation.constraints.NotNull;
 import java.nio.charset.Charset;
@@ -51,6 +54,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.FormHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.lang.Nullable;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -63,7 +67,7 @@ import org.springframework.web.client.RestTemplate;
 
 @Service
 @Slf4j
-public class DbCredentialsProvider implements CredentialsProvider, InitializingBean {
+public class DbCredentialsProvider implements CredentialsProvider, ConfigurationProvider, InitializingBean {
 
     private static final int DEFAULT_DURATION = 24 * 3600; //24 hour
     private static final int MIN_DURATION = 300; //5 min
@@ -74,6 +78,15 @@ public class DbCredentialsProvider implements CredentialsProvider, InitializingB
 
     @Value("${credentials.provider.db.password}")
     private String secret;
+
+    @Value("${credentials.provider.db.platform}")
+    private String platform;
+
+    @Value("${credentials.provider.db.host}")
+    private String host;
+
+    @Value("${credentials.provider.db.port}")
+    private Integer port;
 
     @Value("${credentials.provider.db.database}")
     private String database;
@@ -94,6 +107,8 @@ public class DbCredentialsProvider implements CredentialsProvider, InitializingB
     private Boolean enabled;
 
     private final RestTemplate restTemplate;
+
+    private DbConfig config;
 
     // cache credentials for up to DURATION
     LoadingCache<Pair<String, String>, Pair<DbCredentials, Instant>> cache;
@@ -122,6 +137,14 @@ public class DbCredentialsProvider implements CredentialsProvider, InitializingB
         if (Boolean.TRUE.equals(enabled)) {
             //check config
             enabled = StringUtils.hasText(endpointUrl);
+        }
+
+        DbConfigBuilder builder = DbConfig.builder().platform(platform).host(host).port(port).database(database);
+
+        this.config = builder.build();
+
+        if (log.isTraceEnabled()) {
+            log.trace("config: {}", config.toJson());
         }
 
         //set duration to 2x access token duration to ensure we have valid credentials for a full cycle
@@ -198,6 +221,11 @@ public class DbCredentialsProvider implements CredentialsProvider, InitializingB
             }
 
             TokenResponse token = response.getBody();
+            if (token == null) {
+                log.error("Null or invalid token response");
+                return null;
+            }
+
             if (log.isTraceEnabled()) {
                 log.trace("response: {}", token);
             }
@@ -214,12 +242,12 @@ public class DbCredentialsProvider implements CredentialsProvider, InitializingB
             return Pair.of(
                 DbCredentials
                     .builder()
-                    .platform(token.getPlatform())
-                    .host(token.getHost())
-                    .port(token.getPort())
+                    // .platform(token.getPlatform())
+                    // .host(token.getHost())
+                    // .port(token.getPort())
                     .username(token.getUsername())
                     .password(token.getPassword())
-                    .database(token.getDatabase())
+                    // .database(token.getDatabase())
                     .build(),
                 expiration
             );
@@ -228,6 +256,16 @@ public class DbCredentialsProvider implements CredentialsProvider, InitializingB
             log.error("Error with provider {}", e);
             throw new StoreException(e.getMessage());
         }
+    }
+
+    @Override
+    @Nullable
+    public Configuration getConfig() {
+        if (Boolean.TRUE.equals(enabled)) {
+            return config;
+        }
+
+        return null;
     }
 
     @Override
