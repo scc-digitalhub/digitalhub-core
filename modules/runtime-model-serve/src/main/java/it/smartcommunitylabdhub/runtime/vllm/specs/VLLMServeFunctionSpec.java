@@ -76,7 +76,7 @@ public class VLLMServeFunctionSpec extends FunctionBaseSpec {
     private String modelName;
 
     @JsonProperty("image")
-    @Pattern(regexp = "^vllm\\/vllm-openai?:")
+    @Pattern(regexp = "^vllm\\/vllm-openai(:.*)?$")
     @Schema(title = "fields.container.image.title", description = "fields.container.image.description")
     private String image;
 

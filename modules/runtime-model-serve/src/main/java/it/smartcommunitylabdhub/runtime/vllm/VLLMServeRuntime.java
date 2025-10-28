@@ -41,7 +41,6 @@ import it.smartcommunitylabdhub.commons.services.ModelManager;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
-import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runtime.vllm.models.OpenAIService;
 import it.smartcommunitylabdhub.runtime.vllm.models.VLLMAdapter;
@@ -59,7 +58,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 import lombok.extern.slf4j.Slf4j;
@@ -80,8 +78,8 @@ public class VLLMServeRuntime
     private static final String VLLM_ENGINE = "VLLM";
     private static final Map<String, String> features = new LinkedHashMap<>();
     static {
-        features.put("Completions API", "/v1/completions");
         features.put("Chat Completions API", "/v1/chat/completions");
+        features.put("Completions API", "/v1/completions");
         features.put("Embeddings API", "/v1/embeddings");
         features.put("Transcriptions API", "/v1/audio/transcriptions");
         features.put("Translations API", "/v1/audio/translations");
@@ -259,8 +257,8 @@ public class VLLMServeRuntime
                 openai.setFeatures(new LinkedList<>(features.keySet()));
                 status.setOpenai(openai);
                 // TODO check
-                urls.add(baseUrl + "/models");
                 urls.addAll(features.values());
+                urls.add(baseUrl + "/models");
                 service.setUrls(new ArrayList<>(urls));
                 status.setService(service);
             }
