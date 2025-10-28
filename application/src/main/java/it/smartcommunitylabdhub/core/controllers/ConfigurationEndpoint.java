@@ -27,8 +27,8 @@ import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import java.io.Serializable;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -61,7 +61,7 @@ public class ConfigurationEndpoint {
     }
 
     private Map<String, Serializable> generate() {
-        Map<String, Serializable> map = new HashMap<>();
+        Map<String, Serializable> map = new TreeMap<>();
         if (configurationService != null) {
             configurationService.getConfigurations().forEach(c -> map.putAll(c.toMap()));
         }
