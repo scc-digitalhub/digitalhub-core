@@ -200,7 +200,7 @@ public class MlflowServeRuntime
         if (status.getService() != null && status.getService().getUrl() != null) {
             //add additional urls  for inference v2
             K8sServiceInfo service = status.getService();
-            String baseUrl = service.getUrl() + "/v2";
+            String baseUrl = service.getUrl();
 
             Set<String> urls = new HashSet<>();
             if (service.getUrls() != null) {
