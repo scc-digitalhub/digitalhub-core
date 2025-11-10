@@ -21,9 +21,9 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.models.indexers;
+package it.smartcommunitylabdhub.solr.indexers;
 
-import it.smartcommunitylabdhub.commons.models.model.Model;
+import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.solr.SolrComponent;
 import it.smartcommunitylabdhub.solr.base.SolrBaseEntityIndexer;
 import lombok.extern.slf4j.Slf4j;
@@ -35,4 +35,4 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @ConditionalOnBean(SolrComponent.class)
 @Primary
-public class SolrModelEntityIndexer extends SolrBaseEntityIndexer<Model> {}
+public class SolrWorkflowEntityIndexer extends SolrBaseEntityIndexer<Workflow> {}

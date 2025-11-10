@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.artifacts.indexers;
+package it.smartcommunitylabdhub.solr.indexers;
 
 import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
 import it.smartcommunitylabdhub.solr.SolrComponent;

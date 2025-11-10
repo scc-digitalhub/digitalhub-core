@@ -305,11 +305,11 @@
             <artifactId>dh-search-lucene</artifactId>
             <version>${revision}</version>
         </dependency>
-        <dependency>
+        <!-- <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-search-solr</artifactId>
             <version>${revision}</version>
-        </dependency>
+        </dependency> -->
     </dependencies>
 
     <build>

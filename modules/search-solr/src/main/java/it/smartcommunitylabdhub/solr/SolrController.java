@@ -21,13 +21,11 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.controllers.v1.base;
+package it.smartcommunitylabdhub.solr;
 
-import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.search.indexers.ItemResult;
 import it.smartcommunitylabdhub.search.indexers.SearchGroupResult;
 import it.smartcommunitylabdhub.search.indexers.SearchPage;
-import it.smartcommunitylabdhub.solr.SolrComponent;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,8 +39,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/solr")
-@ApiVersion("v1")
+@RequestMapping("/api/v1/solr")
 @Slf4j
 @PreAuthorize("hasAuthority('ROLE_ADMIN')")
 public class SolrController {
