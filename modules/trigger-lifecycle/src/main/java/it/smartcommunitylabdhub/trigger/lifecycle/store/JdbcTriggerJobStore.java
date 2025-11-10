@@ -43,6 +43,7 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.support.SqlLobValue;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
 @Slf4j
@@ -125,6 +126,7 @@ public class JdbcTriggerJobStore<T extends TriggerJob> implements TriggerJobStor
     }
 
     @Override
+    @Transactional(readOnly = true)
     public T find(@NotNull String id) throws StoreException {
         Assert.hasText(id, "id must not be empty");
         log.debug("find trigger job {}", id);
@@ -142,6 +144,7 @@ public class JdbcTriggerJobStore<T extends TriggerJob> implements TriggerJobStor
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<T> findAll() throws StoreException {
         log.debug("find all trigger jobs");
 
@@ -154,6 +157,7 @@ public class JdbcTriggerJobStore<T extends TriggerJob> implements TriggerJobStor
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<T> findMatching(Predicate<T> filter) throws StoreException {
         if (filter == null) {
             return findAll();
