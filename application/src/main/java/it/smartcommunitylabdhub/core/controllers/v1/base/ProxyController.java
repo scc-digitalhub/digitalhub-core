@@ -21,8 +21,8 @@ import it.smartcommunitylabdhub.core.components.proxy.ProxyService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.jetty.http.HttpHeader;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -53,7 +53,7 @@ public class ProxyController {
         //build response
         MultiValueMap<String, String> headers = new LinkedMultiValueMap<>();
         MediaType contentType = response.getHeaders().getContentType();
-        headers.add(HttpHeader.CONTENT_TYPE.asString(), contentType.toString());
+        headers.add(HttpHeaders.CONTENT_TYPE, contentType.toString());
         return new ResponseEntity<>(response.getBody(), headers, response.getStatusCode());
     }
 }
