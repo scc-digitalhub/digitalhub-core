@@ -287,6 +287,9 @@ fi
 FILES="$(ls -A $destination_dir)"
 if [ FILES ]; then    
     for f in $FILES; do
+        if [ "lost+found" == $f ]; then
+            continue
+        fi
         # enforce file modes
         chmod u=rwxX,g=rwxX -R "${destination_dir}/${f}"
     done
