@@ -21,9 +21,9 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.workflows.indexers;
+package it.smartcommunitylabdhub.lucene.indexers;
 
-import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
+import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
 import it.smartcommunitylabdhub.lucene.LuceneComponent;
 import it.smartcommunitylabdhub.lucene.base.LuceneBaseEntityIndexer;
 import lombok.extern.slf4j.Slf4j;
@@ -33,4 +33,4 @@ import org.springframework.stereotype.Component;
 @Component
 @Slf4j
 @ConditionalOnBean(LuceneComponent.class)
-public class LuceneWorkflowEntityIndexer extends LuceneBaseEntityIndexer<Workflow> {}
+public class LuceneDataItemEntityIndexer extends LuceneBaseEntityIndexer<DataItem> {}

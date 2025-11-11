@@ -21,7 +21,7 @@
  * 
  */
 
-package it.smartcommunitylabdhub.core.config;
+package it.smartcommunitylabdhub.trigger.scheduler.config;
 
 import java.util.Properties;
 import javax.sql.DataSource;
