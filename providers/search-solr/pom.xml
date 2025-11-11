@@ -18,7 +18,7 @@
         <lucene.version>9.11.1</lucene.version>
         <!-- note: jetty locked to 10 due to solr 9.x incompatibility -->
         <!-- note: do NOT set jetty.version because spring bom defines it for jetty 12 -->
-        <jetty4solr.version>10.0.24</jetty4solr.version>
+        <jetty4solr.version>12.0.12</jetty4solr.version>
         <solr.version>9.7.0</solr.version>
     </properties>
     <dependencies>
