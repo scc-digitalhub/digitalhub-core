@@ -291,7 +291,7 @@ public class K8sBuilderHelper implements InitializingBean {
                     new V1EphemeralVolumeSource()
                         .volumeClaimTemplate(
                             new V1PersistentVolumeClaimTemplate()
-                                .metadata(new V1ObjectMeta().name(getVolumeName(id, coreVolume.getName())))
+                                .metadata(new V1ObjectMeta()) //ephemeral does not require a name
                                 .spec(
                                     new V1PersistentVolumeClaimSpec()
                                         .accessModes(Collections.singletonList("ReadWriteOnce"))
