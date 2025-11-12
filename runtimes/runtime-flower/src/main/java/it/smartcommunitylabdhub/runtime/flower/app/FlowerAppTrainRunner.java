@@ -238,11 +238,6 @@ public class FlowerAppTrainRunner {
             .secrets(coreSecrets)
             .resources(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(taskSpec.getResources()) : null)
             .volumes(taskSpec.getVolumes())
-            .nodeSelector(taskSpec.getNodeSelector())
-            .affinity(taskSpec.getAffinity())
-            .tolerations(taskSpec.getTolerations())
-            .runtimeClass(taskSpec.getRuntimeClass())
-            .priorityClass(taskSpec.getPriorityClass())
             .template(taskSpec.getProfile())
             //securityContext
             .fsGroup(groupId)

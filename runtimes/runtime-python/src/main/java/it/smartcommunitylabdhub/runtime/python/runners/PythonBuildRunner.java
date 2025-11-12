@@ -247,9 +247,7 @@ public class PythonBuildRunner {
             .secrets(coreSecrets)
             .resources(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(taskSpec.getResources()) : null)
             .volumes(taskSpec.getVolumes())
-            .nodeSelector(taskSpec.getNodeSelector())
-            .affinity(taskSpec.getAffinity())
-            .tolerations(taskSpec.getTolerations())
+            .template(taskSpec.getProfile())
             // Task Specific
             .dockerFile(dockerfile)
             //specific

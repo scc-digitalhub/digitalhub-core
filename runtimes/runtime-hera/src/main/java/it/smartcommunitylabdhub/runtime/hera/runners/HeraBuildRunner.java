@@ -80,12 +80,9 @@ public class HeraBuildRunner {
             .command("python")
             .args(List.of("wrapper.py").toArray(String[]::new))
             // .resources(taskSpec.getResources())
-            .nodeSelector(taskSpec.getNodeSelector())
             .volumes(taskSpec.getVolumes())
             .secrets(coreSecrets)
             .envs(coreEnvList)
-            .affinity(taskSpec.getAffinity())
-            .tolerations(taskSpec.getTolerations())
             .state(State.READY.name())
             .build();
 

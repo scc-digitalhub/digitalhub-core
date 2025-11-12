@@ -101,43 +101,6 @@ public class WorkflowStepRunProcessor implements Processor<Run, K8sFunctionTaskB
                             rspec.setResources(wspec.getResources());
                         }
 
-                        //nodeselector
-                        if (
-                            wspec.getNodeSelector() != null &&
-                            (rspec.getNodeSelector() == null || rspec.getNodeSelector().isEmpty())
-                        ) {
-                            rspec.setNodeSelector(wspec.getNodeSelector());
-                        }
-
-                        //affinity
-                        if (wspec.getAffinity() != null && rspec.getAffinity() == null) {
-                            rspec.setAffinity(wspec.getAffinity());
-                        }
-
-                        //tolerations
-                        if (
-                            wspec.getTolerations() != null &&
-                            (rspec.getTolerations() == null || rspec.getTolerations().isEmpty())
-                        ) {
-                            rspec.setTolerations(wspec.getTolerations());
-                        }
-
-                        //runtimeClass
-                        if (
-                            StringUtils.hasText(wspec.getRuntimeClass()) &&
-                            !StringUtils.hasText(rspec.getRuntimeClass())
-                        ) {
-                            rspec.setRuntimeClass(wspec.getRuntimeClass());
-                        }
-
-                        //priorityClass
-                        if (
-                            StringUtils.hasText(wspec.getPriorityClass()) &&
-                            !StringUtils.hasText(rspec.getPriorityClass())
-                        ) {
-                            rspec.setPriorityClass(wspec.getPriorityClass());
-                        }
-
                         //profile
                         if (StringUtils.hasText(wspec.getProfile()) && !StringUtils.hasText(rspec.getProfile())) {
                             rspec.setProfile(wspec.getProfile());

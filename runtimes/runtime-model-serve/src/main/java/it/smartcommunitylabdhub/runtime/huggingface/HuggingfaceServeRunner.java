@@ -203,7 +203,10 @@ public class HuggingfaceServeRunner {
         }
         // tensor_input_names
         if (taskSpec.getTensorInputNames() != null) {
-            extraArgMap.put("--tensor_input_names", StringUtils.collectionToCommaDelimitedString(taskSpec.getTensorInputNames()));
+            extraArgMap.put(
+                "--tensor_input_names",
+                StringUtils.collectionToCommaDelimitedString(taskSpec.getTensorInputNames())
+            );
         }
         // task
         if (taskSpec.getHuggingfaceTask() != null) {
@@ -242,7 +245,6 @@ public class HuggingfaceServeRunner {
             args.add(arg.getKey());
             args.add(arg.getValue());
         }
-
 
         // if (functionSpec.getAdapters() != null && functionSpec.getAdapters().size() > 0) {
         //     contextRefs = new LinkedList<>(contextRefs);
@@ -319,11 +321,6 @@ public class HuggingfaceServeRunner {
             .secrets(coreSecrets)
             .resources(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(taskSpec.getResources()) : null)
             .volumes(taskSpec.getVolumes())
-            .nodeSelector(taskSpec.getNodeSelector())
-            .affinity(taskSpec.getAffinity())
-            .tolerations(taskSpec.getTolerations())
-            .runtimeClass(taskSpec.getRuntimeClass())
-            .priorityClass(taskSpec.getPriorityClass())
             .template(taskSpec.getProfile())
             //specific
             .replicas(taskSpec.getReplicas())
@@ -346,11 +343,10 @@ public class HuggingfaceServeRunner {
         // merge explicit args into args, if not exists
 
         // assume key value sequence
-        for (int  i = 0; i < explicitArgs.size(); i += 2) {
+        for (int i = 0; i < explicitArgs.size(); i += 2) {
             if (!extraArgMap.containsKey(explicitArgs.get(i))) {
                 extraArgMap.put(explicitArgs.get(i), explicitArgs.get(i + 1));
             }
-
         }
     }
 }
