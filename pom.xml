@@ -37,27 +37,27 @@
         <module>modules/component-relationships</module>
         <module>modules/component-search</module>
         <module>modules/runtime-base</module>
-        <module>modules/framework-k8s</module>
-        <module>modules/framework-argo</module>
-        <module>modules/framework-kaniko</module>
+        <module>frameworks/framework-k8s</module>
+        <module>frameworks/framework-argo</module>
+        <module>frameworks/framework-kaniko</module>
         <module>modules/trigger-base</module>
-        <module>modules/trigger-scheduler</module>
-        <module>modules/trigger-lifecycle</module>
-        <module>modules/runtime-container</module>
-        <module>modules/runtime-dbt</module>
-        <module>modules/runtime-kfp</module>
-        <module>modules/runtime-hera</module>
-        <module>modules/runtime-python</module>
-        <module>modules/runtime-flower</module>
-        <module>modules/runtime-model-serve</module>
-        <module>modules/runtime-kubeai</module>
+        <module>triggers/trigger-scheduler</module>
+        <module>triggers/trigger-lifecycle</module>
+        <module>runtimes/runtime-container</module>
+        <module>runtimes/runtime-dbt</module>
+        <module>runtimes/runtime-kfp</module>
+        <module>runtimes/runtime-hera</module>
+        <module>runtimes/runtime-python</module>
+        <module>runtimes/runtime-flower</module>
+        <module>runtimes/runtime-model-serve</module>
+        <module>runtimes/runtime-kubeai</module>
         <module>modules/openmetadata-integration</module>
         <module>modules/files</module>
-        <module>modules/credentials-provider-db</module>
-        <module>modules/credentials-provider-minio</module>
-        <module>modules/search-lucene</module>
-        <module>modules/search-solr</module>
-        <module>modules/cloud-rabbitmq</module>
+        <module>providers/credentials-provider-db</module>
+        <module>providers/credentials-provider-minio</module>
+        <module>providers/search-lucene</module>
+        <module>providers/search-solr</module>
+        <module>providers/cloud-rabbitmq</module>
         <module>frontend</module>
         <module>application</module>
     </modules>
