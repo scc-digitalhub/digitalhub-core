@@ -279,7 +279,7 @@ public abstract class BaseEntityServiceImpl<D extends BaseDTO & SpecDTO & Status
 
         if (getLifecycleManager() != null && !nextState.equals(curState)) {
             //perform transition
-            res = getLifecycleManager().handle(dto, nextState);
+            res = getLifecycleManager().handle(res, nextState);
         }
 
         return res;
