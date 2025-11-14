@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.core.workflows.processor;
+package it.smartcommunitylabdhub.framework.k8s.processors;
 
 import it.smartcommunitylabdhub.commons.accessors.fields.KeyAccessor;
 import it.smartcommunitylabdhub.commons.annotations.common.ProcessorType;
