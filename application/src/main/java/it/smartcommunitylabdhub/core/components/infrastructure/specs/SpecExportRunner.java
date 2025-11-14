@@ -25,14 +25,12 @@ package it.smartcommunitylabdhub.core.components.infrastructure.specs;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.schemas.Schema;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -69,9 +67,8 @@ public class SpecExportRunner implements CommandLineRunner {
 
                     log.info("writing spec {}:{} to {}...", entity.getValue(), schema.kind(), out);
 
-                    File file = new File(out);
                     String jsonSchema = schema.schema().toPrettyString();
-                    FileUtils.writeStringToFile(file, jsonSchema, StandardCharsets.UTF_8);
+                    Files.write(fp, jsonSchema.getBytes(StandardCharsets.UTF_8));
                 }
             }
         } catch (IOException e) {
