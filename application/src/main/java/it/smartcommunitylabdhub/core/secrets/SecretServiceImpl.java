@@ -41,7 +41,6 @@ import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.core.secrets.persistence.SecretEntity;
 import it.smartcommunitylabdhub.core.secrets.specs.SecretBaseSpec;
-import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.util.Collections;
@@ -71,6 +70,7 @@ public class SecretServiceImpl implements SecretService {
     // private static final String K8S_PROVIDER = "kubernetes";
     private static final String PATH_FORMAT = "%s://%s/%s";
     private static final Pattern PATH_PATTERN = Pattern.compile("secret://([\\w-]+)");
+    public static final int K8S_NAME_MAX_LENGTH = 62;
 
     @Autowired
     private SearchableEntityRepository<SecretEntity, Secret> entityRepository;
@@ -465,7 +465,19 @@ public class SecretServiceImpl implements SecretService {
     // }
 
     private String getProjectSecretName(String project) {
-        return K8sBuilderHelper.sanitizeNames("proj-secrets-" + project);
+        //use only allowed chars in k8s resource names!
+        String name = project.toLowerCase().replaceAll("[^a-z0-9-]+", "");
+        String value = "proj-secrets-" + name;
+
+        if (value.length() > K8S_NAME_MAX_LENGTH) {
+            log.error("Name exceeds max length: {} ({})", String.valueOf(value.length()), value);
+
+            throw new IllegalArgumentException(
+                "Name exceeds max length: " + String.valueOf(value.length()) + "(" + value + ")"
+            );
+        }
+
+        return value;
     }
 
     private String getSecretPath(String provider, String secret, String key) {
