@@ -47,7 +47,7 @@ public class ModelServeServeTaskSpec extends K8sFunctionTaskBaseSpec {
 
     @JsonProperty(value = "service_type", defaultValue = "ClusterIP")
     @Schema(defaultValue = "ClusterIP")
-    private CoreServiceType serviceType;
+    private CoreServiceType serviceType = CoreServiceType.ClusterIP;
 
     @JsonProperty("service_name")
     private String serviceName;

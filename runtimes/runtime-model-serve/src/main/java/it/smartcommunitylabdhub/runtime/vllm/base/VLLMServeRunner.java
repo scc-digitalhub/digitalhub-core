@@ -39,6 +39,8 @@ import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume.VolumeType;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
 import it.smartcommunitylabdhub.relationships.RelationshipDetail;
@@ -68,6 +70,8 @@ public class VLLMServeRunner {
     
     private final String runtime;
     private final String image;
+    private final String cpuImage;
+    private final String volumeSizeSpec;
     private final int userId;
     private final int groupId;
     private final String otelEndpoint;
@@ -81,8 +85,10 @@ public class VLLMServeRunner {
     public VLLMServeRunner(
         String runtime,
         String image,
+        String cpuImage,
         Integer userId,
         Integer groupId,
+        String volumeSizeSpec,
         String otelEndpoint,
         VLLMServeFunctionSpec functionSpec,
         Map<String, String> secretData,
@@ -92,6 +98,8 @@ public class VLLMServeRunner {
     ) {
         this.runtime = runtime;
         this.image = image;
+        this.cpuImage = cpuImage;
+        this.volumeSizeSpec = volumeSizeSpec;
         this.functionSpec = functionSpec;
         this.secretData = secretData;
         this.k8sBuilderHelper = k8sBuilderHelper;
@@ -111,6 +119,8 @@ public class VLLMServeRunner {
         List<CoreEnv> coreEnvList = new ArrayList<>(
             List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))
         );
+        // workaround for mc config dir to avoid eventual user permissions issues
+        coreEnvList.add(new CoreEnv("MC_CONFIG_DIR", "/shared/mc"));
 
         List<CoreEnv> coreSecrets = secretData == null
             ? null
@@ -129,7 +139,6 @@ public class VLLMServeRunner {
 
         List<String> args = new ArrayList<>(
             List.of(
-                "vllm",
                 "serve"
             )
         );
@@ -144,7 +153,6 @@ public class VLLMServeRunner {
                 mdlId = parts[0];
                 revision = parts[1];
             }
-            args.add("--model");
             args.add(mdlId);
             if (revision != null) {
                 args.add("--revision");
@@ -152,7 +160,6 @@ public class VLLMServeRunner {
             }
             defaultServedModelName = mdlId;
         } else {
-            args.add("--model");
             args.add("/shared/model");
 
             contextRefs =
@@ -172,7 +179,7 @@ public class VLLMServeRunner {
         }
 
         if (runSpec.getArgs() != null && runSpec.getArgs().size() > 0) {
-            mergeArgs(defaultArgMap, args);
+            mergeArgs(defaultArgMap, runSpec.getArgs());
         }
 
         for (Map.Entry<String, List<String>> arg : defaultArgMap.entrySet()) {
@@ -231,15 +238,27 @@ public class VLLMServeRunner {
             }
         }
 
-        String img = StringUtils.hasText(functionSpec.getImage()) ? functionSpec.getImage() : image;
+        String img = StringUtils.hasText(functionSpec.getImage()) 
+        ? functionSpec.getImage() 
+        : runSpec.getUseCpuImage()
+        ? cpuImage 
+        : image;
 
         //validate image
-        if (img == null || !img.startsWith(VLLMServeRuntime.IMAGE)) {
-            throw new IllegalArgumentException(
-                "invalid or empty image, must be based on " + VLLMServeRuntime.IMAGE
-            );
-        }
+        // if (img == null || !img.startsWith(VLLMServeRuntime.IMAGE)) {
+        //     throw new IllegalArgumentException(
+        //         "invalid or empty image, must be based on " + VLLMServeRuntime.IMAGE
+        //     );
+        // }
 
+        List<CoreVolume> volumes = taskSpec.getVolumes() != null ? new LinkedList<>(taskSpec.getVolumes()) : new LinkedList<>();
+        // create model volume to store in the /shared folder and map HF variables
+        volumes.add(createModelVolume(runSpec.getStorageSpace()));
+        appendHFVariables(coreEnvList);            
+        
+
+        // create volume for model
+        
         //build runnable
         K8sRunnable k8sServeRunnable = K8sServeRunnable
             .builder()
@@ -259,7 +278,7 @@ public class VLLMServeRunner {
             .envs(coreEnvList)
             .secrets(coreSecrets)
             .resources(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(taskSpec.getResources()) : null)
-            .volumes(taskSpec.getVolumes())
+            .volumes(volumes)
             .template(taskSpec.getProfile())
             //specific
             .replicas(taskSpec.getReplicas())
@@ -276,6 +295,25 @@ public class VLLMServeRunner {
         k8sServeRunnable.setProject(run.getProject());
 
         return k8sServeRunnable;
+    }
+
+    private void appendHFVariables(List<CoreEnv> coreEnvList) {
+        if (coreEnvList.stream().noneMatch(ce -> ce.name().equals("HF_HOME"))) {
+            coreEnvList.add(new CoreEnv("HF_HOME", "/shared/huggingface"));            
+        }
+        // if (coreEnvList.stream().noneMatch(ce -> ce.name().equals("TRANSFORMERS_CACHE"))) {
+        //     coreEnvList.add(new CoreEnv("TRANSFORMERS_CACHE", "/shared/huggingface"));
+        // }
+    }
+
+    private CoreVolume createModelVolume(String storageSpace) {
+        CoreVolume volume = new CoreVolume();
+        volume.setName("model-volume");
+        volume.setMountPath("/shared");
+        volume.setVolumeType(VolumeType.persistent_volume_claim);
+        String sizeSpec = StringUtils.hasText(storageSpace) ? storageSpace : this.volumeSizeSpec;
+        volume.setSpec(Map.of("size", sizeSpec));
+        return volume;
     }
 
     private String linkToModel(Run run, String path) {

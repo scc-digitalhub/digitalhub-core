@@ -139,8 +139,10 @@ public class VLLMServeTextRuntime
                 case VLLMServeTextServeTaskSpec.KIND -> new VLLMServeRunner(
                     RUNTIME,
                     image,
+                    cpuImage,
                     userId,
                     groupId,
+                    volumeSizeSpec,
                     otelEndpoint,
                     runSpec.getFunctionSpec(),
                     secretService.getSecretData(run.getProject(), runSpec.getTaskServeSpec().getSecrets()),

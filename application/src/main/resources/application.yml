@@ -97,6 +97,9 @@ runtime:
     group-id: ${RUNTIME_HUGGINGFACE_GROUP_ID:${kubernetes.security.group}}
   vllmserve:
     image: ${RUNTIME_VLLM_SERVE_IMAGE:vllm/vllm-openai:latest}
+    cpu-image: ${RUNTIME_VLLM_SERVE_CPU_IMAGE:public.ecr.aws/q9t5s3a7/vllm-cpu-release-repo:v0.10.2:latest}
+    image-audio: ${RUNTIME_VLLM_SERVE_IMAGE_AUDIO:${runtime.vllmserve.image}}
+    cpu-image-audio: ${RUNTIME_VLLM_SERVE_CPU_IMAGE_AUDIO:${runtime.vllmserve.cpu-image}}
     user-id: ${RUNTIME_VLLM_USER_ID:${kubernetes.security.user}}
     group-id: ${RUNTIME_VLLM_GROUP_ID:${kubernetes.security.group}}
   kubeai:

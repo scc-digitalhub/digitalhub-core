@@ -81,6 +81,12 @@ public abstract class VLLMServeRuntime<F extends VLLMServeFunctionSpec, R extend
     @Value("${runtime.vllmserve.image}")
     protected String image;
 
+    @Value("${runtime.vllmserve.cpu-image}")
+    protected String cpuImage;
+
+    @Value("${runtime.vllmserve.volume-size-spec:10Gi}")
+    protected String volumeSizeSpec; 
+
     @Value("${runtime.vllmserve.user-id}")
     protected Integer userId;
 
@@ -146,6 +152,6 @@ public abstract class VLLMServeRuntime<F extends VLLMServeFunctionSpec, R extend
     @Override
     public void afterPropertiesSet() throws Exception {
         Assert.hasText(image, "image can not be null or empty");
-        Assert.isTrue(image.startsWith(IMAGE), "image must be a version of " + IMAGE);
+        // Assert.isTrue(image.startsWith(IMAGE), "image must be a version of " + IMAGE);
     }
 }

@@ -143,8 +143,10 @@ public class VLLMServePoolingRuntime
                 case VLLMServePoolingServeTaskSpec.KIND -> new VLLMServeRunner(
                     RUNTIME,
                     image,
+                    cpuImage,
                     userId,
                     groupId,
+                    volumeSizeSpec,
                     otelEndpoint,
                     runSpec.getFunctionSpec(),
                     secretService.getSecretData(run.getProject(), runSpec.getTaskServeSpec().getSecrets()),

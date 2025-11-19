@@ -46,12 +46,22 @@ public class VLLMServeRunSpec extends RunBaseSpec {
     @JsonProperty("enable_telemetry")
     private Boolean enableTelemetry;
 
+    @Schema(title = "fields.vllm.useCpuImage.title", description = "fields.vllm.useCpuImage.description")
+    @JsonProperty("use_cpu_image")
+    private Boolean useCpuImage;
+
+    @Schema(title = "fields.vllm.storageSpace.title", description = "fields.vllm.storageSpace.description")
+    @JsonProperty("storage_space")
+    private String storageSpace;
+
     @Override
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
         VLLMServeRunSpec spec = mapper.convertValue(data, VLLMServeRunSpec.class);
         this.args = spec.getArgs();
         this.enableTelemetry = spec.getEnableTelemetry();
+        this.useCpuImage = spec.getUseCpuImage();
+        this.storageSpace = spec.getStorageSpace();
     }
 
     public static VLLMServeRunSpec with(Map<String, Serializable> data) {
