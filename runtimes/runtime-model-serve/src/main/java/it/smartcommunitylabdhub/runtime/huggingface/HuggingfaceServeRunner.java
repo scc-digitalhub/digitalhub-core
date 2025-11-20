@@ -238,7 +238,7 @@ public class HuggingfaceServeRunner {
         }
 
         if (runSpec.getArgs() != null && runSpec.getArgs().size() > 0) {
-            mergeArgs(extraArgMap, args);
+            mergeArgs(extraArgMap, runSpec.getArgs());
         }
 
         for (Map.Entry<String, String> arg : extraArgMap.entrySet()) {
@@ -342,10 +342,21 @@ public class HuggingfaceServeRunner {
     private void mergeArgs(Map<String, String> extraArgMap, List<String> explicitArgs) {
         // merge explicit args into args, if not exists
 
-        // assume key value sequence
-        for (int i = 0; i < explicitArgs.size(); i += 2) {
-            if (!extraArgMap.containsKey(explicitArgs.get(i))) {
-                extraArgMap.put(explicitArgs.get(i), explicitArgs.get(i + 1));
+        for (int i = 0; i < explicitArgs.size(); i++) {
+            if (explicitArgs.get(i).startsWith("--")) {
+                String key = explicitArgs.get(i);
+                String value = "";
+                int idx = key.indexOf('=');
+                if (idx != -1) {
+                    key = key.substring(0, idx);
+                    value = explicitArgs.get(i).substring(idx + 1);
+                } else if (i + 1 < explicitArgs.size() && !explicitArgs.get(i + 1).startsWith("--")) {
+                    value = explicitArgs.get(i + 1);
+                    i++;
+                }
+                if (!extraArgMap.containsKey(key)) {
+                    extraArgMap.put(key, value);
+                }
             }
         }
     }
