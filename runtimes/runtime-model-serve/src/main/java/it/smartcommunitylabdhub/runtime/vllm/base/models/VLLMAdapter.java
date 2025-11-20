@@ -37,7 +37,7 @@ import lombok.Setter;
 @Builder
 public class VLLMAdapter {
 
-    @Schema(title = "fields.kubeai.url.title", description = "fields.kubeai.url.description")
+    @Schema(title = "fields.vllm.url.title", description = "fields.vllm.url.description")
     private String url;
 
     @Schema(
