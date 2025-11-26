@@ -37,36 +37,37 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = MlflowServeRuntime.RUNTIME, kind = MlflowServeRunSpec.KIND, entity = EntityName.RUN)
-public class MlflowServeRunSpec extends MlflowRunSpec {
+@SpecType(runtime = MlflowServeRuntime.RUNTIME, kind = MlflowBuildRunSpec.KIND, entity = EntityName.RUN)
+public class MlflowBuildRunSpec extends MlflowRunSpec {
 
-    public static final String KIND = MlflowServeTaskSpec.KIND + ":run";
+    public static final String KIND = MlflowBuildTaskSpec.KIND + ":run";
 
     @JsonSchemaIgnore
     @JsonUnwrapped
     private MlflowServeFunctionSpec functionSpec;
 
     @JsonUnwrapped
-    private MlflowServeTaskSpec taskServeSpec;
+    private MlflowBuildTaskSpec taskBuildSpec;
 
     @Override
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
-        MlflowServeRunSpec spec = mapper.convertValue(data, MlflowServeRunSpec.class);
+
+        MlflowBuildRunSpec spec = mapper.convertValue(data, MlflowBuildRunSpec.class);
         this.functionSpec = spec.getFunctionSpec();
-        this.taskServeSpec = spec.getTaskServeSpec();
+        this.taskBuildSpec = spec.getTaskBuildSpec();
     }
 
     public void setFunctionSpec(MlflowServeFunctionSpec functionSpec) {
         this.functionSpec = functionSpec;
     }
 
-    public void setTaskServeSpec(MlflowServeTaskSpec taskServeSpec) {
-        this.taskServeSpec = taskServeSpec;
+    public void setTaskBuildSpec(MlflowBuildTaskSpec taskBuildSpec) {
+        this.taskBuildSpec = taskBuildSpec;
     }
 
-    public static MlflowServeRunSpec with(Map<String, Serializable> data) {
-        MlflowServeRunSpec spec = new MlflowServeRunSpec();
+    public static MlflowBuildRunSpec with(Map<String, Serializable> data) {
+        MlflowBuildRunSpec spec = new MlflowBuildRunSpec();
         spec.configure(data);
         return spec;
     }

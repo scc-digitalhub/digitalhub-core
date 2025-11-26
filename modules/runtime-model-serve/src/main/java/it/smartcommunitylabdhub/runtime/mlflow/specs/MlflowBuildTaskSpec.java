@@ -23,12 +23,12 @@
 
 package it.smartcommunitylabdhub.runtime.mlflow.specs;
 
-import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.runtime.mlflow.MlflowServeRuntime;
 import java.io.Serializable;
+import java.util.List;
 import java.util.Map;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -37,36 +37,15 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = MlflowServeRuntime.RUNTIME, kind = MlflowServeRunSpec.KIND, entity = EntityName.RUN)
-public class MlflowServeRunSpec extends MlflowRunSpec {
+@SpecType(runtime = MlflowServeRuntime.RUNTIME, kind = MlflowBuildTaskSpec.KIND, entity = EntityName.TASK)
+public class MlflowBuildTaskSpec extends K8sFunctionTaskBaseSpec {
 
-    public static final String KIND = MlflowServeTaskSpec.KIND + ":run";
+    public static final String KIND = MlflowServeRuntime.RUNTIME + "+build";
 
-    @JsonSchemaIgnore
-    @JsonUnwrapped
-    private MlflowServeFunctionSpec functionSpec;
+    private List<String> instructions;
 
-    @JsonUnwrapped
-    private MlflowServeTaskSpec taskServeSpec;
-
-    @Override
-    public void configure(Map<String, Serializable> data) {
-        super.configure(data);
-        MlflowServeRunSpec spec = mapper.convertValue(data, MlflowServeRunSpec.class);
-        this.functionSpec = spec.getFunctionSpec();
-        this.taskServeSpec = spec.getTaskServeSpec();
-    }
-
-    public void setFunctionSpec(MlflowServeFunctionSpec functionSpec) {
-        this.functionSpec = functionSpec;
-    }
-
-    public void setTaskServeSpec(MlflowServeTaskSpec taskServeSpec) {
-        this.taskServeSpec = taskServeSpec;
-    }
-
-    public static MlflowServeRunSpec with(Map<String, Serializable> data) {
-        MlflowServeRunSpec spec = new MlflowServeRunSpec();
+    public static MlflowBuildTaskSpec with(Map<String, Serializable> data) {
+        MlflowBuildTaskSpec spec = new MlflowBuildTaskSpec();
         spec.configure(data);
         return spec;
     }

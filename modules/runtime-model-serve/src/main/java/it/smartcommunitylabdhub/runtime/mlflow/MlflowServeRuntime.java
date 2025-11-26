@@ -32,16 +32,21 @@ import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.base.Executable;
+import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
-import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.commons.services.ModelManager;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
+import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
+import it.smartcommunitylabdhub.runtime.mlflow.specs.MlflowBuildRunSpec;
+import it.smartcommunitylabdhub.runtime.mlflow.specs.MlflowBuildTaskSpec;
+import it.smartcommunitylabdhub.runtime.mlflow.specs.MlflowRunSpec;
 import it.smartcommunitylabdhub.runtime.mlflow.specs.MlflowServeFunctionSpec;
 import it.smartcommunitylabdhub.runtime.mlflow.specs.MlflowServeRunSpec;
 import it.smartcommunitylabdhub.runtime.mlflow.specs.MlflowServeTaskSpec;
@@ -49,6 +54,7 @@ import it.smartcommunitylabdhub.runtime.modelserve.specs.ModelServeRunStatus;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -64,11 +70,13 @@ import org.springframework.util.StringUtils;
 @Slf4j
 @RuntimeComponent(runtime = MlflowServeRuntime.RUNTIME)
 public class MlflowServeRuntime
-    extends K8sBaseRuntime<MlflowServeFunctionSpec, MlflowServeRunSpec, ModelServeRunStatus, K8sRunnable>
+    extends K8sBaseRuntime<MlflowServeFunctionSpec, MlflowRunSpec, ModelServeRunStatus, K8sRunnable>
     implements InitializingBean {
 
     public static final String RUNTIME = "mlflowserve";
     public static final String IMAGE = "seldonio/mlserver";
+
+    public static final String[] KINDS = { MlflowServeRunSpec.KIND, MlflowBuildRunSpec.KIND };
 
     @Autowired
     private SecretService secretService;
@@ -94,6 +102,9 @@ public class MlflowServeRuntime
     @Value("${runtime.mlflowserve.group-id}")
     private Integer groupId;
 
+    @Value("${runtime.mlflowserve.command:mlserver}")
+    private String command;
+
     public MlflowServeRuntime() {}
 
     @Override
@@ -103,27 +114,30 @@ public class MlflowServeRuntime
     }
 
     @Override
-    public MlflowServeRunSpec build(@NotNull Executable function, @NotNull Task task, @NotNull Run run) {
+    public MlflowRunSpec build(@NotNull Executable function, @NotNull Task task, @NotNull Run run) {
         //check run kind
-        if (!MlflowServeRunSpec.KIND.equals(run.getKind())) {
-            throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(
-                        String.valueOf(run.getKind()),
-                        MlflowServeRunSpec.KIND
-                    )
-            );
+        if (!isSupported(run)) {
+            throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
         }
 
         MlflowServeFunctionSpec funSpec = MlflowServeFunctionSpec.with(function.getSpec());
-        MlflowServeRunSpec runSpec = MlflowServeRunSpec.with(run.getSpec());
-
-        String kind = task.getKind();
+        MlflowRunSpec runSpec =
+            switch (run.getKind()) {
+                case MlflowServeRunSpec.KIND -> MlflowServeRunSpec.with(run.getSpec());
+                case MlflowBuildRunSpec.KIND -> MlflowBuildRunSpec.with(run.getSpec());
+                default -> throw new IllegalArgumentException(
+                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+                );
+            };
 
         //build task spec as defined
-        TaskBaseSpec taskSpec =
-            switch (kind) {
+        Map<String, Serializable> taskSpec =
+            switch (task.getKind()) {
                 case MlflowServeTaskSpec.KIND -> {
-                    yield MlflowServeTaskSpec.with(task.getSpec());
+                    yield MlflowServeTaskSpec.with(task.getSpec()).toMap();
+                }
+                case MlflowBuildTaskSpec.KIND -> {
+                    yield MlflowBuildTaskSpec.with(task.getSpec()).toMap();
                 }
                 default -> throw new IllegalArgumentException(
                     "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
@@ -133,28 +147,27 @@ public class MlflowServeRuntime
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
         map.putAll(runSpec.toMap());
-        taskSpec.toMap().forEach(map::putIfAbsent);
-
-        MlflowServeRunSpec serveSpec = MlflowServeRunSpec.with(map);
+        taskSpec.forEach(map::putIfAbsent);
         //ensure function is not modified
-        serveSpec.setFunctionSpec(funSpec);
+        map.putAll(funSpec.toMap());
 
-        return serveSpec;
+        //reconfigure run spec
+        runSpec.configure(map);
+
+        return runSpec;
     }
 
     @Override
     public K8sRunnable run(@NotNull Run run) {
         //check run kind
-        if (!MlflowServeRunSpec.KIND.equals(run.getKind())) {
-            throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(
-                        String.valueOf(run.getKind()),
-                        MlflowServeRunSpec.KIND
-                    )
-            );
+        if (!isSupported(run)) {
+            throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
         }
 
-        MlflowServeRunSpec runSpec = MlflowServeRunSpec.with(run.getSpec());
+        //read base task spec to extract secrets
+        K8sFunctionTaskBaseSpec taskSpec = new K8sFunctionTaskBaseSpec();
+        taskSpec.configure(run.getSpec());
+        Map<String, String> secrets = secretService.getSecretData(run.getProject(), taskSpec.getSecrets());
 
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
@@ -165,13 +178,15 @@ public class MlflowServeRuntime
                     image,
                     userId,
                     groupId,
-                    runSpec.getFunctionSpec(),
-                    secretService.getSecretData(run.getProject(), runSpec.getTaskServeSpec().getSecrets()),
+                    MlflowServeRunSpec.with(run.getSpec()).getFunctionSpec(),
+                    secrets,
                     k8sBuilderHelper,
                     modelService,
                     functionService
                 )
                     .produce(run);
+                case MlflowBuildTaskSpec.KIND -> new MlflowBuildRunner(image, command, modelService, k8sBuilderHelper)
+                    .produce(run, secrets);
                 default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
             };
 
@@ -224,7 +239,31 @@ public class MlflowServeRuntime
     }
 
     @Override
+    public ModelServeRunStatus onComplete(Run run, RunRunnable runnable) {
+        RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
+
+        //update image name after build
+        if (runnable instanceof K8sContainerBuilderRunnable) {
+            String image = ((K8sContainerBuilderRunnable) runnable).getImage();
+
+            String functionId = runAccessor.getFunctionId();
+            Function function = functionService.getFunction(functionId);
+
+            log.debug("update function {} spec to use built image: {}", functionId, image);
+
+            MlflowServeFunctionSpec funSpec = MlflowServeFunctionSpec.with(function.getSpec());
+            if (!image.equals(funSpec.getImage())) {
+                funSpec.setImage(image);
+                function.setSpec(funSpec.toMap());
+                functionService.updateFunction(functionId, function, true);
+            }
+        }
+
+        return null;
+    }
+
+    @Override
     public boolean isSupported(@NotNull Run run) {
-        return MlflowServeRunSpec.KIND.equals(run.getKind());
+        return Arrays.asList(KINDS).contains(run.getKind());
     }
 }
