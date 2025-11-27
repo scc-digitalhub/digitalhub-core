@@ -53,6 +53,7 @@
         <module>runtimes/runtime-kubeai</module>
         <module>modules/openmetadata-integration</module>
         <module>modules/files</module>
+        <module>modules/proxy</module>
         <module>providers/credentials-provider-db</module>
         <module>providers/credentials-provider-minio</module>
         <module>providers/search-lucene</module>

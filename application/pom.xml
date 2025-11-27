@@ -206,7 +206,7 @@
             <artifactId>dh-runtime-base</artifactId>
             <version>${revision}</version>
         </dependency>
-        <dependency>
+        <!-- <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-framework-k8s</artifactId>
             <version>${revision}</version>
@@ -220,13 +220,13 @@
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-framework-argo</artifactId>
             <version>${revision}</version>
-        </dependency>
+        </dependency> -->
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-trigger-base</artifactId>
             <version>${revision}</version>
         </dependency>
-        <dependency>
+        <!-- <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-trigger-scheduler</artifactId>
             <version>${revision}</version>
@@ -235,8 +235,8 @@
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-trigger-lifecycle</artifactId>
             <version>${revision}</version>
-        </dependency>
-        <dependency>
+        </dependency> -->
+        <!-- <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-runtime-container</artifactId>
             <version>${revision}</version>
@@ -275,7 +275,7 @@
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-runtime-kubeai</artifactId>
             <version>${revision}</version>
-        </dependency>
+        </dependency> -->
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-console</artifactId>
@@ -296,7 +296,7 @@
             <artifactId>dh-authorization</artifactId>
             <version>${revision}</version>
         </dependency>
-        <dependency>
+        <!-- <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>credentials-provider-minio</artifactId>
             <version>${revision}</version>
@@ -305,12 +305,12 @@
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>credentials-provider-db</artifactId>
             <version>${revision}</version>
-        </dependency>
-        <dependency>
+        </dependency> -->
+        <!-- <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-search-lucene</artifactId>
             <version>${revision}</version>
-        </dependency>
+        </dependency> -->
         <!-- <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-search-solr</artifactId>
