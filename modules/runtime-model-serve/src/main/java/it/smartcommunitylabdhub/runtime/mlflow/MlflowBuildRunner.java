@@ -126,7 +126,6 @@ public class MlflowBuildRunner {
                 if (!path.endsWith("/")) {
                     path += "/";
                 }
-                path += "model/";
             }
         }
 

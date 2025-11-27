@@ -144,7 +144,6 @@ public class MlflowServeRunner {
                 if (!path.endsWith("/")) {
                     path += "/";
                 }
-                path += "model/";
             }
         }
 
