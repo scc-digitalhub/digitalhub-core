@@ -25,9 +25,10 @@ package it.smartcommunitylabdhub.runtime.mlflow.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.runtime.mlflow.MlflowServeRuntime;
-import it.smartcommunitylabdhub.runtime.modelserve.specs.ModelServeServeTaskSpec;
 import java.io.Serializable;
+import java.util.List;
 import java.util.Map;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -36,13 +37,15 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = MlflowServeRuntime.RUNTIME, kind = MlflowServeTaskSpec.KIND, entity = EntityName.TASK)
-public class MlflowServeTaskSpec extends ModelServeServeTaskSpec {
+@SpecType(runtime = MlflowServeRuntime.RUNTIME, kind = MlflowBuildTaskSpec.KIND, entity = EntityName.TASK)
+public class MlflowBuildTaskSpec extends K8sFunctionTaskBaseSpec {
 
-    public static final String KIND = MlflowServeRuntime.RUNTIME + "+serve";
+    public static final String KIND = MlflowServeRuntime.RUNTIME + "+build";
 
-    public static MlflowServeTaskSpec with(Map<String, Serializable> data) {
-        MlflowServeTaskSpec spec = new MlflowServeTaskSpec();
+    private List<String> instructions;
+
+    public static MlflowBuildTaskSpec with(Map<String, Serializable> data) {
+        MlflowBuildTaskSpec spec = new MlflowBuildTaskSpec();
         spec.configure(data);
         return spec;
     }
