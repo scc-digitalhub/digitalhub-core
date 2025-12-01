@@ -144,7 +144,6 @@ public class MlflowServeRunner {
                 if (!path.endsWith("/")) {
                     path += "/";
                 }
-                path += "model/";
             }
         }
 
@@ -215,7 +214,7 @@ public class MlflowServeRunner {
         String img = StringUtils.hasText(functionSpec.getImage()) ? functionSpec.getImage() : image;
 
         //validate image
-        if (img == null || !img.startsWith(MlflowServeRuntime.IMAGE)) {
+        if (img == null) {
             throw new IllegalArgumentException("invalid or empty image, must be based on " + MlflowServeRuntime.IMAGE);
         }
 

@@ -3,7 +3,7 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <groupId>it.smartcommunitylabdhub</groupId>
-  <artifactId>dh-runtime-flower</artifactId>
+  <artifactId>dh-search-solr</artifactId>
   <version>0.15.0-SNAPSHOT</version>
   <dependencies>
     <dependency>
@@ -14,14 +14,26 @@
     </dependency>
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-framework-k8s</artifactId>
+      <artifactId>dh-search</artifactId>
       <version>0.15.0-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-framework-kaniko</artifactId>
-      <version>0.15.0-SNAPSHOT</version>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-core</artifactId>
+      <version>6.5.6</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+      <version>3.5.7</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-thymeleaf</artifactId>
+      <version>3.5.7</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -32,45 +44,33 @@
       <optional>true</optional>
     </dependency>
     <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-core</artifactId>
-      <version>2.18.4</version>
+      <groupId>org.apache.solr</groupId>
+      <artifactId>solr-solrj</artifactId>
+      <version>9.7.0</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>com.fasterxml.jackson.dataformat</groupId>
-      <artifactId>jackson-dataformat-cbor</artifactId>
-      <version>2.18.4</version>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-util</artifactId>
+      <version>10.0.24</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>com.fasterxml.jackson.dataformat</groupId>
-      <artifactId>jackson-dataformat-yaml</artifactId>
-      <version>2.18.4</version>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-client</artifactId>
+      <version>10.0.24</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>com.fasterxml.jackson.module</groupId>
-      <artifactId>jackson-module-jsonSchema</artifactId>
-      <version>2.18.4</version>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-io</artifactId>
+      <version>10.0.24</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>com.fasterxml.jackson.datatype</groupId>
-      <artifactId>jackson-datatype-jsr310</artifactId>
-      <version>2.18.4</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <version>2.0.17</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>log4j-over-slf4j</artifactId>
-      <version>2.0.17</version>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-http</artifactId>
+      <version>10.0.24</version>
       <scope>compile</scope>
     </dependency>
   </dependencies>

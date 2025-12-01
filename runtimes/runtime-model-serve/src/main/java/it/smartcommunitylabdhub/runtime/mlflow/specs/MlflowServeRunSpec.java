@@ -27,7 +27,6 @@ import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.entities.EntityName;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.runtime.mlflow.MlflowServeRuntime;
 import java.io.Serializable;
 import java.util.Map;
@@ -39,7 +38,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @SpecType(runtime = MlflowServeRuntime.RUNTIME, kind = MlflowServeRunSpec.KIND, entity = EntityName.RUN)
-public class MlflowServeRunSpec extends RunBaseSpec {
+public class MlflowServeRunSpec extends MlflowRunSpec {
 
     public static final String KIND = MlflowServeTaskSpec.KIND + ":run";
 
