@@ -1,3 +1,26 @@
+## [0.14.1](https://github.com/scc-digitalhub/digitalhub-core/compare/0.14.0...0.14.1) (2025-12-02)
+
+Maintenance release for 14.x
+
+### Bug Fixes
+
+* double /v2 in sklearn and mlflow service urls ([516e687](https://github.com/scc-digitalhub/digitalhub-core/commit/516e6873280adf5477ffa4c01a3d9aa12cb61cab))
+* ephemeral volumes with name may cause errors ([dce0062](https://github.com/scc-digitalhub/digitalhub-core/commit/dce006211d7121e9ea1700aee54e0b402b8b4fd2))
+* hugging face image regex ([5244f26](https://github.com/scc-digitalhub/digitalhub-core/commit/5244f2683e5bccf66879b4950df01d606fc91d6d))
+* mlflow model path should not include /model ([f7d5ea7](https://github.com/scc-digitalhub/digitalhub-core/commit/f7d5ea73d7055e17edf8b4cf59b561846a37969e))
+* post create lifecycle action uses newly persisted entry ([40f3224](https://github.com/scc-digitalhub/digitalhub-core/commit/40f32244e82d7f1ca8eea06d08f4fa6f239f76ab))
+* skip lost+found in init container chmods ([ec8afa9](https://github.com/scc-digitalhub/digitalhub-core/commit/ec8afa9cf834959b520cdbbebcf4bd7c7643474a))
+* support any image for mlserver ([a0d6374](https://github.com/scc-digitalhub/digitalhub-core/commit/a0d63749927227728798ddcf34baef3772b32ef9))
+
+
+### Features
+
+* configuration in well-known is sorted by key ([fab9ac9](https://github.com/scc-digitalhub/digitalhub-core/commit/fab9ac9df7b708e97f4776f57044529777029dde))
+* dbconfig exposed as configuration ([7f4a281](https://github.com/scc-digitalhub/digitalhub-core/commit/7f4a281b198e5ba27cfa4241621cc231049e3a34))
+* MLFLowserve build action support ([4f76e8f](https://github.com/scc-digitalhub/digitalhub-core/commit/4f76e8f47b8f8be22f5d6c91d406c26ced5959ff))
+
+
+
 # [0.14.0](https://github.com/scc-digitalhub/digitalhub-core/compare/0.14.0-beta19...0.14.0) (2025-10-24)
 
 ## What's Changed
