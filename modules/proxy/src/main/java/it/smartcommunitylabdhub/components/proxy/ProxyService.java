@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.core.components.proxy;
+package it.smartcommunitylabdhub.components.proxy;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
