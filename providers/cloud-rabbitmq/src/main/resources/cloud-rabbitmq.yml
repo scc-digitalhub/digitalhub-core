@@ -1,0 +1,14 @@
+
+# Conditional Configuration Cloud
+components:
+    rabbitmq:
+      connection:
+        host: ${RABBITMQ_HOST:}
+        port: ${RABBITMQ_PORT:}
+        username: ${RABBITMQ_USER:}
+        password: ${RABBITMQ_PASSWORD:}
+        virtual-host: ${RABBITMQ_VHOST:/}
+      queue-name: ${RABBITMQ_QUEUE:}
+      entity-topic: ${RABBITMQ_TOPIC:entityTopic}
+      entity-routing-key: ${RABBITMQ_ROUTING_KEY:entityRoutingKey}
+      enabled: ${RABBITMQ_ENABLE:false}

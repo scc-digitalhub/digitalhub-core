@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /**
  * Copyright 2025 the original author or authors
  *
@@ -14,11 +20,11 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.credentials.db;
+package it.smartcommunitylabdhub.credentials.db.models;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import it.smartcommunitylabdhub.commons.infrastructure.AbstractConfiguration;
+import it.smartcommunitylabdhub.authorization.model.AbstractCredentials;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -33,17 +39,18 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class DbConfig extends AbstractConfiguration {
+public class DbCredentials extends AbstractCredentials {
 
-    @JsonProperty("db_platform")
-    private String platform;
+    @JsonProperty("db_username")
+    private String username;
 
-    @JsonProperty("db_host")
-    private String host;
+    @JsonProperty("db_password")
+    private String password;
 
-    @JsonProperty("db_port")
-    private Integer port;
-
-    @JsonProperty("db_database")
-    private String database;
+    @Override
+    public void eraseCredentials() {
+        //clear credentials
+        this.username = null;
+        this.password = null;
+    }
 }

@@ -1,0 +1,23 @@
+runtime:
+  sklearnserve:
+    image: ${RUNTIME_SKLEARN_SERVE_IMAGE:seldonio/mlserver:1.6.0-sklearn}
+    user-id: ${RUNTIME_SKLEARN_SERVE_USER_ID:${kubernetes.security.user}}
+    group-id: ${RUNTIME_SKLEARN_SERVE_GROUP_ID:${kubernetes.security.group}}
+  mlflowserve:
+    image: ${RUNTIME_MLFLOW_SERVE_IMAGE:seldonio/mlserver:1.6.0-mlflow}
+    user-id: ${RUNTIME_MLFLOW_SERVE_USER_ID:${kubernetes.security.user}}
+    group-id: ${RUNTIME_MLFLOW_SERVE_GROUP_ID:${kubernetes.security.group}}
+  huggingfaceserve:
+    image: ${RUNTIME_HUGGINGFACE_SERVE_IMAGE:kserve/huggingfaceserver:latest}
+    user-id: ${RUNTIME_HUGGINGFACE_USER_ID:${kubernetes.security.user}}
+    group-id: ${RUNTIME_HUGGINGFACE_GROUP_ID:${kubernetes.security.group}}
+  vllmserve:
+    image: ${RUNTIME_VLLM_SERVE_IMAGE:vllm/vllm-openai:latest}
+    cpu-image: ${RUNTIME_VLLM_SERVE_CPU_IMAGE:public.ecr.aws/q9t5s3a7/vllm-cpu-release-repo:v0.10.2:latest}
+    image-audio: ${RUNTIME_VLLM_SERVE_IMAGE_AUDIO:${runtime.vllmserve.image}}
+    cpu-image-audio: ${RUNTIME_VLLM_SERVE_CPU_IMAGE_AUDIO:${runtime.vllmserve.cpu-image}}
+    user-id: ${RUNTIME_VLLM_USER_ID:${kubernetes.security.user}}
+    group-id: ${RUNTIME_VLLM_GROUP_ID:${kubernetes.security.group}}
+    llm:
+      otel-endpoint: ${LLM_OTEL_ENDPOINT:}
+

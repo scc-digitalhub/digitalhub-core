@@ -18,7 +18,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package it.smartcommunitylabdhub.credentials.db;
+package it.smartcommunitylabdhub.credentials.db.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;

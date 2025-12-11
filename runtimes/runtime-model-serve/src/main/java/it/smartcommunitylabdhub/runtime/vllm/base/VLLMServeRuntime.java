@@ -41,14 +41,12 @@ import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeRunStatus;
 import it.smartcommunitylabdhub.runtime.vllm.text.specs.VLLMServeTextFunctionSpec;
 import it.smartcommunitylabdhub.runtimes.lifecycle.RunState;
 import jakarta.validation.constraints.NotNull;
-import lombok.extern.slf4j.Slf4j;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -60,7 +58,7 @@ public abstract class VLLMServeRuntime<F extends VLLMServeFunctionSpec, R extend
     implements InitializingBean {
 
     public static final String IMAGE = "vllm/vllm-openai";
-    
+
     protected static final String VLLM_ENGINE = "VLLM";
 
     @Autowired
@@ -85,7 +83,7 @@ public abstract class VLLMServeRuntime<F extends VLLMServeFunctionSpec, R extend
     protected String cpuImage;
 
     @Value("${runtime.vllmserve.volume-size-spec:10Gi}")
-    protected String volumeSizeSpec; 
+    protected String volumeSizeSpec;
 
     @Value("${runtime.vllmserve.user-id}")
     protected Integer userId;
@@ -93,15 +91,16 @@ public abstract class VLLMServeRuntime<F extends VLLMServeFunctionSpec, R extend
     @Value("${runtime.vllmserve.group-id}")
     protected Integer groupId;
 
-    @Value("${llm.otel-endpoint:}")
+    @Value("${runtime.vllmserve.llm.otel-endpoint:}")
     protected String otelEndpoint;
 
     public VLLMServeRuntime() {}
 
     public abstract Map<String, String> getOpenAIFeatures();
+
     public abstract Map<String, String> getExtraFeatures();
 
-     @Override
+    @Override
     public VLLMServeRunStatus onRunning(@NotNull Run run, RunRunnable runnable) {
         VLLMServeRunStatus status = VLLMServeRunStatus.with(run.getStatus());
         VLLMServeTextFunctionSpec functionSpec = VLLMServeTextFunctionSpec.with(run.getSpec());

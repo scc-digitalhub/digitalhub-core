@@ -1,0 +1,13 @@
+
+# Solr configuration
+solr:
+  url: ${SOLR_URL:false}
+  user: ${SOLR_USER:}
+  password: ${SOLR_PASSWORD:}
+  admin-user: ${SOLR_ADMIN_USER:${SOLR_USER}}
+  admin-password: ${SOLR_ADMIN_PASSWORD:${SOLR_PASSWORD}}
+  collection: ${SOLR_COLLECTION:dhcore}
+  timeout: ${SOLR_TIMEOUT:5000}
+  shards: ${SOLR_COLLECTION_SHARDS_NUM:1}
+  replicas: ${SOLR_COLLECTION_REPLICATION:1}
+  reindex: ${SOLR_REINDEX:never}

@@ -1,0 +1,4 @@
+# Runtimes
+runtime:
+  dbt:
+    image: ${RUNTIME_DBT_IMAGE:ghcr.io/scc-digitalhub/digitalhub-sdk-wrapper-dbt/wrapper-dbt:latest}

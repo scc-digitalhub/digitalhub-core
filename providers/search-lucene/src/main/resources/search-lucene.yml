@@ -1,0 +1,3 @@
+lucene:
+  index-path: ${LUCENE_INDEX_PATH:./data/index}
+  reindex: ${LUCENE_REINDEX:never}

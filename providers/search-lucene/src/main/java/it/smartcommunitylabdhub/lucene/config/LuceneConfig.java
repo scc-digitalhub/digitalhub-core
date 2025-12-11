@@ -23,11 +23,14 @@
 
 package it.smartcommunitylabdhub.lucene.config;
 
+import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.annotation.Order;
 
 @Configuration
 @Order(3)
+@PropertySource(value = "classpath:/search-lucene.yml", factory = YamlPropertySourceFactory.class)
 @EnableConfigurationProperties({ LuceneProperties.class })
 public class LuceneConfig {}

@@ -1,0 +1,20 @@
+# build config
+builder:
+  framework: ${BUILDER_FRAMEWORK:kaniko}
+  image-prefix: ${BUILDER_IMAGE_PREFIX:dhcore}
+  kaniko:
+    image: ${KANIKO_IMAGE:gcr.io/kaniko-project/executor:latest}
+    image-prefix: ${KANIKO_IMAGE_PREFIX:${builder.image-prefix}}
+    image-registry: ${KANIKO_IMAGE_REGISTRY:${registry.name}}
+    secret: ${KANIKO_SECRET:${registry.secret}}
+    args: ${KANIKO_ARGS:}
+  buildkit:
+    image: ${BUILDKIT_IMAGE:moby/buildkit:master-rootless}
+    image-prefix: ${BUILDKIT_IMAGE_PREFIX:${builder.image-prefix}}
+    image-registry: ${BUILDKIT_IMAGE_REGISTRY:${registry.name}}
+    secret: ${BUILDKIT_SECRET:${registry.secret}}
+    command: ${BUILDKIT_COMMAND:buildctl-daemonless.sh}
+    args: ${BUILDKIT_ARGS:build,--frontend,dockerfile.v0}
+    client-secret:
+      name: ${BUILDKIT_CLIENT_SECRET_NAME:}
+      mount-path: ${BUILDKIT_CLIENT_SECRET_MOUNT_PATH:/certs/client}

@@ -79,7 +79,7 @@ public abstract class K8sBaseMonitor<T extends K8sRunnable> implements Runnable 
     }
 
     @Autowired
-    public void setCollectLogs(@Value("${kubernetes.logs.enable}") Boolean collectLogs) {
+    public void setCollectLogs(@Value("${kubernetes.logs}") Boolean collectLogs) {
         this.collectLogs = collectLogs;
     }
 

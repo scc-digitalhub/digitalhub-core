@@ -1,0 +1,19 @@
+# files support
+files:
+  max-column-size: ${FILES_MAX_COLUMN_SIZE:2097152}
+  default:
+    store: ${FILES_DEFAULT_STORE:s3://${application.name}}
+
+# Credentials
+credentials:
+  provider:
+    s3:
+      enable: ${S3_CREDENTIALS_PROVIDER:false}
+      endpoint: ${S3_ENDPOINT_URL:}
+      bucket: ${S3_BUCKET:}
+      signature-version: s3v4
+      region: ${AWS_DEFAULT_REGION:}
+      access-key: ${AWS_ACCESS_KEY:}
+      secret-key: ${AWS_SECRET_KEY:}
+      path-style-access: ${S3_PATH_STYLE_ACCESS:}
+      

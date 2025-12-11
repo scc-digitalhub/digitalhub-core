@@ -1,0 +1,4 @@
+runtime:
+  hera:
+    image: ${RUNTIME_HERA_IMAGE:ghcr.io/scc-digitalhub/digitalhub-sdk-wrapper-hera/wrapper-hera:latest}
+    duration: ${RUNTIME_HERA_DURATION:${jwt.refresh-token.duration}}

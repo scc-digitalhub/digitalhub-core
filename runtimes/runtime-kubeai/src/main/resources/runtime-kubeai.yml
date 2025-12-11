@@ -1,0 +1,3 @@
+runtime:
+  kubeai:
+    endpoint: ${RUNTIME_KUBEAI_ENDPOINT:}

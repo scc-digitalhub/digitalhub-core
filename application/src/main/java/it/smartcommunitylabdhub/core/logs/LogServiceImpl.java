@@ -66,7 +66,7 @@ public class LogServiceImpl implements LogService {
 
     public static final int MAX_LENGTH = 2 * 1024 * 1024; //2MB
 
-    @Value("${kubernetes.logs.max-length}")
+    @Value("${logs.max-length}")
     private int maxLength = MAX_LENGTH;
 
     @Autowired

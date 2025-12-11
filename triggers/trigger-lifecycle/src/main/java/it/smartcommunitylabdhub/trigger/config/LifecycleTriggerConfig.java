@@ -22,6 +22,7 @@
 
 package it.smartcommunitylabdhub.trigger.config;
 
+import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
 import it.smartcommunitylabdhub.trigger.lifecycle.models.LifecycleTriggerJob;
 import it.smartcommunitylabdhub.trigger.lifecycle.store.InMemoryTriggerJobStore;
 import it.smartcommunitylabdhub.trigger.lifecycle.store.JdbcTriggerJobStore;
@@ -30,8 +31,10 @@ import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
 
 @Configuration
+@PropertySource(value = "classpath:/trigger-lifecycle.yml", factory = YamlPropertySourceFactory.class)
 public class LifecycleTriggerConfig {
 
     @Value("${triggers.lifecycle.store}")

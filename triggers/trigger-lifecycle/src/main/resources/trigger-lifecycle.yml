@@ -1,0 +1,4 @@
+# Triggers
+triggers:
+  lifecycle:
+    store: jdbc

@@ -20,7 +20,7 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.credentials.db;
+package it.smartcommunitylabdhub.credentials.db.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;

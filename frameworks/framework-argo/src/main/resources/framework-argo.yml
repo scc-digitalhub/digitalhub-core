@@ -1,0 +1,6 @@
+argoworkflows:
+  artifacts:
+    configmap: ${ARGOWORKFLOWS_ARTIFACTS_CONFIGMAP:}
+    key: ${ARGOWORKFLOWS_ARTIFACTS_KEY:}
+  serviceaccount: ${ARGOWORKFLOWS_SERVICE_ACCOUNT:default}
+  user: ${ARGOWORKFLOWS_USER:1000}

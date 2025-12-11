@@ -24,6 +24,7 @@
 package it.smartcommunitylabdhub.framework.k8s.config;
 
 import io.kubernetes.client.openapi.ApiClient;
+import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
 import it.smartcommunitylabdhub.commons.services.RunnableStore;
 import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sCRFramework;
@@ -42,8 +43,10 @@ import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
 
 @Configuration
+@PropertySource(value = "classpath:/framework-k8s.yml", factory = YamlPropertySourceFactory.class)
 public class K8sFrameworkConfig {
 
     @Bean

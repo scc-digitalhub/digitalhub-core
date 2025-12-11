@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.console.controllers;
@@ -26,6 +26,7 @@ package it.smartcommunitylabdhub.console.controllers;
 import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
 import it.smartcommunitylabdhub.commons.config.SecurityProperties;
 import it.smartcommunitylabdhub.console.Keys;
+import it.smartcommunitylabdhub.search.service.SearchService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.List;
@@ -56,8 +57,8 @@ public class ConsoleController {
     @Autowired
     private SecurityProperties securityProperties;
 
-    @Value("${solr.url}")
-    private String solrUrl;
+    @Autowired(required = false)
+    SearchService searchService;
 
     @Value("${jwt.client-id}")
     private String clientId;
@@ -110,7 +111,7 @@ public class ConsoleController {
             config.put("REACT_APP_SCOPE", "openid profile offline_access");
         }
 
-        config.put("REACT_APP_ENABLE_SOLR", String.valueOf(StringUtils.hasText(solrUrl)));
+        config.put("REACT_APP_ENABLE_SOLR", String.valueOf(searchService != null));
 
         model.addAttribute("config", config);
         return "console.html";

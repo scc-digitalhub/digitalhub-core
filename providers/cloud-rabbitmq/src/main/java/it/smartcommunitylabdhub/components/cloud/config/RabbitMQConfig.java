@@ -23,6 +23,7 @@
 
 package it.smartcommunitylabdhub.components.cloud.config;
 
+import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
 import java.util.Map;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
@@ -36,36 +37,38 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.annotation.Order;
 
 @Configuration
 @Order(8)
-@ConditionalOnProperty(name = "event-queue.services.rabbit.enabled", havingValue = "true", matchIfMissing = false)
+@PropertySource(value = "classpath:/cloud-rabbitmq.yml", factory = YamlPropertySourceFactory.class)
+@ConditionalOnProperty(name = "components.rabbitmq.enabled", havingValue = "true", matchIfMissing = false)
 @Import(RabbitAutoConfiguration.class)
 public class RabbitMQConfig {
 
-    @Value("${event-queue.services.rabbit.queue-name}")
+    @Value("${components.rabbitmq.queue-name}")
     private String QUEUE_NAME;
 
-    @Value("${event-queue.services.rabbit.entity-topic}")
+    @Value("${components.rabbitmq.entity-topic}")
     private String ENTITY_TOPIC;
 
-    @Value("${event-queue.services.rabbit.entity-routing-key}")
+    @Value("${components.rabbitmq.entity-routing-key}")
     private String ENTITY_ROUTING_KEY;
 
-    @Value("${event-queue.services.rabbit.connection.host}")
+    @Value("${components.rabbitmq.connection.host}")
     private String HOST;
 
-    @Value("${event-queue.services.rabbit.connection.port}")
+    @Value("${components.rabbitmq.connection.port}")
     private Integer PORT;
 
-    @Value("${event-queue.services.rabbit.connection.username}")
+    @Value("${components.rabbitmq.connection.username}")
     private String USERNAME;
 
-    @Value("${event-queue.services.rabbit.connection.password}")
+    @Value("${components.rabbitmq.connection.password}")
     private String PASSWORD;
 
-    @Value("${event-queue.services.rabbit.connection.virtual-host}")
+    @Value("${components.rabbitmq.connection.virtual-host}")
     private String VIRTUAL_HOST;
 
     @Bean

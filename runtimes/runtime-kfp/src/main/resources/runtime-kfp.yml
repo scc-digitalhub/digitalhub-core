@@ -1,0 +1,5 @@
+runtime:
+  kfp:
+    image: ${RUNTIME_KFP_IMAGE:ghcr.io/scc-digitalhub/digitalhub-sdk-wrapper-kfp/wrapper-kfp:latest}
+    duration: ${RUNTIME_KFP_DURATION:${jwt.refresh-token.duration}}
+

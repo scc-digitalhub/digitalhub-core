@@ -1,0 +1,70 @@
+
+# Managing monitors delay and other information
+monitors:
+  min-delay: 10
+  delay: ${MONITORS_DELAY:10}
+
+# registry
+registry:
+  name: ${IMAGE_REGISTRY:}
+  secret: ${IMAGE_REGISTRY_SECRET:}
+
+
+# Kubernetes
+kubernetes:
+  namespace: ${K8S_NAMESPACE:default}
+  logs: ${K8S_ENABLE_LOGS:true}
+  metrics: ${K8S_ENABLE_METRICS:true}
+  # supported values for results: default,keep,disable
+  results: ${K8S_ENABLE_RESULTS:default}
+  security:
+    disable-root: ${K8S_SEC_DISABLE_ROOT:false}
+    seccomp-profile: ${K8S_SEC_SECCOMP_PROFILE:RuntimeDefault}
+    user: ${K8S_SEC_USER:}
+    group: ${K8S_SEC_GROUP:}
+  image-pull-policy: ${K8S_IMAGE_PULL_POLICY:IfNotPresent}
+  registry-secret: ${K8S_REGISTRY_SECRET:${registry.secret}}
+  init:
+    image: ${K8S_INIT_IMAGE:ghcr.io/scc-digitalhub/digitalhub-core-builder-tool:latest}
+    command: "/bin/bash,-c,/app/builder-tool.sh"
+  shared-volume:
+    volume_type: empty_dir
+    name: shared-dir
+    mount_path: /shared
+    spec:
+      sizeLimit: 100Mi
+  empty-dir:
+    size: ${K8S_EMPTY_DIR_SIZE:128Mi}
+    medium: ${K8S_EMPTY_DIR_MEDIUM:}
+  service:
+    type: ${K8S_SERVICE_TYPE:NodePort}
+  resources:
+    cpu:
+      requests: ${K8S_RESOURCE_CPU_DEFAULT:100m}
+      limits: ${K8S_RESOURCE_CPU_LIMIT:}
+    mem:
+      requests: ${K8S_RESOURCE_MEM_DEFAULT:256Mi}
+      limits: ${K8S_RESOURCE_MEM_LIMIT:}
+      toleration: ${K8S_RESOURCE_MEM_TOLERATION:1.1}
+    gpu:
+      key: ${K8S_RESOURCE_GPU_KEY:nvidia.com/gpu}
+    pvc:
+      requests: ${K8S_RESOURCE_PVC_DEFAULT:2Gi}
+      limits: ${K8S_RESOURCE_PVC_LIMIT:}
+      storage-class: ${K8S_RESOURCE_PVC_STORAGE_CLASS:}
+    ephemeral:
+      requests: ${K8S_RESOURCE_EPHEMERAL_DEFAULT:2Gi}
+      limits: ${K8S_RESOURCE_EPHEMERAL_LIMIT:}
+      storage-class: ${K8S_RESOURCE_EPHEMERAL_STORAGE_CLASS:}
+    workflow:
+      storage-class: ${K8S_RESOURCE_WORKFLOW_STORAGE_CLASS:}
+      access-mode: ${K8S_RESOURCE_WORKFLOW_ACCESS_MODE:ReadWriteMany}
+  config:
+    config-map: ${DH_CONFIG_COMMON_MAPS:}
+    secret: ${DH_CONFIG_COMMON_SECRETS:}
+  templates: ${K8S_TEMPLATES:}
+  jobs:
+    activeDeadlineSeconds: ${K8S_JOB_DEADLINE:259200}
+    suspend: ${K8S_JOB_SUSPEND:false}
+  crds:
+    api-groups: ${K8S_CUSTOM_API_GROUPS:kubeai.org/v1}

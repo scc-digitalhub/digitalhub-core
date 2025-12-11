@@ -1,0 +1,2 @@
+metrics:
+  max-column-size: ${FILES_MAX_COLUMN_SIZE:2097152}

@@ -47,7 +47,7 @@ import org.springframework.util.Assert;
 @Slf4j
 public class MetricsManager {
 
-    @Value("${files.max-column-size}")
+    @Value("${metrics.max-column-size}")
     private int maxColumnSize;
 
     @Autowired

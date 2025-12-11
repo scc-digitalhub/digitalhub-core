@@ -24,6 +24,7 @@
 package it.smartcommunitylabdhub.framework.kaniko.config;
 
 import io.kubernetes.client.openapi.ApiClient;
+import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
 import it.smartcommunitylabdhub.commons.services.RunnableStore;
 import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.k8s.K8sBuildkitFramework;
@@ -32,8 +33,10 @@ import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRu
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
 
 @Configuration
+@PropertySource(value = "classpath:/framework-kaniko.yml", factory = YamlPropertySourceFactory.class)
 public class ContainerBuilderFrameworkConfig {
 
     @Bean
