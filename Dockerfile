@@ -4,6 +4,7 @@ COPY application /tmp/application
 COPY frontend /tmp/frontend
 COPY frameworks /tmp/frameworks
 COPY modules /tmp/modules
+COPY entities /tmp/entities
 COPY providers /tmp/providers
 COPY runtimes /tmp/runtimes
 COPY triggers /tmp/triggers
