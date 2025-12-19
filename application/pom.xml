@@ -203,9 +203,58 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-runtime-base</artifactId>
+            <artifactId>dh-console</artifactId>
             <version>${revision}</version>
         </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-openmetadata</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-files</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-authorization</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-proxy</artifactId>
+            <version>${revision}</version>
+        </dependency>        
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-entity-base</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-runtime-base</artifactId>
+            <version>${revision}</version>
+        </dependency>       
+
+        <!-- ENTITIES  -->
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-entity-artifact</artifactId>
+            <version>${revision}</version>
+        </dependency>     
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-entity-dataitem</artifactId>
+            <version>${revision}</version>
+        </dependency>   
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-entity-model</artifactId>
+            <version>${revision}</version>
+        </dependency>           
+
+        <!-- FRAMEWORKS -->
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-framework-k8s</artifactId>
@@ -221,6 +270,7 @@
             <artifactId>dh-framework-argo</artifactId>
             <version>${revision}</version>
         </dependency>
+        <!-- TRIGGERS -->
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-trigger-base</artifactId>
@@ -236,6 +286,7 @@
             <artifactId>dh-trigger-lifecycle</artifactId>
             <version>${revision}</version>
         </dependency>
+        <!-- RUNTIMES -->
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-runtime-container</artifactId>
@@ -276,31 +327,7 @@
             <artifactId>dh-runtime-kubeai</artifactId>
             <version>${revision}</version>
         </dependency>
-        <dependency>
-            <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-console</artifactId>
-            <version>${revision}</version>
-        </dependency>
-        <dependency>
-            <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-openmetadata</artifactId>
-            <version>${revision}</version>
-        </dependency>
-        <dependency>
-            <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-files</artifactId>
-            <version>${revision}</version>
-        </dependency>
-        <dependency>
-            <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-authorization</artifactId>
-            <version>${revision}</version>
-        </dependency>
-        <dependency>
-            <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-proxy</artifactId>
-            <version>${revision}</version>
-        </dependency>
+
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>credentials-provider-minio</artifactId>

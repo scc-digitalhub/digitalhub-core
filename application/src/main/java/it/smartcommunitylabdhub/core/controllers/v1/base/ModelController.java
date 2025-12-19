@@ -34,7 +34,7 @@ import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.services.ModelManager;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
-import it.smartcommunitylabdhub.core.models.filters.ModelEntityFilter;
+import it.smartcommunitylabdhub.models.filters.ModelEntityFilter;
 import it.smartcommunitylabdhub.search.service.IndexableEntityService;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;

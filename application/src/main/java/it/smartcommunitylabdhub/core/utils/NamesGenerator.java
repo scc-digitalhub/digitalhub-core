@@ -28,7 +28,7 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.security.crypto.keygen.StringKeyGenerator;
 import org.springframework.stereotype.Component;
 
-@Component
+@Component("namesGenerator")
 @Slf4j
 public class NamesGenerator implements StringKeyGenerator, InitializingBean {
 

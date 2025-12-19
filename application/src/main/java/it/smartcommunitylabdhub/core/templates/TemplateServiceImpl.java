@@ -34,7 +34,7 @@ import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.models.template.Template;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
-import it.smartcommunitylabdhub.core.components.infrastructure.specs.SpecValidator;
+import it.smartcommunitylabdhub.commons.services.SpecValidator;
 import it.smartcommunitylabdhub.core.utils.UUIDKeyGenerator;
 import jakarta.annotation.Nonnull;
 import jakarta.validation.constraints.NotNull;
@@ -58,7 +58,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.keygen.StringKeyGenerator;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 
 @Service
 @Slf4j
@@ -172,11 +171,7 @@ public class TemplateServiceImpl implements SearchableTemplateService, Initializ
         }
 
         //validate
-        try {
-            validator.validateSpec(spec);
-        } catch (MethodArgumentNotValidException e) {
-            throw new IllegalArgumentException(e.getMessage());
-        }
+        validator.validateSpec(spec);       
     }
 
     private Template sanitize(Template template) {
