@@ -23,14 +23,13 @@
 
 package it.smartcommunitylabdhub.core.artifacts;
 
+import it.smartcommunitylabdhub.artifacts.ArtifactManager;
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.commons.services.ArtifactManager;
 import it.smartcommunitylabdhub.commons.services.EntityService;
 import it.smartcommunitylabdhub.commons.services.VersionableEntityService;
 import jakarta.validation.constraints.NotNull;
@@ -247,8 +246,6 @@ public class ArtifactManagerImpl implements ArtifactManager {
 
         try {
             return entityService.get(id);
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.ARTIFACT.toString());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -286,8 +283,6 @@ public class ArtifactManagerImpl implements ArtifactManager {
         log.debug("update artifact with id {}", String.valueOf(id));
         try {
             return entityService.update(id, dto);
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.ARTIFACT.toString());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

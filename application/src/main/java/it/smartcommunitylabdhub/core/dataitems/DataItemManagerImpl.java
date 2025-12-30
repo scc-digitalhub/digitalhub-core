@@ -28,7 +28,6 @@ import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.services.DataItemManager;
 import it.smartcommunitylabdhub.commons.services.EntityService;
@@ -246,8 +245,6 @@ public class DataItemManagerImpl implements DataItemManager {
 
         try {
             return entityService.get(id);
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.DATAITEM.toString());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -285,8 +282,6 @@ public class DataItemManagerImpl implements DataItemManager {
         log.debug("update dataItem with id {}", String.valueOf(id));
         try {
             return entityService.update(id, dto);
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.DATAITEM.toString());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

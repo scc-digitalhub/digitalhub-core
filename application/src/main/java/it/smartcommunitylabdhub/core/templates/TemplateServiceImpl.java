@@ -29,26 +29,34 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
+import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.template.Template;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.services.SpecValidator;
+import it.smartcommunitylabdhub.commons.utils.ClassPathUtils;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.core.utils.UUIDKeyGenerator;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.PostConstruct;
 import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.ResourcePatternResolver;
@@ -61,7 +69,7 @@ import org.springframework.util.StringUtils;
 
 @Service
 @Slf4j
-public class TemplateServiceImpl implements SearchableTemplateService, InitializingBean {
+public class TemplateServiceImpl implements SearchableTemplateService, InitializingBean, ApplicationContextAware {
 
     private static final int CACHE_TIMEOUT = 60;
     private static final ObjectMapper mapper = JacksonMapper.YAML_OBJECT_MAPPER;
@@ -82,6 +90,9 @@ public class TemplateServiceImpl implements SearchableTemplateService, Initializ
     @Value("${templates.path}")
     private String templatesPath;
 
+    private List<String> types = Collections.emptyList();
+    private ApplicationContext applicationContext;
+
     //loading cache as map type+list
     LoadingCache<String, List<Template>> templateCache = CacheBuilder
         .newBuilder()
@@ -97,10 +108,35 @@ public class TemplateServiceImpl implements SearchableTemplateService, Initializ
         );
 
     @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
+    }
+
+    @PostConstruct
+    public void scanForEntities() {
+        // Detect the base packages based on ComponentScan annotation in CoreApplication.
+        List<String> basePackages = ClassPathUtils.getBasePackages(applicationContext);
+        log.info("Scanning for specDTOs under packages {}", basePackages);
+        Set<Class<? extends BaseDTO>> classes = EntityUtils
+            .scanForEntities(basePackages)
+            .stream()
+            .filter(c -> {
+                //only dto with spec can have a template
+                return SpecDTO.class.isAssignableFrom(c);
+            })
+            .collect(Collectors.toSet());
+
+        //persist unmodifiable
+        this.types =
+            Collections.unmodifiableList(
+                classes.stream().map(s -> EntityUtils.getEntityName(s).toLowerCase()).toList()
+            );
+    }
+
+    @Override
     public void afterPropertiesSet() throws Exception {
         log.debug("Initialize template store for all entities...");
-        for (EntityName name : EntityName.values()) {
-            String type = name.name().toLowerCase();
+        for (String type : types) {
             List<Template> list = templateCache.get(type);
             log.debug("Initialized {} templates for {}", list.size(), type);
         }
@@ -171,7 +207,7 @@ public class TemplateServiceImpl implements SearchableTemplateService, Initializ
         }
 
         //validate
-        validator.validateSpec(spec);       
+        validator.validateSpec(spec);
     }
 
     private Template sanitize(Template template) {
@@ -230,12 +266,12 @@ public class TemplateServiceImpl implements SearchableTemplateService, Initializ
             //evaluate type filter first
             if (filter != null && StringUtils.hasText(filter.getType())) {
                 //exact match
-                EntityName type = EntityName.valueOf(filter.getType().toUpperCase());
-                all = templateCache.get(type.name().toLowerCase());
+                String type = filter.getType();
+                all = templateCache.get(type.toLowerCase());
             } else {
                 //load all
-                for (EntityName type : EntityName.values()) {
-                    all.addAll(templateCache.get(type.getValue().toLowerCase()));
+                for (String type : types) {
+                    all.addAll(templateCache.get(type.toLowerCase()));
                 }
             }
 

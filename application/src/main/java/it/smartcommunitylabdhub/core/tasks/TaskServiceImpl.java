@@ -29,7 +29,6 @@ import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
@@ -199,8 +198,6 @@ public class TaskServiceImpl implements TaskService {
 
         try {
             return entityRepository.get(id);
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.TASK.toString());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -218,57 +215,53 @@ public class TaskServiceImpl implements TaskService {
                 throw new IllegalArgumentException("invalid or missing project");
             }
 
-            try {
-                // Parse and export Spec
-                Spec spec = specRegistry.createSpec(dto.getKind(), dto.getSpec());
-                if (spec == null) {
-                    throw new IllegalArgumentException("invalid kind");
-                }
-
-                //validate
-                validator.validateSpec(spec);
-
-                //update spec as exported
-                dto.setSpec(spec.toMap());
-
-                //check if the same task already exists for the function
-                TaskSpecAccessor taskSpecAccessor = TaskSpecAccessor.with(dto.getSpec());
-                if (!StringUtils.hasText(taskSpecAccessor.getProject())) {
-                    throw new IllegalArgumentException("spec: missing project");
-                }
-                if (!StringUtils.hasText(taskSpecAccessor.getRuntime())) {
-                    throw new IllegalArgumentException("missing runtime");
-                }
-
-                //check project match
-                if (dto.getProject() != null && !dto.getProject().equals(taskSpecAccessor.getProject())) {
-                    throw new IllegalArgumentException("project mismatch");
-                }
-                dto.setProject(taskSpecAccessor.getProject());
-
-                // task may belong to function or to workflow
-                BaseDTO executable = null;
-                String function = taskSpecAccessor.getFunction();
-                String workflow = taskSpecAccessor.getWorkflow();
-
-                if (StringUtils.hasText(function)) {
-                    String functionId = taskSpecAccessor.getFunctionId();
-                    executable = functionService.find(functionId);
-                }
-                if (StringUtils.hasText(workflow)) {
-                    String workflowId = taskSpecAccessor.getWorkflowId();
-                    executable = workflowService.find(workflowId);
-                }
-
-                if (executable == null) {
-                    throw new IllegalArgumentException("invalid executable entity");
-                }
-
-                //create as new
-                return entityRepository.create(dto);
-            } catch (DuplicatedEntityException e) {
-                throw new DuplicatedEntityException(EntityName.TASK.toString(), dto.getId());
+            // Parse and export Spec
+            Spec spec = specRegistry.createSpec(dto.getKind(), dto.getSpec());
+            if (spec == null) {
+                throw new IllegalArgumentException("invalid kind");
             }
+
+            //validate
+            validator.validateSpec(spec);
+
+            //update spec as exported
+            dto.setSpec(spec.toMap());
+
+            //check if the same task already exists for the function
+            TaskSpecAccessor taskSpecAccessor = TaskSpecAccessor.with(dto.getSpec());
+            if (!StringUtils.hasText(taskSpecAccessor.getProject())) {
+                throw new IllegalArgumentException("spec: missing project");
+            }
+            if (!StringUtils.hasText(taskSpecAccessor.getRuntime())) {
+                throw new IllegalArgumentException("missing runtime");
+            }
+
+            //check project match
+            if (dto.getProject() != null && !dto.getProject().equals(taskSpecAccessor.getProject())) {
+                throw new IllegalArgumentException("project mismatch");
+            }
+            dto.setProject(taskSpecAccessor.getProject());
+
+            // task may belong to function or to workflow
+            BaseDTO executable = null;
+            String function = taskSpecAccessor.getFunction();
+            String workflow = taskSpecAccessor.getWorkflow();
+
+            if (StringUtils.hasText(function)) {
+                String functionId = taskSpecAccessor.getFunctionId();
+                executable = functionService.find(functionId);
+            }
+            if (StringUtils.hasText(workflow)) {
+                String workflowId = taskSpecAccessor.getWorkflowId();
+                executable = workflowService.find(workflowId);
+            }
+
+            if (executable == null) {
+                throw new IllegalArgumentException("invalid executable entity");
+            }
+
+            //create as new
+            return entityRepository.create(dto);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -305,8 +298,6 @@ public class TaskServiceImpl implements TaskService {
 
             //full update, task is modifiable
             return entityRepository.update(id, dto);
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.TASK.toString());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

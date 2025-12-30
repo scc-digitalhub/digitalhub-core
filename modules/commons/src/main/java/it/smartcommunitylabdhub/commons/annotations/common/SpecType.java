@@ -23,7 +23,6 @@
 
 package it.smartcommunitylabdhub.commons.annotations.common;
 
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -38,5 +37,5 @@ public @interface SpecType {
 
     String kind();
 
-    EntityName entity();
+    Class<?> entity();
 }

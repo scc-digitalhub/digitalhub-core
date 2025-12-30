@@ -27,7 +27,7 @@ import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.runtime.huggingface.HuggingfaceServeRuntime;
 import java.io.Serializable;
@@ -40,7 +40,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = HuggingfaceServeRuntime.RUNTIME, kind = HuggingfaceServeRunSpec.KIND, entity = EntityName.RUN)
+@SpecType(runtime = HuggingfaceServeRuntime.RUNTIME, kind = HuggingfaceServeRunSpec.KIND, entity = Run.class)
 public class HuggingfaceServeRunSpec extends RunBaseSpec {
 
     public static final String KIND = HuggingfaceServeTaskSpec.KIND + ":run";

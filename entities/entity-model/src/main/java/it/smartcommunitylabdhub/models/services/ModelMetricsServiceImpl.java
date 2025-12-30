@@ -26,12 +26,12 @@ package it.smartcommunitylabdhub.models.services;
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.metrics.Metrics;
 import it.smartcommunitylabdhub.commons.models.metrics.NumberOrNumberArray;
 import it.smartcommunitylabdhub.commons.models.model.Model;
 import it.smartcommunitylabdhub.commons.services.EntityService;
 import it.smartcommunitylabdhub.commons.services.MetricsService;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.metrics.MetricsManager;
 import jakarta.transaction.Transactional;
@@ -63,7 +63,10 @@ public class ModelMetricsServiceImpl implements MetricsService<Model> {
         Map<String, NumberOrNumberArray> embedded = statusFieldAccessor.getMetrics();
 
         //stored metrics
-        Map<String, NumberOrNumberArray> stored = metricsManager.getMetrics(EntityName.MODEL.getValue(), entityId);
+        Map<String, NumberOrNumberArray> stored = metricsManager.getMetrics(
+            EntityUtils.getEntityName(Model.class),
+            entityId
+        );
 
         //merge stored and embedded
         Map<String, NumberOrNumberArray> metrics = MapUtils.mergeMultipleMaps(stored, embedded);
@@ -88,7 +91,7 @@ public class ModelMetricsServiceImpl implements MetricsService<Model> {
             return embedded.get(name);
         } else {
             //stored metrics
-            return metricsManager.getMetrics(EntityName.MODEL.getValue(), entityId, name);
+            return metricsManager.getMetrics(EntityUtils.getEntityName(Model.class), entityId, name);
         }
     }
 
@@ -100,6 +103,6 @@ public class ModelMetricsServiceImpl implements MetricsService<Model> {
             log.trace("data: {}", data);
         }
 
-        return metricsManager.saveMetrics(EntityName.MODEL.getValue(), entityId, name, data);
+        return metricsManager.saveMetrics(EntityUtils.getEntityName(Model.class), entityId, name, data);
     }
 }

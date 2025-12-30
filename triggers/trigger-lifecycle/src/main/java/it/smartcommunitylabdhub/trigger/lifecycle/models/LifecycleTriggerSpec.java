@@ -23,7 +23,7 @@
 package it.smartcommunitylabdhub.trigger.lifecycle.models;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.trigger.Trigger;
 import it.smartcommunitylabdhub.trigger.lifecycle.LifecycleActuator;
 import it.smartcommunitylabdhub.triggers.specs.TriggerBaseSpec;
 import jakarta.validation.constraints.NotBlank;
@@ -36,7 +36,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@SpecType(kind = LifecycleActuator.ACTUATOR, entity = EntityName.TRIGGER)
+@SpecType(kind = LifecycleActuator.ACTUATOR, entity = Trigger.class)
 public class LifecycleTriggerSpec extends TriggerBaseSpec {
 
     @Pattern(regexp = "store://([^/]+)/(.+)")

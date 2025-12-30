@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.runtime.vllm.pooling.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeTaskSpec;
 import it.smartcommunitylabdhub.runtime.vllm.pooling.VLLMServePoolingRuntime;
 
@@ -37,7 +37,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = VLLMServePoolingRuntime.RUNTIME, kind = VLLMServePoolingServeTaskSpec.KIND, entity = EntityName.TASK)
+@SpecType(runtime = VLLMServePoolingRuntime.RUNTIME, kind = VLLMServePoolingServeTaskSpec.KIND, entity = Task.class)
 public class VLLMServePoolingServeTaskSpec extends VLLMServeTaskSpec {
 
     public static final String KIND = VLLMServePoolingRuntime.RUNTIME + "+serve";

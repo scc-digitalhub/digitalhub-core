@@ -26,7 +26,6 @@ package it.smartcommunitylabdhub.solr.base;
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.metadata.AuditMetadata;
 import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
@@ -55,7 +54,7 @@ public abstract class SolrBaseEntityIndexer<D extends BaseDTO> implements Entity
 
     public static final int PAGE_MAX_SIZE = 100;
 
-    protected final EntityName type;
+    protected final Class<D> type;
 
     protected SolrComponent solr;
 
@@ -63,7 +62,7 @@ public abstract class SolrBaseEntityIndexer<D extends BaseDTO> implements Entity
     public SolrBaseEntityIndexer() {
         // resolve generics type via subclass trick
         Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
-        this.type = EntityUtils.getEntityName((Class<D>) t);
+        this.type = (Class<D>) t;
     }
 
     @SuppressWarnings("unchecked")
@@ -72,7 +71,7 @@ public abstract class SolrBaseEntityIndexer<D extends BaseDTO> implements Entity
         this.solr = solr;
         // resolve generics type via subclass trick
         Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
-        this.type = EntityUtils.getEntityName((Class<D>) t);
+        this.type = (Class<D>) t;
     }
 
     @Autowired
@@ -99,7 +98,7 @@ public abstract class SolrBaseEntityIndexer<D extends BaseDTO> implements Entity
         SolrInputDocument doc = new SolrInputDocument();
         String keyGroup = buildKeyGroup(item.getKind(), item.getProject(), item.getName());
         doc.addField("keyGroup", keyGroup);
-        doc.addField("type", type.name());
+        doc.addField("type", EntityUtils.getEntityName(type));
         //base doc
         doc.addField("id", item.getId());
         doc.addField("kind", item.getKind());
@@ -209,7 +208,7 @@ public abstract class SolrBaseEntityIndexer<D extends BaseDTO> implements Entity
     public void clearIndex() {
         log.debug("clear index for {}", type);
         try {
-            solr.clearIndexByType(type.name());
+            solr.clearIndexByType(EntityUtils.getEntityName(type));
         } catch (StoreException e) {
             log.error("error with solr: {}", e.getMessage());
         }

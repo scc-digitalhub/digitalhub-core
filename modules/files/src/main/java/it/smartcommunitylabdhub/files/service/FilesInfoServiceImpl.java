@@ -72,7 +72,7 @@ public class FilesInfoServiceImpl implements FilesInfoService {
         throws StoreException, SystemException {
         log.debug("get files info for entity {} id {}", entityId, entityName);
 
-        FilesInfoEntity entity = repository.findByEntityNameAndEntityId(entityName, entityId);
+        FilesInfoEntity entity = repository.findByEntityNameAndEntityId(entityName.toLowerCase(), entityId);
         if (entity != null) {
             return dtoBuilder.convert(entity);
         }
@@ -84,9 +84,14 @@ public class FilesInfoServiceImpl implements FilesInfoService {
     public FilesInfo saveFilesInfo(@NotNull String entityName, @NotNull String entityId, List<FileInfo> files)
         throws StoreException, SystemException {
         log.debug("save files info for entity {} id {}", entityName, entityId);
-        FilesInfo dto = FilesInfo.builder().entityName(entityName).entityId(entityId).files(files).build();
+        FilesInfo dto = FilesInfo
+            .builder()
+            .entityName(entityName.toLowerCase())
+            .entityId(entityId)
+            .files(files)
+            .build();
 
-        FilesInfoEntity entity = repository.findByEntityNameAndEntityId(entityName, entityId);
+        FilesInfoEntity entity = repository.findByEntityNameAndEntityId(entityName.toLowerCase(), entityId);
         if (entity != null) {
             dto.setId(entity.getId());
         } else {
@@ -109,7 +114,7 @@ public class FilesInfoServiceImpl implements FilesInfoService {
         throws StoreException, SystemException {
         log.debug("clear files info for entity {} id {}", entityName, entityId);
 
-        FilesInfoEntity entity = repository.findByEntityNameAndEntityId(entityName, entityId);
+        FilesInfoEntity entity = repository.findByEntityNameAndEntityId(entityName.toLowerCase(), entityId);
         if (entity != null) {
             repository.delete(entity);
         }

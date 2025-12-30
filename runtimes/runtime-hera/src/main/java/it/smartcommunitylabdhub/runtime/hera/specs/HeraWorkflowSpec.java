@@ -26,8 +26,8 @@ package it.smartcommunitylabdhub.runtime.hera.specs;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.objects.SourceCode;
+import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.commons.models.workflow.WorkflowBaseSpec;
 import it.smartcommunitylabdhub.runtime.hera.HeraRuntime;
 import jakarta.validation.constraints.NotNull;
@@ -40,7 +40,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = HeraRuntime.RUNTIME, kind = HeraRuntime.RUNTIME, entity = EntityName.WORKFLOW)
+@SpecType(runtime = HeraRuntime.RUNTIME, kind = HeraRuntime.RUNTIME, entity = Workflow.class)
 public class HeraWorkflowSpec extends WorkflowBaseSpec {
 
     @NotNull

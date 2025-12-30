@@ -25,7 +25,6 @@ package it.smartcommunitylabdhub.relationships;
 
 import it.smartcommunitylabdhub.commons.accessors.fields.KeyAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.relationships.persistence.RelationshipEntity;
 import it.smartcommunitylabdhub.relationships.persistence.RelationshipRepository;
 import jakarta.validation.constraints.NotNull;
@@ -66,27 +65,27 @@ public class EntityRelationshipsService {
     }
 
     @Transactional(readOnly = true)
-    public List<RelationshipEntity> listByProjectAndType(@NotNull String project, @NotNull EntityName entityName)
+    public List<RelationshipEntity> listByProjectAndType(@NotNull String project, @NotNull String entityName)
         throws StoreException {
         log.debug("list relationships for project {} entity type {}", project, entityName);
 
-        return repository.findByProjectAndEntity(project, entityName.getValue());
+        return repository.findByProjectAndEntity(project, entityName.toLowerCase());
     }
 
     @Transactional(readOnly = true)
     public List<RelationshipEntity> listByEntity(
         @NotNull String project,
-        @NotNull EntityName entityName,
+        @NotNull String entityName,
         @NotNull String id
     ) throws StoreException {
         log.debug("list relationships for project {} entity type {} id {}", project, entityName, String.valueOf(id));
 
-        return repository.findByProjectAndEntityId(project, entityName.getValue(), id);
+        return repository.findByProjectAndEntityId(project, entityName.toLowerCase(), id);
     }
 
     public List<RelationshipEntity> register(
         @NotNull String project,
-        @NotNull EntityName entityName,
+        @NotNull String entityName,
         @NotNull String id,
         @NotNull String key,
         @NotNull List<RelationshipDetail> relationships
@@ -102,7 +101,7 @@ public class EntityRelationshipsService {
         //update if needed
         List<RelationshipEntity> current = repository.findByProjectAndSourceEntityId(
             project,
-            entityName.getValue(),
+            entityName.toLowerCase(),
             id
         );
         List<RelationshipEntity> toKeep = current
@@ -142,7 +141,7 @@ public class EntityRelationshipsService {
 
     public RelationshipEntity register(
         @NotNull String project,
-        @NotNull EntityName entityName,
+        @NotNull String entityName,
         @NotNull String id,
         @NotNull String key,
         @NotNull RelationshipDetail relationship
@@ -162,7 +161,7 @@ public class EntityRelationshipsService {
 
         //source
         entity.setSourceId(id);
-        entity.setSourceType(entityName.getValue());
+        entity.setSourceType(entityName.toLowerCase());
         entity.setSourceKey(key);
 
         //dest
@@ -180,11 +179,10 @@ public class EntityRelationshipsService {
         return entity;
     }
 
-    public void clear(@NotNull String project, @NotNull EntityName entityName, @NotNull String id)
-        throws StoreException {
+    public void clear(@NotNull String project, @NotNull String entityName, @NotNull String id) throws StoreException {
         log.debug("clear relationships for project {} entity type {} id {}", project, entityName, String.valueOf(id));
 
-        List<RelationshipEntity> list = repository.findByProjectAndEntityId(project, entityName.getValue(), id);
+        List<RelationshipEntity> list = repository.findByProjectAndEntityId(project, entityName.toLowerCase(), id);
         if (!list.isEmpty()) {
             if (log.isTraceEnabled()) {
                 log.trace("relationships: {}", list);

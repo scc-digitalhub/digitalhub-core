@@ -27,10 +27,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
@@ -93,7 +93,7 @@ public class Run implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO {
             Keys.STORE_PREFIX +
             getProject() +
             Keys.PATH_DIVIDER +
-            EntityName.RUN.getValue() +
+            EntityUtils.getEntityName(Run.class).toLowerCase() +
             Keys.PATH_DIVIDER +
             getKind() +
             Keys.PATH_DIVIDER +

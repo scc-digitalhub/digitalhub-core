@@ -70,7 +70,7 @@ public class MetricsManager {
     public NumberOrNumberArray getMetrics(@NotNull String entityName, @NotNull String entityId, @NotNull String name)
         throws StoreException, SystemException {
         log.debug("get {} metrics info for entity {} id {}", name, entityName, entityId);
-        MetricsEntity entity = repository.findByEntityNameAndEntityIdAndName(entityName, entityId, name);
+        MetricsEntity entity = repository.findByEntityNameAndEntityIdAndName(entityName.toLowerCase(), entityId, name);
         if (entity != null) {
             Metrics dto = dtoBuilder.convert(entity);
             return dto.getData();
@@ -81,7 +81,7 @@ public class MetricsManager {
     public Map<String, NumberOrNumberArray> getMetrics(@NotNull String entityName, @NotNull String entityId)
         throws StoreException, SystemException {
         log.debug("get metrics info for entity {} id {}", entityName, entityId);
-        List<MetricsEntity> list = repository.findByEntityNameAndEntityId(entityName, entityId);
+        List<MetricsEntity> list = repository.findByEntityNameAndEntityId(entityName.toLowerCase(), entityId);
         Map<String, NumberOrNumberArray> response = new HashMap<>();
         for (MetricsEntity entity : list) {
             Metrics dto = dtoBuilder.convert(entity);
@@ -98,9 +98,15 @@ public class MetricsManager {
     ) throws StoreException, SystemException {
         log.debug("save {} metrics info for entity {} id {}", name, entityName, entityId);
 
-        Metrics dto = Metrics.builder().entityId(entityId).entityName(entityName).name(name).data(data).build();
+        Metrics dto = Metrics
+            .builder()
+            .entityId(entityId)
+            .entityName(entityName.toLowerCase())
+            .name(name)
+            .data(data)
+            .build();
 
-        MetricsEntity entity = repository.findByEntityNameAndEntityIdAndName(entityName, entityId, name);
+        MetricsEntity entity = repository.findByEntityNameAndEntityIdAndName(entityName.toLowerCase(), entityId, name);
 
         if (entity != null) {
             dto.setId(entity.getId());

@@ -27,8 +27,8 @@ import it.smartcommunitylabdhub.authorization.services.AuthorizableAwareEntitySe
 import it.smartcommunitylabdhub.authorization.services.ResourceSharingService;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.project.Project;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.core.projects.persistence.ProjectEntity;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
@@ -158,7 +158,7 @@ public class AuthorizableAwareProjectServiceImpl implements AuthorizableAwareEnt
             List<ResourceShareEntity> shares = sharingService
                 .listByUser(user)
                 .stream()
-                .filter(s -> EntityName.PROJECT.getValue().equals(s.getEntity()))
+                .filter(s -> EntityUtils.getEntityName(Project.class).equalsIgnoreCase(s.getEntity()))
                 .toList();
 
             //for every project check if owner matches
@@ -194,7 +194,7 @@ public class AuthorizableAwareProjectServiceImpl implements AuthorizableAwareEnt
             List<ResourceShareEntity> shares = sharingService
                 .listByUser(user)
                 .stream()
-                .filter(s -> EntityName.PROJECT.getValue().equals(s.getEntity()))
+                .filter(s -> EntityUtils.getEntityName(Project.class).equalsIgnoreCase(s.getEntity()))
                 .toList();
 
             //for every project check if owner matches

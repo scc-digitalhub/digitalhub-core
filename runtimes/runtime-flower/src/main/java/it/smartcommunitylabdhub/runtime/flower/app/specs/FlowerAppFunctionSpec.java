@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.runtime.flower.app.specs;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.function.FunctionBaseSpec;
 import it.smartcommunitylabdhub.runtime.flower.app.FlowerAppRuntime;
 import it.smartcommunitylabdhub.runtime.flower.model.FlowerSourceCode;
@@ -40,7 +40,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = FlowerAppRuntime.RUNTIME, kind = FlowerAppRuntime.RUNTIME, entity = EntityName.FUNCTION)
+@SpecType(runtime = FlowerAppRuntime.RUNTIME, kind = FlowerAppRuntime.RUNTIME, entity = Function.class)
 public class FlowerAppFunctionSpec extends FunctionBaseSpec {
 
     @JsonProperty("fab_source")

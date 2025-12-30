@@ -26,9 +26,11 @@ package it.smartcommunitylabdhub.core.runs.service;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
+import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import it.smartcommunitylabdhub.relationships.BaseRelationshipsAwareEntityService;
 import it.smartcommunitylabdhub.relationships.RelationshipDetail;
@@ -64,14 +66,14 @@ public class RunRelationshipServiceImpl extends BaseRelationshipsAwareEntityServ
                     String fk = accessor.getWorkflowId() != null
                         ? KeyUtils.buildKey(
                             accessor.getProject(),
-                            EntityName.WORKFLOW.getValue(),
+                            EntityUtils.getEntityName(Workflow.class).toLowerCase(),
                             accessor.getRuntime(),
                             accessor.getWorkflow(),
                             accessor.getWorkflowId()
                         )
                         : KeyUtils.buildKey(
                             accessor.getProject(),
-                            EntityName.FUNCTION.getValue(),
+                            EntityUtils.getEntityName(Function.class).toLowerCase(),
                             accessor.getRuntime(),
                             accessor.getFunction(),
                             accessor.getFunctionId()

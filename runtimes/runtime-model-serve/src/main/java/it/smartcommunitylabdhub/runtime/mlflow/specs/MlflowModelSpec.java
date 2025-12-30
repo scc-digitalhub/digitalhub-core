@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.runtime.mlflow.specs;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.model.Model;
 import it.smartcommunitylabdhub.commons.models.model.ModelBaseSpec;
 import it.smartcommunitylabdhub.runtime.mlflow.models.Dataset;
 import it.smartcommunitylabdhub.runtime.mlflow.models.Signature;
@@ -39,7 +39,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@SpecType(kind = "mlflow", entity = EntityName.MODEL)
+@SpecType(kind = "mlflow", entity = Model.class)
 public class MlflowModelSpec extends ModelBaseSpec {
 
     @JsonProperty("parameters")

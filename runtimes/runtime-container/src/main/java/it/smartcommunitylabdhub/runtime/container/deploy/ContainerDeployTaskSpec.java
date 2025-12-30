@@ -25,7 +25,7 @@ package it.smartcommunitylabdhub.runtime.container.deploy;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.runtime.container.ContainerRuntime;
 import jakarta.validation.constraints.Min;
@@ -38,7 +38,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = ContainerRuntime.RUNTIME, kind = ContainerDeployTaskSpec.KIND, entity = EntityName.TASK)
+@SpecType(runtime = ContainerRuntime.RUNTIME, kind = ContainerDeployTaskSpec.KIND, entity = Task.class)
 public class ContainerDeployTaskSpec extends K8sFunctionTaskBaseSpec {
 
     public static final String KIND = "container+deploy";

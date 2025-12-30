@@ -6,28 +6,27 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.core.controllers.v1.base;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.schemas.Schema;
-import it.smartcommunitylabdhub.commons.services.SpecRegistry;
+import it.smartcommunitylabdhub.commons.services.SchemaService;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -57,7 +56,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class SchemaController {
 
     @Autowired
-    private SpecRegistry specRegistry;
+    private SchemaService service;
 
     @Operation(
         summary = "List entity schemas",
@@ -65,15 +64,15 @@ public class SchemaController {
     )
     @GetMapping(path = "/{entity}")
     public ResponseEntity<Page<Schema>> listSchemas(
-        @PathVariable @Valid @NotNull EntityName entity,
+        @PathVariable @Valid @NotNull String entity,
         @RequestParam(required = false) Optional<String> runtime,
         Pageable pageable
     ) {
         Collection<Schema> schemas;
         if (runtime.isPresent()) {
-            schemas = specRegistry.getSchemas(entity, runtime.get());
+            schemas = service.getSchemas(entity, runtime.get());
         } else {
-            schemas = specRegistry.listSchemas(entity);
+            schemas = service.listSchemas(entity);
         }
         PageImpl<Schema> page = new PageImpl<>(new ArrayList<>(schemas), pageable, schemas.size());
 
@@ -82,10 +81,10 @@ public class SchemaController {
 
     @GetMapping(path = "/{entity}/{kind}", produces = "application/json; charset=UTF-8")
     public ResponseEntity<Schema> getSchema(
-        @PathVariable @Valid @NotNull EntityName entity,
+        @PathVariable @Valid @NotNull String entity,
         @PathVariable @NotBlank String kind
     ) {
-        Schema schema = specRegistry.getSchema(kind);
+        Schema schema = service.getSchema(kind);
 
         return ResponseEntity.ok(schema);
     }

@@ -26,7 +26,6 @@ package it.smartcommunitylabdhub.lucene.base;
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.metadata.AuditMetadata;
 import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
@@ -63,7 +62,7 @@ public abstract class LuceneBaseEntityIndexer<D extends BaseDTO> implements Enti
 
     public static final int PAGE_MAX_SIZE = 100;
 
-    protected final EntityName type;
+    protected final Class<D> type;
 
     protected LuceneComponent lucene;
 
@@ -71,7 +70,7 @@ public abstract class LuceneBaseEntityIndexer<D extends BaseDTO> implements Enti
     public LuceneBaseEntityIndexer() {
         // resolve generics type via subclass trick
         Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
-        this.type = EntityUtils.getEntityName((Class<D>) t);
+        this.type = (Class<D>) t;
     }
 
     @SuppressWarnings("unchecked")
@@ -80,7 +79,7 @@ public abstract class LuceneBaseEntityIndexer<D extends BaseDTO> implements Enti
         this.lucene = lucene;
         // resolve generics type via subclass trick
         Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
-        this.type = EntityUtils.getEntityName((Class<D>) t);
+        this.type = (Class<D>) t;
     }
 
     @Autowired
@@ -109,7 +108,7 @@ public abstract class LuceneBaseEntityIndexer<D extends BaseDTO> implements Enti
         doc.add(new StringField("keyGroup", keyGroup, Field.Store.YES));
         doc.add(new SortedDocValuesField("keyGroup", new BytesRef(doc.get("keyGroup"))));
 
-        doc.add(new StringField("type", type.name().toLowerCase(), Field.Store.YES));
+        doc.add(new StringField("type", EntityUtils.getEntityName(type).toLowerCase(), Field.Store.YES));
         doc.add(new SortedDocValuesField("type", new BytesRef(doc.get("type"))));
 
         //base doc
@@ -257,7 +256,7 @@ public abstract class LuceneBaseEntityIndexer<D extends BaseDTO> implements Enti
     public void clearIndex() {
         log.debug("clear index for {}", type);
         try {
-            lucene.clearIndexByType(type.name());
+            lucene.clearIndexByType(EntityUtils.getEntityName(type));
         } catch (StoreException e) {
             log.error("error with solr: {}", e.getMessage());
         }

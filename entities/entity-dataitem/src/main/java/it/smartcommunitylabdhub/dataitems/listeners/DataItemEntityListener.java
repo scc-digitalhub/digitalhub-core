@@ -26,12 +26,12 @@ package it.smartcommunitylabdhub.dataitems.listeners;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
-import it.smartcommunitylabdhub.dataitems.persistence.DataItemEntity;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.core.events.AbstractEntityListener;
 import it.smartcommunitylabdhub.core.events.EntityEvent;
+import it.smartcommunitylabdhub.dataitems.persistence.DataItemEntity;
 import it.smartcommunitylabdhub.files.service.FilesInfoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -122,7 +122,7 @@ public class DataItemEntityListener extends AbstractEntityListener<DataItemEntit
         //delete files info
         if (filesInfoService != null) {
             try {
-                filesInfoService.clearFilesInfo(EntityName.DATAITEM.getValue(), entity.getId());
+                filesInfoService.clearFilesInfo(EntityUtils.getEntityName(DataItem.class), entity.getId());
             } catch (StoreException e) {
                 log.error("store error", e.getMessage());
             }

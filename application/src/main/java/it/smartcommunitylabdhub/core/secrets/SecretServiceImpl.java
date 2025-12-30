@@ -28,7 +28,6 @@ import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.secret.Secret;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
@@ -168,8 +167,6 @@ public class SecretServiceImpl implements SecretService {
 
         try {
             return entityRepository.get(id);
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.SECRET.toString());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -187,48 +184,43 @@ public class SecretServiceImpl implements SecretService {
                 throw new IllegalArgumentException("invalid or missing project");
             }
 
-            try {
-                //parse base
-                SecretBaseSpec secretSpec = new SecretBaseSpec();
-                secretSpec.configure(dto.getSpec());
+            //parse base
+            SecretBaseSpec secretSpec = new SecretBaseSpec();
+            secretSpec.configure(dto.getSpec());
 
-                String path = secretSpec.getPath();
-                if (!StringUtils.hasText(path)) {
-                    throw new IllegalArgumentException("invalid or missing path in spec");
-                }
-
-                //path must match
-                if (!PATH_PATTERN.matcher(path).matches()) {
-                    throw new IllegalArgumentException("invalid or missing path in spec");
-                }
-
-                // Parse and export Spec
-                Spec spec = specRegistry.createSpec(dto.getKind(), dto.getSpec());
-                if (spec == null) {
-                    throw new IllegalArgumentException("invalid kind");
-                }
-
-                //validate
-                validator.validateSpec(spec);
-
-                //update spec as exported
-                dto.setSpec(spec.toMap());
-
-                //check if a secret with this name already exists for the project
-                Optional<Secret> existingSecret = listSecretsByProject(projectId)
-                    .stream()
-                    .filter(s -> s.getName().equals(dto.getName()))
-                    .findFirst();
-                if (existingSecret.isPresent()) {
-                    throw new DuplicatedEntityException(EntityName.SECRET.toString(), dto.getName());
-                }
-
-                // store in DB, do not create physically the secret
-                Secret res = entityRepository.create(dto);
-                return res;
-            } catch (DuplicatedEntityException e) {
-                throw new DuplicatedEntityException(EntityName.SECRET.toString(), dto.getId());
+            String path = secretSpec.getPath();
+            if (!StringUtils.hasText(path)) {
+                throw new IllegalArgumentException("invalid or missing path in spec");
             }
+
+            //path must match
+            if (!PATH_PATTERN.matcher(path).matches()) {
+                throw new IllegalArgumentException("invalid or missing path in spec");
+            }
+
+            // Parse and export Spec
+            Spec spec = specRegistry.createSpec(dto.getKind(), dto.getSpec());
+            if (spec == null) {
+                throw new IllegalArgumentException("invalid kind");
+            }
+
+            //validate
+            validator.validateSpec(spec);
+
+            //update spec as exported
+            dto.setSpec(spec.toMap());
+
+            //check if a secret with this name already exists for the project
+            Optional<Secret> existingSecret = listSecretsByProject(projectId)
+                .stream()
+                .filter(s -> s.getName().equals(dto.getName()))
+                .findFirst();
+            if (existingSecret.isPresent()) {
+                throw new DuplicatedEntityException(Secret.class, dto.getName());
+            }
+
+            // store in DB, do not create physically the secret
+            return entityRepository.create(dto);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -247,10 +239,7 @@ public class SecretServiceImpl implements SecretService {
             dto.setSpec(current.getSpec());
 
             //update
-            Secret res = entityRepository.update(id, dto);
-            return res;
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.SECRET.toString());
+            return entityRepository.update(id, dto);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

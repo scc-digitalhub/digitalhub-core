@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.runtime.huggingface.specs;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.runtime.huggingface.HuggingfaceServeRuntime;
 import it.smartcommunitylabdhub.runtime.huggingface.models.HuggingfaceBackend;
 import it.smartcommunitylabdhub.runtime.huggingface.models.HuggingfaceDType;
@@ -42,7 +42,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = HuggingfaceServeRuntime.RUNTIME, kind = HuggingfaceServeTaskSpec.KIND, entity = EntityName.TASK)
+@SpecType(runtime = HuggingfaceServeRuntime.RUNTIME, kind = HuggingfaceServeTaskSpec.KIND, entity = Task.class)
 public class HuggingfaceServeTaskSpec extends ModelServeServeTaskSpec {
 
     public static final String KIND = HuggingfaceServeRuntime.RUNTIME + "+serve";

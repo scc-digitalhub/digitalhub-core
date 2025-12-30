@@ -21,33 +21,15 @@
  *
  */
 
-package it.smartcommunitylabdhub.commons.models.entities;
+package it.smartcommunitylabdhub.commons.services;
 
-import lombok.Getter;
-import lombok.ToString;
-import org.springframework.util.Assert;
+import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.models.schemas.Schema;
+import jakarta.validation.constraints.NotNull;
+import java.util.Collection;
 
-@Deprecated(forRemoval = true)
-@Getter
-@ToString
-public enum EntityName {
-    PROJECT("project"),
-    WORKFLOW("workflow"),
-    FUNCTION("function"),
-    SECRET("secret"),
-    ARTIFACT("artifact"),
-    DATAITEM("dataitem"),
-    MODEL("model"),
-    TASK("task"),
-    TRIGGER("trigger"),
-    RUN("run"),
-    LOG("log"),
-    METADATA("metadata");
-
-    private final String value;
-
-    EntityName(String value) {
-        Assert.hasText(value, "value cannot be empty");
-        this.value = value;
-    }
+public interface SchemaService {
+    Schema getSchema(@NotNull String kind);
+    Collection<Schema> getSchemas(@NotNull String entity, @NotNull String runtime) throws NoSuchEntityException;
+    Collection<Schema> listSchemas(@NotNull String entity) throws NoSuchEntityException;
 }

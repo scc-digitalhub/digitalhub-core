@@ -23,9 +23,9 @@ import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.services.EntityService;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
@@ -64,7 +64,7 @@ public class MyUserManager {
             entityServices
                 .stream()
                 .filter(s -> s.getType() != null)
-                .collect(Collectors.toMap(s -> s.getType().name(), s -> s));
+                .collect(Collectors.toMap(s -> EntityUtils.getEntityName(s.getType()), s -> s));
     }
 
     @Autowired(required = false)
@@ -147,7 +147,7 @@ public class MyUserManager {
             .filter(s -> s.getType() != null)
             .collect(
                 Collectors.toMap(
-                    s -> s.getType().name(),
+                    s -> EntityUtils.getEntityName(s.getType()),
                     s -> {
                         try {
                             return s.listByUser(user);
@@ -252,7 +252,7 @@ public class MyUserManager {
             //TODO send EntityOp.DELETE_ALL for async
             entityRepositories
                 .stream()
-                .filter(r -> !EntityName.PROJECT.equals(r.getType()))
+                .filter(r -> !Project.class.equals(r.getType()))
                 .forEach(repo -> {
                     try {
                         repo.deleteAll(projectNotIn(projectIds));

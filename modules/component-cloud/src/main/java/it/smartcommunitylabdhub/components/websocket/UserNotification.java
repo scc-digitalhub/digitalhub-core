@@ -26,9 +26,8 @@ package it.smartcommunitylabdhub.components.websocket;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.events.EntityAction;
-import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -56,9 +55,6 @@ public class UserNotification<T extends BaseDTO> implements Serializable {
 
     private String user;
 
-    @NotNull
-    private EntityName entity;
-
     private EntityAction action;
 
     @JsonProperty("record")
@@ -66,7 +62,8 @@ public class UserNotification<T extends BaseDTO> implements Serializable {
     private T dto;
 
     public String getResource() {
+        //resolve entity name
         //TODO replace with proper function
-        return entity.getValue().toLowerCase() + "s";
+        return EntityUtils.getEntityName(dto.getClass()).toLowerCase() + "s";
     }
 }

@@ -27,8 +27,6 @@ import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
-import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.core.events.EntityEvent;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
@@ -67,7 +65,7 @@ public abstract class BaseEntityRepository<E extends BaseEntity, D extends BaseD
     public static final int PAGE_MAX_SIZE = 1000;
     public static final int DEFAULT_TIMEOUT = 30;
     protected final JpaRepository<E, String> repository;
-    protected final EntityName type;
+    protected final Class<D> type;
 
     protected final Converter<D, E> entityBuilder;
     protected final Converter<E, D> dtoBuilder;
@@ -94,7 +92,7 @@ public abstract class BaseEntityRepository<E extends BaseEntity, D extends BaseD
 
         // resolve generics type via subclass trick
         Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
-        this.type = EntityUtils.getEntityName((Class<D>) t);
+        this.type = (Class<D>) t;
     }
 
     @Autowired(required = false)
@@ -109,7 +107,7 @@ public abstract class BaseEntityRepository<E extends BaseEntity, D extends BaseD
     }
 
     @Override
-    public EntityName getType() {
+    public Class<D> getType() {
         return type;
     }
 
@@ -145,7 +143,7 @@ public abstract class BaseEntityRepository<E extends BaseEntity, D extends BaseD
 
         //check for existing ids
         if (entity.getId() != null && (repository.existsById(entity.getId()))) {
-            throw new DuplicatedEntityException(entity.getId());
+            throw new DuplicatedEntityException(type, entity.getId());
         }
 
         //generate id now if missing
@@ -215,7 +213,7 @@ public abstract class BaseEntityRepository<E extends BaseEntity, D extends BaseD
             getLock(id).tryLock(timeout, TimeUnit.SECONDS);
 
             try {
-                E entity = repository.findById(id).orElseThrow(() -> new NoSuchEntityException());
+                E entity = repository.findById(id).orElseThrow(() -> new NoSuchEntityException(type));
 
                 //build entity
                 E e = entityBuilder.convert(dto);
@@ -341,7 +339,7 @@ public abstract class BaseEntityRepository<E extends BaseEntity, D extends BaseD
                 D res = repository
                     .findById(id)
                     .map(e -> dtoBuilder.convert(e))
-                    .orElseThrow(() -> new NoSuchEntityException());
+                    .orElseThrow(() -> new NoSuchEntityException(type));
                 if (log.isTraceEnabled()) {
                     log.trace("res: {}", res);
                 }

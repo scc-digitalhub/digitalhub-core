@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.dataitems.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;
@@ -32,7 +32,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@SpecType(kind = "table", entity = EntityName.DATAITEM)
+@SpecType(kind = "table", entity = DataItem.class)
 public class DataItemTableSpec extends DataItemBaseSpec {
 
     //TODO adopt tableschema

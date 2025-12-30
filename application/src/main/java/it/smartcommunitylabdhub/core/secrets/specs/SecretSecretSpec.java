@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.core.secrets.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.secret.Secret;
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;
@@ -34,7 +34,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(kind = "secret", entity = EntityName.SECRET)
+@SpecType(kind = "secret", entity = Secret.class)
 public class SecretSecretSpec extends SecretBaseSpec {
 
     @Override

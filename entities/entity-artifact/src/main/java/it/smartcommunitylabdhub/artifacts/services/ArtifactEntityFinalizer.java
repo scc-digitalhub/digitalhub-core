@@ -23,7 +23,7 @@ import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.core.services.EntityFinalizer;
 import it.smartcommunitylabdhub.files.service.FilesInfoService;
 import it.smartcommunitylabdhub.files.service.FilesService;
@@ -85,7 +85,7 @@ public class ArtifactEntityFinalizer implements EntityFinalizer<Artifact>, Initi
 
                 //delete files
                 filesService.remove(path, credentials);
-                filesInfoService.clearFilesInfo(EntityName.ARTIFACT.name(), id);
+                filesInfoService.clearFilesInfo(EntityUtils.getEntityName(Artifact.class), id);
             }
         }
     }

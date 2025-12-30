@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.artifacts.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;
@@ -32,7 +32,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@SpecType(kind = "artifact", entity = EntityName.ARTIFACT)
+@SpecType(kind = "artifact", entity = Artifact.class)
 public class ArtifactArtifactSpec extends ArtifactBaseSpec {
 
     @Override

@@ -26,9 +26,9 @@ package it.smartcommunitylabdhub.core.projects.specs;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
 import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.model.Model;
+import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.project.ProjectBaseSpec;
 import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import java.io.Serializable;
@@ -44,7 +44,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@SpecType(kind = "project", entity = EntityName.PROJECT)
+@SpecType(kind = "project", entity = Project.class)
 public class ProjectSpec extends ProjectBaseSpec {
 
     private List<Function> functions = new ArrayList<>();

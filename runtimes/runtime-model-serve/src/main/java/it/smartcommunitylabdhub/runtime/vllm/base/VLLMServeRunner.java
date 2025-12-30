@@ -27,13 +27,13 @@ import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.accessors.fields.KeyAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.model.Model;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.commons.services.ModelManager;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
@@ -50,7 +50,6 @@ import it.smartcommunitylabdhub.runtime.vllm.base.models.VLLMAdapter;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeFunctionSpec;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeRunSpec;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeTaskSpec;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -67,7 +66,7 @@ public class VLLMServeRunner {
     private static final int HTTP_PORT = 8000;
     private static final int UID = 1000;
     private static final int GID = 1000;
-    
+
     private final String runtime;
     private final String image;
     private final String cpuImage;
@@ -137,11 +136,7 @@ public class VLLMServeRunner {
 
         UriComponents uri = UriComponentsBuilder.fromUriString(path).build();
 
-        List<String> args = new ArrayList<>(
-            List.of(
-                "serve"
-            )
-        );
+        List<String> args = new ArrayList<>(List.of("serve"));
 
         String defaultServedModelName = "model";
         // model dir or model id
@@ -171,7 +166,10 @@ public class VLLMServeRunner {
         Map<String, List<String>> defaultArgMap = new HashMap<>();
         defaultArgMap.put("--host", List.of("0.0.0.0"));
         defaultArgMap.put("--port", List.of(String.valueOf(HTTP_PORT)));
-        defaultArgMap.put("--served-model-name", List.of(functionSpec.getModelName() != null ? functionSpec.getModelName() : defaultServedModelName));
+        defaultArgMap.put(
+            "--served-model-name",
+            List.of(functionSpec.getModelName() != null ? functionSpec.getModelName() : defaultServedModelName)
+        );
 
         if (otelEndpoint != null && !otelEndpoint.isBlank() && Boolean.TRUE.equals(runSpec.getEnableTelemetry())) {
             defaultArgMap.put("--otlp-traces-endpoint", List.of(otelEndpoint));
@@ -186,7 +184,6 @@ public class VLLMServeRunner {
             args.add(arg.getKey());
             if (!arg.getValue().isEmpty()) args.addAll(arg.getValue());
         }
-
 
         if (functionSpec.getAdapters() != null && functionSpec.getAdapters().size() > 0) {
             contextRefs = new LinkedList<>(contextRefs);
@@ -216,7 +213,7 @@ public class VLLMServeRunner {
                                 .build()
                         );
                 }
-                args.add(adapter.getName() +  "=" + ref);
+                args.add(adapter.getName() + "=" + ref);
             }
         }
 
@@ -238,11 +235,9 @@ public class VLLMServeRunner {
             }
         }
 
-        String img = StringUtils.hasText(functionSpec.getImage()) 
-        ? functionSpec.getImage() 
-        : runSpec.getUseCpuImage()
-        ? cpuImage 
-        : image;
+        String img = StringUtils.hasText(functionSpec.getImage())
+            ? functionSpec.getImage()
+            : runSpec.getUseCpuImage() ? cpuImage : image;
 
         //validate image
         // if (img == null || !img.startsWith(VLLMServeRuntime.IMAGE)) {
@@ -251,14 +246,15 @@ public class VLLMServeRunner {
         //     );
         // }
 
-        List<CoreVolume> volumes = taskSpec.getVolumes() != null ? new LinkedList<>(taskSpec.getVolumes()) : new LinkedList<>();
+        List<CoreVolume> volumes = taskSpec.getVolumes() != null
+            ? new LinkedList<>(taskSpec.getVolumes())
+            : new LinkedList<>();
         // create model volume to store in the /shared folder and map HF variables
         volumes.add(createModelVolume(runSpec.getStorageSpace()));
-        appendHFVariables(coreEnvList);            
-        
+        appendHFVariables(coreEnvList);
 
         // create volume for model
-        
+
         //build runnable
         K8sRunnable k8sServeRunnable = K8sServeRunnable
             .builder()
@@ -299,7 +295,7 @@ public class VLLMServeRunner {
 
     private void appendHFVariables(List<CoreEnv> coreEnvList) {
         if (coreEnvList.stream().noneMatch(ce -> ce.name().equals("HF_HOME"))) {
-            coreEnvList.add(new CoreEnv("HF_HOME", "/shared/huggingface"));            
+            coreEnvList.add(new CoreEnv("HF_HOME", "/shared/huggingface"));
         }
         // if (coreEnvList.stream().noneMatch(ce -> ce.name().equals("TRANSFORMERS_CACHE"))) {
         //     coreEnvList.add(new CoreEnv("TRANSFORMERS_CACHE", "/shared/huggingface"));
@@ -318,7 +314,7 @@ public class VLLMServeRunner {
 
     private String linkToModel(Run run, String path) {
         KeyAccessor keyAccessor = KeyAccessor.with(path);
-        if (!EntityName.MODEL.getValue().equals(keyAccessor.getType())) {
+        if (!EntityUtils.getEntityName(Model.class).equalsIgnoreCase(keyAccessor.getType())) {
             throw new CoreRuntimeException("invalid entity kind reference, expected model");
         }
         Model model = keyAccessor.getId() != null
@@ -346,7 +342,7 @@ public class VLLMServeRunner {
 
         String key = null;
         List<String> values = new LinkedList<>();
-        for (int  i = 0; i < explicitArgs.size(); i++) {
+        for (int i = 0; i < explicitArgs.size(); i++) {
             if (explicitArgs.get(i).startsWith("--")) {
                 //store previous
                 if (key != null) {
@@ -367,6 +363,5 @@ public class VLLMServeRunner {
                 extraArgMap.put(key, values);
             }
         }
-
     }
 }

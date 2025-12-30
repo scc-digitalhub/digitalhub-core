@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.runtime.kubeai.text.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.runtime.kubeai.base.KubeAIServeTaskSpec;
 import it.smartcommunitylabdhub.runtime.kubeai.text.KubeAITextRuntime;
 import java.io.Serializable;
@@ -36,7 +36,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = KubeAITextRuntime.RUNTIME, kind = KubeAITextServeTaskSpec.KIND, entity = EntityName.TASK)
+@SpecType(runtime = KubeAITextRuntime.RUNTIME, kind = KubeAITextServeTaskSpec.KIND, entity = Task.class)
 public class KubeAITextServeTaskSpec extends KubeAIServeTaskSpec {
 
     public static final String KIND = KubeAITextRuntime.RUNTIME + "+serve";

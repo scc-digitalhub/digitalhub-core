@@ -25,7 +25,7 @@ package it.smartcommunitylabdhub.models.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.model.Model;
 import java.io.Serializable;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -34,7 +34,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@SpecType(kind = "model", entity = EntityName.MODEL)
+@SpecType(kind = "model", entity = Model.class)
 public class ModelSpec extends it.smartcommunitylabdhub.commons.models.model.ModelBaseSpec {
 
     @JsonProperty("parameters")

@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.runtime.container.job;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.runtime.container.ContainerRuntime;
 import it.smartcommunitylabdhub.runtime.container.specs.ContainerFunctionSpec;
 import it.smartcommunitylabdhub.runtime.container.specs.ContainerRunSpec;
@@ -37,7 +37,7 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
-@SpecType(runtime = ContainerRuntime.RUNTIME, kind = ContainerJobRunSpec.KIND, entity = EntityName.RUN)
+@SpecType(runtime = ContainerRuntime.RUNTIME, kind = ContainerJobRunSpec.KIND, entity = Run.class)
 public class ContainerJobRunSpec extends ContainerRunSpec {
 
     public static final String KIND = ContainerJobTaskSpec.KIND + ":run";

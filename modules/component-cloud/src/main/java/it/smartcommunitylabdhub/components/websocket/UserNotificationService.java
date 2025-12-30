@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.components.websocket;
 
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import lombok.extern.slf4j.Slf4j;
@@ -51,14 +51,22 @@ public class UserNotificationService {
             return;
         }
 
-        log.debug("notify {} {} change", notification.getEntity(), notification.getId());
+        if (notification.getDto() == null) {
+            log.warn("notification has no dto");
+            return;
+        }
+
+        Class<? extends BaseDTO> clazz = notification.getDto().getClass();
+        String entityName = EntityUtils.getEntityName(clazz);
+
+        log.debug("notify {} {} change", entityName, notification.getId());
         if (log.isTraceEnabled()) {
             log.trace("dto: {}", notification.getDto());
         }
 
         //send whole event as payload
-        broadcast(buildDestination(notification.getEntity(), notification.getDto().getId()), notification);
-        broadcast(buildDestination(notification.getEntity()), notification);
+        broadcast(buildDestination(entityName, notification.getDto().getId()), notification);
+        broadcast(buildDestination(entityName), notification);
     }
 
     public void broadcast(String destination, Serializable payload) {
@@ -82,18 +90,16 @@ public class UserNotificationService {
             return;
         }
 
-        log.debug(
-            "notify {} {} change to user {}",
-            notification.getEntity(),
-            notification.getId(),
-            notification.getUser()
-        );
+        Class<? extends BaseDTO> clazz = notification.getDto().getClass();
+        String entityName = EntityUtils.getEntityName(clazz);
+
+        log.debug("notify {} {} change to user {}", entityName, notification.getId(), notification.getUser());
         if (log.isTraceEnabled()) {
             log.trace("dto: {}", notification.getDto());
         }
 
         //send whole event as payload
-        notify(notification.getUser(), buildDestination(notification.getEntity()), notification);
+        notify(notification.getUser(), buildDestination(entityName), notification);
     }
 
     public void notifyOwner(@NotNull BaseDTO dto) {
@@ -130,18 +136,17 @@ public class UserNotificationService {
         }
     }
 
-    private String buildDestination(EntityName name) {
+    private String buildDestination(String name) {
         //use simple name  (pluralized) as dest
-        return PREFIX + "/" + name.getValue().toLowerCase() + "s";
+        return PREFIX + "/" + name.toLowerCase() + "s";
     }
 
-    private String buildDestination(EntityName name, String id) {
+    private String buildDestination(String name, String id) {
         //use simple name  (pluralized) as dest
-        return PREFIX + "/" + name.getValue().toLowerCase() + "s" + "/" + id;
+        return buildDestination(name) + "/" + id;
     }
 
-    private String buildDestination(Class<?> clazz) {
-        //use simple name  (pluralized) as dest
-        return PREFIX + "/" + clazz.getSimpleName().toLowerCase() + "s";
+    private String buildDestination(Class<? extends BaseDTO> clazz) {
+        return buildDestination(EntityUtils.getEntityName(clazz));
     }
 }
