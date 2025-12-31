@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.models.lifecycle;
 
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvents;
-import it.smartcommunitylabdhub.commons.models.model.Model;
+import it.smartcommunitylabdhub.models.Model;
 
 public enum ModelEvents implements LifecycleEvents<Model> {
     CREATE,

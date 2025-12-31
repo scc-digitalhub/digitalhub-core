@@ -25,7 +25,6 @@ package it.smartcommunitylabdhub.core.config;
 
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.log.Log;
-import it.smartcommunitylabdhub.commons.models.model.Model;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.secret.Secret;
@@ -50,8 +49,6 @@ import it.smartcommunitylabdhub.core.triggers.persistence.TriggerEntity;
 import it.smartcommunitylabdhub.core.triggers.persistence.TriggerRepository;
 import it.smartcommunitylabdhub.core.workflows.persistence.WorkflowEntity;
 import it.smartcommunitylabdhub.core.workflows.persistence.WorkflowRepository;
-import it.smartcommunitylabdhub.models.persistence.ModelEntity;
-import it.smartcommunitylabdhub.models.persistence.ModelRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -66,16 +63,6 @@ public class PersistenceConfig {
         ProjectRepository repository,
         Converter<Project, ProjectEntity> entityBuilder,
         Converter<ProjectEntity, Project> dtoBuilder
-    ) {
-        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder) {};
-    }
-
-
-    @Bean
-    public SearchableEntityRepository<ModelEntity, Model> modelSearchableEntityRepository(
-        ModelRepository repository,
-        Converter<Model, ModelEntity> entityBuilder,
-        Converter<ModelEntity, Model> dtoBuilder
     ) {
         return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder) {};
     }

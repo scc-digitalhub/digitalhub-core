@@ -22,9 +22,9 @@
 
 package it.smartcommunitylabdhub.models.lifecycle;
 
-import it.smartcommunitylabdhub.commons.models.model.Model;
 import it.smartcommunitylabdhub.lifecycle.BaseEntityState;
 import it.smartcommunitylabdhub.lifecycle.BaseFsmFactory;
+import it.smartcommunitylabdhub.models.Model;
 import java.util.Set;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;

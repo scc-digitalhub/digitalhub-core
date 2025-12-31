@@ -22,9 +22,9 @@
 
 package it.smartcommunitylabdhub.models.lifecycle;
 
-import it.smartcommunitylabdhub.commons.models.model.Model;
 import it.smartcommunitylabdhub.lifecycle.BaseLifecycleManager;
 import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
+import it.smartcommunitylabdhub.models.Model;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
