@@ -23,7 +23,7 @@
 
 package it.smartcommunitylabdhub.artifacts.filters;
 
-import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
+import it.smartcommunitylabdhub.artifacts.Artifact;
 import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilter;
 import lombok.Getter;
 import lombok.Setter;

@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.commons.models.artifact;
+package it.smartcommunitylabdhub.artifacts;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;

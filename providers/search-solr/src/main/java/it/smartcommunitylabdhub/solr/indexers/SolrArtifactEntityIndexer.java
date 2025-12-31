@@ -23,7 +23,7 @@
 
 package it.smartcommunitylabdhub.solr.indexers;
 
-import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
+import it.smartcommunitylabdhub.artifacts.Artifact;
 import it.smartcommunitylabdhub.solr.SolrComponent;
 import it.smartcommunitylabdhub.solr.base.SolrBaseEntityIndexer;
 import lombok.extern.slf4j.Slf4j;
