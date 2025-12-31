@@ -22,7 +22,7 @@
 
 package it.smartcommunitylabdhub.dataitems.lifecycle;
 
-import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
+import it.smartcommunitylabdhub.dataitems.DataItem;
 import it.smartcommunitylabdhub.lifecycle.BaseLifecycleManager;
 import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
 import lombok.extern.slf4j.Slf4j;

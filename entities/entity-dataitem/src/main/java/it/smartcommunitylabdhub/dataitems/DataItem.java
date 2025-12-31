@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.commons.models.dataitem;
+package it.smartcommunitylabdhub.dataitems;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;

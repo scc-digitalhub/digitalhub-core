@@ -24,9 +24,9 @@
 package it.smartcommunitylabdhub.dataitems.builders;
 
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
-import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
 import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
 import it.smartcommunitylabdhub.commons.models.metadata.EmbeddableMetadata;
+import it.smartcommunitylabdhub.dataitems.DataItem;
 import it.smartcommunitylabdhub.dataitems.lifecycle.DataItemState;
 import it.smartcommunitylabdhub.dataitems.persistence.DataItemEntity;
 import jakarta.persistence.AttributeConverter;

@@ -23,7 +23,6 @@
 
 package it.smartcommunitylabdhub.core.config;
 
-import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.log.Log;
 import it.smartcommunitylabdhub.commons.models.model.Model;
@@ -51,8 +50,6 @@ import it.smartcommunitylabdhub.core.triggers.persistence.TriggerEntity;
 import it.smartcommunitylabdhub.core.triggers.persistence.TriggerRepository;
 import it.smartcommunitylabdhub.core.workflows.persistence.WorkflowEntity;
 import it.smartcommunitylabdhub.core.workflows.persistence.WorkflowRepository;
-import it.smartcommunitylabdhub.dataitems.persistence.DataItemEntity;
-import it.smartcommunitylabdhub.dataitems.persistence.DataItemRepository;
 import it.smartcommunitylabdhub.models.persistence.ModelEntity;
 import it.smartcommunitylabdhub.models.persistence.ModelRepository;
 import org.springframework.context.annotation.Bean;
@@ -73,14 +70,6 @@ public class PersistenceConfig {
         return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder) {};
     }
 
-    @Bean
-    public SearchableEntityRepository<DataItemEntity, DataItem> dataItemSearchableEntityRepository(
-        DataItemRepository repository,
-        Converter<DataItem, DataItemEntity> entityBuilder,
-        Converter<DataItemEntity, DataItem> dtoBuilder
-    ) {
-        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder) {};
-    }
 
     @Bean
     public SearchableEntityRepository<ModelEntity, Model> modelSearchableEntityRepository(

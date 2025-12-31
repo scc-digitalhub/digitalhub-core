@@ -23,7 +23,7 @@
 
 package it.smartcommunitylabdhub.dataitems.services;
 
-import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
+import it.smartcommunitylabdhub.dataitems.DataItem;
 import it.smartcommunitylabdhub.files.base.BaseFilesService;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;

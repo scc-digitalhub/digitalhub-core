@@ -22,7 +22,7 @@
 
 package it.smartcommunitylabdhub.dataitems.lifecycle;
 
-import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
+import it.smartcommunitylabdhub.dataitems.DataItem;
 import it.smartcommunitylabdhub.lifecycle.BaseEntityState;
 import it.smartcommunitylabdhub.lifecycle.BaseFsmFactory;
 import java.util.Set;
