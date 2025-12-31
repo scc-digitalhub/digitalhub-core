@@ -35,13 +35,11 @@ import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.lucene.LuceneComponent;
 import it.smartcommunitylabdhub.lucene.service.LuceneDocParser;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
-import it.smartcommunitylabdhub.search.indexers.IndexField;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
@@ -58,7 +56,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 @Slf4j
-public abstract class LuceneBaseEntityIndexer<D extends BaseDTO> implements EntityIndexer<D>, InitializingBean {
+public class LuceneBaseEntityIndexer<D extends BaseDTO> implements EntityIndexer<D>, InitializingBean {
 
     public static final int PAGE_MAX_SIZE = 100;
 
@@ -67,19 +65,27 @@ public abstract class LuceneBaseEntityIndexer<D extends BaseDTO> implements Enti
     protected LuceneComponent lucene;
 
     @SuppressWarnings("unchecked")
-    public LuceneBaseEntityIndexer() {
+    protected LuceneBaseEntityIndexer() {
         // resolve generics type via subclass trick
         Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
         this.type = (Class<D>) t;
     }
 
     @SuppressWarnings("unchecked")
-    public LuceneBaseEntityIndexer(LuceneComponent lucene) {
+    protected LuceneBaseEntityIndexer(LuceneComponent lucene) {
         Assert.notNull(lucene, "lucene can not be null");
         this.lucene = lucene;
         // resolve generics type via subclass trick
         Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
         this.type = (Class<D>) t;
+    }
+
+    public LuceneBaseEntityIndexer(Class<D> type, LuceneComponent lucene) {
+        Assert.notNull(lucene, "lucene can not be null");
+        Assert.notNull(type, "type can not be null");
+
+        this.lucene = lucene;
+        this.type = type;
     }
 
     @Autowired
@@ -125,15 +131,15 @@ public abstract class LuceneBaseEntityIndexer<D extends BaseDTO> implements Enti
         doc.add(new StringField("user", getStringValue(item.getUser()), Field.Store.YES));
 
         //status
-        if (item instanceof StatusDTO) {
-            StatusFieldAccessor status = StatusFieldAccessor.with(((StatusDTO) item).getStatus());
+        if (item instanceof StatusDTO statusItem) {
+            StatusFieldAccessor status = StatusFieldAccessor.with(statusItem.getStatus());
             doc.add(new StringField("status", getStringValue(status.getState()), Field.Store.YES));
         }
 
         //extract meta to index
-        if (item instanceof MetadataDTO) {
+        if (item instanceof MetadataDTO metadataItem) {
             //metadata
-            BaseMetadata metadata = BaseMetadata.from(((MetadataDTO) item).getMetadata());
+            BaseMetadata metadata = BaseMetadata.from(metadataItem.getMetadata());
             doc.add(new TextField("metadata.name", getStringValue(metadata.getName()), Field.Store.YES));
             doc.add(new SortedDocValuesField("metadata.name", new BytesRef(doc.get("metadata.name"))));
 
@@ -187,37 +193,6 @@ public abstract class LuceneBaseEntityIndexer<D extends BaseDTO> implements Enti
         }
 
         return doc;
-    }
-
-    @Override
-    public List<IndexField> fields() {
-        List<IndexField> fields = new LinkedList<>();
-
-        fields.add(new IndexField("id", "string", true, false, true, true));
-        fields.add(new IndexField("keyGroup", "string", true, false, true, true));
-        fields.add(new IndexField("type", "string", true, false, true, true));
-
-        fields.add(new IndexField("kind", "string", true, false, true, true));
-        fields.add(new IndexField("project", "string", true, false, true, true));
-        fields.add(new IndexField("name", "string", true, false, true, true));
-        fields.add(new IndexField("user", "string", true, false, true, true));
-
-        fields.add(new IndexField("status", "string", true, false, true, true));
-
-        fields.add(new IndexField("metadata.name", "text_en", true, false, true, true));
-        fields.add(new IndexField("metadata.description", "text_en", true, false, true, true));
-        fields.add(new IndexField("metadata.project", "text_en", true, false, true, true));
-
-        fields.add(new IndexField("metadata.labels", "text_en", true, true, true, true));
-
-        fields.add(new IndexField("metadata.created", "pdate", true, false, true, true));
-        fields.add(new IndexField("metadata.updated", "pdate", true, false, true, true));
-        fields.add(new IndexField("metadata.createdBy", "string", true, false, true, true));
-        fields.add(new IndexField("metadata.updatedBy", "string", true, false, true, true));
-
-        fields.add(new IndexField("metadata.version", "text_en", true, false, true, true));
-
-        return fields;
     }
 
     @Override

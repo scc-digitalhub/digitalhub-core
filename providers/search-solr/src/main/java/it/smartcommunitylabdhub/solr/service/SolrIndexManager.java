@@ -31,12 +31,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.search.base.SearchPageImpl;
-import it.smartcommunitylabdhub.search.indexers.IndexField;
 import it.smartcommunitylabdhub.search.indexers.IndexerException;
 import it.smartcommunitylabdhub.search.indexers.ItemResult;
 import it.smartcommunitylabdhub.search.indexers.SearchGroupResult;
 import it.smartcommunitylabdhub.search.indexers.SearchPage;
 import it.smartcommunitylabdhub.solr.config.SolrProperties;
+import it.smartcommunitylabdhub.solr.indexers.SolrIndexField;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -181,7 +181,7 @@ public class SolrIndexManager {
         }
     }
 
-    public synchronized void initFields(Iterable<IndexField> fields) throws IndexerException {
+    public synchronized void initFields(Iterable<SolrIndexField> fields) throws IndexerException {
         log.debug("init fields");
         if (log.isTraceEnabled()) {
             log.trace("fields: {}", fields);
@@ -217,7 +217,7 @@ public class SolrIndexManager {
                     fieldsNode.elements().forEachRemaining(node -> names.add(node.get("name").asText()));
 
                     //add missing fields
-                    for (IndexField field : fields) {
+                    for (SolrIndexField field : fields) {
                         if (!names.contains(field.getName())) {
                             addField(
                                 field.getName(),

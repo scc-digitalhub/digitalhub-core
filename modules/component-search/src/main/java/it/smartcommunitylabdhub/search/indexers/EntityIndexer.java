@@ -33,9 +33,12 @@ public interface EntityIndexer<T extends BaseDTO> {
 
     public void indexAll(Collection<T> entities);
 
-    public Collection<IndexField> fields();
-
     public void clearIndex();
 
     public void remove(T entity);
+
+    @FunctionalInterface
+    interface Factory {
+        <T extends BaseDTO> EntityIndexer<T> build(Class<T> clazz);
+    }
 }

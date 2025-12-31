@@ -24,7 +24,16 @@
 package it.smartcommunitylabdhub.lucene.config;
 
 import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
+import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
+import it.smartcommunitylabdhub.lucene.LuceneComponent;
+import it.smartcommunitylabdhub.lucene.base.LuceneBaseEntityIndexer;
+import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
+import it.smartcommunitylabdhub.search.service.SearchService;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.annotation.Order;
@@ -33,4 +42,23 @@ import org.springframework.core.annotation.Order;
 @Order(3)
 @PropertySource(value = "classpath:/search-lucene.yml", factory = YamlPropertySourceFactory.class)
 @EnableConfigurationProperties({ LuceneProperties.class })
-public class LuceneConfig {}
+public class LuceneConfig {
+
+    @Bean
+    @ConditionalOnProperty(prefix = "lucene", name = "index-path")
+    @ConditionalOnMissingBean(value = SearchService.class, ignored = LuceneComponent.class)
+    LuceneComponent luceneComponent(LuceneProperties luceneProperties) {
+        return new LuceneComponent(luceneProperties);
+    }
+
+    @Bean
+    @ConditionalOnBean(LuceneComponent.class)
+    EntityIndexer.Factory luceneEntityIndexerSupplier(LuceneComponent lucene) {
+        return new EntityIndexer.Factory() {
+            @Override
+            public <T extends BaseDTO> EntityIndexer<T> build(Class<T> clazz) {
+                return new LuceneBaseEntityIndexer<>(clazz, lucene);
+            }
+        };
+    }
+}

@@ -35,16 +35,10 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.lucene.document.Document;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
-@Component
 @Slf4j
-@ConditionalOnProperty(prefix = "lucene", name = "index-path")
-@ConditionalOnMissingBean(value = SearchService.class, ignored = LuceneComponent.class)
 public class LuceneComponent implements SearchService, InitializingBean {
 
     private LuceneManager indexManager;

@@ -23,9 +23,6 @@
 
 package it.smartcommunitylabdhub.core.config;
 
-import it.smartcommunitylabdhub.artifacts.Artifact;
-import it.smartcommunitylabdhub.artifacts.persistence.ArtifactEntity;
-import it.smartcommunitylabdhub.artifacts.persistence.ArtifactRepository;
 import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.log.Log;
@@ -72,15 +69,6 @@ public class PersistenceConfig {
         ProjectRepository repository,
         Converter<Project, ProjectEntity> entityBuilder,
         Converter<ProjectEntity, Project> dtoBuilder
-    ) {
-        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder) {};
-    }
-
-    @Bean
-    public SearchableEntityRepository<ArtifactEntity, Artifact> artifactSearchableEntityRepository(
-        ArtifactRepository repository,
-        Converter<Artifact, ArtifactEntity> entityBuilder,
-        Converter<ArtifactEntity, Artifact> dtoBuilder
     ) {
         return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder) {};
     }

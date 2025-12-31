@@ -33,8 +33,8 @@ import it.smartcommunitylabdhub.commons.models.metadata.VersioningMetadata;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
-import it.smartcommunitylabdhub.search.indexers.IndexField;
 import it.smartcommunitylabdhub.solr.SolrComponent;
+import it.smartcommunitylabdhub.solr.indexers.SolrIndexField;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Collection;
@@ -50,7 +50,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 @Slf4j
-public abstract class SolrBaseEntityIndexer<D extends BaseDTO> implements EntityIndexer<D>, InitializingBean {
+public class SolrBaseEntityIndexer<D extends BaseDTO> implements EntityIndexer<D>, InitializingBean {
 
     public static final int PAGE_MAX_SIZE = 100;
 
@@ -59,19 +59,27 @@ public abstract class SolrBaseEntityIndexer<D extends BaseDTO> implements Entity
     protected SolrComponent solr;
 
     @SuppressWarnings("unchecked")
-    public SolrBaseEntityIndexer() {
+    protected SolrBaseEntityIndexer() {
         // resolve generics type via subclass trick
         Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
         this.type = (Class<D>) t;
     }
 
     @SuppressWarnings("unchecked")
-    public SolrBaseEntityIndexer(SolrComponent solr) {
+    protected SolrBaseEntityIndexer(SolrComponent solr) {
         Assert.notNull(solr, "solr can not be null");
         this.solr = solr;
         // resolve generics type via subclass trick
         Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
         this.type = (Class<D>) t;
+    }
+
+    public SolrBaseEntityIndexer(Class<D> type, SolrComponent solr) {
+        Assert.notNull(solr, "solr can not be null");
+        Assert.notNull(type, "type can not be null");
+
+        this.solr = solr;
+        this.type = type;
     }
 
     @Autowired
@@ -138,33 +146,32 @@ public abstract class SolrBaseEntityIndexer<D extends BaseDTO> implements Entity
         return doc;
     }
 
-    @Override
-    public List<IndexField> fields() {
-        List<IndexField> fields = new LinkedList<>();
+    public List<SolrIndexField> fields() {
+        List<SolrIndexField> fields = new LinkedList<>();
 
-        fields.add(new IndexField("id", "string", true, false, true, true));
-        fields.add(new IndexField("keyGroup", "string", true, false, true, true));
-        fields.add(new IndexField("type", "string", true, false, true, true));
+        fields.add(new SolrIndexField("id", "string", true, false, true, true));
+        fields.add(new SolrIndexField("keyGroup", "string", true, false, true, true));
+        fields.add(new SolrIndexField("type", "string", true, false, true, true));
 
-        fields.add(new IndexField("kind", "string", true, false, true, true));
-        fields.add(new IndexField("project", "string", true, false, true, true));
-        fields.add(new IndexField("name", "string", true, false, true, true));
-        fields.add(new IndexField("user", "string", true, false, true, true));
+        fields.add(new SolrIndexField("kind", "string", true, false, true, true));
+        fields.add(new SolrIndexField("project", "string", true, false, true, true));
+        fields.add(new SolrIndexField("name", "string", true, false, true, true));
+        fields.add(new SolrIndexField("user", "string", true, false, true, true));
 
-        fields.add(new IndexField("status", "string", true, false, true, true));
+        fields.add(new SolrIndexField("status", "string", true, false, true, true));
 
-        fields.add(new IndexField("metadata.name", "text_en", true, false, true, true));
-        fields.add(new IndexField("metadata.description", "text_en", true, false, true, true));
-        fields.add(new IndexField("metadata.project", "text_en", true, false, true, true));
+        fields.add(new SolrIndexField("metadata.name", "text_en", true, false, true, true));
+        fields.add(new SolrIndexField("metadata.description", "text_en", true, false, true, true));
+        fields.add(new SolrIndexField("metadata.project", "text_en", true, false, true, true));
 
-        fields.add(new IndexField("metadata.labels", "text_en", true, true, true, true));
+        fields.add(new SolrIndexField("metadata.labels", "text_en", true, true, true, true));
 
-        fields.add(new IndexField("metadata.created", "pdate", true, false, true, true));
-        fields.add(new IndexField("metadata.updated", "pdate", true, false, true, true));
-        fields.add(new IndexField("metadata.createdBy", "string", true, false, true, true));
-        fields.add(new IndexField("metadata.updatedBy", "string", true, false, true, true));
+        fields.add(new SolrIndexField("metadata.created", "pdate", true, false, true, true));
+        fields.add(new SolrIndexField("metadata.updated", "pdate", true, false, true, true));
+        fields.add(new SolrIndexField("metadata.createdBy", "string", true, false, true, true));
+        fields.add(new SolrIndexField("metadata.updatedBy", "string", true, false, true, true));
 
-        fields.add(new IndexField("metadata.version", "text_en", true, false, true, true));
+        fields.add(new SolrIndexField("metadata.version", "text_en", true, false, true, true));
 
         return fields;
     }

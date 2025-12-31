@@ -21,16 +21,25 @@
  *
  */
 
-package it.smartcommunitylabdhub.lucene.indexers;
+package it.smartcommunitylabdhub.solr.indexers;
 
-import it.smartcommunitylabdhub.artifacts.Artifact;
-import it.smartcommunitylabdhub.lucene.LuceneComponent;
-import it.smartcommunitylabdhub.lucene.base.LuceneBaseEntityIndexer;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.stereotype.Component;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
-@Component
-@Slf4j
-@ConditionalOnBean(LuceneComponent.class)
-public class LuceneArtifactEntityIndexer extends LuceneBaseEntityIndexer<Artifact> {}
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@ToString
+public class SolrIndexField {
+
+    private String name;
+    private String type;
+    private boolean indexed;
+    private boolean multiValued;
+    private boolean stored;
+    private boolean uninvertible;
+}

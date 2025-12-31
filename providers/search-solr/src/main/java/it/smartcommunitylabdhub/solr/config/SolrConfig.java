@@ -24,8 +24,16 @@
 package it.smartcommunitylabdhub.solr.config;
 
 import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
+import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
+import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
+import it.smartcommunitylabdhub.solr.SolrComponent;
+import it.smartcommunitylabdhub.solr.base.SolrBaseEntityIndexer;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.annotation.Order;
 
@@ -33,4 +41,23 @@ import org.springframework.core.annotation.Order;
 @Order(3)
 @PropertySource(value = "classpath:/search-solr.yml", factory = YamlPropertySourceFactory.class)
 @EnableConfigurationProperties({ SolrProperties.class })
-public class SolrConfig {}
+public class SolrConfig {
+
+    @Bean
+    @ConditionalOnProperty(prefix = "solr", name = "url")
+    @Primary
+    SolrComponent solrComponent(SolrProperties solrProperties) {
+        return new SolrComponent(solrProperties);
+    }
+
+    @Bean
+    @ConditionalOnBean(SolrComponent.class)
+    EntityIndexer.Factory solrEntityIndexerSupplier(SolrComponent solr) {
+        return new EntityIndexer.Factory() {
+            @Override
+            public <T extends BaseDTO> EntityIndexer<T> build(Class<T> clazz) {
+                return new SolrBaseEntityIndexer<>(clazz, solr);
+            }
+        };
+    }
+}

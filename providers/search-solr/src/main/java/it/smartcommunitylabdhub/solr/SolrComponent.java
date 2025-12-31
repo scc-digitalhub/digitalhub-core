@@ -23,29 +23,23 @@
 
 package it.smartcommunitylabdhub.solr;
 
-import it.smartcommunitylabdhub.search.indexers.IndexField;
 import it.smartcommunitylabdhub.search.indexers.IndexerException;
 import it.smartcommunitylabdhub.search.indexers.ItemResult;
 import it.smartcommunitylabdhub.search.indexers.SearchGroupResult;
 import it.smartcommunitylabdhub.search.indexers.SearchPage;
 import it.smartcommunitylabdhub.search.service.SearchService;
 import it.smartcommunitylabdhub.solr.config.SolrProperties;
+import it.smartcommunitylabdhub.solr.indexers.SolrIndexField;
 import it.smartcommunitylabdhub.solr.service.SolrIndexManager;
 import jakarta.annotation.PreDestroy;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.solr.common.SolrInputDocument;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Primary;
 import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
-@Component
 @Slf4j
-@ConditionalOnProperty(prefix = "solr", name = "url")
-@Primary
 public class SolrComponent implements SearchService, InitializingBean {
 
     private SolrIndexManager indexManager;
@@ -108,7 +102,7 @@ public class SolrComponent implements SearchService, InitializingBean {
         }
     }
 
-    public void registerFields(Iterable<IndexField> fields) throws IndexerException {
+    public void registerFields(Iterable<SolrIndexField> fields) throws IndexerException {
         Assert.notNull(fields, "fields can not be null");
         if (indexManager != null) {
             indexManager.initFields(fields);
