@@ -29,7 +29,6 @@ import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
 import it.smartcommunitylabdhub.commons.models.metadata.VersioningMetadata;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
@@ -39,7 +38,6 @@ import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.commons.services.EntityService;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.services.SpecValidator;
-import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilterConverter;
@@ -80,7 +78,7 @@ public abstract class BaseEntityServiceImpl<D extends BaseDTO & SpecDTO & Status
 
     public static final int PAGE_MAX_SIZE = 1000;
     public static final int DEFAULT_TIMEOUT = 30;
-    protected final EntityName type;
+    protected final Class<D> type;
 
     protected SearchableEntityRepository<E, D> repository;
     protected Converter<D, E> entityBuilder;
@@ -98,7 +96,7 @@ public abstract class BaseEntityServiceImpl<D extends BaseDTO & SpecDTO & Status
     protected BaseEntityServiceImpl() {
         // resolve generics type via subclass trick
         Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
-        this.type = EntityUtils.getEntityName((Class<D>) t);
+        this.type = (Class<D>) t;
     }
 
     @SuppressWarnings("unchecked")
@@ -117,7 +115,7 @@ public abstract class BaseEntityServiceImpl<D extends BaseDTO & SpecDTO & Status
 
         // resolve generics type via subclass trick
         Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
-        this.type = EntityUtils.getEntityName((Class<D>) t);
+        this.type = (Class<D>) t;
     }
 
     @Autowired
@@ -205,7 +203,7 @@ public abstract class BaseEntityServiceImpl<D extends BaseDTO & SpecDTO & Status
      * Service
      */
     @Override
-    public EntityName getType() {
+    public Class<D> getType() {
         return type;
     }
 

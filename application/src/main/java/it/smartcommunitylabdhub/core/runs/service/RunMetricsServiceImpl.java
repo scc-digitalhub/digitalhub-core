@@ -19,12 +19,12 @@ package it.smartcommunitylabdhub.core.runs.service;
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.metrics.Metrics;
 import it.smartcommunitylabdhub.commons.models.metrics.NumberOrNumberArray;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.services.EntityService;
 import it.smartcommunitylabdhub.commons.services.MetricsService;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.metrics.MetricsManager;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
@@ -54,7 +54,7 @@ public class RunMetricsServiceImpl implements MetricsService<Run> {
         Map<String, NumberOrNumberArray> metrics = statusFieldAccessor.getMetrics();
         if (metrics != null) {
             Map<String, NumberOrNumberArray> entityMetrics = metricsManager.getMetrics(
-                EntityName.RUN.getValue(),
+                EntityUtils.getEntityName(Run.class),
                 entityId
             );
             for (Map.Entry<String, NumberOrNumberArray> entry : entityMetrics.entrySet()) {
@@ -63,7 +63,7 @@ public class RunMetricsServiceImpl implements MetricsService<Run> {
             }
             return metrics;
         }
-        return metricsManager.getMetrics(EntityName.RUN.getValue(), entityId);
+        return metricsManager.getMetrics(EntityUtils.getEntityName(Run.class), entityId);
     }
 
     @Override
@@ -76,7 +76,7 @@ public class RunMetricsServiceImpl implements MetricsService<Run> {
         StatusFieldAccessor statusFieldAccessor = StatusFieldAccessor.with(entity.getStatus());
         Map<String, NumberOrNumberArray> metrics = statusFieldAccessor.getMetrics();
         if ((metrics != null) && metrics.containsKey(name)) return metrics.get(name);
-        return metricsManager.getMetrics(EntityName.RUN.getValue(), entityId, name);
+        return metricsManager.getMetrics(EntityUtils.getEntityName(Run.class), entityId, name);
     }
 
     @Override
@@ -87,6 +87,6 @@ public class RunMetricsServiceImpl implements MetricsService<Run> {
             log.trace("data: {}", data);
         }
 
-        return metricsManager.saveMetrics(EntityName.RUN.getValue(), entityId, name, data);
+        return metricsManager.saveMetrics(EntityUtils.getEntityName(Run.class), entityId, name, data);
     }
 }

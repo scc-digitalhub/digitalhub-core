@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.runtime.flower.app.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.runtime.flower.app.FlowerAppRuntime;
 import java.io.Serializable;
@@ -36,7 +36,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = FlowerAppRuntime.RUNTIME, kind = FlowerAppTrainTaskSpec.KIND, entity = EntityName.TASK)
+@SpecType(runtime = FlowerAppRuntime.RUNTIME, kind = FlowerAppTrainTaskSpec.KIND, entity = Task.class)
 public class FlowerAppTrainTaskSpec extends K8sFunctionTaskBaseSpec {
 
     public static final String KIND = "flower-app+train";

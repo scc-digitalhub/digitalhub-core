@@ -23,7 +23,7 @@
 
 package it.smartcommunitylabdhub.artifacts.relationships;
 
-import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
+import it.smartcommunitylabdhub.artifacts.Artifact;
 import it.smartcommunitylabdhub.relationships.BaseEntityRelationshipsManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

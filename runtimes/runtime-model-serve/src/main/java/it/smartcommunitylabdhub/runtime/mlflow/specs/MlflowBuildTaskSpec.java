@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.runtime.mlflow.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.runtime.mlflow.MlflowServeRuntime;
 import java.io.Serializable;
@@ -37,7 +37,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = MlflowServeRuntime.RUNTIME, kind = MlflowBuildTaskSpec.KIND, entity = EntityName.TASK)
+@SpecType(runtime = MlflowServeRuntime.RUNTIME, kind = MlflowBuildTaskSpec.KIND, entity = Task.class)
 public class MlflowBuildTaskSpec extends K8sFunctionTaskBaseSpec {
 
     public static final String KIND = MlflowServeRuntime.RUNTIME + "+build";

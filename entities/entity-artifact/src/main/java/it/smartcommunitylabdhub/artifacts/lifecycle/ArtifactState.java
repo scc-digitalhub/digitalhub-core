@@ -16,8 +16,8 @@
 
 package it.smartcommunitylabdhub.artifacts.lifecycle;
 
+import it.smartcommunitylabdhub.artifacts.Artifact;
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleState;
-import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
 
 public enum ArtifactState implements LifecycleState<Artifact> {
     CREATED,

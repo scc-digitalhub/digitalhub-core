@@ -21,16 +21,15 @@
  *
  */
 
-package it.smartcommunitylabdhub.lucene.indexers;
+package it.smartcommunitylabdhub.commons.services;
 
-import it.smartcommunitylabdhub.commons.models.model.Model;
-import it.smartcommunitylabdhub.lucene.LuceneComponent;
-import it.smartcommunitylabdhub.lucene.base.LuceneBaseEntityIndexer;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.stereotype.Component;
+import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.models.schemas.Schema;
+import jakarta.validation.constraints.NotNull;
+import java.util.Collection;
 
-@Component
-@Slf4j
-@ConditionalOnBean(LuceneComponent.class)
-public class LuceneModelEntityIndexer extends LuceneBaseEntityIndexer<Model> {}
+public interface SchemaService {
+    Schema getSchema(@NotNull String kind);
+    Collection<Schema> getSchemas(@NotNull String entity, @NotNull String runtime) throws NoSuchEntityException;
+    Collection<Schema> listSchemas(@NotNull String entity) throws NoSuchEntityException;
+}

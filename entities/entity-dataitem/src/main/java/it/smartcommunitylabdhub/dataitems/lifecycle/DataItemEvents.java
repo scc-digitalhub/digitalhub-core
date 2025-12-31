@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.dataitems.lifecycle;
 
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvents;
-import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
+import it.smartcommunitylabdhub.dataitems.DataItem;
 
 public enum DataItemEvents implements LifecycleEvents<DataItem> {
     CREATE,

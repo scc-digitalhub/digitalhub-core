@@ -23,8 +23,8 @@
 
 package it.smartcommunitylabdhub.artifacts.lifecycle;
 
+import it.smartcommunitylabdhub.artifacts.Artifact;
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvents;
-import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
 
 public enum ArtifactEvents implements LifecycleEvents<Artifact> {
     CREATE,

@@ -22,10 +22,10 @@
 
 package it.smartcommunitylabdhub.core.dataitems.notification;
 
-import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
 import it.smartcommunitylabdhub.components.cloud.BaseCloudListener;
 import it.smartcommunitylabdhub.components.cloud.CloudEntityEvent;
 import it.smartcommunitylabdhub.components.websocket.UserNotificationEntityEvent;
+import it.smartcommunitylabdhub.dataitems.DataItem;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;

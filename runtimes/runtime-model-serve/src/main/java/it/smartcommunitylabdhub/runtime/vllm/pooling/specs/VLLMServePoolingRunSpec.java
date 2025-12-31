@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.runtime.vllm.pooling.specs;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeRunSpec;
 import it.smartcommunitylabdhub.runtime.vllm.pooling.VLLMServePoolingRuntime;
 
@@ -39,7 +39,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = VLLMServePoolingRuntime.RUNTIME, kind = VLLMServePoolingRunSpec.KIND, entity = EntityName.RUN)
+@SpecType(runtime = VLLMServePoolingRuntime.RUNTIME, kind = VLLMServePoolingRunSpec.KIND, entity = Run.class)
 public class VLLMServePoolingRunSpec extends VLLMServeRunSpec {
 
     public static final String KIND = VLLMServePoolingServeTaskSpec.KIND + ":run";

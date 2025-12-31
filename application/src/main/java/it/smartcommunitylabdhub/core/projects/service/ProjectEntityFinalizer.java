@@ -16,18 +16,18 @@
 
 package it.smartcommunitylabdhub.core.projects.service;
 
+import it.smartcommunitylabdhub.artifacts.Artifact;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
 import it.smartcommunitylabdhub.commons.models.function.Function;
-import it.smartcommunitylabdhub.commons.models.model.Model;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.commons.services.EntityService;
 import it.smartcommunitylabdhub.commons.services.LabelService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.core.services.EntityFinalizer;
+import it.smartcommunitylabdhub.dataitems.DataItem;
+import it.smartcommunitylabdhub.models.Model;
 import jakarta.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.List;

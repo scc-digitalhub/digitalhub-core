@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.runtime.dbt.specs;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.runtime.dbt.DbtRuntime;
 import java.io.Serializable;
@@ -39,7 +39,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = DbtRuntime.RUNTIME, kind = DbtRunSpec.KIND, entity = EntityName.RUN)
+@SpecType(runtime = DbtRuntime.RUNTIME, kind = DbtRunSpec.KIND, entity = Run.class)
 public class DbtRunSpec extends RunBaseSpec {
 
     public static final String KIND = DbtTransformSpec.KIND + ":run";

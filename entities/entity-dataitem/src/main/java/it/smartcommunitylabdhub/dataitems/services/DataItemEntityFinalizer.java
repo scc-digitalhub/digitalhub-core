@@ -21,10 +21,10 @@ import it.smartcommunitylabdhub.authorization.services.CredentialsService;
 import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
-import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
-import it.smartcommunitylabdhub.dataitems.specs.DataItemBaseSpec;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.core.services.EntityFinalizer;
+import it.smartcommunitylabdhub.dataitems.DataItem;
+import it.smartcommunitylabdhub.dataitems.specs.DataItemBaseSpec;
 import it.smartcommunitylabdhub.files.service.FilesInfoService;
 import it.smartcommunitylabdhub.files.service.FilesService;
 import jakarta.validation.constraints.NotNull;
@@ -85,7 +85,7 @@ public class DataItemEntityFinalizer implements EntityFinalizer<DataItem>, Initi
 
                 //delete files
                 filesService.remove(path, credentials);
-                filesInfoService.clearFilesInfo(EntityName.DATAITEM.name(), id);
+                filesInfoService.clearFilesInfo(EntityUtils.getEntityName(DataItem.class), id);
             }
         }
     }

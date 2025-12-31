@@ -17,7 +17,7 @@
 package it.smartcommunitylabdhub.models.lifecycle;
 
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleState;
-import it.smartcommunitylabdhub.commons.models.model.Model;
+import it.smartcommunitylabdhub.models.Model;
 
 public enum ModelState implements LifecycleState<Model> {
     CREATED,

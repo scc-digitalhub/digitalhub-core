@@ -27,7 +27,6 @@ import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.log.Log;
 import it.smartcommunitylabdhub.commons.models.log.LogBaseSpec;
 import it.smartcommunitylabdhub.commons.models.project.Project;
@@ -197,8 +196,6 @@ public class LogServiceImpl implements LogService {
 
         try {
             return entityService.get(id);
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.LOG.toString());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -215,36 +212,32 @@ public class LogServiceImpl implements LogService {
                 throw new IllegalArgumentException("invalid or missing project");
             }
 
-            try {
-                //parse base spec to resolve run
-                LogBaseSpec spec = new LogBaseSpec();
-                spec.configure(dto.getSpec());
+            //parse base spec to resolve run
+            LogBaseSpec spec = new LogBaseSpec();
+            spec.configure(dto.getSpec());
 
-                String runId = spec.getRun();
-                if (!StringUtils.hasText(runId)) {
-                    throw new IllegalArgumentException("missing or invalid run");
-                }
-
-                Run run = runEntityService.find(runId);
-                if (run == null) {
-                    throw new IllegalArgumentException("missing or invalid run");
-                }
-
-                if (!projectId.equals(run.getProject())) {
-                    throw new IllegalArgumentException("project mismatch");
-                }
-
-                //check if too big and slice
-                if (dto.getContent() != null && dto.getContent().length() > maxLength) {
-                    log.debug("log content too long, slice to {}", maxLength);
-                    dto.setContent(dto.getContent().substring(dto.getContent().length() - maxLength));
-                }
-
-                //create as new
-                return entityService.create(dto);
-            } catch (DuplicatedEntityException e) {
-                throw new DuplicatedEntityException(EntityName.LOG.toString(), dto.getId());
+            String runId = spec.getRun();
+            if (!StringUtils.hasText(runId)) {
+                throw new IllegalArgumentException("missing or invalid run");
             }
+
+            Run run = runEntityService.find(runId);
+            if (run == null) {
+                throw new IllegalArgumentException("missing or invalid run");
+            }
+
+            if (!projectId.equals(run.getProject())) {
+                throw new IllegalArgumentException("project mismatch");
+            }
+
+            //check if too big and slice
+            if (dto.getContent() != null && dto.getContent().length() > maxLength) {
+                log.debug("log content too long, slice to {}", maxLength);
+                dto.setContent(dto.getContent().substring(dto.getContent().length() - maxLength));
+            }
+
+            //create as new
+            return entityService.create(dto);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -279,8 +272,6 @@ public class LogServiceImpl implements LogService {
 
             //full update, log is modifiable
             return entityRepository.update(id, dto);
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.LOG.toString());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

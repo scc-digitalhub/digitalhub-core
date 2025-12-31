@@ -22,7 +22,7 @@
 
 package it.smartcommunitylabdhub.core.artifacts.notification;
 
-import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
+import it.smartcommunitylabdhub.artifacts.Artifact;
 import it.smartcommunitylabdhub.components.cloud.BaseCloudListener;
 import it.smartcommunitylabdhub.components.cloud.CloudEntityEvent;
 import it.smartcommunitylabdhub.components.websocket.UserNotificationEntityEvent;

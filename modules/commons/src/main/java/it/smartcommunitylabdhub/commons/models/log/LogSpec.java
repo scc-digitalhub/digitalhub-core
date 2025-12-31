@@ -24,7 +24,6 @@
 package it.smartcommunitylabdhub.commons.models.log;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import java.io.Serializable;
 import java.util.Map;
 import lombok.AllArgsConstructor;
@@ -36,7 +35,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @Builder
-@SpecType(kind = "log", entity = EntityName.LOG)
+@SpecType(kind = "log", entity = Log.class)
 public class LogSpec extends LogBaseSpec {
 
     @Override

@@ -21,7 +21,6 @@ import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeCompon
 import it.smartcommunitylabdhub.commons.infrastructure.ProcessorRegistry;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.infrastructure.Runtime;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.metadata.Metadata;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
@@ -126,10 +125,10 @@ public class KindAwareRunLifecycleManager extends KindAwareLifecycleManager<Run>
                     Class<? extends Spec> specClass = (Class<? extends Spec>) Class.forName(className);
                     SpecType type = specClass.getAnnotation(SpecType.class);
                     String kind = type.kind();
-                    EntityName entity = type.entity();
+                    Class<?> entity = type.entity();
                     String runtime = type.runtime();
 
-                    if (EntityName.RUN != entity) {
+                    if (Run.class != entity) {
                         //ignore non run specs
                         continue;
                     }

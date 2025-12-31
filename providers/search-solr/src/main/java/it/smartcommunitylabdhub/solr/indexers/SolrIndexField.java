@@ -21,33 +21,25 @@
  *
  */
 
-package it.smartcommunitylabdhub.commons.models.entities;
+package it.smartcommunitylabdhub.solr.indexers;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.ToString;
-import org.springframework.util.Assert;
 
-@Deprecated(forRemoval = true)
 @Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
 @ToString
-public enum EntityName {
-    PROJECT("project"),
-    WORKFLOW("workflow"),
-    FUNCTION("function"),
-    SECRET("secret"),
-    ARTIFACT("artifact"),
-    DATAITEM("dataitem"),
-    MODEL("model"),
-    TASK("task"),
-    TRIGGER("trigger"),
-    RUN("run"),
-    LOG("log"),
-    METADATA("metadata");
+public class SolrIndexField {
 
-    private final String value;
-
-    EntityName(String value) {
-        Assert.hasText(value, "value cannot be empty");
-        this.value = value;
-    }
+    private String name;
+    private String type;
+    private boolean indexed;
+    private boolean multiValued;
+    private boolean stored;
+    private boolean uninvertible;
 }

@@ -23,9 +23,9 @@
 
 package it.smartcommunitylabdhub.dataitems.services;
 
-import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
-import it.smartcommunitylabdhub.dataitems.persistence.DataItemEntity;
 import it.smartcommunitylabdhub.core.services.BaseVersionableEntityServiceImpl;
+import it.smartcommunitylabdhub.dataitems.DataItem;
+import it.smartcommunitylabdhub.dataitems.persistence.DataItemEntity;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

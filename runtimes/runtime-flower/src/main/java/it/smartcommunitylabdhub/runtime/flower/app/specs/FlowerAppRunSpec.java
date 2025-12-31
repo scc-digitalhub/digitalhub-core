@@ -28,7 +28,7 @@ import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.runtime.flower.app.FlowerAppRuntime;
 import jakarta.validation.constraints.NotNull;
@@ -42,7 +42,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = FlowerAppRuntime.RUNTIME, kind = FlowerAppRunSpec.KIND, entity = EntityName.RUN)
+@SpecType(runtime = FlowerAppRuntime.RUNTIME, kind = FlowerAppRunSpec.KIND, entity = Run.class)
 public class FlowerAppRunSpec extends RunBaseSpec {
 
     public static final String KIND = FlowerAppTrainTaskSpec.KIND + ":run";

@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.runtime.flower.server.specs;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.function.FunctionBaseSpec;
 import it.smartcommunitylabdhub.runtime.flower.server.FlowerServerRuntime;
 import java.io.Serializable;
@@ -39,7 +39,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = FlowerServerRuntime.RUNTIME, kind = FlowerServerRuntime.RUNTIME, entity = EntityName.FUNCTION)
+@SpecType(runtime = FlowerServerRuntime.RUNTIME, kind = FlowerServerRuntime.RUNTIME, entity = Function.class)
 public class FlowerServerFunctionSpec extends FunctionBaseSpec {
 
     @JsonProperty("image")

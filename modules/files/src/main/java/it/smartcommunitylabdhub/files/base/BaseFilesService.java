@@ -31,7 +31,6 @@ import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
@@ -67,7 +66,7 @@ import org.springframework.util.StringUtils;
 public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & StatusDTO>
     implements EntityFilesService<D>, InitializingBean {
 
-    protected final EntityName type;
+    protected final Class<D> type;
 
     protected EntityRepository<D> entityService;
 
@@ -80,7 +79,7 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
     public BaseFilesService() {
         // resolve generics type via subclass trick
         Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
-        this.type = EntityUtils.getEntityName((Class<D>) t);
+        this.type = (Class<D>) t;
     }
 
     @Autowired
@@ -143,8 +142,6 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
             }
 
             return info;
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(type.name());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -187,8 +184,6 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
             }
 
             return info;
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(type.name());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -213,7 +208,7 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
                 : null;
 
             if (files == null || files.isEmpty()) {
-                FilesInfo filesInfo = filesInfoService.getFilesInfo(type.name(), id);
+                FilesInfo filesInfo = filesInfoService.getFilesInfo(EntityUtils.getEntityName(type), id);
                 if (filesInfo != null && (filesInfo.getFiles() != null)) {
                     files = filesInfo.getFiles();
                 } else {
@@ -237,12 +232,10 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
             }
 
             if (log.isTraceEnabled()) {
-                log.trace("files info for entity with id {}: {} -> {}", id, type.name(), files);
+                log.trace("files info for entity with id {}: {} -> {}", id, EntityUtils.getEntityName(type), files);
             }
 
             return files;
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(type.name());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -257,10 +250,8 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
 
             if (files != null) {
                 log.debug("store files info for {}", dto.getId());
-                filesInfoService.saveFilesInfo(type.name(), id, files);
+                filesInfoService.saveFilesInfo(EntityUtils.getEntityName(type), id, files);
             }
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(type.name());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -285,7 +276,7 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
                 "/" +
                 project +
                 "/" +
-                type.name().toLowerCase() +
+                EntityUtils.getEntityName(type).toLowerCase() +
                 "/" +
                 subpath +
                 "/";
@@ -344,7 +335,7 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
                 "/" +
                 project +
                 "/" +
-                type.name().toLowerCase() +
+                EntityUtils.getEntityName(type).toLowerCase() +
                 "/" +
                 subpath +
                 "/";

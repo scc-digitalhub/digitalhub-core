@@ -23,8 +23,8 @@
 
 package it.smartcommunitylabdhub.artifacts.builders;
 
+import it.smartcommunitylabdhub.artifacts.Artifact;
 import it.smartcommunitylabdhub.artifacts.persistence.ArtifactEntity;
-import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
 import it.smartcommunitylabdhub.commons.models.metadata.EmbeddableMetadata;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.metadata.AuditMetadataBuilder;

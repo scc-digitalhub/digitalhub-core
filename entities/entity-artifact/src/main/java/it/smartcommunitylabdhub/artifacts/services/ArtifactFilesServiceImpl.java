@@ -23,7 +23,7 @@
 
 package it.smartcommunitylabdhub.artifacts.services;
 
-import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
+import it.smartcommunitylabdhub.artifacts.Artifact;
 import it.smartcommunitylabdhub.files.base.BaseFilesService;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;

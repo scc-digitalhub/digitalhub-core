@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.runtime.python.specs;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.runtime.python.PythonRuntime;
 import java.io.Serializable;
 import java.util.Map;
@@ -37,7 +37,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = PythonRuntime.RUNTIME, kind = PythonBuildRunSpec.KIND, entity = EntityName.RUN)
+@SpecType(runtime = PythonRuntime.RUNTIME, kind = PythonBuildRunSpec.KIND, entity = Run.class)
 public final class PythonBuildRunSpec extends PythonRunSpec {
 
     public static final String KIND = PythonBuildTaskSpec.KIND + ":run";

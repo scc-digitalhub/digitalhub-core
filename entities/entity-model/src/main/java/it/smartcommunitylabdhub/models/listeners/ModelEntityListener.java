@@ -25,13 +25,13 @@ package it.smartcommunitylabdhub.models.listeners;
 
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
-import it.smartcommunitylabdhub.commons.models.model.Model;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.core.events.AbstractEntityListener;
 import it.smartcommunitylabdhub.core.events.EntityEvent;
 import it.smartcommunitylabdhub.files.service.FilesInfoService;
+import it.smartcommunitylabdhub.models.Model;
 import it.smartcommunitylabdhub.models.persistence.ModelEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -121,7 +121,7 @@ public class ModelEntityListener extends AbstractEntityListener<ModelEntity, Mod
         //delete files info
         if (filesInfoService != null) {
             try {
-                filesInfoService.clearFilesInfo(EntityName.MODEL.getValue(), entity.getId());
+                filesInfoService.clearFilesInfo(EntityUtils.getEntityName(Model.class), entity.getId());
             } catch (StoreException e) {
                 log.error("store error", e.getMessage());
             }

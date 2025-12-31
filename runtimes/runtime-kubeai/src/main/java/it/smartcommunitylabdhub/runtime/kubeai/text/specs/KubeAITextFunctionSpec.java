@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.runtime.kubeai.text.specs;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.runtime.kubeai.base.KubeAIServeFunctionSpec;
 import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAIEngine;
 import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAIFeature;
@@ -45,7 +45,7 @@ import lombok.Setter;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@SpecType(runtime = KubeAITextRuntime.RUNTIME, kind = KubeAITextRuntime.RUNTIME, entity = EntityName.FUNCTION)
+@SpecType(runtime = KubeAITextRuntime.RUNTIME, kind = KubeAITextRuntime.RUNTIME, entity = Function.class)
 public class KubeAITextFunctionSpec extends KubeAIServeFunctionSpec {
 
     @JsonProperty("features")

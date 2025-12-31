@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.runtime.kfp.specs;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.runtime.kfp.KFPRuntime;
 import java.io.Serializable;
 import java.util.Map;
@@ -37,7 +37,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = KFPRuntime.RUNTIME, kind = KFPBuildRunSpec.KIND, entity = EntityName.RUN)
+@SpecType(runtime = KFPRuntime.RUNTIME, kind = KFPBuildRunSpec.KIND, entity = Run.class)
 public class KFPBuildRunSpec extends KFPRunSpec {
 
     public static final String KIND = KFPBuildTaskSpec.KIND + ":run";

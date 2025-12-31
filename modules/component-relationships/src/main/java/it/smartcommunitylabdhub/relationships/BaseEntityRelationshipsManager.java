@@ -25,7 +25,6 @@ package it.smartcommunitylabdhub.relationships;
 
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.relationships.persistence.RelationshipEntity;
@@ -41,7 +40,7 @@ import org.springframework.util.Assert;
 public class BaseEntityRelationshipsManager<D extends BaseDTO & MetadataDTO>
     implements EntityRelationshipsManager<D>, InitializingBean {
 
-    protected final EntityName type;
+    protected final Class<D> type;
     protected EntityRelationshipsService service;
 
     @Autowired
@@ -53,7 +52,7 @@ public class BaseEntityRelationshipsManager<D extends BaseDTO & MetadataDTO>
     public BaseEntityRelationshipsManager() {
         // resolve generics type via subclass trick
         Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
-        this.type = EntityUtils.getEntityName((Class<D>) t);
+        this.type = (Class<D>) t;
     }
 
     @SuppressWarnings("unchecked")
@@ -62,7 +61,7 @@ public class BaseEntityRelationshipsManager<D extends BaseDTO & MetadataDTO>
 
         // resolve generics type via subclass trick
         Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
-        this.type = EntityUtils.getEntityName((Class<D>) t);
+        this.type = (Class<D>) t;
         this.service = service;
     }
 
@@ -76,7 +75,7 @@ public class BaseEntityRelationshipsManager<D extends BaseDTO & MetadataDTO>
         return String.format("%s[type=%s]", this.getClass().getSimpleName(), type);
     }
 
-    protected EntityName getType() {
+    protected Class<D> getType() {
         return type;
     }
 
@@ -90,7 +89,7 @@ public class BaseEntityRelationshipsManager<D extends BaseDTO & MetadataDTO>
             RelationshipsMetadata relationships = RelationshipsMetadata.from(item.getMetadata());
             service.register(
                 item.getProject(),
-                getType(),
+                EntityUtils.getEntityName(getType()),
                 item.getId(),
                 item.getKey(),
                 relationships.getRelationships()
@@ -107,7 +106,7 @@ public class BaseEntityRelationshipsManager<D extends BaseDTO & MetadataDTO>
         try {
             log.debug("clear for {}: {}", getType(), item.getId());
 
-            service.clear(item.getProject(), getType(), item.getId());
+            service.clear(item.getProject(), EntityUtils.getEntityName(getType()), item.getId());
         } catch (StoreException e) {
             log.error("error with service: {}", e.getMessage());
         }
@@ -119,7 +118,11 @@ public class BaseEntityRelationshipsManager<D extends BaseDTO & MetadataDTO>
 
         log.debug("get for {}: {}", getType(), item.getId());
 
-        List<RelationshipEntity> entries = service.listByEntity(item.getProject(), getType(), item.getId());
+        List<RelationshipEntity> entries = service.listByEntity(
+            item.getProject(),
+            EntityUtils.getEntityName(getType()),
+            item.getId()
+        );
         return entries
             .stream()
             .map(e -> new RelationshipDetail(e.getRelationship(), e.getSourceKey(), e.getDestKey()))

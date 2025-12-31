@@ -25,7 +25,7 @@ package it.smartcommunitylabdhub.trigger.scheduler.models;
 
 import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.trigger.Trigger;
 import it.smartcommunitylabdhub.triggers.specs.TriggerBaseSpec;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -36,7 +36,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@SpecType(kind = "scheduler", entity = EntityName.TRIGGER)
+@SpecType(kind = "scheduler", entity = Trigger.class)
 public class SchedulerTriggerSpec extends TriggerBaseSpec {
 
     @Pattern(regexp = Keys.CRONTAB_PATTERN)

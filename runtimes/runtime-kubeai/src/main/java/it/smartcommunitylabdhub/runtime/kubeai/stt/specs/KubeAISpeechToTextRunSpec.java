@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.runtime.kubeai.stt.specs;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.runtime.kubeai.base.KubeAIServeRunSpec;
 import it.smartcommunitylabdhub.runtime.kubeai.stt.KubeAISpeechToTextRuntime;
 import java.io.Serializable;
@@ -38,7 +38,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = KubeAISpeechToTextRuntime.RUNTIME, kind = KubeAISpeechToTextRunSpec.KIND, entity = EntityName.RUN)
+@SpecType(runtime = KubeAISpeechToTextRuntime.RUNTIME, kind = KubeAISpeechToTextRunSpec.KIND, entity = Run.class)
 public class KubeAISpeechToTextRunSpec extends KubeAIServeRunSpec {
 
     public static final String KIND = KubeAISpeechToTextServeTaskSpec.KIND + ":run";

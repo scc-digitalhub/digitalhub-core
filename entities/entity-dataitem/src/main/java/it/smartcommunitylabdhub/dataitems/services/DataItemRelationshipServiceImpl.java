@@ -16,7 +16,7 @@
 
 package it.smartcommunitylabdhub.dataitems.services;
 
-import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
+import it.smartcommunitylabdhub.dataitems.DataItem;
 import it.smartcommunitylabdhub.relationships.BaseRelationshipsAwareEntityService;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;

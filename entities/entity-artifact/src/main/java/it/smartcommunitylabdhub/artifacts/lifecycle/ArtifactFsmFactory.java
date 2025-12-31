@@ -22,7 +22,7 @@
 
 package it.smartcommunitylabdhub.artifacts.lifecycle;
 
-import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
+import it.smartcommunitylabdhub.artifacts.Artifact;
 import it.smartcommunitylabdhub.lifecycle.BaseEntityState;
 import it.smartcommunitylabdhub.lifecycle.BaseFsmFactory;
 import java.util.Set;

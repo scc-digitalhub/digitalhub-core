@@ -29,7 +29,6 @@ import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.trigger.Trigger;
@@ -192,8 +191,6 @@ public class TriggerManagerImpl implements TriggerManager {
 
         try {
             return entityService.get(id);
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.TASK.toString());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -211,29 +208,25 @@ public class TriggerManagerImpl implements TriggerManager {
                 throw new IllegalArgumentException("invalid or missing project");
             }
 
-            try {
-                //check task is valid
-                TriggerBaseSpec baseSpec = TriggerBaseSpec.from(dto.getSpec());
-                if (!StringUtils.hasText(baseSpec.getTask())) {
-                    throw new IllegalArgumentException("spec: missing task");
-                }
-                if (!StringUtils.hasText(baseSpec.getFunction()) && !StringUtils.hasText(baseSpec.getWorkflow())) {
-                    throw new IllegalArgumentException("spec: missing function or workflow");
-                }
-
-                //access task details from ref, same as run
-                RunSpecAccessor specAccessor = RunSpecAccessor.with(dto.getSpec());
-
-                //check project match
-                if (dto.getProject() != null && !dto.getProject().equals(specAccessor.getProject())) {
-                    throw new IllegalArgumentException("project mismatch");
-                }
-
-                //create as new
-                return entityService.create(dto);
-            } catch (DuplicatedEntityException e) {
-                throw new DuplicatedEntityException(EntityName.TRIGGER.toString(), dto.getId());
+            //check task is valid
+            TriggerBaseSpec baseSpec = TriggerBaseSpec.from(dto.getSpec());
+            if (!StringUtils.hasText(baseSpec.getTask())) {
+                throw new IllegalArgumentException("spec: missing task");
             }
+            if (!StringUtils.hasText(baseSpec.getFunction()) && !StringUtils.hasText(baseSpec.getWorkflow())) {
+                throw new IllegalArgumentException("spec: missing function or workflow");
+            }
+
+            //access task details from ref, same as run
+            RunSpecAccessor specAccessor = RunSpecAccessor.with(dto.getSpec());
+
+            //check project match
+            if (dto.getProject() != null && !dto.getProject().equals(specAccessor.getProject())) {
+                throw new IllegalArgumentException("project mismatch");
+            }
+
+            //create as new
+            return entityService.create(dto);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -246,8 +239,6 @@ public class TriggerManagerImpl implements TriggerManager {
         log.debug("update trigger with id {}", String.valueOf(id));
         try {
             return entityService.update(id, dto);
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.TASK.toString());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.runtime.hera.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sWorkflowTaskBaseSpec;
 import it.smartcommunitylabdhub.runtime.hera.HeraRuntime;
 import java.io.Serializable;
@@ -36,7 +36,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = HeraRuntime.RUNTIME, kind = HeraPipelineTaskSpec.KIND, entity = EntityName.TASK)
+@SpecType(runtime = HeraRuntime.RUNTIME, kind = HeraPipelineTaskSpec.KIND, entity = Task.class)
 public class HeraPipelineTaskSpec extends K8sWorkflowTaskBaseSpec {
 
     public static final String KIND = "hera+pipeline";

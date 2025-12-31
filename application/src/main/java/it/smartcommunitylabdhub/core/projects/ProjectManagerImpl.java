@@ -23,19 +23,16 @@
 
 package it.smartcommunitylabdhub.core.projects;
 
+import it.smartcommunitylabdhub.artifacts.Artifact;
 import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.models.artifact.Artifact;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.metadata.EmbeddableMetadata;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
-import it.smartcommunitylabdhub.commons.models.model.Model;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
@@ -50,6 +47,8 @@ import it.smartcommunitylabdhub.core.projects.specs.ProjectSpec;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.core.utils.RefUtils;
+import it.smartcommunitylabdhub.dataitems.DataItem;
+import it.smartcommunitylabdhub.models.Model;
 import it.smartcommunitylabdhub.relationships.EntityRelationshipsService;
 import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipsAwareEntityService;
@@ -199,8 +198,6 @@ public class ProjectManagerImpl implements ProjectManager, RelationshipsAwareEnt
             project.setSpec(spec.toMap());
 
             return project;
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.PROJECT.toString());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -215,7 +212,7 @@ public class ProjectManagerImpl implements ProjectManager, RelationshipsAwareEnt
                 .searchAll(CommonSpecification.nameEquals(name))
                 .stream()
                 .findFirst()
-                .orElseThrow(() -> new NoSuchEntityException(EntityName.PROJECT.toString()));
+                .orElseThrow(() -> new NoSuchEntityException(Project.class));
 
             return getProject(project.getId());
         } catch (StoreException e) {
@@ -249,7 +246,7 @@ public class ProjectManagerImpl implements ProjectManager, RelationshipsAwareEnt
 
             Project existing = findProjectByName(dto.getName());
             if (existing != null) {
-                throw new DuplicatedEntityException(EntityName.PROJECT.toString(), name);
+                throw new DuplicatedEntityException(Project.class, name);
             }
 
             //make sure project id matches name (for slugs)
@@ -262,8 +259,6 @@ public class ProjectManagerImpl implements ProjectManager, RelationshipsAwareEnt
 
             //create as new
             return entityService.create(dto);
-        } catch (DuplicatedEntityException e) {
-            throw new DuplicatedEntityException(EntityName.PROJECT.toString(), dto.getId());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -287,8 +282,6 @@ public class ProjectManagerImpl implements ProjectManager, RelationshipsAwareEnt
 
             //full update, project is modifiable
             return entityService.update(id, dto, true);
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.PROJECT.toString());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

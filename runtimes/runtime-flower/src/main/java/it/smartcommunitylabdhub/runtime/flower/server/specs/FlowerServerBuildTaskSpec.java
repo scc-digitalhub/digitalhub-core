@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.runtime.flower.server.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.runtime.flower.server.FlowerServerRuntime;
 import java.io.Serializable;
@@ -37,7 +37,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = FlowerServerRuntime.RUNTIME, kind = FlowerServerBuildTaskSpec.KIND, entity = EntityName.TASK)
+@SpecType(runtime = FlowerServerRuntime.RUNTIME, kind = FlowerServerBuildTaskSpec.KIND, entity = Task.class)
 public class FlowerServerBuildTaskSpec extends K8sFunctionTaskBaseSpec {
 
     public static final String KIND = "flower-server+build";

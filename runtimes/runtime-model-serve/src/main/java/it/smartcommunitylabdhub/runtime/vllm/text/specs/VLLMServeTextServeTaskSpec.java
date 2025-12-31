@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.runtime.vllm.text.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeTaskSpec;
 import it.smartcommunitylabdhub.runtime.vllm.text.VLLMServeTextRuntime;
 
@@ -37,7 +37,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = VLLMServeTextRuntime.RUNTIME, kind = VLLMServeTextServeTaskSpec.KIND, entity = EntityName.TASK)
+@SpecType(runtime = VLLMServeTextRuntime.RUNTIME, kind = VLLMServeTextServeTaskSpec.KIND, entity = Task.class)
 public class VLLMServeTextServeTaskSpec extends VLLMServeTaskSpec {
 
     public static final String KIND = VLLMServeTextRuntime.RUNTIME + "+serve";

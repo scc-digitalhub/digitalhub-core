@@ -21,12 +21,12 @@ import it.smartcommunitylabdhub.authorization.services.CredentialsService;
 import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
-import it.smartcommunitylabdhub.commons.models.model.Model;
-import it.smartcommunitylabdhub.commons.models.model.ModelBaseSpec;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.core.services.EntityFinalizer;
 import it.smartcommunitylabdhub.files.service.FilesInfoService;
 import it.smartcommunitylabdhub.files.service.FilesService;
+import it.smartcommunitylabdhub.models.Model;
+import it.smartcommunitylabdhub.models.specs.ModelBaseSpec;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -85,7 +85,7 @@ public class ModelEntityFinalizer implements EntityFinalizer<Model>, Initializin
 
                 //delete files
                 filesService.remove(path, credentials);
-                filesInfoService.clearFilesInfo(EntityName.MODEL.name(), id);
+                filesInfoService.clearFilesInfo(EntityUtils.getEntityName(Model.class), id);
             }
         }
     }

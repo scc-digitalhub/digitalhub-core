@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.runtime.kfp.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sWorkflowTaskBaseSpec;
 import it.smartcommunitylabdhub.runtime.kfp.KFPRuntime;
 import java.io.Serializable;
@@ -36,7 +36,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @AllArgsConstructor
-@SpecType(runtime = KFPRuntime.RUNTIME, kind = KFPBuildTaskSpec.KIND, entity = EntityName.TASK)
+@SpecType(runtime = KFPRuntime.RUNTIME, kind = KFPBuildTaskSpec.KIND, entity = Task.class)
 public class KFPBuildTaskSpec extends K8sWorkflowTaskBaseSpec {
 
     public static final String KIND = "kfp+build";

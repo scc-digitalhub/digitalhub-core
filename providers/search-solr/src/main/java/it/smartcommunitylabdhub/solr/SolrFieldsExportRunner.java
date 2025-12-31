@@ -23,8 +23,8 @@
 
 package it.smartcommunitylabdhub.solr;
 
-import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
-import it.smartcommunitylabdhub.search.indexers.IndexField;
+import it.smartcommunitylabdhub.solr.base.SolrBaseEntityIndexer;
+import it.smartcommunitylabdhub.solr.indexers.SolrIndexField;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -55,10 +55,10 @@ public class SolrFieldsExportRunner implements CommandLineRunner {
     @Autowired
     private TemplateEngine templateEngine;
 
-    private List<EntityIndexer<?>> services;
+    private List<SolrBaseEntityIndexer<?>> services;
 
     @Autowired(required = false)
-    public void setServices(List<EntityIndexer<?>> services) {
+    public void setServices(List<SolrBaseEntityIndexer<?>> services) {
         this.services = services;
     }
 
@@ -68,9 +68,9 @@ public class SolrFieldsExportRunner implements CommandLineRunner {
         int returnCode = 0;
         if (services != null) {
             try {
-                Map<String, IndexField> fieldsMap = new HashMap<>();
+                Map<String, SolrIndexField> fieldsMap = new HashMap<>();
                 services.forEach(service -> {
-                    for (IndexField field : service.fields()) {
+                    for (SolrIndexField field : service.fields()) {
                         if (!fieldsMap.containsKey(field.getName())) fieldsMap.put(field.getName(), field);
                     }
                 });

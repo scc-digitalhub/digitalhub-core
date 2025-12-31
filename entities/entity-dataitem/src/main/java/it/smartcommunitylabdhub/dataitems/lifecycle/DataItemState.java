@@ -17,7 +17,7 @@
 package it.smartcommunitylabdhub.dataitems.lifecycle;
 
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleState;
-import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
+import it.smartcommunitylabdhub.dataitems.DataItem;
 
 public enum DataItemState implements LifecycleState<DataItem> {
     CREATED,

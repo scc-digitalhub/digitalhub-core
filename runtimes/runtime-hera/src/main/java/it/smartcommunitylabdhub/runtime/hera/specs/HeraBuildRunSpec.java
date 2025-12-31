@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.runtime.hera.specs;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.runtime.hera.HeraRuntime;
 import java.io.Serializable;
 import java.util.Map;
@@ -37,7 +37,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = HeraRuntime.RUNTIME, kind = HeraBuildRunSpec.KIND, entity = EntityName.RUN)
+@SpecType(runtime = HeraRuntime.RUNTIME, kind = HeraBuildRunSpec.KIND, entity = Run.class)
 public class HeraBuildRunSpec extends HeraRunSpec {
 
     public static final String KIND = HeraBuildTaskSpec.KIND + ":run";

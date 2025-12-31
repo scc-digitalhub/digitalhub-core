@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.runtime.vllm.speech.specs;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeRunSpec;
 import it.smartcommunitylabdhub.runtime.vllm.speech.VLLMServeSpeechRuntime;
 
@@ -39,7 +39,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = VLLMServeSpeechRuntime.RUNTIME, kind = VLLMServeSpeechRunSpec.KIND, entity = EntityName.RUN)
+@SpecType(runtime = VLLMServeSpeechRuntime.RUNTIME, kind = VLLMServeSpeechRunSpec.KIND, entity = Run.class)
 public class VLLMServeSpeechRunSpec extends VLLMServeRunSpec {
 
     public static final String KIND = VLLMServeSpeechServeTaskSpec.KIND + ":run";

@@ -29,7 +29,6 @@ import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.models.run.Run;
@@ -201,8 +200,6 @@ public class RunManagerImpl implements RunManager {
 
         try {
             return entityService.get(id);
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.RUN.toString());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -249,13 +246,8 @@ public class RunManagerImpl implements RunManager {
             }
 
             //TODO check if run kind matches allowed for task/runtime
-
-            try {
-                // store the run in db
-                return entityService.create(dto);
-            } catch (DuplicatedEntityException e) {
-                throw new DuplicatedEntityException(EntityName.RUN.toString(), dto.getId());
-            }
+            // store the run in db
+            return entityService.create(dto);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -301,8 +293,6 @@ public class RunManagerImpl implements RunManager {
 
             //update, run is modifiable
             return entityService.update(id, dto, true);
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.RUN.toString());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

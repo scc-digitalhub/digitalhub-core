@@ -28,9 +28,9 @@ import it.smartcommunitylabdhub.authorization.services.ShareableAwareEntityServi
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
@@ -61,7 +61,7 @@ public class ShareableProjectService implements ShareableAwareEntityService<Proj
             //check if a share with same user already exists
             List<ResourceShareEntity> shares = sharingService.listByProjectAndEntity(
                 project.getProject(),
-                EntityName.PROJECT,
+                EntityUtils.getEntityName(Project.class),
                 id,
                 user
             );
@@ -70,15 +70,18 @@ public class ShareableProjectService implements ShareableAwareEntityService<Proj
             }
 
             //create
-            ResourceShareEntity share = sharingService.share(project.getProject(), EntityName.PROJECT, id, user);
+            ResourceShareEntity share = sharingService.share(
+                project.getProject(),
+                EntityUtils.getEntityName(Project.class),
+                id,
+                user
+            );
 
             if (log.isTraceEnabled()) {
                 log.trace("share: {}", share);
             }
 
             return share;
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.PROJECT.toString());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -102,14 +105,15 @@ public class ShareableProjectService implements ShareableAwareEntityService<Proj
             if (!project.getId().equals(share.getProject())) {
                 throw new IllegalArgumentException("project-mismatch");
             }
-            if (!id.equals(share.getEntityId()) || !EntityName.PROJECT.getValue().equals(share.getEntity())) {
+            if (
+                !id.equals(share.getEntityId()) ||
+                !EntityUtils.getEntityName(Project.class).equalsIgnoreCase(share.getEntity())
+            ) {
                 throw new IllegalArgumentException("invalid");
             }
 
             //revoke
             sharingService.revoke(shareId);
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.PROJECT.toString());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -120,9 +124,9 @@ public class ShareableProjectService implements ShareableAwareEntityService<Proj
     public List<ResourceShareEntity> listSharesById(@NotNull String id) {
         log.debug("list shares for project with id {}", String.valueOf(id));
         try {
-            return sharingService.listByProjectAndEntity(id, EntityName.PROJECT, id);
+            return sharingService.listByProjectAndEntity(id, EntityUtils.getEntityName(Project.class), id);
         } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.PROJECT.toString());
+            throw new NoSuchEntityException(Project.class);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.runtime.flower.client.specs;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.runtime.flower.client.FlowerClientRuntime;
 import java.io.Serializable;
 import java.util.Map;
@@ -37,7 +37,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = FlowerClientRuntime.RUNTIME, kind = FlowerClientBuildRunSpec.KIND, entity = EntityName.RUN)
+@SpecType(runtime = FlowerClientRuntime.RUNTIME, kind = FlowerClientBuildRunSpec.KIND, entity = Run.class)
 public class FlowerClientBuildRunSpec extends FlowerClientRunSpec {
 
     public static final String KIND = FlowerClientBuildTaskSpec.KIND + ":run";

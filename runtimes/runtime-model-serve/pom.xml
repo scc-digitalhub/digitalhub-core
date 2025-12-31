@@ -35,7 +35,11 @@
             <artifactId>dh-authorization</artifactId>
             <version>${revision}</version>
         </dependency>
-
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-entity-model</artifactId>
+            <version>${revision}</version>
+        </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>

@@ -23,13 +23,13 @@
 
 package it.smartcommunitylabdhub.dataitems.builders;
 
-import it.smartcommunitylabdhub.commons.models.dataitem.DataItem;
 import it.smartcommunitylabdhub.commons.models.metadata.EmbeddableMetadata;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
-import it.smartcommunitylabdhub.dataitems.persistence.DataItemEntity;
 import it.smartcommunitylabdhub.core.metadata.AuditMetadataBuilder;
 import it.smartcommunitylabdhub.core.metadata.BaseMetadataBuilder;
 import it.smartcommunitylabdhub.core.metadata.VersioningMetadataBuilder;
+import it.smartcommunitylabdhub.dataitems.DataItem;
+import it.smartcommunitylabdhub.dataitems.persistence.DataItemEntity;
 import jakarta.persistence.AttributeConverter;
 import java.io.Serializable;
 import java.util.HashMap;

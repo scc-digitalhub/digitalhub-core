@@ -28,7 +28,6 @@ import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
@@ -262,8 +261,6 @@ public class WorkflowManagerImpl implements WorkflowManager {
 
         try {
             return entityService.get(id);
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.ARTIFACT.toString());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -302,8 +299,6 @@ public class WorkflowManagerImpl implements WorkflowManager {
         log.debug("update workflow with id {}", String.valueOf(id));
         try {
             return entityService.update(id, dto);
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.WORKFLOW.toString());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -319,8 +314,6 @@ public class WorkflowManagerImpl implements WorkflowManager {
             //force update
             //no validation
             return entityRepository.update(id, dto);
-        } catch (NoSuchEntityException e) {
-            throw new NoSuchEntityException(EntityName.WORKFLOW.toString());
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

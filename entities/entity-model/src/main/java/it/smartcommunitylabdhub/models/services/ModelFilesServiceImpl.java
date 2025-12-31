@@ -23,8 +23,8 @@
 
 package it.smartcommunitylabdhub.models.services;
 
-import it.smartcommunitylabdhub.commons.models.model.Model;
 import it.smartcommunitylabdhub.files.base.BaseFilesService;
+import it.smartcommunitylabdhub.models.Model;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

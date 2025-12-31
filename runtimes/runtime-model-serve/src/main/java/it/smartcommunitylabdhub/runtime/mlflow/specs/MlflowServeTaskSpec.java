@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.runtime.mlflow.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.entities.EntityName;
+import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.runtime.mlflow.MlflowServeRuntime;
 import it.smartcommunitylabdhub.runtime.modelserve.specs.ModelServeServeTaskSpec;
 import java.io.Serializable;
@@ -36,7 +36,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = MlflowServeRuntime.RUNTIME, kind = MlflowServeTaskSpec.KIND, entity = EntityName.TASK)
+@SpecType(runtime = MlflowServeRuntime.RUNTIME, kind = MlflowServeTaskSpec.KIND, entity = Task.class)
 public class MlflowServeTaskSpec extends ModelServeServeTaskSpec {
 
     public static final String KIND = MlflowServeRuntime.RUNTIME + "+serve";
