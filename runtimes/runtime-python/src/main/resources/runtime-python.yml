@@ -5,6 +5,7 @@ runtime:
       PYTHON3_10: ${RUNTIME_PYTHON_IMAGE_3_10:ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.10-latest}
       PYTHON3_11: ${RUNTIME_PYTHON_IMAGE_3_11:ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.11-latest}
       PYTHON3_12: ${RUNTIME_PYTHON_IMAGE_3_12:ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.12-latest}
+      PYTHON3_13: ${RUNTIME_PYTHON_IMAGE_3_12:ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.13-latest}
     user-id: ${RUNTIME_PYTHON_USER_ID:${kubernetes.security.user}}
     group-id: ${RUNTIME_PYTHON_GROUP_ID:${kubernetes.security.group}}
     command: /usr/local/bin/processor

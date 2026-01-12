@@ -27,7 +27,8 @@ public enum PythonVersion {
     PYTHON3_9("3.9"),
     PYTHON3_10("3.10"),
     PYTHON3_11("3.11"),
-    PYTHON3_12("3.12");
+    PYTHON3_12("3.12"),
+    PYTHON3_13("3.13");
 
     private final String version;
 
