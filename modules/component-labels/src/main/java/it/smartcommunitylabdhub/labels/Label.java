@@ -21,17 +21,26 @@
  *
  */
 
-package it.smartcommunitylabdhub.commons.annotations.common;
+package it.smartcommunitylabdhub.labels;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import org.springframework.stereotype.Indexed;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-@Indexed
-public @interface Entity {
-    String entity();
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
+@Setter
+@Builder
+@JsonPropertyOrder(alphabetic = true)
+public class Label {
+
+    private String id;
+
+    private String project;
+
+    private String label;
 }
