@@ -30,14 +30,14 @@ import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
-import it.smartcommunitylabdhub.commons.models.base.Executable;
+import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.commons.services.SecretService;
-import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.models.ModelManager;
 import it.smartcommunitylabdhub.runtime.huggingface.specs.HuggingfaceServeFunctionSpec;
@@ -58,7 +58,12 @@ import org.springframework.util.Assert;
 @Slf4j
 @RuntimeComponent(runtime = HuggingfaceServeRuntime.RUNTIME)
 public class HuggingfaceServeRuntime
-    extends K8sBaseRuntime<HuggingfaceServeFunctionSpec, HuggingfaceServeRunSpec, ModelServeRunStatus, K8sRunnable>
+    extends K8sFunctionBaseRuntime<
+        HuggingfaceServeFunctionSpec,
+        HuggingfaceServeRunSpec,
+        ModelServeRunStatus,
+        K8sRunnable
+    >
     implements InitializingBean {
 
     public static final String RUNTIME = "huggingfaceserve";
@@ -97,7 +102,7 @@ public class HuggingfaceServeRuntime
     }
 
     @Override
-    public HuggingfaceServeRunSpec build(@NotNull Executable function, @NotNull Task task, @NotNull Run run) {
+    public HuggingfaceServeRunSpec build(@NotNull Function function, @NotNull Task task, @NotNull Run run) {
         //check run kind
         if (!HuggingfaceServeRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(

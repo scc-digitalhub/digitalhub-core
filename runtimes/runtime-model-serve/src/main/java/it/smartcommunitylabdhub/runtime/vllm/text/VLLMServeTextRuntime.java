@@ -29,7 +29,7 @@ import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
-import it.smartcommunitylabdhub.commons.models.base.Executable;
+import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
@@ -49,22 +49,21 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RuntimeComponent(runtime = VLLMServeTextRuntime.RUNTIME)
-public class VLLMServeTextRuntime
-    extends VLLMServeRuntime<VLLMServeTextFunctionSpec, VLLMServeTextRunSpec> {
+public class VLLMServeTextRuntime extends VLLMServeRuntime<VLLMServeTextFunctionSpec, VLLMServeTextRunSpec> {
 
     public static final String RUNTIME = "vllmserve-text";
-    
+
     private static final Map<String, String> features = new LinkedHashMap<>();
     private static final Map<String, String> openAIFeatures = new LinkedHashMap<>();
 
     static {
         openAIFeatures.put("Chat Completions API", "/v1/chat/completions");
         openAIFeatures.put("Completions API", "/v1/completions");
-        
+
         features.put("Custom Tokenizer API", "/tokenize");
         features.put("Custom Detokenizer API", "/detokenize");
     }
-    
+
     public VLLMServeTextRuntime() {}
 
     @Override
@@ -78,7 +77,7 @@ public class VLLMServeTextRuntime
     }
 
     @Override
-    public VLLMServeTextRunSpec build(@NotNull Executable function, @NotNull Task task, @NotNull Run run) {
+    public VLLMServeTextRunSpec build(@NotNull Function function, @NotNull Task task, @NotNull Run run) {
         //check run kind
         if (!VLLMServeTextRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(

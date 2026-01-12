@@ -30,7 +30,7 @@ import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeCompon
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.models.base.Executable;
+import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
@@ -71,7 +71,7 @@ public class KubeAITextRuntime extends KubeAIRuntime<KubeAITextFunctionSpec, Kub
     }
 
     @Override
-    public KubeAITextRunSpec build(@NotNull Executable function, @NotNull Task task, @NotNull Run run) {
+    public KubeAITextRunSpec build(@NotNull Function function, @NotNull Task task, @NotNull Run run) {
         //check run kind
         if (!KubeAITextRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(

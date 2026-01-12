@@ -28,7 +28,7 @@ import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
-import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sSecretHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
@@ -49,7 +49,7 @@ import org.springframework.beans.factory.annotation.Value;
 
 @Slf4j
 public abstract class KubeAIRuntime<F extends KubeAIServeFunctionSpec, R extends KubeAIServeRunSpec>
-    extends K8sBaseRuntime<F, R, KubeAIServeRunStatus, K8sCRRunnable>
+    extends K8sFunctionBaseRuntime<F, R, KubeAIServeRunStatus, K8sCRRunnable>
     implements InitializingBean {
 
     @Value("${runtime.kubeai.endpoint}")

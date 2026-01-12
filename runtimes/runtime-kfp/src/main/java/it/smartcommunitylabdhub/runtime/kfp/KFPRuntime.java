@@ -36,7 +36,6 @@ import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.jackson.YamlMapperFactory;
-import it.smartcommunitylabdhub.commons.models.base.Executable;
 import it.smartcommunitylabdhub.commons.models.objects.SourceCode;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
@@ -46,8 +45,8 @@ import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.commons.services.WorkflowManager;
 import it.smartcommunitylabdhub.framework.argo.objects.K8sWorkflowObject;
 import it.smartcommunitylabdhub.framework.argo.runnables.K8sArgoWorkflowRunnable;
-import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sWorkflowBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.jackson.KubernetesMapper;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runtime.kfp.dtos.NodeStatusDTO;
@@ -76,7 +75,7 @@ import org.springframework.beans.factory.annotation.Value;
 
 @RuntimeComponent(runtime = KFPRuntime.RUNTIME)
 @Slf4j
-public class KFPRuntime extends K8sBaseRuntime<KFPWorkflowSpec, KFPRunSpec, KFPRunStatus, K8sRunnable> {
+public class KFPRuntime extends K8sWorkflowBaseRuntime<KFPWorkflowSpec, KFPRunSpec, KFPRunStatus, K8sRunnable> {
 
     public static final Integer DEFAULT_DURATION = 3600 * 8; // 8 hour
     public static final Integer MIN_DURATION = 300; // 5 minutes
@@ -120,7 +119,7 @@ public class KFPRuntime extends K8sBaseRuntime<KFPWorkflowSpec, KFPRunSpec, KFPR
     }
 
     @Override
-    public KFPRunSpec build(@NotNull Executable workflow, @NotNull Task task, @NotNull Run run) {
+    public KFPRunSpec build(@NotNull Workflow workflow, @NotNull Task task, @NotNull Run run) {
         //check run kind
         if (!isSupported(run)) {
             throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));

@@ -31,7 +31,6 @@ import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeCompon
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.models.base.Executable;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
@@ -39,7 +38,7 @@ import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.commons.services.SecretService;
-import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
@@ -72,7 +71,8 @@ import org.springframework.beans.factory.annotation.Value;
 
 @Slf4j
 @RuntimeComponent(runtime = PythonRuntime.RUNTIME)
-public class PythonRuntime extends K8sBaseRuntime<PythonFunctionSpec, PythonRunSpec, PythonRunStatus, K8sRunnable> {
+public class PythonRuntime
+    extends K8sFunctionBaseRuntime<PythonFunctionSpec, PythonRunSpec, PythonRunStatus, K8sRunnable> {
 
     public static final String RUNTIME = "python";
     public static final String[] KINDS = { PythonJobRunSpec.KIND, PythonServeRunSpec.KIND, PythonBuildRunSpec.KIND };
@@ -105,7 +105,7 @@ public class PythonRuntime extends K8sBaseRuntime<PythonFunctionSpec, PythonRunS
     public PythonRuntime() {}
 
     @Override
-    public PythonRunSpec build(@NotNull Executable function, @NotNull Task task, @NotNull Run run) {
+    public PythonRunSpec build(@NotNull Function function, @NotNull Task task, @NotNull Run run) {
         //check run kind
         if (!isSupported(run)) {
             throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));

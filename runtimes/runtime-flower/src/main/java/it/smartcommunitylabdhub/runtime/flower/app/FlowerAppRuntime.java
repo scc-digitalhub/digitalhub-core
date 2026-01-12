@@ -30,12 +30,12 @@ import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
-import it.smartcommunitylabdhub.commons.models.base.Executable;
+import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
-import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runtime.flower.app.specs.FlowerAppFunctionSpec;
 import it.smartcommunitylabdhub.runtime.flower.app.specs.FlowerAppRunSpec;
@@ -54,7 +54,7 @@ import org.springframework.beans.factory.annotation.Value;
 @Slf4j
 @RuntimeComponent(runtime = FlowerAppRuntime.RUNTIME)
 public class FlowerAppRuntime
-    extends K8sBaseRuntime<FlowerAppFunctionSpec, FlowerAppRunSpec, FlowerRunStatus, K8sRunnable> {
+    extends K8sFunctionBaseRuntime<FlowerAppFunctionSpec, FlowerAppRunSpec, FlowerRunStatus, K8sRunnable> {
 
     public static final String RUNTIME = "flower-app";
 
@@ -80,7 +80,7 @@ public class FlowerAppRuntime
     public FlowerAppRuntime() {}
 
     @Override
-    public FlowerAppRunSpec build(@NotNull Executable function, @NotNull Task task, @NotNull Run run) {
+    public FlowerAppRunSpec build(@NotNull Function function, @NotNull Task task, @NotNull Run run) {
         //check run kind
         if (!FlowerAppRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(

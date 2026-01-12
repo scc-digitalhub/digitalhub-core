@@ -24,20 +24,13 @@
 package it.smartcommunitylabdhub.runtimes.base;
 
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
-import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.infrastructure.Runtime;
-import it.smartcommunitylabdhub.commons.models.base.Executable;
-import it.smartcommunitylabdhub.commons.models.base.ExecutableBaseSpec;
-import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
-import it.smartcommunitylabdhub.commons.models.task.Task;
-import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
-import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.commons.services.RunnableStore;
 import it.smartcommunitylabdhub.runtimes.lifecycle.RunState;
 import jakarta.validation.constraints.NotNull;
@@ -52,31 +45,10 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.StringUtils;
 
 @Slf4j
-public abstract class AbstractBaseRuntime<
-    F extends ExecutableBaseSpec, S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable
->
+public abstract class AbstractBaseRuntime<S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable>
     implements Runtime<S, Z, R> {
 
     protected Collection<RunnableStore<R>> stores = Collections.emptyList();
-
-    protected EntityRepository<Function> functionRepository;
-    protected EntityRepository<Workflow> workflowRepository;
-    protected EntityRepository<Task> taskRepository;
-
-    @Autowired
-    public void setFunctionRepository(EntityRepository<Function> functionRepository) {
-        this.functionRepository = functionRepository;
-    }
-
-    @Autowired
-    public void setWorkflowRepository(EntityRepository<Workflow> workflowRepository) {
-        this.workflowRepository = workflowRepository;
-    }
-
-    @Autowired
-    public void setTaskRepository(EntityRepository<Task> taskRepository) {
-        this.taskRepository = taskRepository;
-    }
 
     @Autowired(required = false)
     public void setStores(Collection<RunnableStore<? extends RunRunnable>> stores) {
@@ -107,32 +79,6 @@ public abstract class AbstractBaseRuntime<
     }
 
     public abstract boolean isSupported(@NotNull Run run);
-
-    public abstract S build(@NotNull Executable execSpec, @NotNull Task taskSpec, @NotNull Run runSpec);
-
-    @Override
-    public S build(@NotNull Run run) {
-        //check run kind
-        if (!isSupported(run)) {
-            throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
-        }
-
-        try {
-            RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
-
-            //retrieve executable
-            Task task = taskRepository.get(specAccessor.getTaskId());
-
-            Executable function = specAccessor.getWorkflowId() != null
-                ? workflowRepository.get(specAccessor.getWorkflowId())
-                : functionRepository.get(specAccessor.getFunctionId());
-
-            //build
-            return build(function, task, run);
-        } catch (NoSuchEntityException | StoreException e) {
-            throw new CoreRuntimeException("runtime error building run spec", e);
-        }
-    }
 
     @Override
     public R stop(@NotNull Run run) {

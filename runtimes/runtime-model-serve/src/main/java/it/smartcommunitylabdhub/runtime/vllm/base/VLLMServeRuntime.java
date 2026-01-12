@@ -29,7 +29,7 @@ import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.commons.services.SecretService;
-import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.models.ModelManager;
@@ -54,7 +54,7 @@ import org.springframework.util.Assert;
 
 @Slf4j
 public abstract class VLLMServeRuntime<F extends VLLMServeFunctionSpec, R extends VLLMServeRunSpec>
-    extends K8sBaseRuntime<F, R, VLLMServeRunStatus, K8sRunnable>
+    extends K8sFunctionBaseRuntime<F, R, VLLMServeRunStatus, K8sRunnable>
     implements InitializingBean {
 
     public static final String IMAGE = "vllm/vllm-openai";

@@ -26,7 +26,10 @@ package it.smartcommunitylabdhub.commons.models.function;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import it.smartcommunitylabdhub.commons.Keys;
-import it.smartcommunitylabdhub.commons.models.base.Executable;
+import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
+import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
+import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
+import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -48,7 +51,7 @@ import org.springframework.lang.Nullable;
 @Builder
 @ToString
 @JsonPropertyOrder(alphabetic = true)
-public class Function implements Executable {
+public class Function implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO {
 
     @Nullable
     @Pattern(regexp = Keys.SLUG_PATTERN)

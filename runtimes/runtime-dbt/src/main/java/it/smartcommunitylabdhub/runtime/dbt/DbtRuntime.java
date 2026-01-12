@@ -31,13 +31,13 @@ import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeCompon
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
-import it.smartcommunitylabdhub.commons.models.base.Executable;
+import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
-import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
 import it.smartcommunitylabdhub.runtime.dbt.runners.DbtTransformRunner;
 import it.smartcommunitylabdhub.runtime.dbt.specs.DbtFunctionSpec;
@@ -55,7 +55,7 @@ import org.springframework.beans.factory.annotation.Value;
 
 @RuntimeComponent(runtime = DbtRuntime.RUNTIME)
 @Slf4j
-public class DbtRuntime extends K8sBaseRuntime<DbtFunctionSpec, DbtRunSpec, DbtRunStatus, K8sJobRunnable> {
+public class DbtRuntime extends K8sFunctionBaseRuntime<DbtFunctionSpec, DbtRunSpec, DbtRunStatus, K8sJobRunnable> {
 
     public static final String RUNTIME = "dbt";
 
@@ -74,7 +74,7 @@ public class DbtRuntime extends K8sBaseRuntime<DbtFunctionSpec, DbtRunSpec, DbtR
     public DbtRuntime() {}
 
     @Override
-    public DbtRunSpec build(@NotNull Executable function, @NotNull Task task, @NotNull Run run) {
+    public DbtRunSpec build(@NotNull Function function, @NotNull Task task, @NotNull Run run) {
         //check run kind
         if (!DbtRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(

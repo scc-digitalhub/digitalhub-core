@@ -31,14 +31,13 @@ import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeCompon
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.models.base.Executable;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.commons.services.SecretService;
-import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
@@ -65,7 +64,7 @@ import org.springframework.core.io.Resource;
 @Slf4j
 @RuntimeComponent(runtime = FlowerServerRuntime.RUNTIME)
 public class FlowerServerRuntime
-    extends K8sBaseRuntime<FlowerServerFunctionSpec, FlowerServerRunSpec, FlowerRunStatus, K8sRunnable> {
+    extends K8sFunctionBaseRuntime<FlowerServerFunctionSpec, FlowerServerRunSpec, FlowerRunStatus, K8sRunnable> {
 
     public static final String RUNTIME = "flower-server";
     public static final String[] KINDS = { FlowerServerBuildRunSpec.KIND, FlowerServerDeployRunSpec.KIND };
@@ -110,7 +109,7 @@ public class FlowerServerRuntime
     public FlowerServerRuntime() {}
 
     @Override
-    public FlowerServerRunSpec build(@NotNull Executable function, @NotNull Task task, @NotNull Run run) {
+    public FlowerServerRunSpec build(@NotNull Function function, @NotNull Task task, @NotNull Run run) {
         //check run kind
         if (!isSupported(run)) {
             throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));

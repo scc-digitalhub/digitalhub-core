@@ -31,14 +31,14 @@ import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeCompon
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.models.base.Executable;
+import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.commons.services.SecretService;
-import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.models.ModelManager;
@@ -65,7 +65,7 @@ import org.springframework.util.StringUtils;
 @Slf4j
 @RuntimeComponent(runtime = SklearnServeRuntime.RUNTIME)
 public class SklearnServeRuntime
-    extends K8sBaseRuntime<SklearnServeFunctionSpec, SklearnServeRunSpec, ModelServeRunStatus, K8sRunnable>
+    extends K8sFunctionBaseRuntime<SklearnServeFunctionSpec, SklearnServeRunSpec, ModelServeRunStatus, K8sRunnable>
     implements InitializingBean {
 
     public static final String RUNTIME = "sklearnserve";
@@ -104,7 +104,7 @@ public class SklearnServeRuntime
     }
 
     @Override
-    public SklearnServeRunSpec build(@NotNull Executable function, @NotNull Task task, @NotNull Run run) {
+    public SklearnServeRunSpec build(@NotNull Function function, @NotNull Task task, @NotNull Run run) {
         //check run kind
         if (!SklearnServeRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
@@ -233,7 +233,6 @@ public class SklearnServeRuntime
             //TODO
             // inferenceService.setStatus(service.getStatus());
             status.setInferenceV2(inferenceService);
-
         }
 
         return status;

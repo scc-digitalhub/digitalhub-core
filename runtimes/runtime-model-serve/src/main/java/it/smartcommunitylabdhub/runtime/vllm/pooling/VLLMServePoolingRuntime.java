@@ -29,7 +29,7 @@ import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
-import it.smartcommunitylabdhub.commons.models.base.Executable;
+import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
@@ -82,7 +82,7 @@ public class VLLMServePoolingRuntime extends VLLMServeRuntime<VLLMServePoolingFu
     }
 
     @Override
-    public VLLMServePoolingRunSpec build(@NotNull Executable function, @NotNull Task task, @NotNull Run run) {
+    public VLLMServePoolingRunSpec build(@NotNull Function function, @NotNull Task task, @NotNull Run run) {
         //check run kind
         if (!VLLMServePoolingRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(

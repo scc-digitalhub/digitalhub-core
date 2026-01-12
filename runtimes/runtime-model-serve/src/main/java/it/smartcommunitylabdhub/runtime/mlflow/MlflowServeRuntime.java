@@ -31,14 +31,13 @@ import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeCompon
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.models.base.Executable;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.FunctionManager;
 import it.smartcommunitylabdhub.commons.services.SecretService;
-import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
@@ -71,7 +70,7 @@ import org.springframework.util.StringUtils;
 @Slf4j
 @RuntimeComponent(runtime = MlflowServeRuntime.RUNTIME)
 public class MlflowServeRuntime
-    extends K8sBaseRuntime<MlflowServeFunctionSpec, MlflowRunSpec, ModelServeRunStatus, K8sRunnable>
+    extends K8sFunctionBaseRuntime<MlflowServeFunctionSpec, MlflowRunSpec, ModelServeRunStatus, K8sRunnable>
     implements InitializingBean {
 
     public static final String RUNTIME = "mlflowserve";
@@ -115,7 +114,7 @@ public class MlflowServeRuntime
     }
 
     @Override
-    public MlflowRunSpec build(@NotNull Executable function, @NotNull Task task, @NotNull Run run) {
+    public MlflowRunSpec build(@NotNull Function function, @NotNull Task task, @NotNull Run run) {
         //check run kind
         if (!isSupported(run)) {
             throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
