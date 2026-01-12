@@ -16,7 +16,12 @@
 
 package it.smartcommunitylabdhub.runtime.mlflow.specs;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
+import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;
@@ -28,8 +33,17 @@ import lombok.Setter;
 @NoArgsConstructor
 public class MlflowRunSpec extends RunBaseSpec {
 
+    @JsonProperty("path")
+    @NotNull
+    @Pattern(regexp = "^(store://([^/]+)/model/mlflow/.*)" + "|" + Keys.FOLDER_PATTERN + "|" + Keys.ZIP_PATTERN)
+    @Schema(title = "fields.path.title", description = "fields.mlflow.path.description")
+    private String path;
+
     @Override
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
+
+        MlflowRunSpec spec = mapper.convertValue(data, MlflowRunSpec.class);
+        this.path = spec.getPath();
     }
 }
