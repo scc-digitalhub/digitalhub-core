@@ -104,6 +104,8 @@ public abstract class VLLMServeRuntime<F extends VLLMServeFunctionSpec, R extend
     public VLLMServeRunStatus onRunning(@NotNull Run run, RunRunnable runnable) {
         VLLMServeRunStatus status = VLLMServeRunStatus.with(run.getStatus());
         VLLMServeTextFunctionSpec functionSpec = VLLMServeTextFunctionSpec.with(run.getSpec());
+        VLLMServeRunSpec runSpec = VLLMServeRunSpec.with(run.getSpec());
+
         if (status == null || functionSpec == null) {
             return null;
         }
@@ -119,7 +121,7 @@ public abstract class VLLMServeRuntime<F extends VLLMServeFunctionSpec, R extend
             OpenAIService openai = new OpenAIService();
             openai.setBaseUrl(baseUrl + "/v1");
             openai.setModel(functionSpec.getModelName());
-            openai.setModelUrl(functionSpec.getUrl());
+            openai.setModelUrl(runSpec.getUrl());
 
             if (functionSpec.getAdapters() != null) {
                 openai.setAdapters(

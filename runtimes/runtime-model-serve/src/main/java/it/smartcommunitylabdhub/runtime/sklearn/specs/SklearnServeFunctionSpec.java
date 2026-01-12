@@ -29,7 +29,6 @@ import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.function.FunctionBaseSpec;
 import it.smartcommunitylabdhub.runtime.sklearn.SklearnServeRuntime;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.Map;
@@ -45,11 +44,7 @@ import lombok.Setter;
 @SpecType(runtime = SklearnServeRuntime.RUNTIME, kind = SklearnServeRuntime.RUNTIME, entity = Function.class)
 public class SklearnServeFunctionSpec extends FunctionBaseSpec {
 
-    @JsonProperty("path")
-    @NotNull
-    @Pattern(regexp = "^(store://([^/]+)/model/sklearn/.*)|.*\\.pkl$|.*\\.joblib$")
-    @Schema(title = "fields.path.title", description = "fields.sklearn.path.description")
-    private String path;
+
 
     @JsonProperty("model_name")
     @Schema(
@@ -70,7 +65,6 @@ public class SklearnServeFunctionSpec extends FunctionBaseSpec {
 
         SklearnServeFunctionSpec spec = mapper.convertValue(data, SklearnServeFunctionSpec.class);
         this.modelName = spec.getModelName();
-        this.path = spec.getPath();
         this.image = spec.getImage();
     }
 

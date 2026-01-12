@@ -23,12 +23,16 @@
 
 package it.smartcommunitylabdhub.runtime.sklearn.specs;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
+import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.runtime.sklearn.SklearnServeRuntime;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;
@@ -50,6 +54,12 @@ public class SklearnServeRunSpec extends RunBaseSpec {
     @JsonUnwrapped
     private SklearnServeTaskSpec taskServeSpec;
 
+    @JsonProperty("path")
+    @NotNull
+    @Pattern(regexp = "^(store://([^/]+)/model/sklearn/.*)|.*\\.pkl$|.*\\.joblib$")
+    @Schema(title = "fields.path.title", description = "fields.sklearn.path.description")
+    private String path;
+
     @Override
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
@@ -58,6 +68,7 @@ public class SklearnServeRunSpec extends RunBaseSpec {
 
         this.functionSpec = spec.getFunctionSpec();
         this.taskServeSpec = spec.getTaskServeSpec();
+        this.path = spec.getPath();
     }
 
     public void setFunctionSpec(SklearnServeFunctionSpec functionSpec) {

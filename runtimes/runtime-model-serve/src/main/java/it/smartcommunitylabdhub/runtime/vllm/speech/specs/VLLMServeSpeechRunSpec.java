@@ -29,7 +29,6 @@ import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeRunSpec;
 import it.smartcommunitylabdhub.runtime.vllm.speech.VLLMServeSpeechRuntime;
-
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;

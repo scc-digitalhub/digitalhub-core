@@ -116,8 +116,8 @@ public class MlflowServeRunner {
 
         Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
 
-        String path = functionSpec.getPath();
-        if (functionSpec.getPath().startsWith(Keys.STORE_PREFIX)) {
+        String path = runSpec.getPath();
+        if (path.startsWith(Keys.STORE_PREFIX)) {
             KeyAccessor keyAccessor = KeyAccessor.with(path);
             if (!EntityUtils.getEntityName(Model.class).equalsIgnoreCase(keyAccessor.getType())) {
                 throw new CoreRuntimeException("invalid entity kind reference, expected model");

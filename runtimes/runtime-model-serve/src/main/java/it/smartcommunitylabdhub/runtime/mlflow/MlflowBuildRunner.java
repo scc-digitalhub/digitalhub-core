@@ -105,8 +105,8 @@ public class MlflowBuildRunner {
         // Parse run spec
         RunSpecAccessor runSpecAccessor = RunSpecAccessor.with(run.getSpec());
 
-        String path = functionSpec.getPath();
-        if (functionSpec.getPath().startsWith(Keys.STORE_PREFIX)) {
+        String path = runSpec.getPath();
+        if (path.startsWith(Keys.STORE_PREFIX)) {
             KeyAccessor keyAccessor = KeyAccessor.with(path);
             if (!EntityUtils.getEntityName(Model.class).equalsIgnoreCase(keyAccessor.getType())) {
                 throw new CoreRuntimeException("invalid entity kind reference, expected model");

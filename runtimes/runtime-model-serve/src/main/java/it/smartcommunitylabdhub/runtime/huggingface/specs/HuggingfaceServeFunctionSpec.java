@@ -25,12 +25,10 @@ package it.smartcommunitylabdhub.runtime.huggingface.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
-import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.function.FunctionBaseSpec;
 import it.smartcommunitylabdhub.runtime.huggingface.HuggingfaceServeRuntime;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.Map;
@@ -45,22 +43,6 @@ import lombok.Setter;
 @AllArgsConstructor
 @SpecType(runtime = HuggingfaceServeRuntime.RUNTIME, kind = HuggingfaceServeRuntime.RUNTIME, entity = Function.class)
 public class HuggingfaceServeFunctionSpec extends FunctionBaseSpec {
-
-    @JsonProperty("path")
-    @NotNull
-    @Pattern(
-        regexp = "^(store://([^/]+)/model/huggingface/.*)" +
-        "|" +
-        Keys.FOLDER_PATTERN +
-        "|" +
-        Keys.ZIP_PATTERN +
-        "|" +
-        "^huggingface?://.*$" +
-        "|" +
-        "^hf?://.*$"
-    )
-    @Schema(title = "fields.path.title", description = "fields.huggingface.path.description")
-    private String path;
 
     @JsonProperty("model_name")
     @Schema(
@@ -93,7 +75,6 @@ public class HuggingfaceServeFunctionSpec extends FunctionBaseSpec {
 
         HuggingfaceServeFunctionSpec spec = mapper.convertValue(data, HuggingfaceServeFunctionSpec.class);
         this.modelName = spec.getModelName();
-        this.path = spec.getPath();
         this.image = spec.getImage();
     }
 

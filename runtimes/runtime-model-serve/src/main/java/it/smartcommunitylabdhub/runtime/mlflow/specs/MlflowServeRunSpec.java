@@ -23,11 +23,16 @@
 
 package it.smartcommunitylabdhub.runtime.mlflow.specs;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
+import io.swagger.v3.oas.annotations.media.Schema;
+import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.runtime.mlflow.MlflowServeRuntime;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;
@@ -49,12 +54,19 @@ public class MlflowServeRunSpec extends MlflowRunSpec {
     @JsonUnwrapped
     private MlflowServeTaskSpec taskServeSpec;
 
+    @JsonProperty("path")
+    @NotNull
+    @Pattern(regexp = "^(store://([^/]+)/model/mlflow/.*)" + "|" + Keys.FOLDER_PATTERN + "|" + Keys.ZIP_PATTERN)
+    @Schema(title = "fields.path.title", description = "fields.mlflow.path.description")
+    private String path;
+
     @Override
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
         MlflowServeRunSpec spec = mapper.convertValue(data, MlflowServeRunSpec.class);
         this.functionSpec = spec.getFunctionSpec();
         this.taskServeSpec = spec.getTaskServeSpec();
+        this.path = spec.getPath();
     }
 
     public void setFunctionSpec(MlflowServeFunctionSpec functionSpec) {

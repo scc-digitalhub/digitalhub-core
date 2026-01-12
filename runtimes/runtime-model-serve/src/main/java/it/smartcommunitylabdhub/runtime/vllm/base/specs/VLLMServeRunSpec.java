@@ -25,8 +25,10 @@ package it.smartcommunitylabdhub.runtime.vllm.base.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
+import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
-
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +40,21 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class VLLMServeRunSpec extends RunBaseSpec {
+
+    @NotNull
+    @Pattern(
+        regexp = "^(store://([^/]+)/model/huggingface/.*)" +
+        "|" +
+        Keys.FOLDER_PATTERN +
+        "|" +
+        Keys.ZIP_PATTERN +
+        "|" +
+        "^huggingface?://.*$" +
+        "|" +
+        "^hf?://.*$"
+    )
+    @Schema(title = "fields.vllm.url.title", description = "fields.vllm.url.description")
+    private String url;
 
     @Schema(title = "fields.vllm.args.title", description = "fields.vllm.args.description")
     private List<String> args;
@@ -58,6 +75,7 @@ public class VLLMServeRunSpec extends RunBaseSpec {
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
         VLLMServeRunSpec spec = mapper.convertValue(data, VLLMServeRunSpec.class);
+        this.url = spec.getUrl();
         this.args = spec.getArgs();
         this.enableTelemetry = spec.getEnableTelemetry();
         this.useCpuImage = spec.getUseCpuImage();

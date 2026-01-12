@@ -45,15 +45,12 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.springframework.beans.factory.annotation.Value;
-
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 
 @Slf4j
 @RuntimeComponent(runtime = VLLMServeSpeechRuntime.RUNTIME)
-public class VLLMServeSpeechRuntime
-    extends VLLMServeRuntime<VLLMServeSpeechFunctionSpec, VLLMServeSpeechRunSpec> {
+public class VLLMServeSpeechRuntime extends VLLMServeRuntime<VLLMServeSpeechFunctionSpec, VLLMServeSpeechRunSpec> {
 
     public static final String RUNTIME = "vllmserve-speech";
 
@@ -63,9 +60,9 @@ public class VLLMServeSpeechRuntime
     @Value("${runtime.vllmserve.cpu-image-audio}")
     protected String audioCpuImage;
 
-
     private static final Map<String, String> features = new LinkedHashMap<>();
     private static final Map<String, String> openAIFeatures = new LinkedHashMap<>();
+
     static {
         openAIFeatures.put("Transcriptions API", "/v1/audio/transcriptions");
         openAIFeatures.put("Translations API", "/v1/audio/translations");

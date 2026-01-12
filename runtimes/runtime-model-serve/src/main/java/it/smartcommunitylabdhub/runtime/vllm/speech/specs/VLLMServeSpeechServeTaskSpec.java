@@ -27,7 +27,6 @@ import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeTaskSpec;
 import it.smartcommunitylabdhub.runtime.vllm.speech.VLLMServeSpeechRuntime;
-
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;

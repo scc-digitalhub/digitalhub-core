@@ -49,13 +49,13 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RuntimeComponent(runtime = VLLMServePoolingRuntime.RUNTIME)
-public class VLLMServePoolingRuntime
-    extends VLLMServeRuntime<VLLMServePoolingFunctionSpec, VLLMServePoolingRunSpec> {
+public class VLLMServePoolingRuntime extends VLLMServeRuntime<VLLMServePoolingFunctionSpec, VLLMServePoolingRunSpec> {
 
     public static final String RUNTIME = "vllmserve-pooling";
 
     private static final Map<String, String> openAIFeatures = new LinkedHashMap<>();
     private static final Map<String, String> features = new LinkedHashMap<>();
+
     static {
         openAIFeatures.put("Embeddings API", "/v1/embeddings");
 

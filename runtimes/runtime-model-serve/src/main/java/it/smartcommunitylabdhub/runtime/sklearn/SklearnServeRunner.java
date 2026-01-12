@@ -119,10 +119,9 @@ public class SklearnServeRunner {
 
         Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
 
-        String path = functionSpec.getPath();
-
+        String path = runSpec.getPath();
         // special case: path as entity key - reference to a model
-        if (functionSpec.getPath().startsWith(Keys.STORE_PREFIX)) {
+        if (path.startsWith(Keys.STORE_PREFIX)) {
             KeyAccessor keyAccessor = KeyAccessor.with(path);
             if (!EntityUtils.getEntityName(Model.class).equalsIgnoreCase(keyAccessor.getType())) {
                 throw new CoreRuntimeException("invalid entity kind reference, expected model");

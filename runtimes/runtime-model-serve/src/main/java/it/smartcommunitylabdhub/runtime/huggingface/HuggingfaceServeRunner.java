@@ -112,7 +112,7 @@ public class HuggingfaceServeRunner {
 
         //read source and build context
         List<ContextRef> contextRefs = null;
-        String path = functionSpec.getPath();
+        String path = runSpec.getPath();
         if (path.startsWith(Keys.STORE_PREFIX)) {
             KeyAccessor keyAccessor = KeyAccessor.with(path);
             if (!EntityUtils.getEntityName(Model.class).equalsIgnoreCase(keyAccessor.getType())) {

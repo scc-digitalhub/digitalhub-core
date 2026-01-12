@@ -129,7 +129,7 @@ public class VLLMServeRunner {
 
         //read source and build context
         List<ContextRef> contextRefs = null;
-        String path = functionSpec.getUrl();
+        String path = runSpec.getUrl();
         if (path.startsWith(Keys.STORE_PREFIX)) {
             path = linkToModel(run, path);
         }

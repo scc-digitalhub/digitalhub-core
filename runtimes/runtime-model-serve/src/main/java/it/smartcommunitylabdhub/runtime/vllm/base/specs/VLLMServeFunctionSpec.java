@@ -25,10 +25,8 @@ package it.smartcommunitylabdhub.runtime.vllm.base.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
-import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.models.function.FunctionBaseSpec;
 import it.smartcommunitylabdhub.runtime.vllm.base.models.VLLMAdapter;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.List;
@@ -44,20 +42,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class VLLMServeFunctionSpec extends FunctionBaseSpec {
 
-    @NotNull
-    @Pattern(
-        regexp = "^(store://([^/]+)/model/huggingface/.*)" +
-        "|" +
-        Keys.FOLDER_PATTERN +
-        "|" +
-        Keys.ZIP_PATTERN +
-        "|" +
-        "^huggingface?://.*$" +
-        "|" +
-        "^hf?://.*$"
-    )
-    @Schema(title = "fields.vllm.url.title", description = "fields.vllm.url.description")
-    private String url;
+
 
     @JsonProperty("model_name")
     @Schema(
@@ -82,7 +67,6 @@ public class VLLMServeFunctionSpec extends FunctionBaseSpec {
 
         VLLMServeFunctionSpec spec = mapper.convertValue(data, VLLMServeFunctionSpec.class);
         this.modelName = spec.getModelName();
-        this.url = spec.getUrl();
         this.image = spec.getImage();
         this.adapters = spec.getAdapters();
     }

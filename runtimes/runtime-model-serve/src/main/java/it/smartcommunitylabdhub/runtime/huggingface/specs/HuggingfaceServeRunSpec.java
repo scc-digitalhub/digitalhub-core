@@ -23,13 +23,17 @@
 
 package it.smartcommunitylabdhub.runtime.huggingface.specs;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import io.swagger.v3.oas.annotations.media.Schema;
+import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.runtime.huggingface.HuggingfaceServeRuntime;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +56,22 @@ public class HuggingfaceServeRunSpec extends RunBaseSpec {
     @JsonUnwrapped
     private HuggingfaceServeTaskSpec taskServeSpec;
 
+    @JsonProperty("path")
+    @NotNull
+    @Pattern(
+        regexp = "^(store://([^/]+)/model/huggingface/.*)" +
+        "|" +
+        Keys.FOLDER_PATTERN +
+        "|" +
+        Keys.ZIP_PATTERN +
+        "|" +
+        "^huggingface?://.*$" +
+        "|" +
+        "^hf?://.*$"
+    )
+    @Schema(title = "fields.path.title", description = "fields.huggingface.path.description")
+    private String path;
+
     @Schema(title = "fields.huggingface.args.title", description = "fields.huggingface.args.description")
     private List<String> args;
 
@@ -63,6 +83,7 @@ public class HuggingfaceServeRunSpec extends RunBaseSpec {
 
         this.functionSpec = spec.getFunctionSpec();
         this.taskServeSpec = spec.getTaskServeSpec();
+        this.path = spec.getPath();
         this.args = spec.getArgs();
     }
 
