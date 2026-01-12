@@ -50,6 +50,7 @@ import it.smartcommunitylabdhub.runtime.mlflow.specs.MlflowRunSpec;
 import it.smartcommunitylabdhub.runtime.mlflow.specs.MlflowServeFunctionSpec;
 import it.smartcommunitylabdhub.runtime.mlflow.specs.MlflowServeRunSpec;
 import it.smartcommunitylabdhub.runtime.mlflow.specs.MlflowServeTaskSpec;
+import it.smartcommunitylabdhub.runtime.modelserve.specs.InferenceV2Service;
 import it.smartcommunitylabdhub.runtime.modelserve.specs.ModelServeRunStatus;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
@@ -233,6 +234,20 @@ public class MlflowServeRuntime
 
             service.setUrls(new ArrayList<>(urls));
             status.setService(service);
+
+            //add inference specific info
+            InferenceV2Service inferenceService = new InferenceV2Service();
+            inferenceService.setBaseUrl(baseUrl);
+
+            inferenceService.setModel(modelName);
+            inferenceService.setInferenceUrl(baseUrl + "/v2/models/" + modelName + "/infer");
+            inferenceService.setModelMetadataUrl(baseUrl + "/v2/models/" + modelName);
+            inferenceService.setModelReadinessUrl(baseUrl + "/v2/models/" + modelName + "/ready");
+            inferenceService.setReadinessUrl(baseUrl + "/v2/health/ready");
+            inferenceService.setLivenessUrl(baseUrl + "/v2/health/live");
+            //TODO
+            // inferenceService.setStatus(service.getStatus());
+            status.setInferenceV2(inferenceService);
         }
 
         return status;

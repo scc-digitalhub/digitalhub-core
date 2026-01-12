@@ -24,11 +24,6 @@
 package it.smartcommunitylabdhub.runtime.modelserve.specs;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
-import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
-import java.io.Serializable;
-import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -41,25 +36,17 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ModelServeRunStatus extends RunBaseStatus {
+public class InferenceV2Service {
 
-    private K8sServiceInfo service;
+    private String baseUrl;
+    private String status;
 
-    @JsonProperty("inference_v2")
-    private InferenceV2Service inferenceV2;
+    private String model;
 
-    @Override
-    public void configure(Map<String, Serializable> data) {
-        super.configure(data);
+    private String inferenceUrl;
+    private String modelMetadataUrl;
+    private String modelReadinessUrl;
 
-        ModelServeRunStatus spec = mapper.convertValue(data, ModelServeRunStatus.class);
-        this.service = spec.getService();
-    }
-
-    public static ModelServeRunStatus with(Map<String, Serializable> data) {
-        ModelServeRunStatus spec = new ModelServeRunStatus();
-        spec.configure(data);
-
-        return spec;
-    }
+    private String readinessUrl;
+    private String livenessUrl;
 }

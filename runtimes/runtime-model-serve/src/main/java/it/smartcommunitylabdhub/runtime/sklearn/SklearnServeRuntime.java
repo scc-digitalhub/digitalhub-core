@@ -42,6 +42,7 @@ import it.smartcommunitylabdhub.framework.k8s.base.K8sBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.models.ModelManager;
+import it.smartcommunitylabdhub.runtime.modelserve.specs.InferenceV2Service;
 import it.smartcommunitylabdhub.runtime.modelserve.specs.ModelServeRunStatus;
 import it.smartcommunitylabdhub.runtime.sklearn.specs.SklearnServeFunctionSpec;
 import it.smartcommunitylabdhub.runtime.sklearn.specs.SklearnServeRunSpec;
@@ -218,6 +219,21 @@ public class SklearnServeRuntime
 
             service.setUrls(new ArrayList<>(urls));
             status.setService(service);
+
+            //add inference specific info
+            InferenceV2Service inferenceService = new InferenceV2Service();
+            inferenceService.setBaseUrl(baseUrl);
+
+            inferenceService.setModel(modelName);
+            inferenceService.setInferenceUrl(baseUrl + "/v2/models/" + modelName + "/infer");
+            inferenceService.setModelMetadataUrl(baseUrl + "/v2/models/" + modelName);
+            inferenceService.setModelReadinessUrl(baseUrl + "/v2/models/" + modelName + "/ready");
+            inferenceService.setReadinessUrl(baseUrl + "/v2/health/ready");
+            inferenceService.setLivenessUrl(baseUrl + "/v2/health/live");
+            //TODO
+            // inferenceService.setStatus(service.getStatus());
+            status.setInferenceV2(inferenceService);
+
         }
 
         return status;
