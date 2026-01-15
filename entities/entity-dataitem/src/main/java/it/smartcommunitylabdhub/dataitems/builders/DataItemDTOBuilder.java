@@ -36,7 +36,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.stereotype.Component;
 
@@ -48,9 +47,7 @@ public class DataItemDTOBuilder implements Converter<DataItemEntity, DataItem> {
     private AuditMetadataBuilder auditingMetadataBuilder;
     private VersioningMetadataBuilder versioningMetadataBuilder;
 
-    public DataItemDTOBuilder(
-        @Qualifier("cborMapConverter") AttributeConverter<Map<String, Serializable>, byte[]> cborConverter
-    ) {
+    public DataItemDTOBuilder(AttributeConverter<Map<String, Serializable>, byte[]> cborConverter) {
         this.converter = cborConverter;
     }
 

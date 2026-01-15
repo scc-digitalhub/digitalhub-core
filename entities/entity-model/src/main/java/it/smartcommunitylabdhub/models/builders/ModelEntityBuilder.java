@@ -34,7 +34,6 @@ import java.io.Serializable;
 import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.stereotype.Component;
 
@@ -43,9 +42,7 @@ public class ModelEntityBuilder implements Converter<Model, ModelEntity> {
 
     private final AttributeConverter<Map<String, Serializable>, byte[]> converter;
 
-    public ModelEntityBuilder(
-        @Qualifier("cborMapConverter") AttributeConverter<Map<String, Serializable>, byte[]> cborConverter
-    ) {
+    public ModelEntityBuilder(AttributeConverter<Map<String, Serializable>, byte[]> cborConverter) {
         this.converter = cborConverter;
     }
 
