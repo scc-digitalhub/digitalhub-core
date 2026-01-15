@@ -17,7 +17,7 @@
 
 package it.smartcommunitylabdhub.models.config;
 
-import it.smartcommunitylabdhub.core.repositories.BaseEntityRepository;
+import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.models.Model;
 import it.smartcommunitylabdhub.models.persistence.ModelEntity;
@@ -37,7 +37,7 @@ public class ModelConfig {
         Converter<Model, ModelEntity> entityBuilder,
         Converter<ModelEntity, Model> dtoBuilder
     ) {
-        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder) {};
+        return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
     }
 
     // build indexer only if a provider is available

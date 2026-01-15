@@ -18,10 +18,10 @@ package it.smartcommunitylabdhub.core.triggers.lifecycle;
 
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.trigger.Trigger;
-import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.commons.services.RunManager;
 import it.smartcommunitylabdhub.commons.services.TaskService;
 import it.smartcommunitylabdhub.commons.services.TemplateProcessor;
+import it.smartcommunitylabdhub.core.repositories.EntityRepository;
 import it.smartcommunitylabdhub.lifecycle.KindAwareLifecycleManager;
 import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
 import it.smartcommunitylabdhub.triggers.infrastructure.Actuator;

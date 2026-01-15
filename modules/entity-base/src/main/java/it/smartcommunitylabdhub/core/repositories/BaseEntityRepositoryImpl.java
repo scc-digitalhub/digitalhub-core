@@ -59,7 +59,7 @@ import org.springframework.util.Assert;
 
 @Slf4j
 @Transactional
-public abstract class BaseEntityRepository<E extends BaseEntity, D extends BaseDTO>
+public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends BaseDTO>
     implements SearchableEntityRepository<E, D> {
 
     public static final int PAGE_MAX_SIZE = 1000;
@@ -77,7 +77,7 @@ public abstract class BaseEntityRepository<E extends BaseEntity, D extends BaseD
     private int timeout = DEFAULT_TIMEOUT;
 
     @SuppressWarnings("unchecked")
-    protected BaseEntityRepository(
+    protected BaseEntityRepositoryImpl(
         JpaRepository<E, String> repository,
         Converter<D, E> entityBuilder,
         Converter<E, D> dtoBuilder

@@ -17,7 +17,7 @@
 
 package it.smartcommunitylabdhub.dataitems.config;
 
-import it.smartcommunitylabdhub.core.repositories.BaseEntityRepository;
+import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.dataitems.DataItem;
 import it.smartcommunitylabdhub.dataitems.persistence.DataItemEntity;
@@ -37,7 +37,7 @@ public class DataItemConfig {
         Converter<DataItem, DataItemEntity> entityBuilder,
         Converter<DataItemEntity, DataItem> dtoBuilder
     ) {
-        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder) {};
+        return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
     }
 
     // build indexer only if a provider is available

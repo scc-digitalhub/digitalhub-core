@@ -20,7 +20,7 @@ package it.smartcommunitylabdhub.artifacts.config;
 import it.smartcommunitylabdhub.artifacts.Artifact;
 import it.smartcommunitylabdhub.artifacts.persistence.ArtifactEntity;
 import it.smartcommunitylabdhub.artifacts.persistence.ArtifactRepository;
-import it.smartcommunitylabdhub.core.repositories.BaseEntityRepository;
+import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
 import java.util.Optional;
@@ -37,7 +37,7 @@ public class ArtifactConfig {
         Converter<Artifact, ArtifactEntity> entityBuilder,
         Converter<ArtifactEntity, Artifact> dtoBuilder
     ) {
-        return new BaseEntityRepository<>(repository, entityBuilder, dtoBuilder) {};
+        return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
     }
 
     // build indexer only if a provider is available

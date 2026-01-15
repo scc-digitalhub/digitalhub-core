@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.commons.services;
+package it.smartcommunitylabdhub.core.services;
 
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
