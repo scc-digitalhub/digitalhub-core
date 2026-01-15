@@ -10,7 +10,7 @@ import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.log.Log;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.services.LogService;
-import it.smartcommunitylabdhub.commons.services.RunnableStore;
+import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

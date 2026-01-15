@@ -25,7 +25,6 @@ package it.smartcommunitylabdhub.framework.k8s.config;
 
 import io.kubernetes.client.openapi.ApiClient;
 import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
-import it.smartcommunitylabdhub.commons.services.RunnableStore;
 import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sCRFramework;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sDeploymentFramework;
@@ -40,6 +39,9 @@ import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sDeploymentRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
+import it.smartcommunitylabdhub.runtimes.persistence.RunnableRepository;
+import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
+import it.smartcommunitylabdhub.runtimes.store.RunnableStoreImpl;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -58,28 +60,28 @@ public class K8sFrameworkConfig {
 
     @Bean
     @ConditionalOnKubernetes
-    public RunnableStore<K8sServeRunnable> k8sServeRunnableStoreService(RunnableStore.StoreSupplier storeSupplier) {
-        return storeSupplier.get(K8sServeRunnable.class);
+    public RunnableStore<K8sServeRunnable> k8sServeRunnableStoreService(RunnableRepository runnableRepository) {
+        return new RunnableStoreImpl<>(K8sServeRunnable.class, runnableRepository);
     }
 
     @Bean
     @ConditionalOnKubernetes
     public RunnableStore<K8sDeploymentRunnable> k8sDeploymentRunnableStoreService(
-        RunnableStore.StoreSupplier storeSupplier
+        RunnableRepository runnableRepository
     ) {
-        return storeSupplier.get(K8sDeploymentRunnable.class);
+        return new RunnableStoreImpl<>(K8sDeploymentRunnable.class, runnableRepository);
     }
 
     @Bean
     @ConditionalOnKubernetes
-    public RunnableStore<K8sJobRunnable> k8sjobRunnableStoreService(RunnableStore.StoreSupplier storeSupplier) {
-        return storeSupplier.get(K8sJobRunnable.class);
+    public RunnableStore<K8sJobRunnable> k8sjobRunnableStoreService(RunnableRepository runnableRepository) {
+        return new RunnableStoreImpl<>(K8sJobRunnable.class, runnableRepository);
     }
 
     @Bean
     @ConditionalOnKubernetes
-    public RunnableStore<K8sCRRunnable> k8sCRRunnableStoreService(RunnableStore.StoreSupplier storeSupplier) {
-        return storeSupplier.get(K8sCRRunnable.class);
+    public RunnableStore<K8sCRRunnable> k8sCRRunnableStoreService(RunnableRepository runnableRepository) {
+        return new RunnableStoreImpl<>(K8sCRRunnable.class, runnableRepository);
     }
 
     @Bean

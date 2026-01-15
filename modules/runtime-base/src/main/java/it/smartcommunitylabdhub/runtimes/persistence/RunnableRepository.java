@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.runs.persistence;
+package it.smartcommunitylabdhub.runtimes.persistence;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;

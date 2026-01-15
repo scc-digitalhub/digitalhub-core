@@ -28,7 +28,6 @@ import io.kubernetes.client.openapi.models.V1Deployment;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1Service;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.MonitorComponent;
-import it.smartcommunitylabdhub.commons.services.RunnableStore;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
@@ -36,6 +35,7 @@ import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sDeploymentFr
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sServeFramework;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
+import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

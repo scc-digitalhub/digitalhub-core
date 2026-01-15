@@ -9,7 +9,6 @@ package it.smartcommunitylabdhub.framework.argo.infrastructure.monitor;
 import io.argoproj.workflow.models.IoArgoprojWorkflowV1alpha1WorkflowStatus;
 import io.kubernetes.client.openapi.models.V1Pod;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.MonitorComponent;
-import it.smartcommunitylabdhub.commons.services.RunnableStore;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.framework.argo.infrastructure.k8s.K8sArgoWorkflowFramework;
 import it.smartcommunitylabdhub.framework.argo.objects.K8sWorkflowObject;
@@ -18,6 +17,7 @@ import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernete
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.monitor.K8sBaseMonitor;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
+import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

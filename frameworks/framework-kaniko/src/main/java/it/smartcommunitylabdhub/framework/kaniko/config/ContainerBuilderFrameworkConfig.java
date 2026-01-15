@@ -25,11 +25,13 @@ package it.smartcommunitylabdhub.framework.kaniko.config;
 
 import io.kubernetes.client.openapi.ApiClient;
 import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
-import it.smartcommunitylabdhub.commons.services.RunnableStore;
 import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.k8s.K8sBuildkitFramework;
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.k8s.K8sKanikoFramework;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
+import it.smartcommunitylabdhub.runtimes.persistence.RunnableRepository;
+import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
+import it.smartcommunitylabdhub.runtimes.store.RunnableStoreImpl;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -42,9 +44,9 @@ public class ContainerBuilderFrameworkConfig {
     @Bean
     @ConditionalOnKubernetes
     public RunnableStore<K8sContainerBuilderRunnable> k8sKanikoRunnableStoreService(
-        RunnableStore.StoreSupplier storeSupplier
+        RunnableRepository runnableRepository
     ) {
-        return storeSupplier.get(K8sContainerBuilderRunnable.class);
+        return new RunnableStoreImpl<>(K8sContainerBuilderRunnable.class, runnableRepository);
     }
 
     @Bean
