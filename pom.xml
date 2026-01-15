@@ -37,6 +37,7 @@
         <module>modules/component-metrics</module>
         <module>modules/component-relationships</module>
         <module>modules/component-search</module>
+        <module>modules/component-labels</module>
         <module>modules/entity-base</module>
         <module>modules/runtime-base</module>
         <module>entities/entity-artifact</module>

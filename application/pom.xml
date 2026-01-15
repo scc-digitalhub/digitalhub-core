@@ -193,6 +193,11 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-labels</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-search</artifactId>
             <version>${revision}</version>
         </dependency>
@@ -225,7 +230,7 @@
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-proxy</artifactId>
             <version>${revision}</version>
-        </dependency>        
+        </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-entity-base</artifactId>
@@ -235,24 +240,24 @@
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-runtime-base</artifactId>
             <version>${revision}</version>
-        </dependency>       
+        </dependency>
 
         <!-- ENTITIES  -->
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-entity-artifact</artifactId>
             <version>${revision}</version>
-        </dependency>     
+        </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-entity-dataitem</artifactId>
             <version>${revision}</version>
-        </dependency>   
+        </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-entity-model</artifactId>
             <version>${revision}</version>
-        </dependency>           
+        </dependency>
 
         <!-- FRAMEWORKS -->
         <dependency>

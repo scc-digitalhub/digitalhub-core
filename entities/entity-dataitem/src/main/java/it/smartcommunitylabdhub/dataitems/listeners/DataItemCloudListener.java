@@ -20,7 +20,7 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.core.dataitems.notification;
+package it.smartcommunitylabdhub.dataitems.listeners;
 
 import it.smartcommunitylabdhub.components.cloud.BaseCloudListener;
 import it.smartcommunitylabdhub.components.cloud.CloudEntityEvent;

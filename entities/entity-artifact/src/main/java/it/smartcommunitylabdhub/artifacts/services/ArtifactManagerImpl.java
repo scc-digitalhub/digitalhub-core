@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.artifacts;
+package it.smartcommunitylabdhub.artifacts.services;
 
 import it.smartcommunitylabdhub.artifacts.Artifact;
 import it.smartcommunitylabdhub.artifacts.ArtifactManager;

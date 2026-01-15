@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.dataitems;
+package it.smartcommunitylabdhub.models.services;
 
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
@@ -30,8 +30,8 @@ import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.services.EntityService;
 import it.smartcommunitylabdhub.commons.services.VersionableEntityService;
-import it.smartcommunitylabdhub.dataitems.DataItem;
-import it.smartcommunitylabdhub.dataitems.DataItemManager;
+import it.smartcommunitylabdhub.models.Model;
+import it.smartcommunitylabdhub.models.ModelManager;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -46,17 +46,17 @@ import org.springframework.validation.BindException;
 @Service
 @Transactional
 @Slf4j
-public class DataItemManagerImpl implements DataItemManager {
+public class ModelManagerImpl implements ModelManager {
 
     @Autowired
-    private EntityService<DataItem> entityService;
+    private EntityService<Model> entityService;
 
     @Autowired
-    private VersionableEntityService<DataItem> versionableService;
+    private VersionableEntityService<Model> versionableService;
 
     @Override
-    public Page<DataItem> listDataItems(Pageable pageable) {
-        log.debug("list dataItems page {}", pageable);
+    public Page<Model> listModels(Pageable pageable) {
+        log.debug("list models page {}", pageable);
 
         try {
             return entityService.list(pageable);
@@ -67,8 +67,8 @@ public class DataItemManagerImpl implements DataItemManager {
     }
 
     @Override
-    public List<DataItem> listLatestDataItems() {
-        log.debug("list latest dataItems");
+    public List<Model> listLatestModels() {
+        log.debug("list latest models");
 
         try {
             return versionableService.listLatest();
@@ -79,8 +79,8 @@ public class DataItemManagerImpl implements DataItemManager {
     }
 
     @Override
-    public Page<DataItem> listLatestDataItems(Pageable pageable) {
-        log.debug("list latest dataItems page {}", pageable);
+    public Page<Model> listLatestModels(Pageable pageable) {
+        log.debug("list latest models page {}", pageable);
         try {
             return versionableService.listLatest(pageable);
         } catch (StoreException e) {
@@ -90,8 +90,8 @@ public class DataItemManagerImpl implements DataItemManager {
     }
 
     @Override
-    public List<DataItem> listDataItemsByUser(@NotNull String user) {
-        log.debug("list all dataItems for user {}  ", user);
+    public List<Model> listModelsByUser(@NotNull String user) {
+        log.debug("list all models for user {}  ", user);
 
         try {
             return entityService.listByUser(user);
@@ -102,8 +102,8 @@ public class DataItemManagerImpl implements DataItemManager {
     }
 
     @Override
-    public Page<DataItem> searchDataItems(Pageable pageable, @Nullable SearchFilter<DataItem> filter) {
-        log.debug("search dataItems page {}, filter {}", pageable, String.valueOf(filter));
+    public Page<Model> searchModels(Pageable pageable, @Nullable SearchFilter<Model> filter) {
+        log.debug("search models page {}, filter {}", pageable, String.valueOf(filter));
 
         try {
             return entityService.search(filter, pageable);
@@ -114,8 +114,8 @@ public class DataItemManagerImpl implements DataItemManager {
     }
 
     @Override
-    public Page<DataItem> searchLatestDataItems(Pageable pageable, @Nullable SearchFilter<DataItem> filter) {
-        log.debug("search latest dataItems with {} page {}", String.valueOf(filter), pageable);
+    public Page<Model> searchLatestModels(Pageable pageable, @Nullable SearchFilter<Model> filter) {
+        log.debug("search latest models with {} page {}", String.valueOf(filter), pageable);
 
         try {
             return versionableService.searchLatest(filter, pageable);
@@ -126,8 +126,8 @@ public class DataItemManagerImpl implements DataItemManager {
     }
 
     @Override
-    public List<DataItem> listDataItemsByProject(@NotNull String project) {
-        log.debug("list all dataItems for project {}  ", project);
+    public List<Model> listModelsByProject(@NotNull String project) {
+        log.debug("list all models for project {}  ", project);
 
         try {
             return entityService.listByProject(project);
@@ -138,8 +138,8 @@ public class DataItemManagerImpl implements DataItemManager {
     }
 
     @Override
-    public Page<DataItem> listDataItemsByProject(@NotNull String project, Pageable pageable) {
-        log.debug("list all dataItems for project {}  page {}", project, pageable);
+    public Page<Model> listModelsByProject(@NotNull String project, Pageable pageable) {
+        log.debug("list all models for project {}  page {}", project, pageable);
         try {
             return entityService.listByProject(project, pageable);
         } catch (StoreException e) {
@@ -149,8 +149,8 @@ public class DataItemManagerImpl implements DataItemManager {
     }
 
     @Override
-    public List<DataItem> listLatestDataItemsByProject(@NotNull String project) {
-        log.debug("list dataItems for project {}  ", project);
+    public List<Model> listLatestModelsByProject(@NotNull String project) {
+        log.debug("list models for project {}  ", project);
 
         try {
             return versionableService.listLatestByProject(project);
@@ -161,8 +161,8 @@ public class DataItemManagerImpl implements DataItemManager {
     }
 
     @Override
-    public Page<DataItem> listLatestDataItemsByProject(@NotNull String project, Pageable pageable) {
-        log.debug("list dataItems for project {}  page {}", project, pageable);
+    public Page<Model> listLatestModelsByProject(@NotNull String project, Pageable pageable) {
+        log.debug("list models for project {}  page {}", project, pageable);
 
         try {
             return versionableService.listLatestByProject(project, pageable);
@@ -173,12 +173,12 @@ public class DataItemManagerImpl implements DataItemManager {
     }
 
     @Override
-    public Page<DataItem> searchDataItemsByProject(
+    public Page<Model> searchModelsByProject(
         @NotNull String project,
         Pageable pageable,
-        @Nullable SearchFilter<DataItem> filter
+        @Nullable SearchFilter<Model> filter
     ) {
-        log.debug("search all dataItems for project {} with {} page {}", project, String.valueOf(filter), pageable);
+        log.debug("search all models for project {} with {} page {}", project, String.valueOf(filter), pageable);
 
         try {
             return entityService.searchByProject(project, filter, pageable);
@@ -189,12 +189,12 @@ public class DataItemManagerImpl implements DataItemManager {
     }
 
     @Override
-    public Page<DataItem> searchLatestDataItemsByProject(
+    public Page<Model> searchLatestModelsByProject(
         @NotNull String project,
         Pageable pageable,
-        @Nullable SearchFilter<DataItem> filter
+        @Nullable SearchFilter<Model> filter
     ) {
-        log.debug("search latest dataItems for project {} with {} page {}", project, String.valueOf(filter), pageable);
+        log.debug("search latest models for project {} with {} page {}", project, String.valueOf(filter), pageable);
 
         try {
             return versionableService.searchLatestByProject(project, filter, pageable);
@@ -205,8 +205,8 @@ public class DataItemManagerImpl implements DataItemManager {
     }
 
     @Override
-    public List<DataItem> findDataItems(@NotNull String project, @NotNull String name) {
-        log.debug("find dataItems for project {} with name {}", project, name);
+    public List<Model> findModels(@NotNull String project, @NotNull String name) {
+        log.debug("find models for project {} with name {}", project, name);
 
         try {
             return versionableService.findAll(project, name);
@@ -217,8 +217,8 @@ public class DataItemManagerImpl implements DataItemManager {
     }
 
     @Override
-    public Page<DataItem> findDataItems(@NotNull String project, @NotNull String name, Pageable pageable) {
-        log.debug("find dataItems for project {} with name {} page {}", project, name, pageable);
+    public Page<Model> findModels(@NotNull String project, @NotNull String name, Pageable pageable) {
+        log.debug("find models for project {} with name {} page {}", project, name, pageable);
 
         try {
             return versionableService.findAll(project, name, pageable);
@@ -229,8 +229,8 @@ public class DataItemManagerImpl implements DataItemManager {
     }
 
     @Override
-    public DataItem findDataItem(@NotNull String id) {
-        log.debug("find dataItem with id {}", String.valueOf(id));
+    public Model findModel(@NotNull String id) {
+        log.debug("find model with id {}", String.valueOf(id));
         try {
             return entityService.find(id);
         } catch (StoreException e) {
@@ -240,8 +240,8 @@ public class DataItemManagerImpl implements DataItemManager {
     }
 
     @Override
-    public DataItem getDataItem(@NotNull String id) throws NoSuchEntityException {
-        log.debug("get dataItem with id {}", String.valueOf(id));
+    public Model getModel(@NotNull String id) throws NoSuchEntityException {
+        log.debug("get model with id {}", String.valueOf(id));
 
         try {
             return entityService.get(id);
@@ -252,8 +252,8 @@ public class DataItemManagerImpl implements DataItemManager {
     }
 
     @Override
-    public DataItem getLatestDataItem(@NotNull String project, @NotNull String name) throws NoSuchEntityException {
-        log.debug("get latest dataItem for project {} with name {}", project, name);
+    public Model getLatestModel(@NotNull String project, @NotNull String name) throws NoSuchEntityException {
+        log.debug("get latest model for project {} with name {}", project, name);
 
         try {
             return versionableService.getLatest(project, name);
@@ -264,9 +264,9 @@ public class DataItemManagerImpl implements DataItemManager {
     }
 
     @Override
-    public DataItem createDataItem(@NotNull DataItem dto)
+    public Model createModel(@NotNull Model dto)
         throws DuplicatedEntityException, BindException, IllegalArgumentException {
-        log.debug("create dataItem");
+        log.debug("create model");
 
         try {
             return entityService.create(dto);
@@ -277,9 +277,9 @@ public class DataItemManagerImpl implements DataItemManager {
     }
 
     @Override
-    public DataItem updateDataItem(@NotNull String id, @NotNull DataItem dto)
+    public Model updateModel(@NotNull String id, @NotNull Model dto)
         throws NoSuchEntityException, IllegalArgumentException, BindException {
-        log.debug("update dataItem with id {}", String.valueOf(id));
+        log.debug("update model with id {}", String.valueOf(id));
         try {
             return entityService.update(id, dto);
         } catch (StoreException e) {
@@ -289,8 +289,8 @@ public class DataItemManagerImpl implements DataItemManager {
     }
 
     @Override
-    public void deleteDataItem(@NotNull String id, @Nullable Boolean cascade) {
-        log.debug("delete dataItem with id {}", String.valueOf(id));
+    public void deleteModel(@NotNull String id, @Nullable Boolean cascade) {
+        log.debug("delete model with id {}", String.valueOf(id));
 
         try {
             entityService.delete(id, cascade);
@@ -301,8 +301,8 @@ public class DataItemManagerImpl implements DataItemManager {
     }
 
     @Override
-    public void deleteDataItems(@NotNull String project, @NotNull String name, @Nullable Boolean cascade) {
-        log.debug("delete dataItems for project {} with name {}", project, name);
+    public void deleteModels(@NotNull String project, @NotNull String name, @Nullable Boolean cascade) {
+        log.debug("delete models for project {} with name {}", project, name);
         try {
             versionableService.deleteAll(project, name, cascade);
         } catch (StoreException e) {
@@ -312,8 +312,8 @@ public class DataItemManagerImpl implements DataItemManager {
     }
 
     @Override
-    public void deleteDataItemsByProject(@NotNull String project, @Nullable Boolean cascade) {
-        log.debug("delete dataItems for project {}", project);
+    public void deleteModelsByProject(@NotNull String project, @Nullable Boolean cascade) {
+        log.debug("delete models for project {}", project);
         try {
             entityService.deleteByProject(project, cascade);
         } catch (StoreException e) {

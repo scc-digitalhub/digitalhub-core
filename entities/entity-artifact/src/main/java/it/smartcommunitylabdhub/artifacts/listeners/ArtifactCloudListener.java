@@ -20,12 +20,12 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.core.models.notification;
+package it.smartcommunitylabdhub.artifacts.listeners;
 
+import it.smartcommunitylabdhub.artifacts.Artifact;
 import it.smartcommunitylabdhub.components.cloud.BaseCloudListener;
 import it.smartcommunitylabdhub.components.cloud.CloudEntityEvent;
 import it.smartcommunitylabdhub.components.websocket.UserNotificationEntityEvent;
-import it.smartcommunitylabdhub.models.Model;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
@@ -33,17 +33,17 @@ import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
-public class ModelCloudListener extends BaseCloudListener<Model> {
+public class ArtifactCloudListener extends BaseCloudListener<Artifact> {
 
     @Async
     @EventListener
-    public void notify(UserNotificationEntityEvent<Model> event) {
+    public void notify(UserNotificationEntityEvent<Artifact> event) {
         super.notify(event);
     }
 
     @Async
     @EventListener
-    public void broadcast(CloudEntityEvent<Model> event) {
+    public void broadcast(CloudEntityEvent<Artifact> event) {
         super.broadcast(event);
     }
 }
