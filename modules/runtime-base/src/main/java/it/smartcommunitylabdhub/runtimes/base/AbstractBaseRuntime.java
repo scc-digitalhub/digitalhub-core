@@ -31,7 +31,7 @@ import it.smartcommunitylabdhub.commons.infrastructure.Runtime;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
-import it.smartcommunitylabdhub.runtimes.lifecycle.RunState;
+import it.smartcommunitylabdhub.runs.lifecycle.RunState;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
 import jakarta.validation.constraints.NotNull;
 import java.lang.reflect.InvocationTargetException;

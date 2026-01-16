@@ -45,9 +45,15 @@
         <module>modules/runtime-base</module>
         <module>entities/entity-artifact</module>
         <module>entities/entity-dataitem</module>
+        <module>entities/entity-function</module>
+        <module>entities/entity-project</module>
+        <module>entities/entity-run</module>
+        <module>entities/entity-secret</module>
+        <module>entities/entity-task</module>
         <module>entities/entity-model</module>
         <module>entities/entity-trigger</module>
         <module>entities/entity-log</module>
+        <module>entities/entity-workflow</module>
         <module>frameworks/framework-k8s</module>
         <module>frameworks/framework-argo</module>
         <module>frameworks/framework-kaniko</module>

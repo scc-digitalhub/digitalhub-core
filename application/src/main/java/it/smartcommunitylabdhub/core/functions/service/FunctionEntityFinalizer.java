@@ -26,7 +26,7 @@ import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.core.services.EntityFinalizer;
-import it.smartcommunitylabdhub.core.tasks.persistence.TaskEntity;
+import it.smartcommunitylabdhub.tasks.persistence.TaskEntity;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
