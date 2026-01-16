@@ -23,9 +23,9 @@
 
 package it.smartcommunitylabdhub.triggers.lifecycle;
 
-import it.smartcommunitylabdhub.commons.models.trigger.Trigger;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.fsm.Transition;
+import it.smartcommunitylabdhub.triggers.Trigger;
 import it.smartcommunitylabdhub.triggers.infrastructure.Actuator;
 import it.smartcommunitylabdhub.triggers.infrastructure.TriggerRun;
 import it.smartcommunitylabdhub.triggers.models.TriggerRunBaseStatus;

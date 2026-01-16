@@ -23,8 +23,8 @@
 package it.smartcommunitylabdhub.trigger.lifecycle.models;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.trigger.Trigger;
 import it.smartcommunitylabdhub.trigger.lifecycle.LifecycleActuator;
+import it.smartcommunitylabdhub.triggers.Trigger;
 import it.smartcommunitylabdhub.triggers.specs.TriggerBaseSpec;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;

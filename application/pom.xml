@@ -163,13 +163,6 @@
         </dependency>
 
 
-        <!-- TEMPLATING -->
-        <dependency>
-            <groupId>com.github.spullara.mustache.java</groupId>
-            <artifactId>compiler</artifactId>
-            <version>0.9.10</version>
-        </dependency>
-
         <!-- DH MODULES -->
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
@@ -209,6 +202,11 @@
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-console</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-templates</artifactId>
             <version>${revision}</version>
         </dependency>
         <dependency>

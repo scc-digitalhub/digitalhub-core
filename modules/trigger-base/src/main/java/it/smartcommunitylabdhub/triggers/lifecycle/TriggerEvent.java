@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.triggers.lifecycle;
 
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvents;
-import it.smartcommunitylabdhub.commons.models.trigger.Trigger;
+import it.smartcommunitylabdhub.triggers.Trigger;
 
 public enum TriggerEvent implements LifecycleEvents<Trigger> {
     RUN,

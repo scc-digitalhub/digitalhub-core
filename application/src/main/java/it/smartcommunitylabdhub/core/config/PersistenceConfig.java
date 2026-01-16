@@ -29,7 +29,6 @@ import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.secret.Secret;
 import it.smartcommunitylabdhub.commons.models.task.Task;
-import it.smartcommunitylabdhub.commons.models.trigger.Trigger;
 import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.core.functions.persistence.FunctionEntity;
 import it.smartcommunitylabdhub.core.functions.persistence.FunctionRepository;
@@ -45,8 +44,6 @@ import it.smartcommunitylabdhub.core.secrets.persistence.SecretEntity;
 import it.smartcommunitylabdhub.core.secrets.persistence.SecretRepository;
 import it.smartcommunitylabdhub.core.tasks.persistence.TaskEntity;
 import it.smartcommunitylabdhub.core.tasks.persistence.TaskRepository;
-import it.smartcommunitylabdhub.core.triggers.persistence.TriggerEntity;
-import it.smartcommunitylabdhub.core.triggers.persistence.TriggerRepository;
 import it.smartcommunitylabdhub.core.workflows.persistence.WorkflowEntity;
 import it.smartcommunitylabdhub.core.workflows.persistence.WorkflowRepository;
 import org.springframework.context.annotation.Bean;
@@ -121,12 +118,5 @@ public class PersistenceConfig {
         return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
     }
 
-    @Bean
-    public SearchableEntityRepository<TriggerEntity, Trigger> triggerSearchableEntityRepository(
-        TriggerRepository repository,
-        Converter<Trigger, TriggerEntity> entityBuilder,
-        Converter<TriggerEntity, Trigger> dtoBuilder
-    ) {
-        return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
-    }
+ 
 }
