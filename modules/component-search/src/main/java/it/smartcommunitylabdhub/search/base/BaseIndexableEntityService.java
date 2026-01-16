@@ -27,7 +27,7 @@ import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.core.repositories.EntityRepository;
+import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
 import it.smartcommunitylabdhub.search.service.IndexableEntityService;
 import jakarta.validation.constraints.NotNull;

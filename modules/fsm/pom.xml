@@ -20,11 +20,7 @@
             <artifactId>dh-commons</artifactId>
             <version>${revision}</version>
         </dependency>
-        <dependency>
-            <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-entity-base</artifactId>
-            <version>${revision}</version>
-        </dependency>
+
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>

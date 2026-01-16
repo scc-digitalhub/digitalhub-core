@@ -40,6 +40,7 @@
         <module>modules/component-search</module>
         <module>modules/component-labels</module>
         <module>modules/component-logs</module>
+        <module>modules/component-files</module>
         <module>modules/entity-base</module>
         <module>modules/runtime-base</module>
         <module>entities/entity-artifact</module>
@@ -62,7 +63,6 @@
         <module>runtimes/runtime-model-serve</module>
         <module>runtimes/runtime-kubeai</module>
         <module>modules/openmetadata-integration</module>
-        <module>modules/files</module>
         <module>modules/proxy</module>
         <module>providers/credentials-provider-db</module>
         <module>providers/credentials-provider-minio</module>

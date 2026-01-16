@@ -24,14 +24,12 @@
 package it.smartcommunitylabdhub.labels.component;
 
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
+import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
-import it.smartcommunitylabdhub.core.events.EntityEvent;
-import it.smartcommunitylabdhub.core.persistence.BaseEntity;
+import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
+import it.smartcommunitylabdhub.components.cloud.CloudEntityEvent;
 import it.smartcommunitylabdhub.events.EntityAction;
 import it.smartcommunitylabdhub.labels.LabelService;
-import jakarta.persistence.AttributeConverter;
-import java.io.Serializable;
-import java.util.Map;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,26 +44,22 @@ public class LabelComponent {
     @Autowired
     private LabelService labelService;
 
-    @Autowired
-    private AttributeConverter<Map<String, Serializable>, byte[]> converter;
-
     @Async
     @EventListener
-    public void receive(EntityEvent<? extends BaseEntity> event) {
+    public void receive(CloudEntityEvent<? extends BaseDTO> event) {
         if (
-            event.getEntity() == null ||
-            event.getEntity().getMetadata() == null ||
+            !(event.getDto() instanceof MetadataDTO) ||
             (event.getAction().equals(EntityAction.DELETE) || event.getAction().equals(EntityAction.READ))
         ) {
             return;
         }
 
         //register labels from metadata on writes
-        Map<String, Serializable> map = converter.convertToEntityAttribute(event.getEntity().getMetadata());
-        BaseMetadata metadata = BaseMetadata.from(map);
+        var dto = (MetadataDTO & BaseDTO) event.getDto();
+        BaseMetadata metadata = BaseMetadata.from(dto.getMetadata());
 
         if (metadata.getLabels() != null) {
-            updateLabels(event.getEntity().getProject(), metadata.getLabels());
+            updateLabels(dto.getProject(), metadata.getLabels());
         }
     }
 
