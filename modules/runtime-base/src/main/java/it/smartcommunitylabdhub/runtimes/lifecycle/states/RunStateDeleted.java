@@ -27,8 +27,8 @@ import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.infrastructure.Runtime;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
-import it.smartcommunitylabdhub.runtimes.lifecycle.RunEvent;
-import it.smartcommunitylabdhub.runtimes.lifecycle.RunState;
+import it.smartcommunitylabdhub.runs.lifecycle.RunEvent;
+import it.smartcommunitylabdhub.runs.lifecycle.RunState;
 import java.util.Collections;
 import lombok.extern.slf4j.Slf4j;
 

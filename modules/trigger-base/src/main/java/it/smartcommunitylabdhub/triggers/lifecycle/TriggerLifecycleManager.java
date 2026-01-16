@@ -40,7 +40,7 @@ import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
 import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipName;
 import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
-import it.smartcommunitylabdhub.runtimes.lifecycle.RunEvent;
+import it.smartcommunitylabdhub.runs.lifecycle.RunEvent;
 import it.smartcommunitylabdhub.templates.TemplateProcessor;
 import it.smartcommunitylabdhub.triggers.Trigger;
 import it.smartcommunitylabdhub.triggers.infrastructure.Actuator;

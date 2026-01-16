@@ -30,6 +30,8 @@ import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.lifecycle.BaseLifecycleManager;
+import it.smartcommunitylabdhub.runs.lifecycle.RunEvent;
+import it.smartcommunitylabdhub.runs.lifecycle.RunState;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Map;

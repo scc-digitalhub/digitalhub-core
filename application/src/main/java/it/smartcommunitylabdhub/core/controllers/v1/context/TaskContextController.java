@@ -36,7 +36,7 @@ import it.smartcommunitylabdhub.commons.services.RunManager;
 import it.smartcommunitylabdhub.commons.services.TaskService;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
-import it.smartcommunitylabdhub.core.tasks.filters.TaskEntityFilter;
+import it.smartcommunitylabdhub.tasks.filters.TaskEntityFilter;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;

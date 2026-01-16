@@ -23,26 +23,14 @@
 
 package it.smartcommunitylabdhub.core.config;
 
-import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.project.Project;
-import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.secret.Secret;
-import it.smartcommunitylabdhub.commons.models.task.Task;
-import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
-import it.smartcommunitylabdhub.core.functions.persistence.FunctionEntity;
-import it.smartcommunitylabdhub.core.functions.persistence.FunctionRepository;
 import it.smartcommunitylabdhub.core.projects.persistence.ProjectEntity;
 import it.smartcommunitylabdhub.core.projects.persistence.ProjectRepository;
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
-import it.smartcommunitylabdhub.core.runs.persistence.RunEntity;
-import it.smartcommunitylabdhub.core.runs.persistence.RunRepository;
 import it.smartcommunitylabdhub.core.secrets.persistence.SecretEntity;
 import it.smartcommunitylabdhub.core.secrets.persistence.SecretRepository;
-import it.smartcommunitylabdhub.core.tasks.persistence.TaskEntity;
-import it.smartcommunitylabdhub.core.tasks.persistence.TaskRepository;
-import it.smartcommunitylabdhub.core.workflows.persistence.WorkflowEntity;
-import it.smartcommunitylabdhub.core.workflows.persistence.WorkflowRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -62,46 +50,10 @@ public class PersistenceConfig {
     }
 
     @Bean
-    public SearchableEntityRepository<FunctionEntity, Function> functionSearchableEntityRepository(
-        FunctionRepository repository,
-        Converter<Function, FunctionEntity> entityBuilder,
-        Converter<FunctionEntity, Function> dtoBuilder
-    ) {
-        return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
-    }
-
-    @Bean
-    public SearchableEntityRepository<RunEntity, Run> runSearchableEntityRepository(
-        RunRepository repository,
-        Converter<Run, RunEntity> entityBuilder,
-        Converter<RunEntity, Run> dtoBuilder
-    ) {
-        return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
-    }
-
-    @Bean
     public SearchableEntityRepository<SecretEntity, Secret> secretSearchableEntityRepository(
         SecretRepository repository,
         Converter<Secret, SecretEntity> entityBuilder,
         Converter<SecretEntity, Secret> dtoBuilder
-    ) {
-        return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
-    }
-
-    @Bean
-    public SearchableEntityRepository<TaskEntity, Task> taskSearchableEntityRepository(
-        TaskRepository repository,
-        Converter<Task, TaskEntity> entityBuilder,
-        Converter<TaskEntity, Task> dtoBuilder
-    ) {
-        return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
-    }
-
-    @Bean
-    public SearchableEntityRepository<WorkflowEntity, Workflow> workflowSearchableEntityRepository(
-        WorkflowRepository repository,
-        Converter<Workflow, WorkflowEntity> entityBuilder,
-        Converter<WorkflowEntity, Workflow> dtoBuilder
     ) {
         return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
     }

@@ -30,6 +30,26 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-entity-function</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-entity-workflow</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-entity-task</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-entity-run</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-entity-log</artifactId>
             <version>${revision}</version>
         </dependency>
