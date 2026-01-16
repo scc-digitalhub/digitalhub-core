@@ -21,7 +21,7 @@
  * 
  */
 
-package it.smartcommunitylabdhub.core.logs.persistence;
+package it.smartcommunitylabdhub.logs.persistence;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

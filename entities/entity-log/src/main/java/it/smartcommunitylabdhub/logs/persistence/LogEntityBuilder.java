@@ -21,11 +21,11 @@
  * 
  */
 
-package it.smartcommunitylabdhub.core.logs.persistence;
+package it.smartcommunitylabdhub.logs.persistence;
 
-import it.smartcommunitylabdhub.commons.models.log.Log;
-import it.smartcommunitylabdhub.commons.models.log.LogBaseSpec;
 import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
+import it.smartcommunitylabdhub.logs.Log;
+import it.smartcommunitylabdhub.logs.spec.LogBaseSpec;
 import jakarta.persistence.AttributeConverter;
 import java.io.Serializable;
 import java.time.ZoneOffset;

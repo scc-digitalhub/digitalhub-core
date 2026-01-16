@@ -21,11 +21,11 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.logs.service;
+package it.smartcommunitylabdhub.logs.service;
 
-import it.smartcommunitylabdhub.commons.models.log.Log;
-import it.smartcommunitylabdhub.core.logs.persistence.LogEntity;
 import it.smartcommunitylabdhub.core.services.BaseEntityServiceImpl;
+import it.smartcommunitylabdhub.logs.Log;
+import it.smartcommunitylabdhub.logs.persistence.LogEntity;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

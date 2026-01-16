@@ -21,12 +21,12 @@
  * 
  */
 
-package it.smartcommunitylabdhub.core.logs.persistence;
+package it.smartcommunitylabdhub.logs.persistence;
 
-import it.smartcommunitylabdhub.commons.models.log.Log;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.metadata.AuditMetadataBuilder;
 import it.smartcommunitylabdhub.core.metadata.BaseMetadataBuilder;
+import it.smartcommunitylabdhub.logs.Log;
 import jakarta.persistence.AttributeConverter;
 import java.io.Serializable;
 import java.util.HashMap;

@@ -24,7 +24,6 @@
 package it.smartcommunitylabdhub.core.config;
 
 import it.smartcommunitylabdhub.commons.models.function.Function;
-import it.smartcommunitylabdhub.commons.models.log.Log;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.secret.Secret;
@@ -32,8 +31,6 @@ import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.core.functions.persistence.FunctionEntity;
 import it.smartcommunitylabdhub.core.functions.persistence.FunctionRepository;
-import it.smartcommunitylabdhub.core.logs.persistence.LogEntity;
-import it.smartcommunitylabdhub.core.logs.persistence.LogRepository;
 import it.smartcommunitylabdhub.core.projects.persistence.ProjectEntity;
 import it.smartcommunitylabdhub.core.projects.persistence.ProjectRepository;
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
@@ -74,15 +71,6 @@ public class PersistenceConfig {
     }
 
     @Bean
-    public SearchableEntityRepository<LogEntity, Log> logSearchableEntityRepository(
-        LogRepository repository,
-        Converter<Log, LogEntity> entityBuilder,
-        Converter<LogEntity, Log> dtoBuilder
-    ) {
-        return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
-    }
-
-    @Bean
     public SearchableEntityRepository<RunEntity, Run> runSearchableEntityRepository(
         RunRepository repository,
         Converter<Run, RunEntity> entityBuilder,
@@ -117,6 +105,4 @@ public class PersistenceConfig {
     ) {
         return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
     }
-
- 
 }

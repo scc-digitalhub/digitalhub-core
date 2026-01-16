@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.core.logs.filter;
+package it.smartcommunitylabdhub.logs.filter;
 
-import it.smartcommunitylabdhub.commons.models.log.Log;
-import it.smartcommunitylabdhub.core.logs.persistence.LogEntity;
 import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilterConverter;
+import it.smartcommunitylabdhub.logs.Log;
+import it.smartcommunitylabdhub.logs.persistence.LogEntity;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.stereotype.Component;
 

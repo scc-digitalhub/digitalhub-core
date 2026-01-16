@@ -21,16 +21,16 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.logs.filter;
+package it.smartcommunitylabdhub.logs.filter;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.Keys;
-import it.smartcommunitylabdhub.commons.models.log.Log;
 import it.smartcommunitylabdhub.commons.models.queries.SearchCriteria;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilter;
 import it.smartcommunitylabdhub.core.queries.filters.BaseEntityFilter;
 import it.smartcommunitylabdhub.core.queries.filters.BaseEntitySearchCriteria;
+import it.smartcommunitylabdhub.logs.Log;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.Pattern;
 import java.util.ArrayList;

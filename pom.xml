@@ -34,17 +34,19 @@
         <module>modules/authorization</module>
         <module>modules/fsm</module>
         <module>modules/component-templates</module>
-        <module>modules/component-cloud</module>        
+        <module>modules/component-cloud</module>
         <module>modules/component-metrics</module>
         <module>modules/component-relationships</module>
         <module>modules/component-search</module>
         <module>modules/component-labels</module>
+        <module>modules/component-logs</module>
         <module>modules/entity-base</module>
         <module>modules/runtime-base</module>
         <module>entities/entity-artifact</module>
         <module>entities/entity-dataitem</module>
         <module>entities/entity-model</module>
         <module>entities/entity-trigger</module>
+        <module>entities/entity-log</module>
         <module>frameworks/framework-k8s</module>
         <module>frameworks/framework-argo</module>
         <module>frameworks/framework-kaniko</module>

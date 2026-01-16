@@ -21,24 +21,24 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.logs;
+package it.smartcommunitylabdhub.logs.service;
 
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.models.log.Log;
-import it.smartcommunitylabdhub.commons.models.log.LogBaseSpec;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.models.run.Run;
-import it.smartcommunitylabdhub.commons.services.LogService;
-import it.smartcommunitylabdhub.core.logs.persistence.LogEntity;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.EntityRepository;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.core.services.EntityService;
+import it.smartcommunitylabdhub.logs.Log;
+import it.smartcommunitylabdhub.logs.LogService;
+import it.smartcommunitylabdhub.logs.persistence.LogEntity;
+import it.smartcommunitylabdhub.logs.spec.LogBaseSpec;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;

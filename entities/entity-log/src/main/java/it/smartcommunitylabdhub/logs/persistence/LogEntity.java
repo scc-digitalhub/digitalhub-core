@@ -21,12 +21,12 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.logs.persistence;
+package it.smartcommunitylabdhub.logs.persistence;
 
-import it.smartcommunitylabdhub.core.logs.LogServiceImpl;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity;
 import it.smartcommunitylabdhub.core.persistence.SpecEntity;
 import it.smartcommunitylabdhub.core.persistence.StatusEntity;
+import it.smartcommunitylabdhub.logs.service.LogServiceImpl;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Lob;

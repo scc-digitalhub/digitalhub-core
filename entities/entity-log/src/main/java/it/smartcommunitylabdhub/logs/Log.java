@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.commons.models.log;
+package it.smartcommunitylabdhub.logs;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
