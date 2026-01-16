@@ -20,7 +20,7 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.core.projects.service;
+package it.smartcommunitylabdhub.projects.service;
 
 import it.smartcommunitylabdhub.authorization.model.ResourceShareEntity;
 import it.smartcommunitylabdhub.authorization.services.ResourceSharingService;

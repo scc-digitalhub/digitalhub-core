@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.projects;
+package it.smartcommunitylabdhub.core.projects.service;
 
 import it.smartcommunitylabdhub.artifacts.Artifact;
 import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
@@ -40,7 +40,6 @@ import it.smartcommunitylabdhub.commons.services.ProjectManager;
 import it.smartcommunitylabdhub.commons.services.SpecValidator;
 import it.smartcommunitylabdhub.commons.utils.EmbedUtils;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
-import it.smartcommunitylabdhub.core.projects.persistence.ProjectEntity;
 import it.smartcommunitylabdhub.core.projects.specs.ProjectSpec;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
@@ -49,6 +48,7 @@ import it.smartcommunitylabdhub.core.services.VersionableEntityService;
 import it.smartcommunitylabdhub.core.utils.RefUtils;
 import it.smartcommunitylabdhub.dataitems.DataItem;
 import it.smartcommunitylabdhub.models.Model;
+import it.smartcommunitylabdhub.projects.persistence.ProjectEntity;
 import it.smartcommunitylabdhub.relationships.EntityRelationshipsService;
 import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipsAwareEntityService;

@@ -37,7 +37,7 @@ import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.services.ProjectManager;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
-import it.smartcommunitylabdhub.core.projects.filters.ProjectEntityFilter;
+import it.smartcommunitylabdhub.projects.filters.ProjectEntityFilter;
 import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipsAwareEntityService;
 import jakarta.annotation.Nullable;

@@ -23,26 +23,9 @@
 
 package it.smartcommunitylabdhub.core.config;
 
-import it.smartcommunitylabdhub.commons.models.project.Project;
-import it.smartcommunitylabdhub.core.projects.persistence.ProjectEntity;
-import it.smartcommunitylabdhub.core.projects.persistence.ProjectRepository;
-import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
-import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-import org.springframework.core.convert.converter.Converter;
 
 @Configuration
 @Order(2)
-public class PersistenceConfig {
-
-    @Bean
-    public SearchableEntityRepository<ProjectEntity, Project> projectSearchableEntityRepository(
-        ProjectRepository repository,
-        Converter<Project, ProjectEntity> entityBuilder,
-        Converter<ProjectEntity, Project> dtoBuilder
-    ) {
-        return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
-    }
-}
+public class PersistenceConfig {}

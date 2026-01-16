@@ -21,13 +21,13 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.projects.service;
+package it.smartcommunitylabdhub.projects.service;
 
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.core.projects.persistence.ProjectEntity;
 import it.smartcommunitylabdhub.core.services.BaseEntityServiceImpl;
+import it.smartcommunitylabdhub.projects.persistence.ProjectEntity;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.util.Collections;
