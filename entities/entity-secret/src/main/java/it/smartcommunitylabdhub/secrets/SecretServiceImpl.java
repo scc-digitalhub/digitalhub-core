@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.secrets;
+package it.smartcommunitylabdhub.secrets;
 
 import it.smartcommunitylabdhub.commons.annotations.common.Identifier;
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
@@ -38,8 +38,8 @@ import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.services.SpecValidator;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
-import it.smartcommunitylabdhub.core.secrets.persistence.SecretEntity;
-import it.smartcommunitylabdhub.core.secrets.specs.SecretBaseSpec;
+import it.smartcommunitylabdhub.secrets.persistence.SecretEntity;
+import it.smartcommunitylabdhub.secrets.specs.SecretBaseSpec;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.util.Collections;

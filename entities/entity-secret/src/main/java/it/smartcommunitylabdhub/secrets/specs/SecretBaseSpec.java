@@ -21,7 +21,7 @@
  * 
  */
 
-package it.smartcommunitylabdhub.core.secrets.specs;
+package it.smartcommunitylabdhub.secrets.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;

@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.secrets.specs;
+package it.smartcommunitylabdhub.secrets.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.secret.Secret;

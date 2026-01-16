@@ -1,10 +1,4 @@
 /*
- * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
-/*
  * Copyright 2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,27 +15,25 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.config;
+package it.smartcommunitylabdhub.secrets.config;
 
-import it.smartcommunitylabdhub.commons.models.project.Project;
-import it.smartcommunitylabdhub.core.projects.persistence.ProjectEntity;
-import it.smartcommunitylabdhub.core.projects.persistence.ProjectRepository;
+import it.smartcommunitylabdhub.commons.models.secret.Secret;
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
+import it.smartcommunitylabdhub.secrets.persistence.SecretEntity;
+import it.smartcommunitylabdhub.secrets.persistence.SecretRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.Order;
 import org.springframework.core.convert.converter.Converter;
 
 @Configuration
-@Order(2)
-public class PersistenceConfig {
+public class SecretConfig {
 
     @Bean
-    public SearchableEntityRepository<ProjectEntity, Project> projectSearchableEntityRepository(
-        ProjectRepository repository,
-        Converter<Project, ProjectEntity> entityBuilder,
-        Converter<ProjectEntity, Project> dtoBuilder
+    SearchableEntityRepository<SecretEntity, Secret> secretSearchableEntityRepository(
+        SecretRepository repository,
+        Converter<Secret, SecretEntity> entityBuilder,
+        Converter<SecretEntity, Secret> dtoBuilder
     ) {
         return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
     }

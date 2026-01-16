@@ -21,7 +21,7 @@
  * 
  */
 
-package it.smartcommunitylabdhub.core.secrets.persistence;
+package it.smartcommunitylabdhub.secrets.persistence;
 
 import java.util.List;
 import java.util.Optional;
