@@ -25,6 +25,7 @@ package it.smartcommunitylabdhub.framework.k8s.runnables;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import it.smartcommunitylabdhub.commons.infrastructure.ConfigurableRunnable;
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
@@ -43,6 +44,7 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreResourceDefinition;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreResources;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreToleration;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
+import it.smartcommunitylabdhub.framework.k8s.objects.CustomResource;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
@@ -139,6 +141,10 @@ public class K8sRunnable implements RunRunnable, SecuredRunnable, ConfigurableRu
 
     @JsonProperty("context_sources")
     private List<ContextSource> contextSources;
+
+    @JsonProperty("custom_resources")
+    private List<CustomResource> customResources;
+
 
     @Override
     public String getFramework() {

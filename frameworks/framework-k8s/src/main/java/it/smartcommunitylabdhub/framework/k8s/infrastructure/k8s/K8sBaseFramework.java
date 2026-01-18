@@ -66,6 +66,7 @@ import it.smartcommunitylabdhub.framework.k8s.jackson.KubernetesMapper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sSecretHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sCRHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sTemplate;
@@ -163,6 +164,7 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
     protected K8sBuilderHelper k8sBuilderHelper;
     protected K8sSecretHelper k8sSecretHelper;
     protected K8sLabelHelper k8sLabelHelper;
+    protected K8sCRHelper k8sCRHelper;
 
     protected K8sBaseFramework(ApiClient apiClient) {
         Assert.notNull(apiClient, "k8s api client is required");
@@ -396,11 +398,17 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
         this.k8sLabelHelper = k8sLabelHelper;
     }
 
+    @Autowired
+    public void setK8sCRHelper(K8sCRHelper k8sCRHelper) {
+        this.k8sCRHelper = k8sCRHelper;
+    }
+
     @Override
     public void afterPropertiesSet() throws Exception {
         Assert.notNull(k8sBuilderHelper, "k8s helper is required");
         Assert.notNull(k8sSecretHelper, "k8s secret helper is required");
         Assert.notNull(k8sLabelHelper, "k8s label helper is required");
+        Assert.notNull(k8sCRHelper, "k8s CR helper is required");
         Assert.notNull(k8sProperties, "k8s properties required");
         Assert.notNull(namespace, "k8s namespace required");
         Assert.notNull(version, "k8s version required");

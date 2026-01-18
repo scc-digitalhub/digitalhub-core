@@ -35,6 +35,7 @@ import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sSecretHelper;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
+import it.smartcommunitylabdhub.framework.k8s.objects.CustomResource;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
 import it.smartcommunitylabdhub.models.Model;
 import it.smartcommunitylabdhub.models.ModelManager;
@@ -45,6 +46,7 @@ import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAIEngine;
 import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAIModelSpec;
 import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAiEnvFrom;
 import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAiEnvFromRef;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -226,12 +228,17 @@ public class KubeAIServeRunner {
                     ? List.of(new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction()))
                     : null
             )
-            .name(modelName)
-            .apiGroup(KUBEAI_API_GROUP)
-            .apiVersion(KUBEAI_API_VERSION)
-            .kind(KUBEAI_API_KIND)
-            .plural(KUBEAI_API_PLURAL)
-            .spec(JacksonMapper.CUSTOM_OBJECT_MAPPER.convertValue(modelSpec, Map.class))
+            .customResource(
+                CustomResource
+                .builder()
+                .name(modelName)
+                .apiGroup(KUBEAI_API_GROUP)
+                .apiVersion(KUBEAI_API_VERSION)
+                .kind(KUBEAI_API_KIND)
+                .plural(KUBEAI_API_PLURAL)
+                .spec(JacksonMapper.CUSTOM_OBJECT_MAPPER.convertValue(modelSpec, Map.class))
+                .build()
+            )
             .requiresSecret(envFrom != null)
             .build();
 
