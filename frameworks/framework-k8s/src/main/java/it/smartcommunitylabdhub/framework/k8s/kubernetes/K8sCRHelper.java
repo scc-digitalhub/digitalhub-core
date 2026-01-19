@@ -184,14 +184,24 @@ public class K8sCRHelper implements InitializingBean {
         return obj;
     } 
 
-    private static JsonElement specToJsonElement(Map<String, Serializable> spec) {
+    public DynamicKubernetesObject get(CustomResource resource) throws K8sFrameworkException {
+        DynamicKubernetesApi dynamicApi = getDynamicKubernetesApi(resource);
+        try {
+            return get(build(resource, Collections.emptyMap()), dynamicApi);
+        } catch (K8sFrameworkException | IllegalArgumentException e) {
+            log.error("error reading k8s CR: {}", e.getMessage());
+            throw new K8sFrameworkException("error reading k8s CR", e);
+        }
+    }
+
+    public static JsonElement specToJsonElement(Map<String, Serializable> spec) {
         Gson gson = new Gson();
         String json = gson.toJson(spec);
         JsonObject jsonObject = JsonParser.parseString(json).getAsJsonObject();
         return jsonObject;
     }
 
-    private static HashMap<String, Serializable> jsonElementToSpec(JsonElement jsonElement) throws IOException {
+    public static HashMap<String, Serializable> jsonElementToSpec(JsonElement jsonElement) throws IOException {
         Gson gson = new Gson();
         String json = gson.toJson(jsonElement);
         return mapper.readValue(json, typeRef);
@@ -246,7 +256,7 @@ public class K8sCRHelper implements InitializingBean {
 
     //TODO replace return object, contains a GSON JsonObject which is *not* serializable by Jackson
     @Deprecated
-    public DynamicKubernetesObject get(@NotNull DynamicKubernetesObject cr, DynamicKubernetesApi dynamicApi) throws K8sFrameworkException {
+    private DynamicKubernetesObject get(@NotNull DynamicKubernetesObject cr, DynamicKubernetesApi dynamicApi) throws K8sFrameworkException {
         Assert.notNull(cr.getMetadata(), "metadata can not be null");
 
         try {

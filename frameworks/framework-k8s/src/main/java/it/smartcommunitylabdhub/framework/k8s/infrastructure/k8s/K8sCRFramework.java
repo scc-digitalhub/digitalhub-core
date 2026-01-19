@@ -172,6 +172,9 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
         }
     }
 
+    public DynamicKubernetesObject get(K8sCRRunnable runnable) throws K8sFrameworkException {
+        return k8sCRHelper.get(runnable.getCustomResource());
+    }
 
 
     @Override

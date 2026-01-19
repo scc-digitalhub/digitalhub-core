@@ -97,7 +97,7 @@ public abstract class KubeAIRuntime<F extends KubeAIServeFunctionSpec, R extends
 
             if (runnable != null && runnable instanceof K8sCRRunnable) {
                 //model name is set via resource name for kubeAi
-                openai.setModel(((K8sCRRunnable) runnable).getName());
+                openai.setModel(((K8sCRRunnable) runnable).getCustomResource().getName());
             }
 
             if (functionSpec.getAdapters() != null) {

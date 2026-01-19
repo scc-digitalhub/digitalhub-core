@@ -32,6 +32,7 @@ import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sCRFramework;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sCRHelper;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
@@ -63,8 +64,7 @@ public class K8sCRMonitor extends K8sBaseMonitor<K8sCRRunnable> {
     @Override
     public K8sCRRunnable refresh(K8sCRRunnable runnable) {
         try {
-            DynamicKubernetesApi dynamicApi = framework.getDynamicKubernetesApi(runnable);
-            DynamicKubernetesObject cr = framework.get(framework.build(runnable), dynamicApi);
+            DynamicKubernetesObject cr = framework.get(runnable);
 
             // check status
             // if ERROR signal, otherwise let RUNNING
@@ -80,7 +80,7 @@ public class K8sCRMonitor extends K8sBaseMonitor<K8sCRRunnable> {
                 try {
                     //explicit conversion
                     //NOTE: dko contains a GSON JsonObject which jackson *can not* convert
-                    HashMap<String, Serializable> spec = K8sCRFramework.jsonElementToSpec(cr.getRaw());
+                    HashMap<String, Serializable> spec = K8sCRHelper.jsonElementToSpec(cr.getRaw());
 
                     runnable.setResults(MapUtils.mergeMultipleMaps(runnable.getResults(), Map.of(cr.getKind(), spec)));
                 } catch (IOException e) {
