@@ -8,8 +8,8 @@ COPY entities /tmp/entities
 COPY providers /tmp/providers
 COPY runtimes /tmp/runtimes
 COPY triggers /tmp/triggers
-COPY pom.xml /tmp/pom.xml
 COPY templates /tmp/templates
+COPY pom.xml /tmp/pom.xml
 WORKDIR /tmp
 RUN mvn -Drevision=${VER} clean install -pl modules/commons
 RUN mvn -Drevision=${VER} clean install -pl '!application' -pl '!frontend'

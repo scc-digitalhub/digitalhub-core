@@ -31,6 +31,12 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
+      <groupId>it.smartcommunitylabdhub</groupId>
+      <artifactId>dh-entity-model</artifactId>
+      <version>0.15.0-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
       <version>1.18.42</version>
