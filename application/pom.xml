@@ -171,7 +171,22 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-authorization</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-fsm</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-templates</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-cloud</artifactId>
             <version>${revision}</version>
         </dependency>
         <dependency>
@@ -186,42 +201,22 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-labels</artifactId>
-            <version>${revision}</version>
-        </dependency>
-        <dependency>
-            <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-search</artifactId>
             <version>${revision}</version>
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-cloud</artifactId>
+            <artifactId>dh-labels</artifactId>
             <version>${revision}</version>
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-console</artifactId>
-            <version>${revision}</version>
-        </dependency>
-        <dependency>
-            <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-templates</artifactId>
-            <version>${revision}</version>
-        </dependency>
-        <dependency>
-            <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-openmetadata</artifactId>
+            <artifactId>dh-logs</artifactId>
             <version>${revision}</version>
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-files</artifactId>
-            <version>${revision}</version>
-        </dependency>
-        <dependency>
-            <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-authorization</artifactId>
             <version>${revision}</version>
         </dependency>
         <dependency>
@@ -239,6 +234,11 @@
             <artifactId>dh-runtime-base</artifactId>
             <version>${revision}</version>
         </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-console</artifactId>
+            <version>${revision}</version>
+        </dependency>
 
         <!-- ENTITIES  -->
         <dependency>
@@ -254,16 +254,6 @@
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-entity-function</artifactId>
-            <version>${revision}</version>
-        </dependency>
-        <dependency>
-            <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-entity-log</artifactId>
-            <version>${revision}</version>
-        </dependency>
-        <dependency>
-            <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-entity-model</artifactId>
             <version>${revision}</version>
         </dependency>
         <dependency>
@@ -288,7 +278,17 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-entity-model</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-entity-trigger</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-entity-log</artifactId>
             <version>${revision}</version>
         </dependency>
         <dependency>
@@ -305,14 +305,15 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-framework-kaniko</artifactId>
+            <artifactId>dh-framework-argo</artifactId>
             <version>${revision}</version>
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-framework-argo</artifactId>
+            <artifactId>dh-framework-kaniko</artifactId>
             <version>${revision}</version>
         </dependency>
+
         <!-- TRIGGERS -->
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
@@ -329,6 +330,7 @@
             <artifactId>dh-trigger-lifecycle</artifactId>
             <version>${revision}</version>
         </dependency>
+
         <!-- RUNTIMES -->
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
@@ -371,6 +373,12 @@
             <version>${revision}</version>
         </dependency>
 
+        <!-- PROVIDERS  -->
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>credentials-provider-db</artifactId>
+            <version>${revision}</version>
+        </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>credentials-provider-minio</artifactId>
@@ -378,7 +386,7 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>credentials-provider-db</artifactId>
+            <artifactId>credentials-provider-s3</artifactId>
             <version>${revision}</version>
         </dependency>
         <dependency>

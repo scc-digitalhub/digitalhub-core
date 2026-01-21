@@ -72,6 +72,7 @@
         <module>modules/proxy</module>
         <module>providers/credentials-provider-db</module>
         <module>providers/credentials-provider-minio</module>
+        <module>providers/credentials-provider-s3</module>
         <module>providers/search-lucene</module>
         <module>providers/search-solr</module>
         <module>providers/cloud-rabbitmq</module>
