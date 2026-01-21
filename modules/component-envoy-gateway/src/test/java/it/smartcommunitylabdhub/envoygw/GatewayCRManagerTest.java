@@ -1,9 +1,32 @@
+/*
+ * Copyright © 2026 DSLab – Fondazione Bruno Kessler and individual contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package it.smartcommunitylabdhub.envoygw;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.github.mustachejava.Mustache;
+import com.github.mustachejava.MustacheFactory;
+import it.smartcommunitylabdhub.commons.models.enums.State;
+import it.smartcommunitylabdhub.envoygw.model.ExtProcService;
+import it.smartcommunitylabdhub.envoygw.model.GenAIModelService;
+import it.smartcommunitylabdhub.envoygw.model.GenericService;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -11,7 +34,6 @@ import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Map;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,43 +42,45 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.Resource;
 
-import com.github.mustachejava.Mustache;
-import com.github.mustachejava.MustacheFactory;
-
-import it.smartcommunitylabdhub.commons.models.enums.State;
-import it.smartcommunitylabdhub.envoygw.model.ExtProcService;
-import it.smartcommunitylabdhub.envoygw.model.GenAIModelService;
-import it.smartcommunitylabdhub.envoygw.model.GenericService;
-import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
-
 @ExtendWith(MockitoExtension.class)
 class GatewayCRManagerTest {
 
     @Mock
     private Resource aigatewayrouteTemplate;
+
     @Mock
     private Resource aibackendTemplate;
+
     @Mock
     private Resource backendTemplate;
+
     @Mock
     private Resource genericHttpRouteTemplate;
+
     @Mock
     private Resource payloadLoggerExtProcTemplate;
+
     @Mock
     private Resource extProcTemplate;
 
     @Mock
     private MustacheFactory mustacheFactory;
+
     @Mock
     private Mustache aigatewayrouteMustache;
+
     @Mock
     private Mustache aibackendMustache;
+
     @Mock
     private Mustache backendMustache;
+
     @Mock
     private Mustache genericHttpRouteMustache;
+
     @Mock
     private Mustache payloadLoggerExtProcMustache;
+
     @Mock
     private Mustache extProcMustache;
 
@@ -161,8 +185,10 @@ class GatewayCRManagerTest {
         service.setSchemaName("openai");
 
         // When & Then
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-            () -> gatewayCRManager.createGenAIRunnables(null, "test-task", service));
+        IllegalArgumentException exception = assertThrows(
+            IllegalArgumentException.class,
+            () -> gatewayCRManager.createGenAIRunnables(null, "test-task", service)
+        );
         assertEquals("runtime is required", exception.getMessage());
     }
 
@@ -178,16 +204,20 @@ class GatewayCRManagerTest {
         service.setSchemaName("openai");
 
         // When & Then
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-            () -> gatewayCRManager.createGenAIRunnables("test-runtime", null, service));
+        IllegalArgumentException exception = assertThrows(
+            IllegalArgumentException.class,
+            () -> gatewayCRManager.createGenAIRunnables("test-runtime", null, service)
+        );
         assertEquals("task is required", exception.getMessage());
     }
 
     @Test
     void testCreateGenAIRunnables_NullService_ThrowsException() {
         // When & Then
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-            () -> gatewayCRManager.createGenAIRunnables("test-runtime", "test-task", null));
+        IllegalArgumentException exception = assertThrows(
+            IllegalArgumentException.class,
+            () -> gatewayCRManager.createGenAIRunnables("test-runtime", "test-task", null)
+        );
         assertEquals("service is required", exception.getMessage());
     }
 
@@ -231,7 +261,10 @@ class GatewayCRManagerTest {
         GenericService service = new GenericService("test-project", "test-service", "localhost", 8080);
 
         // Mock mustache execution
-        mockMustacheExecution(payloadLoggerExtProcMustache, "{\"apiVersion\":\"v1alpha1\",\"kind\":\"EnvoyExtensionPolicy\"}");
+        mockMustacheExecution(
+            payloadLoggerExtProcMustache,
+            "{\"apiVersion\":\"v1alpha1\",\"kind\":\"EnvoyExtensionPolicy\"}"
+        );
 
         // When
         List<K8sCRRunnable> runnables = gatewayCRManager.createServicePayloadLoggerRunnables(runtime, task, service);
@@ -283,10 +316,12 @@ class GatewayCRManagerTest {
         StringWriter writer = new StringWriter();
         writer.write("{\"key\":\"value\"}");
         doAnswer(invocation -> {
-            StringWriter sw = invocation.getArgument(0);
-            sw.write("{\"key\":\"value\"}");
-            return sw;
-        }).when(mustache).execute(any(StringWriter.class), (Object) any());
+                StringWriter sw = invocation.getArgument(0);
+                sw.write("{\"key\":\"value\"}");
+                return sw;
+            })
+            .when(mustache)
+            .execute(any(StringWriter.class), (Object) any());
 
         Map<String, Object> context = Map.of("test", "data");
 
@@ -308,10 +343,12 @@ class GatewayCRManagerTest {
         // Given
         Mustache mustache = mock(Mustache.class);
         doAnswer(invocation -> {
-            StringWriter sw = invocation.getArgument(0);
-            sw.write("invalid json");
-            return sw;
-        }).when(mustache).execute(any(StringWriter.class), (Object) any());
+                StringWriter sw = invocation.getArgument(0);
+                sw.write("invalid json");
+                return sw;
+            })
+            .when(mustache)
+            .execute(any(StringWriter.class), (Object) any());
 
         Map<String, Object> context = Map.of("test", "data");
 
@@ -320,16 +357,20 @@ class GatewayCRManagerTest {
         method.setAccessible(true);
 
         // When & Then
-        InvocationTargetException exception = assertThrows(InvocationTargetException.class,
-            () -> method.invoke(gatewayCRManager, mustache, context));
+        InvocationTargetException exception = assertThrows(
+            InvocationTargetException.class,
+            () -> method.invoke(gatewayCRManager, mustache, context)
+        );
         assertInstanceOf(IOException.class, exception.getCause());
     }
 
     private void mockMustacheExecution(Mustache mustache, String jsonResponse) throws IOException {
         doAnswer(invocation -> {
-            StringWriter writer = invocation.getArgument(0);
-            writer.write(jsonResponse);
-            return writer;
-        }).when(mustache).execute(any(StringWriter.class), (Object) any());
+                StringWriter writer = invocation.getArgument(0);
+                writer.write(jsonResponse);
+                return writer;
+            })
+            .when(mustache)
+            .execute(any(StringWriter.class), (Object) any());
     }
 }

@@ -1,19 +1,28 @@
-package it.smartcommunitylabdhub.envoygw;
+/*
+ * Copyright © 2026 DSLab – Fondazione Bruno Kessler and individual contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-import lombok.val;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
-import org.springframework.stereotype.Component;
-import org.springframework.util.Assert;
+
+
+package it.smartcommunitylabdhub.envoygw;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.mustachejava.DefaultMustacheFactory;
 import com.github.mustachejava.Mustache;
 import com.github.mustachejava.MustacheFactory;
-
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.envoygw.model.ExtProcService;
@@ -28,10 +37,16 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.stereotype.Component;
+import org.springframework.util.Assert;
 
-@Component 
+@Component
 @Slf4j
-public class GatewayCRManager implements InitializingBean{
+public class GatewayCRManager implements InitializingBean {
 
     @Value("${gateway.ai-gateway.name}")
     private String aiGatewayName;
@@ -41,13 +56,16 @@ public class GatewayCRManager implements InitializingBean{
 
     @Value("${extensions.payload-logger.host}")
     private String payloadLoggerHost;
+
     @Value("${extensions.payload-logger.port}")
     private Integer payloadLoggerPort;
 
     @Value("classpath:templates/aigatewayroute.yml")
     private Resource aigatewayrouteTemplate;
+
     @Value("classpath:templates/aibackend.yaml")
     private Resource aibackendTemplate;
+
     @Value("classpath:templates/backend.yml")
     private Resource backendTemplate;
 
@@ -71,7 +89,7 @@ public class GatewayCRManager implements InitializingBean{
     private static final String AIBACKEND_API_KIND = "AIServiceBackend";
     private static final String AIBACKEND_API_PLURAL = "aiservicebackends";
 
-    private Mustache backendMustache; 
+    private Mustache backendMustache;
     private static final String BACKEND_API_KIND = "Backend";
     private static final String BACKEND_API_PLURAL = "backends";
     private static final String BACKEND_API_GROUP = "gateway.envoyproxy.io";
@@ -103,14 +121,23 @@ public class GatewayCRManager implements InitializingBean{
 
     private static final ObjectMapper objectMapper = JacksonMapper.CUSTOM_OBJECT_MAPPER;
 
-
     @Override
     public void afterPropertiesSet() throws Exception {
-        aigatewayrouteMustache = mustacheFactory.compile(new InputStreamReader(aigatewayrouteTemplate.getInputStream()), "aigatewayroute");
-        aibackendMustache = mustacheFactory.compile(new InputStreamReader(aibackendTemplate.getInputStream()), "aibackend");
+        aigatewayrouteMustache =
+            mustacheFactory.compile(new InputStreamReader(aigatewayrouteTemplate.getInputStream()), "aigatewayroute");
+        aibackendMustache =
+            mustacheFactory.compile(new InputStreamReader(aibackendTemplate.getInputStream()), "aibackend");
         backendMustache = mustacheFactory.compile(new InputStreamReader(backendTemplate.getInputStream()), "backend");
-        genericHttpRouteMustache = mustacheFactory.compile(new InputStreamReader(genericHttpRouteTemplate.getInputStream()), "generic-httproute");
-        payloadLoggerExtProcMustache = mustacheFactory.compile(new InputStreamReader(payloadLoggerExtProcTemplate.getInputStream()), "payload-logger-extproc");
+        genericHttpRouteMustache =
+            mustacheFactory.compile(
+                new InputStreamReader(genericHttpRouteTemplate.getInputStream()),
+                "generic-httproute"
+            );
+        payloadLoggerExtProcMustache =
+            mustacheFactory.compile(
+                new InputStreamReader(payloadLoggerExtProcTemplate.getInputStream()),
+                "payload-logger-extproc"
+            );
         extProcMustache = mustacheFactory.compile(new InputStreamReader(extProcTemplate.getInputStream()), "extproc");
     }
 
@@ -127,7 +154,8 @@ public class GatewayCRManager implements InitializingBean{
      * @return
      * @throws IOException
      */
-    public List<K8sCRRunnable> createGenAIRunnables(String runtime, String task, GenAIModelService service) throws IOException {
+    public List<K8sCRRunnable> createGenAIRunnables(String runtime, String task, GenAIModelService service)
+        throws IOException {
         Assert.hasText(runtime, "runtime is required");
         Assert.hasText(task, "task is required");
         Assert.notNull(service, "service is required");
@@ -158,7 +186,7 @@ public class GatewayCRManager implements InitializingBean{
             .spec(generateSpec(aigatewayrouteMustache, context))
             .build();
         runnables.add(aigatewayrouteCR);
-        
+
         // AIBackend CR
         context.clear();
         context.put("schemaName", service.getSchemaName());
@@ -199,7 +227,8 @@ public class GatewayCRManager implements InitializingBean{
     }
 
     /**
-     * Create K8sCRRunnables corresponding to Envoy Generic Gateway Custom resources for Generic Service. Specifically, it creates the following CRs:
+     * Create K8sCRRunnables corresponding to Envoy Generic Gateway Custom resources for Generic Service.
+     * Specifically, it creates the following CRs:
      * - HTTPRoute
      * - Backend
      * @param runtime
@@ -208,7 +237,8 @@ public class GatewayCRManager implements InitializingBean{
      * @return
      * @throws IOException
      */
-    public List<K8sCRRunnable> createGenericServiceRunnables(String runtime, String task, GenericService service) throws IOException {
+    public List<K8sCRRunnable> createGenericServiceRunnables(String runtime, String task, GenericService service)
+        throws IOException {
         Assert.hasText(runtime, "runtime is required");
         Assert.hasText(task, "task is required");
         Assert.notNull(service, "service is required");
@@ -259,9 +289,10 @@ public class GatewayCRManager implements InitializingBean{
 
         return runnables;
     }
-    
+
     /**
-     * Create K8sCRRunnables corresponding to Envoy Extension Processor Custom resources for Payload Logger. Specifically, it creates the following CRs:
+     * Create K8sCRRunnables corresponding to Envoy Extension Processor Custom resources for Payload Logger.
+     * Specifically, it creates the following CRs:
      * - EnvoyExtensionPolicy
      * @param runtime
      * @param task
@@ -269,7 +300,8 @@ public class GatewayCRManager implements InitializingBean{
      * @return
      * @throws IOException
      */
-    public List<K8sCRRunnable> createServicePayloadLoggerRunnables(String runtime, String task, GenericService service) throws IOException {
+    public List<K8sCRRunnable> createServicePayloadLoggerRunnables(String runtime, String task, GenericService service)
+        throws IOException {
         Assert.hasText(runtime, "runtime is required");
         Assert.hasText(task, "task is required");
         Assert.notNull(service, "service is required");
@@ -304,7 +336,8 @@ public class GatewayCRManager implements InitializingBean{
     }
 
     /**
-     * Create K8sCRRunnables corresponding to Envoy Extension Processor Custom resources for ExtProc Service. Specifically, it creates the following CRs:
+     * Create K8sCRRunnables corresponding to Envoy Extension Processor Custom resources for ExtProc Service.
+     * Specifically, it creates the following CRs:
      * - EnvoyExtensionPolicy
      * @param runtime
      * @param task
@@ -312,7 +345,8 @@ public class GatewayCRManager implements InitializingBean{
      * @return
      * @throws IOException
      */
-    public List<K8sCRRunnable> createServiceExtprocRunnables(String runtime, String task, ExtProcService service) throws IOException {
+    public List<K8sCRRunnable> createServiceExtprocRunnables(String runtime, String task, ExtProcService service)
+        throws IOException {
         Assert.hasText(runtime, "runtime is required");
         Assert.hasText(task, "task is required");
         Assert.notNull(service, "service is required");
@@ -344,7 +378,8 @@ public class GatewayCRManager implements InitializingBean{
         return runnables;
     }
 
-    private Map<String, Serializable> generateSpec(Mustache mustache, Map<String, Serializable> context) throws IOException {
+    private Map<String, Serializable> generateSpec(Mustache mustache, Map<String, Serializable> context)
+        throws IOException {
         StringWriter writer = new StringWriter();
         mustache.execute(writer, context);
         writer.flush();
