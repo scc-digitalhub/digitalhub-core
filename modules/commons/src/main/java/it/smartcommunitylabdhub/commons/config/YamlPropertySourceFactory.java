@@ -17,9 +17,9 @@
 package it.smartcommunitylabdhub.commons.config;
 
 import java.io.IOException;
-import java.util.Properties;
-import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
-import org.springframework.core.env.PropertiesPropertySource;
+import java.util.Collections;
+import org.springframework.boot.env.OriginTrackedMapPropertySource;
+import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.support.EncodedResource;
 import org.springframework.core.io.support.PropertySourceFactory;
@@ -33,19 +33,22 @@ public class YamlPropertySourceFactory implements PropertySourceFactory {
         @Nullable String name,
         @NonNull EncodedResource encodedResource
     ) throws IOException {
-        YamlPropertiesFactoryBean factory = new YamlPropertiesFactoryBean();
-        factory.setResources(encodedResource.getResource());
+        // Use Spring Boot's YamlPropertySourceLoader which properly handles
+        // environment variable placeholder resolution in multi-jar deployments
+        YamlPropertySourceLoader loader = new YamlPropertySourceLoader();
 
         String fileName = encodedResource.getResource().getFilename() != null
             ? encodedResource.getResource().getFilename()
             : name;
 
-        Properties properties = factory.getObject();
+        var propertySources = loader.load(fileName, encodedResource.getResource());
 
-        if (properties == null) {
-            properties = new Properties();
+        if (propertySources.isEmpty()) {
+            // Return empty property source as fallback
+            return new OriginTrackedMapPropertySource(fileName, Collections.emptyMap());
         }
 
-        return new PropertiesPropertySource(fileName, properties);
+        // Return the first property source (typically there's only one for simple YAML files)
+        return propertySources.get(0);
     }
 }
