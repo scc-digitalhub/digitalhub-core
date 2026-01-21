@@ -1,10 +1,10 @@
 gateway:
   ai-gateway:
-    name: ai-gateway
+    name: ${AI_GATEWAY_NAME:ai-gateway}
   generic-gateway:
-    name: generic-gateway
+    name: ${GENERIC_GATEWAY_NAME:generic-gateway}
   
 extensions:
   payload-logger:
-    host: payload-logger.digitalhub.svc.cluster.local
-    port: 50051
+    host: ${PAYLOAD_LOGGER_HOST:}
+    port: ${PAYLOAD_LOGGER_PORT:}

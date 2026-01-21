@@ -14,12 +14,30 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.envoygw;
+package it.smartcommunitylabdhub.envoygw.config;
 
-import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@Configuration
-@PropertySource(value = "classpath:/component-envoygw.yml", factory = YamlPropertySourceFactory.class)
-public class GatewayConfig {}
+@Getter
+@Setter
+@NoArgsConstructor
+@ToString
+@ConfigurationProperties(prefix = "gateway", ignoreUnknownFields = true)
+public class EnvoyGwProperties {
+
+    private GatewayInstanceProperties aiGateway;
+    private GatewayInstanceProperties genericGateway;
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @ToString
+    public static class GatewayInstanceProperties {
+
+        private String name;
+    }
+}

@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-
-
 package it.smartcommunitylabdhub.envoygw;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -25,6 +23,8 @@ import com.github.mustachejava.Mustache;
 import com.github.mustachejava.MustacheFactory;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.enums.State;
+import it.smartcommunitylabdhub.envoygw.config.EnvoyGwProperties;
+import it.smartcommunitylabdhub.envoygw.config.PayloadLoggerProperties;
 import it.smartcommunitylabdhub.envoygw.model.ExtProcService;
 import it.smartcommunitylabdhub.envoygw.model.GenAIModelService;
 import it.smartcommunitylabdhub.envoygw.model.GenericService;
@@ -39,44 +39,37 @@ import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
-import org.springframework.stereotype.Component;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.util.Assert;
 
-@Component
 @Slf4j
 public class GatewayCRManager implements InitializingBean {
 
-    @Value("${gateway.ai-gateway.name}")
-    private String aiGatewayName;
+    private final EnvoyGwProperties envoyGwProperties;
+    private PayloadLoggerProperties payloadLoggerProperties;
 
-    @Value("${gateway.generic-gateway.name}")
-    private String genericGatewayName;
+    @Autowired
+    ResourceLoader resourceLoader;
 
-    @Value("${extensions.payload-logger.host}")
-    private String payloadLoggerHost;
+    // @Value("classpath:envoygw/templates/aigatewayroute.yml")
+    // private Resource aigatewayrouteTemplate;
 
-    @Value("${extensions.payload-logger.port}")
-    private Integer payloadLoggerPort;
+    // @Value("classpath:envoygw/templates/aibackend.yaml")
+    // private Resource aibackendTemplate;
 
-    @Value("classpath:templates/aigatewayroute.yml")
-    private Resource aigatewayrouteTemplate;
+    // @Value("classpath:envoygw/templates/backend.yml")
+    // private Resource backendTemplate;
 
-    @Value("classpath:templates/aibackend.yaml")
-    private Resource aibackendTemplate;
+    // @Value("classpath:envoygw/templates/generic-httproute.yml")
+    // private Resource genericHttpRouteTemplate;
 
-    @Value("classpath:templates/backend.yml")
-    private Resource backendTemplate;
+    // @Value("classpath:envoygw/templates/payload-extension.yml")
+    // private Resource payloadLoggerExtProcTemplate;
 
-    @Value("classpath:templates/generic-httproute.yml")
-    private Resource genericHttpRouteTemplate;
-
-    @Value("classpath:templates/payload-extension.yml")
-    private Resource payloadLoggerExtProcTemplate;
-
-    @Value("classpath:templates/extproc-extension.yml")
-    private Resource extProcTemplate;
+    // @Value("classpath:envoygw/templates/extproc-extension.yml")
+    // private Resource extProcTemplate;
 
     private static final String AIGATEWAY_API_GROUP = "aigateway.envoyproxy.io";
     private static final String AIGATEWAY_API_VERSION = "v1alpha1";
@@ -121,24 +114,32 @@ public class GatewayCRManager implements InitializingBean {
 
     private static final ObjectMapper objectMapper = JacksonMapper.CUSTOM_OBJECT_MAPPER;
 
+    public GatewayCRManager(EnvoyGwProperties envoyGwProperties) {
+        Assert.notNull(envoyGwProperties, "envoyGwProperties is required");
+        if (log.isTraceEnabled()) {
+            log.trace("GatewayCRManager created with properties: {}", envoyGwProperties.toString());
+        }
+
+        this.envoyGwProperties = envoyGwProperties;
+    }
+
+    @Autowired(required = false)
+    public void setPayloadLoggerProperties(PayloadLoggerProperties payloadLoggerProperties) {
+        this.payloadLoggerProperties = payloadLoggerProperties;
+    }
+
     @Override
     public void afterPropertiesSet() throws Exception {
-        aigatewayrouteMustache =
-            mustacheFactory.compile(new InputStreamReader(aigatewayrouteTemplate.getInputStream()), "aigatewayroute");
-        aibackendMustache =
-            mustacheFactory.compile(new InputStreamReader(aibackendTemplate.getInputStream()), "aibackend");
-        backendMustache = mustacheFactory.compile(new InputStreamReader(backendTemplate.getInputStream()), "backend");
-        genericHttpRouteMustache =
-            mustacheFactory.compile(
-                new InputStreamReader(genericHttpRouteTemplate.getInputStream()),
-                "generic-httproute"
-            );
-        payloadLoggerExtProcMustache =
-            mustacheFactory.compile(
-                new InputStreamReader(payloadLoggerExtProcTemplate.getInputStream()),
-                "payload-logger-extproc"
-            );
-        extProcMustache = mustacheFactory.compile(new InputStreamReader(extProcTemplate.getInputStream()), "extproc");
+        log.debug("Loading templates from resources...");
+
+        aibackendMustache = loadTemplate("aibackend");
+        aigatewayrouteMustache = loadTemplate("aigatewayroute");
+        backendMustache = loadTemplate("backend");
+        extProcMustache = loadTemplate("extproc-extension");
+        genericHttpRouteMustache = loadTemplate("generic-httproute");
+        payloadLoggerExtProcMustache = loadTemplate("payload-extension");
+
+        log.debug("Templates loaded successfully");
     }
 
     /**
@@ -170,7 +171,7 @@ public class GatewayCRManager implements InitializingBean {
 
         // AIGateway Route CR
         Map<String, Serializable> context = new HashMap<>();
-        context.put("aiGatewayName", aiGatewayName);
+        context.put("aiGatewayName", envoyGwProperties.getAiGateway().getName());
         context.put("modelName", service.getModelName());
         context.put("aiBackendName", aiBackendName);
         K8sCRRunnable aigatewayrouteCR = K8sCRRunnable
@@ -251,7 +252,7 @@ public class GatewayCRManager implements InitializingBean {
         String backendName = serviceId + "-backend";
         // HTTPRoute CR
         Map<String, Serializable> context = new HashMap<>();
-        context.put("genericGatewayName", genericGatewayName);
+        context.put("genericGatewayName", envoyGwProperties.getGenericGateway().getName());
         context.put("backendName", backendName);
         context.put("servicePath", serviceId);
 
@@ -305,6 +306,10 @@ public class GatewayCRManager implements InitializingBean {
         Assert.hasText(runtime, "runtime is required");
         Assert.hasText(task, "task is required");
         Assert.notNull(service, "service is required");
+        if (payloadLoggerProperties == null || !payloadLoggerProperties.isEnabled()) {
+            log.warn("Payload Logger extension is not enabled, skipping creation of Payload Logger CRs");
+            return List.of();
+        }
 
         String serviceId = service.getServiceId();
         log.debug("createServicePayloadLoggerRunnables for runtime {} task {} serviceId {}", runtime, task, serviceId);
@@ -316,8 +321,8 @@ public class GatewayCRManager implements InitializingBean {
         context.put("routeName", serviceId + "-httproute");
         context.put("projectName", service.getProjectName());
         context.put("serviceId", serviceId);
-        context.put("payloadLoggerHost", payloadLoggerHost);
-        context.put("payloadLoggerPort", payloadLoggerPort);
+        context.put("payloadLoggerHost", payloadLoggerProperties.getHost());
+        context.put("payloadLoggerPort", payloadLoggerProperties.getPort());
         K8sCRRunnable payloadLoggerCR = K8sCRRunnable
             .builder()
             .runtime(runtime)
@@ -384,5 +389,11 @@ public class GatewayCRManager implements InitializingBean {
         mustache.execute(writer, context);
         writer.flush();
         return objectMapper.readValue(writer.toString(), typeRef);
+    }
+
+    private Mustache loadTemplate(String templateName) throws IOException {
+        String resourcePath = String.format("classpath:envoygw/templates/%s.yaml", templateName);
+        Resource resource = resourceLoader.getResource(resourcePath);
+        return mustacheFactory.compile(new InputStreamReader(resource.getInputStream()), templateName);
     }
 }
