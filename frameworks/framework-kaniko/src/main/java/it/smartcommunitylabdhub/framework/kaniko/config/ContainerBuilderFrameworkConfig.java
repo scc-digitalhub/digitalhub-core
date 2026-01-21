@@ -33,12 +33,14 @@ import it.smartcommunitylabdhub.runtimes.persistence.RunnableRepository;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStoreImpl;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 
 @Configuration
 @PropertySource(value = "classpath:/framework-kaniko.yml", factory = YamlPropertySourceFactory.class)
+@EnableConfigurationProperties({ ContainerBuilderProperties.class, KanikoProperties.class, BuildkitProperties.class })
 public class ContainerBuilderFrameworkConfig {
 
     @Bean
@@ -52,14 +54,14 @@ public class ContainerBuilderFrameworkConfig {
     @Bean
     @ConditionalOnKubernetes
     @ConditionalOnProperty(name = "builder.framework", havingValue = "kaniko", matchIfMissing = false)
-    public K8sKanikoFramework k8sKanikoFramework(ApiClient apiClient) {
-        return new K8sKanikoFramework(apiClient);
+    public K8sKanikoFramework k8sKanikoFramework(ApiClient apiClient, KanikoProperties kanikoProperties) {
+        return new K8sKanikoFramework(apiClient, kanikoProperties);
     }
 
     @Bean
     @ConditionalOnKubernetes
     @ConditionalOnProperty(name = "builder.framework", havingValue = "buildkit", matchIfMissing = false)
-    public K8sBuildkitFramework k8sBuildkitFramework(ApiClient apiClient) {
-        return new K8sBuildkitFramework(apiClient);
+    public K8sBuildkitFramework k8sBuildkitFramework(ApiClient apiClient, BuildkitProperties buildkitProperties) {
+        return new K8sBuildkitFramework(apiClient, buildkitProperties);
     }
 }

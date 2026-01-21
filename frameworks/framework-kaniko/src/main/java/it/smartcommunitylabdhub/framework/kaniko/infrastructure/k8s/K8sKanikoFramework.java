@@ -53,6 +53,7 @@ import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sTemplate;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
+import it.smartcommunitylabdhub.framework.kaniko.config.KanikoProperties;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
@@ -84,30 +85,25 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
     >() {};
 
     private final BatchV1Api batchV1Api;
+    private final KanikoProperties properties;
 
     private int activeDeadlineSeconds = DEADLINE_SECONDS;
-
-    @Value("${builder.kaniko.image}")
-    private String kanikoImage;
 
     private String initImage;
     private List<String> initCommand = null;
 
-    @Value("${builder.kaniko.image-prefix}")
-    private String imagePrefix;
 
-    @Value("${builder.kaniko.image-registry}")
-    private String imageRegistry;
 
-    @Value("${builder.kaniko.secret}")
-    private String kanikoSecret;
-
-    @Value("${builder.kaniko.args}")
-    private List<String> kanikoArgs;
-
-    public K8sKanikoFramework(ApiClient apiClient) {
+    public K8sKanikoFramework(ApiClient apiClient, KanikoProperties properties) {
         super(apiClient);
+        Assert.notNull(properties, "kaniko properties are required");
+
+        if (log.isTraceEnabled()) {
+            log.trace("kaniko properties: {}", properties);
+        }
+
         this.batchV1Api = new BatchV1Api(apiClient);
+        this.properties = properties;
     }
 
     @Autowired
@@ -382,8 +378,8 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
 
         //build destination image name and set to runnable
         String prefix =
-            (StringUtils.hasText(imageRegistry) ? imageRegistry + "/" : "") +
-            (StringUtils.hasText(imagePrefix) ? imagePrefix + "-" : "");
+            (StringUtils.hasText(properties.getImageRegistry()) ? properties.getImageRegistry() + "/" : "") +
+            (StringUtils.hasText(properties.getImagePrefix()) ? properties.getImagePrefix() + "-" : "");
         // workaround: update image name only first time
         String imageName = runnable.getImage();
         if (StringUtils.hasText(prefix) && !runnable.getImage().startsWith(prefix)) {
@@ -431,17 +427,18 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
 
         // Add secret for kaniko
         // NOTE: we support *only* docker config files
-        if (StringUtils.hasText(kanikoSecret)) {
+        if (StringUtils.hasText(properties.getSecret())) {
             V1Volume secretVolume = new V1Volume()
-                .name(kanikoSecret)
+                .name(properties.getSecret())
                 .secret(
                     new V1SecretVolumeSource()
-                        .secretName(kanikoSecret)
+                        .secretName(properties.getSecret())
                         .items(List.of(new V1KeyToPath().key(".dockerconfigjson").path("config.json")))
                 );
 
-            V1VolumeMount secretVolumeMount = new V1VolumeMount().name(kanikoSecret).mountPath("/kaniko/.docker");
-
+            V1VolumeMount secretVolumeMount = new V1VolumeMount()
+                .name(properties.getSecret())
+                .mountPath("/kaniko/.docker");
             volumes.add(secretVolume);
             volumeMounts.add(secretVolumeMount);
         }
@@ -457,12 +454,12 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
             )
         );
         // Add Kaniko args
-        kanikoArgsAll.addAll(kanikoArgs);
+        kanikoArgsAll.addAll(properties.getArgs());
 
         // Build Container
         V1Container container = new V1Container()
             .name(containerName)
-            .image(kanikoImage)
+            .image(properties.getImage())
             .imagePullPolicy("IfNotPresent")
             .args(kanikoArgsAll)
             .resources(resources)

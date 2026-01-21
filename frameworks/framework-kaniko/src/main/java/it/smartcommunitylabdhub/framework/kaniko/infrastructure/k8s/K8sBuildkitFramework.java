@@ -57,6 +57,7 @@ import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sTemplate;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
+import it.smartcommunitylabdhub.framework.kaniko.config.BuildkitProperties;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
@@ -89,39 +90,23 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
     >() {};
 
     private final BatchV1Api batchV1Api;
+    private final BuildkitProperties properties;
 
     private int activeDeadlineSeconds = DEADLINE_SECONDS;
-
-    @Value("${builder.buildkit.image}")
-    private String kanikoImage;
 
     private String initImage;
     private List<String> initCommand = null;
 
-    @Value("${builder.buildkit.image-prefix}")
-    private String imagePrefix;
-
-    @Value("${builder.buildkit.image-registry}")
-    private String imageRegistry;
-
-    @Value("${builder.buildkit.secret}")
-    private String kanikoSecret;
-
-    @Value("${builder.buildkit.client-secret.name}")
-    private String kanikoClientSecret;
-
-    @Value("${builder.buildkit.client-secret.mount-path}")
-    private String kanikoClientSecretPath;
-
-    @Value("${builder.buildkit.args}")
-    private List<String> kanikoArgs;
-
-    @Value("${builder.buildkit.command}")
-    private List<String> kanikoCommand;
-
-    public K8sBuildkitFramework(ApiClient apiClient) {
+    public K8sBuildkitFramework(ApiClient apiClient, BuildkitProperties properties) {
         super(apiClient);
+        Assert.notNull(properties, "buildkit properties are required");
+
+        if (log.isTraceEnabled()) {
+            log.trace("buildkit properties: {}", properties);
+        }
+
         this.batchV1Api = new BatchV1Api(apiClient);
+        this.properties = properties;
     }
 
     @Autowired
@@ -396,8 +381,8 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
 
         //build destination image name and set to runnable
         String prefix =
-            (StringUtils.hasText(imageRegistry) ? imageRegistry + "/" : "") +
-            (StringUtils.hasText(imagePrefix) ? imagePrefix + "-" : "");
+            (StringUtils.hasText(properties.getImageRegistry()) ? properties.getImageRegistry() + "/" : "") +
+            (StringUtils.hasText(properties.getImagePrefix()) ? properties.getImagePrefix() + "-" : "");
         // workaround: update image name only first time
         String imageName = runnable.getImage();
         if (StringUtils.hasText(prefix) && !runnable.getImage().startsWith(prefix)) {
@@ -448,30 +433,30 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
 
         // Add secret for kaniko
         // NOTE: we support *only* docker config files
-        if (StringUtils.hasText(kanikoSecret)) {
+        if (StringUtils.hasText(properties.getSecret())) {
             V1Volume secretVolume = new V1Volume()
-                .name(kanikoSecret)
+                .name(properties.getSecret())
                 .secret(
                     new V1SecretVolumeSource()
-                        .secretName(kanikoSecret)
+                        .secretName(properties.getSecret())
                         .items(List.of(new V1KeyToPath().key(".dockerconfigjson").path("config.json")))
                 );
 
-            V1VolumeMount secretVolumeMount = new V1VolumeMount().name(kanikoSecret).mountPath("/kaniko/.docker");
-
+            V1VolumeMount secretVolumeMount = new V1VolumeMount()
+                .name(properties.getSecret())
+                .mountPath("/kaniko/.docker");
             volumes.add(secretVolume);
             volumeMounts.add(secretVolumeMount);
         }
 
-        if (StringUtils.hasText(kanikoClientSecret)) {
+        if (StringUtils.hasText(properties.getClientSecretName())) {
             V1Volume clientSecretVolume = new V1Volume()
-                .name(kanikoClientSecret)
-                .secret(new V1SecretVolumeSource().secretName(kanikoClientSecret));
+                .name(properties.getClientSecretName())
+                .secret(new V1SecretVolumeSource().secretName(properties.getClientSecretName()));
 
             V1VolumeMount clientSecretVolumeMount = new V1VolumeMount()
-                .name(kanikoClientSecret)
-                .mountPath(kanikoClientSecretPath);
-
+                .name(properties.getClientSecretName())
+                .mountPath(properties.getClientSecretMountPath());
             volumes.add(clientSecretVolume);
             volumeMounts.add(clientSecretVolumeMount);
         }
@@ -479,7 +464,7 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
         // resources
         V1ResourceRequirements resources = buildResources(runnable);
 
-        List<String> kanikoArgsAll = new ArrayList<>(kanikoArgs);
+        List<String> kanikoArgsAll = new ArrayList<>(properties.getArgs());
 
         // Add Kaniko args
         kanikoArgsAll.addAll(
@@ -507,8 +492,8 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
         // Build Container
         V1Container container = new V1Container()
             .name(containerName)
-            .command(kanikoCommand)
-            .image(kanikoImage)
+            .command(properties.getCommand())
+            .image(properties.getImage())
             .imagePullPolicy("IfNotPresent")
             .args(kanikoArgsAll)
             .resources(resources)

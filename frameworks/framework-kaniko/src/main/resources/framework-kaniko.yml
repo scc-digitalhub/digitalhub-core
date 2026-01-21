@@ -15,6 +15,5 @@ builder:
     secret: ${BUILDKIT_SECRET:${registry.secret}}
     command: ${BUILDKIT_COMMAND:buildctl-daemonless.sh}
     args: ${BUILDKIT_ARGS:build,--frontend,dockerfile.v0}
-    client-secret:
-      name: ${BUILDKIT_CLIENT_SECRET_NAME:}
-      mount-path: ${BUILDKIT_CLIENT_SECRET_MOUNT_PATH:/certs/client}
+    client-secret-name: ${BUILDKIT_CLIENT_SECRET_NAME:}
+    client-secret-mount-path: ${BUILDKIT_CLIENT_SECRET_MOUNT_PATH:/certs/client}
