@@ -17,9 +17,26 @@
 package it.smartcommunitylabdhub.credentials.minio;
 
 import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
+import it.smartcommunitylabdhub.files.service.FilesService;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 
 @Configuration
 @PropertySource(value = "classpath:/credentials-provider-minio.yml", factory = YamlPropertySourceFactory.class)
-public class MinioProviderConfig {}
+@EnableConfigurationProperties({ MinioProperties.class })
+public class MinioProviderConfig {
+
+    @Bean
+    @ConditionalOnProperty(
+        prefix = "credentials.provider.minio",
+        name = "enable",
+        havingValue = "true",
+        matchIfMissing = false
+    )
+    MinioProvider minioProvider(FilesService filesService, MinioProperties minioProperties) {
+        return new MinioProvider(filesService, minioProperties);
+    }
+}

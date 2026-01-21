@@ -53,49 +53,21 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.util.Pair;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
-import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 
-@Service
-@ConditionalOnProperty(name = "credentials.provider.minio.enable", havingValue = "true", matchIfMissing = false)
 @Slf4j
 public class MinioProvider implements ConfigurationProvider, CredentialsProvider, InitializingBean {
 
     private static final int DEFAULT_DURATION = 24 * 3600; //24 hour
     private static final int MIN_DURATION = 300; //5 min
 
-    @Value("${credentials.provider.minio.access-key}")
-    private String accessKey;
-
-    @Value("${credentials.provider.minio.secret-key}")
-    private String secretKey;
-
-    @Value("${credentials.provider.minio.claim}")
-    private String claimPrefix;
-
-    @Value("${credentials.provider.minio.policy}")
-    private String defaultPolicy;
-
-    @Value("${credentials.provider.minio.roleArn}")
-    private String defaultRoleArn;
-
-    @Value("${credentials.provider.minio.endpoint}")
-    private String endpointUrl;
-
-    @Value("${credentials.provider.minio.region}")
-    private String region;
-
-    @Value("${credentials.provider.minio.enable}")
-    private Boolean enabled;
-
-    private String bucket;
+    private final MinioProperties properties;
 
     private int duration = DEFAULT_DURATION;
     private int accessTokenDuration = JwtTokenService.DEFAULT_ACCESS_TOKEN_DURATION;
@@ -106,20 +78,16 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
     // cache credentials for up to DURATION
     LoadingCache<Pair<String, MinioPolicy>, S3Credentials> cache;
 
-    public MinioProvider(FilesService filesService) {
+    public MinioProvider(FilesService filesService, MinioProperties properties) {
         Assert.notNull(filesService, "files service is required");
-        this.filesService = filesService;
-        //TODO define a property bean
-    }
+        Assert.notNull(properties, "minio properties are required");
 
-    @Autowired(required = false)
-    public void setBucket(@Value("${credentials.provider.minio.bucket}") String bucket) {
-        //sanity check
-        if (StringUtils.hasText(bucket)) {
-            this.bucket = bucket;
-        } else {
-            this.bucket = null;
+        if (log.isTraceEnabled()) {
+            log.trace("properties: {}", properties);
         }
+
+        this.filesService = filesService;
+        this.properties = properties;
     }
 
     @Autowired
@@ -131,12 +99,6 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        if (Boolean.TRUE.equals(enabled)) {
-            //check config and override if needed
-            //TODO raise an error
-            enabled = StringUtils.hasText(endpointUrl);
-        }
-
         //set duration to 2x access token duration to ensure we have valid credentials for a full cycle
         if (accessTokenDuration * 2 > duration || accessTokenDuration * 3 < duration) {
             duration = accessTokenDuration * 2;
@@ -163,9 +125,9 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
         //build config
         S3ConfigBuilder builder = S3Config
             .builder()
-            .endpoint(endpointUrl)
-            .bucket(bucket)
-            .region(region)
+            .endpoint(properties.getEndpoint())
+            .bucket(properties.getBucket())
+            .region(properties.getRegion())
             .signatureVersion("s3v4")
             .pathStyle(true);
 
@@ -179,9 +141,9 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
         S3FilesStore store = new S3FilesStore(config);
 
         //register with service
-        if (StringUtils.hasText(bucket)) {
-            filesService.registerStore("s3://" + bucket, store);
-            filesService.registerStore("zip+s3://" + bucket, store);
+        if (StringUtils.hasText(properties.getBucket())) {
+            filesService.registerStore("s3://" + properties.getBucket(), store);
+            filesService.registerStore("zip+s3://" + properties.getBucket(), store);
         } else {
             filesService.registerStore("s3://", store);
             filesService.registerStore("zip+s3://", store);
@@ -199,12 +161,12 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
             //NOTE: roleArn or policy scoping does NOT work via assumeRole, only with external OIDC provider
             //credentials will receive the same set of privileges as the accessKey used to sign the request!
             AssumeRoleProvider provider = new AssumeRoleProvider(
-                endpointUrl,
-                accessKey,
-                secretKey,
+                properties.getEndpoint(),
+                properties.getAccessKey(),
+                properties.getSecretKey(),
                 duration,
                 policy.getPolicy(),
-                region,
+                properties.getRegion(),
                 policy.getRoleArn(),
                 null,
                 null,
@@ -243,7 +205,7 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
 
     @Override
     public Credentials get(@NotNull UserAuthentication<?> auth) {
-        if (Boolean.TRUE.equals(enabled) && cache != null) {
+        if (properties.isEnabled() && cache != null) {
             //we expect a policy credentials in context
             MinioPolicy policy = Optional
                 .ofNullable(auth.getCredentials())
@@ -333,19 +295,19 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
 
     @Override
     public <T extends AbstractAuthenticationToken> Credentials process(@NotNull T token) {
-        if (Boolean.TRUE.equals(enabled)) {
+        if (properties.isEnabled()) {
             //extract a policy from jwt tokens
             if (token instanceof JwtAuthenticationToken) {
                 //check if role or policy is set
                 String roleArnParam =
-                    ((JwtAuthenticationToken) token).getToken().getClaimAsString(claimPrefix + "/roleArn");
+                    ((JwtAuthenticationToken) token).getToken().getClaimAsString(properties.getClaim() + "/roleArn");
                 String policyParam =
-                    ((JwtAuthenticationToken) token).getToken().getClaimAsString(claimPrefix + "/policy");
+                    ((JwtAuthenticationToken) token).getToken().getClaimAsString(properties.getClaim() + "/policy");
 
-                String roleArn = StringUtils.hasText(roleArnParam) ? roleArnParam : defaultRoleArn;
-                String policy = StringUtils.hasText(policyParam) ? policyParam : defaultPolicy;
+                String roleArn = StringUtils.hasText(roleArnParam) ? roleArnParam : properties.getRoleArn();
+                String policy = StringUtils.hasText(policyParam) ? policyParam : properties.getPolicy();
 
-                return MinioPolicy.builder().claim(claimPrefix).roleArn(roleArn).policy(policy).build();
+                return MinioPolicy.builder().claim(properties.getClaim()).roleArn(roleArn).policy(policy).build();
             }
 
             //extract stored policy from bearer
@@ -370,7 +332,12 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
             }
 
             //fallback to default
-            return MinioPolicy.builder().claim(claimPrefix).policy(defaultPolicy).roleArn(defaultRoleArn).build();
+            return MinioPolicy
+                .builder()
+                .claim(properties.getClaim())
+                .policy(properties.getPolicy())
+                .roleArn(properties.getRoleArn())
+                .build();
         }
 
         return null;
