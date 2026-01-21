@@ -46,6 +46,10 @@ public class LuceneComponent implements SearchService, InitializingBean {
     public LuceneComponent(LuceneProperties properties) {
         Assert.notNull(properties, "lucene properties are required");
 
+        if (log.isTraceEnabled()) {
+            log.trace("properties: {}", properties);
+        }
+
         //build manager
         this.indexManager = new LuceneManager(properties);
     }
@@ -57,7 +61,7 @@ public class LuceneComponent implements SearchService, InitializingBean {
             //init
             indexManager.init();
         } catch (IndexerException e) {
-            log.error("error initializing solr: {}", e.getMessage());
+            log.error("error initializing lucene: {}", e.getMessage());
             indexManager = null;
         }
     }
@@ -69,7 +73,7 @@ public class LuceneComponent implements SearchService, InitializingBean {
                 indexManager.close();
             }
         } catch (IndexerException e) {
-            log.error("error disconnecting solr: {}", e.getMessage());
+            log.error("error disconnecting lucene: {}", e.getMessage());
         }
     }
 
@@ -112,7 +116,7 @@ public class LuceneComponent implements SearchService, InitializingBean {
     public SearchPage<SearchGroupResult> groupSearch(String q, List<String> fq, Pageable pageRequest)
         throws IndexerException {
         if (indexManager == null) {
-            throw new IndexerException("solr not available");
+            throw new IndexerException("lucene not available");
         }
         return indexManager.groupSearch(q, fq, pageRequest);
     }
@@ -120,7 +124,7 @@ public class LuceneComponent implements SearchService, InitializingBean {
     @Override
     public SearchPage<ItemResult> itemSearch(String q, List<String> fq, Pageable pageRequest) throws IndexerException {
         if (indexManager == null) {
-            throw new IndexerException("solr not available");
+            throw new IndexerException("lucene not available");
         }
         return indexManager.itemSearch(q, fq, pageRequest);
     }

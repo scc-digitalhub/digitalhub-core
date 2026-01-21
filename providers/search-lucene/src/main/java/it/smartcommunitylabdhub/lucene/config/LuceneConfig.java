@@ -26,6 +26,7 @@ package it.smartcommunitylabdhub.lucene.config;
 import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.lucene.LuceneComponent;
+import it.smartcommunitylabdhub.lucene.LuceneInitalizer;
 import it.smartcommunitylabdhub.lucene.base.LuceneBaseEntityIndexer;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
 import it.smartcommunitylabdhub.search.service.SearchService;
@@ -60,5 +61,11 @@ public class LuceneConfig {
                 return new LuceneBaseEntityIndexer<>(clazz, lucene);
             }
         };
+    }
+
+    @Bean
+    @ConditionalOnBean(LuceneComponent.class)
+    LuceneInitalizer luceneInitalizer(LuceneProperties luceneProperties, LuceneComponent lucene) {
+        return new LuceneInitalizer(luceneProperties);
     }
 }

@@ -28,15 +28,11 @@ import it.smartcommunitylabdhub.search.service.IndexableEntityService;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.context.event.ApplicationStartedEvent;
 import org.springframework.context.ApplicationListener;
-import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
-@Component
 @Slf4j
-@ConditionalOnBean(LuceneComponent.class)
 public class LuceneInitalizer implements ApplicationListener<ApplicationStartedEvent> {
 
     private final LuceneProperties properties;
@@ -55,6 +51,7 @@ public class LuceneInitalizer implements ApplicationListener<ApplicationStartedE
     @Override
     public void onApplicationEvent(ApplicationStartedEvent event) {
         // trigger reindex if required
+        log.debug("Lucene initalizing: reindex is {}", properties.getReindex());
         if (services != null && "always".equals(properties.getReindex())) {
             //reindex
             services.forEach(service -> service.reindexAll());
