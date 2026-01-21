@@ -26,62 +26,33 @@ import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.CredentialsProvider;
 import it.smartcommunitylabdhub.commons.infrastructure.ConfigurationProvider;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
+import it.smartcommunitylabdhub.files.config.S3Properties;
 import it.smartcommunitylabdhub.files.provider.S3Config.S3ConfigBuilder;
 import it.smartcommunitylabdhub.files.s3.S3FilesStore;
 import it.smartcommunitylabdhub.files.service.FilesService;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
-import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
-@Service
-@ConditionalOnProperty(name = "credentials.provider.s3.enable", havingValue = "true", matchIfMissing = false)
 @Slf4j
 public class S3Provider implements ConfigurationProvider, CredentialsProvider, InitializingBean {
 
-    @Value("${credentials.provider.s3.access-key}")
-    private String accessKey;
-
-    @Value("${credentials.provider.s3.secret-key}")
-    private String secretKey;
-
-    @Value("${credentials.provider.s3.endpoint}")
-    private String endpoint;
-
-    private String bucket;
-
-    @Value("${credentials.provider.s3.signature-version}")
-    private String signatureVersion;
-
-    @Value("${credentials.provider.s3.region}")
-    private String region;
-
-    @Value("${credentials.provider.s3.path-style-access}")
-    private Boolean pathStyleAccess;
-
+    private final S3Properties properties;
     private final FilesService filesService;
     private S3Config config;
 
-    public S3Provider(FilesService filesService) {
+    public S3Provider(FilesService filesService, S3Properties s3Properties) {
         Assert.notNull(filesService, "files service is required");
-        this.filesService = filesService;
-        //TODO define a property bean
-    }
+        Assert.notNull(s3Properties, "s3 properties are required");
 
-    @Autowired(required = false)
-    public void setBucket(@Value("${credentials.provider.s3.bucket}") String bucket) {
-        //sanity check
-        if (StringUtils.hasText(bucket)) {
-            this.bucket = bucket;
-        } else {
-            this.bucket = null;
+        if (log.isTraceEnabled()) {
+            log.trace("s3 properties: {}", s3Properties);
         }
+        this.filesService = filesService;
+        this.properties = s3Properties;
     }
 
     @Override
@@ -91,11 +62,11 @@ public class S3Provider implements ConfigurationProvider, CredentialsProvider, I
         //build config
         S3ConfigBuilder builder = S3Config
             .builder()
-            .endpoint(endpoint)
-            .bucket(bucket)
-            .region(region)
-            .signatureVersion(signatureVersion)
-            .pathStyle(pathStyleAccess);
+            .endpoint(properties.getEndpoint())
+            .bucket(properties.getBucket())
+            .region(properties.getRegion())
+            .signatureVersion(properties.getSignatureVersion())
+            .pathStyle(properties.getPathStyleAccess());
 
         this.config = builder.build();
 
@@ -107,9 +78,9 @@ public class S3Provider implements ConfigurationProvider, CredentialsProvider, I
         S3FilesStore store = new S3FilesStore(config);
 
         //register with service
-        if (StringUtils.hasText(bucket)) {
-            filesService.registerStore("s3://" + bucket, store);
-            filesService.registerStore("zip+s3://" + bucket, store);
+        if (StringUtils.hasText(properties.getBucket())) {
+            filesService.registerStore("s3://" + properties.getBucket(), store);
+            filesService.registerStore("zip+s3://" + properties.getBucket(), store);
         } else {
             filesService.registerStore("s3://", store);
             filesService.registerStore("zip+s3://", store);
@@ -125,7 +96,11 @@ public class S3Provider implements ConfigurationProvider, CredentialsProvider, I
         log.debug("generate credentials for user authentication {} via STS service", auth.getName());
 
         //static credentials shared
-        return S3Credentials.builder().accessKey(accessKey).secretKey(secretKey).build();
+        return S3Credentials
+            .builder()
+            .accessKey(properties.getAccessKey())
+            .secretKey(properties.getSecretKey())
+            .build();
     }
 
     @Override

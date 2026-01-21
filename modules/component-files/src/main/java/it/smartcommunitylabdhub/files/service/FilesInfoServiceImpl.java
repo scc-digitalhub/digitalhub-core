@@ -25,6 +25,7 @@ package it.smartcommunitylabdhub.files.service;
 
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
+import it.smartcommunitylabdhub.files.config.FilesProperties;
 import it.smartcommunitylabdhub.files.models.FileInfo;
 import it.smartcommunitylabdhub.files.models.FilesInfo;
 import it.smartcommunitylabdhub.files.persistence.FilesInfoDTOBuilder;
@@ -36,19 +37,15 @@ import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.keygen.StringKeyGenerator;
-import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
-@Service
 @Transactional
 @Slf4j
 public class FilesInfoServiceImpl implements FilesInfoService {
 
-    @Value("${files.max-column-size}")
-    private int maxColumnSize;
+    private final FilesProperties properties;
 
     @Autowired
     private FilesInfoDTOBuilder dtoBuilder;
@@ -60,6 +57,16 @@ public class FilesInfoServiceImpl implements FilesInfoService {
     private FilesInfoRepository repository;
 
     private StringKeyGenerator keyGenerator = () -> UUID.randomUUID().toString().replace("-", "");
+
+    public FilesInfoServiceImpl(FilesProperties properties) {
+        Assert.notNull(properties, "files properties are required");
+
+        if (log.isTraceEnabled()) {
+            log.trace("properties: {}", properties);
+        }
+
+        this.properties = properties;
+    }
 
     @Autowired(required = false)
     public void setKeyGenerator(StringKeyGenerator keyGenerator) {
@@ -101,8 +108,10 @@ public class FilesInfoServiceImpl implements FilesInfoService {
         entity = entityBuilder.convert(dto);
 
         //check files size before persisting
-        if (entity.getFiles() != null && entity.getFiles().length > maxColumnSize) {
-            throw new IllegalArgumentException("files column exceeds maximum size " + String.valueOf(maxColumnSize));
+        if (entity.getFiles() != null && entity.getFiles().length > properties.getMaxColumnSize()) {
+            throw new IllegalArgumentException(
+                "files column exceeds maximum size " + String.valueOf(properties.getMaxColumnSize())
+            );
         }
 
         entity = repository.save(entity);

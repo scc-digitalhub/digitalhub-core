@@ -17,9 +17,9 @@
 package it.smartcommunitylabdhub.files.config;
 
 import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
-import it.smartcommunitylabdhub.files.service.FilesInfoService;
-import it.smartcommunitylabdhub.files.service.FilesInfoServiceImpl;
+import it.smartcommunitylabdhub.files.provider.S3Provider;
 import it.smartcommunitylabdhub.files.service.FilesService;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,16 +27,12 @@ import org.springframework.context.annotation.PropertySource;
 
 @Configuration
 @PropertySource(value = "classpath:/component-files.yml", factory = YamlPropertySourceFactory.class)
-@EnableConfigurationProperties({ FilesProperties.class })
-public class FilesConfig {
+@EnableConfigurationProperties({ S3Properties.class })
+public class S3ProviderConfig {
 
     @Bean
-    FilesService filesService(FilesProperties filesProperties) {
-        return new FilesService(filesProperties);
-    }
-
-    @Bean
-    FilesInfoService filesInfoSeervice(FilesProperties filesProperties) {
-        return new FilesInfoServiceImpl(filesProperties);
+    @ConditionalOnProperty(name = "credentials.provider.s3.enable", havingValue = "true", matchIfMissing = false)
+    S3Provider s3Provider(FilesService filesService, S3Properties s3Properties) {
+        return new S3Provider(filesService, s3Properties);
     }
 }

@@ -29,6 +29,7 @@ import it.smartcommunitylabdhub.commons.infrastructure.ConfigurationProvider;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.project.ProjectBaseSpec;
+import it.smartcommunitylabdhub.files.config.FilesProperties;
 import it.smartcommunitylabdhub.files.http.HttpStore;
 import it.smartcommunitylabdhub.files.models.DownloadInfo;
 import it.smartcommunitylabdhub.files.models.FileInfo;
@@ -43,8 +44,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -53,18 +52,23 @@ import org.springframework.util.StringUtils;
  * Path-aware files service with support for multiple backends
  */
 
-@Service
 @Slf4j
 public class FilesService implements ConfigurationProvider, InitializingBean {
 
     private final Map<String, FilesStore> stores = new HashMap<>();
 
-    @Value("${files.default.store}")
-    private String defaultStore;
+    private final FilesProperties properties;
 
     private FilesConfig config;
 
-    public FilesService() {
+    public FilesService(FilesProperties properties) {
+        Assert.notNull(properties, "files properties are required");
+
+        if (log.isTraceEnabled()) {
+            log.trace("properties: {}", properties);
+        }
+
+        this.properties = properties;
         //create an http read-only store
         HttpStore store = new HttpStore();
 
@@ -77,7 +81,7 @@ public class FilesService implements ConfigurationProvider, InitializingBean {
     @Override
     public void afterPropertiesSet() throws Exception {
         //build config
-        this.config = FilesConfig.builder().defaultFilesStore(defaultStore).build();
+        this.config = FilesConfig.builder().defaultFilesStore(properties.getDefaultStore()).build();
     }
 
     @Override
@@ -111,7 +115,7 @@ public class FilesService implements ConfigurationProvider, InitializingBean {
         Optional<String> df = keys.stream().filter(k -> k.equals("s3://")).findFirst();
 
         String baseStore = dk.isPresent() ? dk.get() : (df.isPresent() ? df.get() : null);
-        String store = StringUtils.hasText(defaultStore) ? defaultStore : baseStore;
+        String store = StringUtils.hasText(properties.getDefaultStore()) ? properties.getDefaultStore() : baseStore;
 
         if (project != null) {
             //check if project has a configured store
