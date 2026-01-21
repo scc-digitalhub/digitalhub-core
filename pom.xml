@@ -41,6 +41,7 @@
         <module>modules/component-labels</module>
         <module>modules/component-logs</module>
         <module>modules/component-files</module>
+        <module>modules/component-envoy-gateway</module>
         <module>modules/entity-base</module>
         <module>modules/runtime-base</module>
         <module>entities/entity-artifact</module>

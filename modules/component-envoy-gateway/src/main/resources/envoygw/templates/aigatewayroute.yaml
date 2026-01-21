@@ -1,0 +1,12 @@
+parentRefs:
+  - name: {{aiGatewayName}}
+    kind: Gateway
+    group: gateway.networking.k8s.io
+rules:
+  - matches:
+      - headers:
+          - type: Exact
+            name: x-ai-eg-model
+            value: {{modelName}}
+    backendRefs:
+      - name: {{aiBackendName}}

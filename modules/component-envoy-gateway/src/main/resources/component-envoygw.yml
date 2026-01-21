@@ -1,0 +1,10 @@
+gateway:
+  ai-gateway:
+    name: ${AI_GATEWAY_NAME:ai-gateway}
+  generic-gateway:
+    name: ${GENERIC_GATEWAY_NAME:generic-gateway}
+  
+extensions:
+  payload-logger:
+    host: ${PAYLOAD_LOGGER_HOST:}
+    port: ${PAYLOAD_LOGGER_PORT:}

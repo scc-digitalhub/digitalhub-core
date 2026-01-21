@@ -1,0 +1,4 @@
+endpoints:
+  - fqdn:
+      hostname: {{serviceHost}}
+      port: {{servicePort}}

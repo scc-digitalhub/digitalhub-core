@@ -1,0 +1,6 @@
+schema:
+  name: {{schemaName}}
+backendRef:
+  name: {{backendName}}
+  kind: Backend
+  group: gateway.envoyproxy.io

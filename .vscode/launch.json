@@ -18,6 +18,18 @@
             "mainClass": "it.smartcommunitylabdhub.core.CoreApplication",
             "projectName": "core",
             "vmArgs": "-Dspring.profiles.active=local",
+            "env": {
+                "K8S_NAMESPACE": "dev-platform",
+                "KUBECONFIG": "/Users/raman/workspace/atlas.config",
+                "RUNTIME_VLLM_SERVE_IMAGE": "smartcommunitylab/vllm:v0.11.1",
+                "RUNTIME_VLLM_SERVE_CPU_IMAGE": "smartcommunitylab/vllm-cpu:v0.11.1",
+                "K8S_SEC_DISABLE_ROOT": "true",
+                "K8S_RESOURCE_CPU_DEFAULT": 2,
+                "RUNTIME_VLLM_USER_ID": "65500",
+                "RUNTIME_VLLM_GROUP_ID": "65500",
+                "RUNTIME_HUGGINGFACE_SERVE_IMAGE": "kserve/huggingfaceserver:v0.14.0",
+                "BUILDER_FRAMEWORK": "buildkit"
+            }
         },
         {
             "type": "chrome",
