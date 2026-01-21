@@ -27,6 +27,7 @@ import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
 import it.smartcommunitylabdhub.solr.SolrComponent;
+import it.smartcommunitylabdhub.solr.SolrInitalizer;
 import it.smartcommunitylabdhub.solr.base.SolrBaseEntityIndexer;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -59,5 +60,11 @@ public class SolrConfig {
                 return new SolrBaseEntityIndexer<>(clazz, solr);
             }
         };
+    }
+
+    @Bean
+    @ConditionalOnBean(SolrComponent.class)
+    SolrInitalizer solrInitalizer(SolrProperties solrProperties, SolrComponent solr) {
+        return new SolrInitalizer(solrProperties);
     }
 }

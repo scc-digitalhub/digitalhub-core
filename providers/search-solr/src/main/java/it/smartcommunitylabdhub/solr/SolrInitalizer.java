@@ -28,15 +28,11 @@ import it.smartcommunitylabdhub.solr.config.SolrProperties;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationStartedEvent;
 import org.springframework.context.ApplicationListener;
-import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
-@Component
 @Slf4j
-@ConditionalOnProperty(prefix = "solr", name = "url")
 public class SolrInitalizer implements ApplicationListener<ApplicationStartedEvent> {
 
     private final SolrProperties properties;
@@ -54,6 +50,8 @@ public class SolrInitalizer implements ApplicationListener<ApplicationStartedEve
 
     @Override
     public void onApplicationEvent(ApplicationStartedEvent event) {
+        log.debug("Solr initalizing: reindex is {}", properties.getReindex());
+
         // trigger reindex if required
         if (services != null && "always".equals(properties.getReindex())) {
             //reindex

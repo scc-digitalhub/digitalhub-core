@@ -47,6 +47,9 @@ public class SolrComponent implements SearchService, InitializingBean {
     public SolrComponent(SolrProperties solrProperties) {
         Assert.notNull(solrProperties, "solr properties are required");
 
+        if (log.isTraceEnabled()) {
+            log.trace("properties: {}", solrProperties);
+        }
         //build manager
         this.indexManager = new SolrIndexManager(solrProperties);
     }
