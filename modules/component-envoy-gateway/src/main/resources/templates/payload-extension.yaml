@@ -1,0 +1,23 @@
+targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name:  {{routeName}}
+lua:
+  - type: Inline
+    inline: |
+      function envoy_on_request(request_handle)
+        request_handle:streamInfo():dynamicMetadata():set("digitalhub", "project", "{{projectName}}")
+        request_handle:streamInfo():dynamicMetadata():set("digitalhub", "service_name", "{{serviceId}}")
+      end
+extProc:
+  - backendRefs:
+      - name: {{payloadLoggerHost}}
+        port: {{payloadLoggerPort}}
+    metadata:
+      accessibleNamespaces: 
+        - digitalhub
+    processingMode:
+      request: 
+        body: Streamed
+      response: 
+        body: Streamed

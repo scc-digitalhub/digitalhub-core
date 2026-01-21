@@ -1,0 +1,19 @@
+parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: {{genericGatewayName}}
+rules:
+  - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: {{backendName}}
+        weight: 1
+    matches:
+      - path:
+          value: /{{servicePath}}
+    filters:
+    - type: URLRewrite
+      urlRewrite:
+        path:
+          type: ReplacePrefixMatch
+          replacePrefixMatch: /
