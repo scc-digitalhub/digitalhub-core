@@ -1,5 +1,6 @@
 FROM maven:3-eclipse-temurin-21-alpine AS build
 ARG VER=SNAPSHOT
+ARG SKIP_TESTS=false
 COPY application /tmp/application
 COPY frontend /tmp/frontend
 COPY frameworks /tmp/frameworks
@@ -14,18 +15,19 @@ WORKDIR /tmp
 RUN --mount=type=cache,target=/root/.m2,source=/cache/.m2,from=ghcr.io/scc-digitalhub/digitalhub-core:cache \ 
     mvn -Drevision=${VER} install -pl 'modules/commons'
 RUN --mount=type=cache,target=/root/.m2,source=/cache/.m2,from=ghcr.io/scc-digitalhub/digitalhub-core:cache \ 
-    mvn -Drevision=${VER} install -pl '!modules/commons,!frontend,!application'    
+    mvn -Drevision=${VER} install -pl '!modules/commons,!frontend,!application' -DskipTests=${SKIP_TESTS}
 RUN --mount=type=cache,target=/root/.m2,source=/cache/.m2,from=ghcr.io/scc-digitalhub/digitalhub-core:cache \
     --mount=type=cache,target=/tmp/frontend/target,source=/cache/frontend/target,from=ghcr.io/scc-digitalhub/digitalhub-core:cache \ 
     --mount=type=cache,target=/tmp/frontend/console/node_modules,source=/cache/frontend/console/node_modules,from=ghcr.io/scc-digitalhub/digitalhub-core:cache \ 
-    mvn -Drevision=${VER} install -pl 'frontend'
+    mvn -Drevision=${VER} install -pl 'frontend' -DskipTests=${SKIP_TESTS}
 RUN --mount=type=cache,target=/root/.m2,source=/cache/.m2,from=ghcr.io/scc-digitalhub/digitalhub-core:cache \ 
-    mvn -Drevision=${VER} package -pl 'application'
+    mvn -Drevision=${VER} package -pl 'application' -DskipTests=${SKIP_TESTS}
 
 FROM maven:3-eclipse-temurin-21-alpine AS builder
+ARG VER=SNAPSHOT
 WORKDIR /tmp
-COPY --from=build /tmp/application/target/*.jar /tmp/
-RUN java -Djarmode=layertools -jar *.jar extract
+COPY --from=build /tmp/application/target/core-${VER}.jar /tmp/
+RUN java -Djarmode=layertools -jar core-${VER}.jar extract
 
 FROM gcr.io/distroless/java21-debian12:nonroot
 ENV APP=core.jar
