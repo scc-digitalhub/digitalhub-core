@@ -17,9 +17,21 @@
 package it.smartcommunitylabdhub.credentials.db.config;
 
 import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
+import it.smartcommunitylabdhub.credentials.db.DbCredentialsProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 
 @Configuration
 @PropertySource(value = "classpath:/credentials-provider-db.yml", factory = YamlPropertySourceFactory.class)
-public class DbCredentialsProviderConfig {}
+@EnableConfigurationProperties({ DbCredentialsProviderProperties.class })
+public class DbCredentialsProviderConfig {
+
+    @Bean
+    @ConditionalOnProperty(name = "credentials.provider.db.enable", havingValue = "true", matchIfMissing = false)
+    DbCredentialsProvider dbCredentialsProvider(DbCredentialsProviderProperties dbCredentialsProviderProperties) {
+        return new DbCredentialsProvider(dbCredentialsProviderProperties);
+    }
+}

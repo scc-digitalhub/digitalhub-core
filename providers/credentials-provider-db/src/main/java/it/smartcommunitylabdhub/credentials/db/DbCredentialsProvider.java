@@ -32,6 +32,7 @@ import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.ConfigurationProvider;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
+import it.smartcommunitylabdhub.credentials.db.config.DbCredentialsProviderProperties;
 import it.smartcommunitylabdhub.credentials.db.models.DbConfig;
 import it.smartcommunitylabdhub.credentials.db.models.DbConfig.DbConfigBuilder;
 import it.smartcommunitylabdhub.credentials.db.models.DbCredentials;
@@ -62,14 +63,13 @@ import org.springframework.lang.Nullable;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
-import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-@Service
 @Slf4j
 public class DbCredentialsProvider implements CredentialsProvider, ConfigurationProvider, InitializingBean {
 
@@ -77,38 +77,10 @@ public class DbCredentialsProvider implements CredentialsProvider, Configuration
     private static final int MIN_DURATION = 300; //5 min
     private static final int SKEW_DURATION = 60; //1 min
 
-    @Value("${credentials.provider.db.user}")
-    private String user;
-
-    @Value("${credentials.provider.db.password}")
-    private String secret;
-
-    @Value("${credentials.provider.db.platform}")
-    private String platform;
-
-    @Value("${credentials.provider.db.host}")
-    private String host;
-
-    @Value("${credentials.provider.db.port}")
-    private Integer port;
-
-    @Value("${credentials.provider.db.database}")
-    private String database;
-
-    @Value("${credentials.provider.db.claim}")
-    private String claim;
-
-    @Value("${credentials.provider.db.role}")
-    private String defaultRole;
+    private final DbCredentialsProviderProperties properties;
 
     private int duration = DEFAULT_DURATION;
     private int accessTokenDuration = JwtTokenService.DEFAULT_ACCESS_TOKEN_DURATION;
-
-    @Value("${credentials.provider.db.endpoint}")
-    private String endpointUrl;
-
-    @Value("${credentials.provider.db.enable}")
-    private Boolean enabled;
 
     private final RestTemplate restTemplate;
 
@@ -117,8 +89,14 @@ public class DbCredentialsProvider implements CredentialsProvider, Configuration
     // cache credentials for up to DURATION
     LoadingCache<Pair<String, String>, Pair<DbCredentials, Instant>> cache;
 
-    public DbCredentialsProvider() {
-        //TODO define a property bean
+    public DbCredentialsProvider(DbCredentialsProviderProperties properties) {
+        Assert.notNull(properties, "db properties can not be null");
+
+        if (log.isTraceEnabled()) {
+            log.trace("db properties: {}", properties);
+        }
+
+        this.properties = properties;
         restTemplate = new RestTemplate();
 
         //register message converter for form-encoded requests
@@ -138,12 +116,12 @@ public class DbCredentialsProvider implements CredentialsProvider, Configuration
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        if (Boolean.TRUE.equals(enabled)) {
-            //check config
-            enabled = StringUtils.hasText(endpointUrl);
-        }
-
-        DbConfigBuilder builder = DbConfig.builder().platform(platform).host(host).port(port).database(database);
+        DbConfigBuilder builder = DbConfig
+            .builder()
+            .platform(properties.getPlatform())
+            .host(properties.getHost())
+            .port(properties.getPort())
+            .database(properties.getDatabase());
 
         this.config = builder.build();
 
@@ -182,11 +160,13 @@ public class DbCredentialsProvider implements CredentialsProvider, Configuration
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-            if (StringUtils.hasText(user) && StringUtils.hasText(secret)) {
+            if (StringUtils.hasText(properties.getUser()) && StringUtils.hasText(properties.getPassword())) {
                 //basic auth is required
                 byte[] basicAuth = Base64
                     .getEncoder()
-                    .encode((user + ":" + secret).getBytes(Charset.forName("US-ASCII")));
+                    .encode(
+                        (properties.getUser() + ":" + properties.getPassword()).getBytes(Charset.forName("US-ASCII"))
+                    );
                 headers.add("Authorization", "Basic " + new String(basicAuth));
             }
 
@@ -200,7 +180,7 @@ public class DbCredentialsProvider implements CredentialsProvider, Configuration
             // .build();
             MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
             map.add("username", username);
-            map.add("database", database);
+            map.add("database", properties.getDatabase());
             map.add("roles", role);
             map.add("duration", String.valueOf(duration));
 
@@ -209,7 +189,7 @@ public class DbCredentialsProvider implements CredentialsProvider, Configuration
             }
 
             //call web sts
-            String url = endpointUrl + "/sts/web";
+            String url = properties.getEndpoint() + "/sts/web";
 
             log.debug("call STS endpoint for exchange {}", url);
             ResponseEntity<TokenResponse> response = restTemplate.postForEntity(
@@ -265,7 +245,7 @@ public class DbCredentialsProvider implements CredentialsProvider, Configuration
     @Override
     @Nullable
     public Configuration getConfig() {
-        if (Boolean.TRUE.equals(enabled)) {
+        if (properties.isEnabled()) {
             return config;
         }
 
@@ -274,7 +254,7 @@ public class DbCredentialsProvider implements CredentialsProvider, Configuration
 
     @Override
     public Credentials get(@NotNull UserAuthentication<?> auth) {
-        if (Boolean.TRUE.equals(enabled) && cache != null) {
+        if (properties.isEnabled() && cache != null) {
             //we expect a role credentials in context
             DbRole role = Optional
                 .ofNullable(auth.getCredentials())
@@ -317,12 +297,12 @@ public class DbCredentialsProvider implements CredentialsProvider, Configuration
 
     @Override
     public <T extends AbstractAuthenticationToken> Credentials process(@NotNull T token) {
-        if (Boolean.TRUE.equals(enabled)) {
+        if (properties.isEnabled()) {
             //extract a role from jwt tokens
-            if (token instanceof JwtAuthenticationToken && StringUtils.hasText(claim)) {
-                String role = ((JwtAuthenticationToken) token).getToken().getClaimAsString(claim);
+            if (token instanceof JwtAuthenticationToken && StringUtils.hasText(properties.getClaim())) {
+                String role = ((JwtAuthenticationToken) token).getToken().getClaimAsString(properties.getClaim());
                 if (StringUtils.hasText(role)) {
-                    return DbRole.builder().claim(claim).role(role).build();
+                    return DbRole.builder().claim(properties.getClaim()).role(role).build();
                 }
             }
 
@@ -348,8 +328,8 @@ public class DbCredentialsProvider implements CredentialsProvider, Configuration
             }
 
             //fallback to default
-            if (StringUtils.hasText(defaultRole)) {
-                return DbRole.builder().claim(claim).role(defaultRole).build();
+            if (StringUtils.hasText(properties.getRole())) {
+                return DbRole.builder().claim(properties.getClaim()).role(properties.getRole()).build();
             }
         }
 
