@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.files.config;
+package it.smartcommunitylabdhub.credentials.s3.config;
 
 import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
-import it.smartcommunitylabdhub.files.provider.S3Provider;
+import it.smartcommunitylabdhub.credentials.s3.S3Provider;
 import it.smartcommunitylabdhub.files.service.FilesService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -26,7 +26,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 
 @Configuration
-@PropertySource(value = "classpath:/component-files.yml", factory = YamlPropertySourceFactory.class)
+@PropertySource(value = "classpath:/credentials-provider-s3.yml", factory = YamlPropertySourceFactory.class)
 @EnableConfigurationProperties({ S3Properties.class })
 public class S3ProviderConfig {
 

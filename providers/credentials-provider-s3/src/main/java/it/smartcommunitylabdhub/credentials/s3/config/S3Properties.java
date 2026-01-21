@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.files.config;
+package it.smartcommunitylabdhub.credentials.s3.config;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;

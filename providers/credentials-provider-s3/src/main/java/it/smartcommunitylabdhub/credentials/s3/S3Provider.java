@@ -20,14 +20,16 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.files.provider;
+package it.smartcommunitylabdhub.credentials.s3;
 
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.CredentialsProvider;
 import it.smartcommunitylabdhub.commons.infrastructure.ConfigurationProvider;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
-import it.smartcommunitylabdhub.files.config.S3Properties;
+import it.smartcommunitylabdhub.credentials.s3.config.S3Properties;
+import it.smartcommunitylabdhub.files.provider.S3Config;
 import it.smartcommunitylabdhub.files.provider.S3Config.S3ConfigBuilder;
+import it.smartcommunitylabdhub.files.provider.S3Credentials;
 import it.smartcommunitylabdhub.files.s3.S3FilesStore;
 import it.smartcommunitylabdhub.files.service.FilesService;
 import jakarta.validation.constraints.NotNull;
