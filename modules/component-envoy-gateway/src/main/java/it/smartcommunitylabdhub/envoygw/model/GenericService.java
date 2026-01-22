@@ -29,6 +29,7 @@ public class GenericService {
 
     private String projectName;
     private String serviceId;
+    private String functionName;
     private String serviceHost;
     private Integer servicePort;
 }

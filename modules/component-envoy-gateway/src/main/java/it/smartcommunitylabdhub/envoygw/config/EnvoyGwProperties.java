@@ -39,5 +39,6 @@ public class EnvoyGwProperties {
     public static class GatewayInstanceProperties {
 
         private String name;
+        private String endpoint;
     }
 }

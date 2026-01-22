@@ -1,8 +1,10 @@
 gateway:
   ai-gateway:
     name: ${AI_GATEWAY_NAME:ai-gateway}
+    endpoint: ${AI_GATEWAY_ENDPOINT:}
   generic-gateway:
     name: ${GENERIC_GATEWAY_NAME:generic-gateway}
+    endpoint: ${GENERIC_GATEWAY_ENDPOINT:}
   
 extensions:
   payload-logger:
