@@ -296,7 +296,7 @@ public class K8sBuilderHelper implements InitializingBean {
                                     new V1PersistentVolumeClaimSpec()
                                         .accessModes(Collections.singletonList("ReadWriteOnce"))
                                         .volumeMode("Filesystem")
-                                        .storageClassName(spec.getOrDefault("storage_class", ephemeralStorageClass))
+                                        .storageClassName(spec.getOrDefault("storageClass", ephemeralStorageClass))
                                         .resources(req)
                                 )
                         )
@@ -305,7 +305,7 @@ public class K8sBuilderHelper implements InitializingBean {
                 return volume.emptyDir(
                     new V1EmptyDirVolumeSource()
                         .medium(emptyDirDefaultMedium) //configured by admin only!
-                        .sizeLimit(Quantity.fromString(spec.getOrDefault("size_limit", emptyDirDefaultSize)))
+                        .sizeLimit(Quantity.fromString(spec.getOrDefault("sizeLimit", emptyDirDefaultSize)))
                 );
             default:
                 return null;
@@ -336,6 +336,20 @@ public class K8sBuilderHelper implements InitializingBean {
         }
         resources.setRequests(definitions);
         return resources;
+    }
+
+    public CoreVolume buildSharedVolume(CoreResource resource) {
+        if (resource != null && resource.getDisk() != null) {
+            //add ephemeral volume for scratch disk as /shared
+            return new CoreVolume(
+                CoreVolume.VolumeType.ephemeral,
+                "/shared",
+                "shared-dir",
+                Map.of("size", resource.getDisk())
+            );
+        }
+
+        return null;
     }
 
     /*

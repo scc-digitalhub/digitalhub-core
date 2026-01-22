@@ -67,10 +67,6 @@ public class VLLMServeRunSpec extends RunBaseSpec {
     @JsonProperty("use_cpu_image")
     private Boolean useCpuImage;
 
-    @Schema(title = "fields.vllm.storageSpace.title", description = "fields.vllm.storageSpace.description")
-    @JsonProperty("storage_space")
-    private String storageSpace;
-
     @Override
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
@@ -79,7 +75,6 @@ public class VLLMServeRunSpec extends RunBaseSpec {
         this.args = spec.getArgs();
         this.enableTelemetry = spec.getEnableTelemetry();
         this.useCpuImage = spec.getUseCpuImage();
-        this.storageSpace = spec.getStorageSpace();
     }
 
     public static VLLMServeRunSpec with(Map<String, Serializable> data) {

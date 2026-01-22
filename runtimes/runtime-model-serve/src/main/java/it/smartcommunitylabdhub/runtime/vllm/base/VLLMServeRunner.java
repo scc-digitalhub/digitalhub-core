@@ -36,8 +36,8 @@ import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreResource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
-import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume.VolumeType;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
 import it.smartcommunitylabdhub.functions.FunctionManager;
@@ -126,6 +126,23 @@ public class VLLMServeRunner {
             : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
 
         Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
+
+        List<CoreVolume> coreVolumes = new ArrayList<>(
+            taskSpec.getVolumes() != null ? taskSpec.getVolumes() : List.of()
+        );
+
+        //check if scratch disk is requested as resource or set default
+        String volumeSize = taskSpec.getResources() != null && taskSpec.getResources().getDisk() != null
+            ? taskSpec.getResources().getDisk()
+            : volumeSizeSpec;
+        CoreResource diskResource = new CoreResource();
+        diskResource.setDisk(volumeSize);
+
+        Optional
+            .ofNullable(k8sBuilderHelper)
+            .ifPresent(helper -> {
+                Optional.ofNullable(helper.buildSharedVolume(diskResource)).ifPresent(coreVolumes::add);
+            });
 
         //read source and build context
         List<ContextRef> contextRefs = null;
@@ -246,11 +263,6 @@ public class VLLMServeRunner {
         //     );
         // }
 
-        List<CoreVolume> volumes = taskSpec.getVolumes() != null
-            ? new LinkedList<>(taskSpec.getVolumes())
-            : new LinkedList<>();
-        // create model volume to store in the /shared folder and map HF variables
-        volumes.add(createModelVolume(runSpec.getStorageSpace()));
         appendHFVariables(coreEnvList);
 
         // create volume for model
@@ -274,7 +286,7 @@ public class VLLMServeRunner {
             .envs(coreEnvList)
             .secrets(coreSecrets)
             .resources(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(taskSpec.getResources()) : null)
-            .volumes(volumes)
+            .volumes(coreVolumes)
             .template(taskSpec.getProfile())
             //specific
             .replicas(taskSpec.getReplicas())
@@ -300,16 +312,6 @@ public class VLLMServeRunner {
         // if (coreEnvList.stream().noneMatch(ce -> ce.name().equals("TRANSFORMERS_CACHE"))) {
         //     coreEnvList.add(new CoreEnv("TRANSFORMERS_CACHE", "/shared/huggingface"));
         // }
-    }
-
-    private CoreVolume createModelVolume(String storageSpace) {
-        CoreVolume volume = new CoreVolume();
-        volume.setName("model-volume");
-        volume.setMountPath("/shared");
-        volume.setVolumeType(VolumeType.persistent_volume_claim);
-        String sizeSpec = StringUtils.hasText(storageSpace) ? storageSpace : this.volumeSizeSpec;
-        volume.setSpec(Map.of("size", sizeSpec));
-        return volume;
     }
 
     private String linkToModel(Run run, String path) {

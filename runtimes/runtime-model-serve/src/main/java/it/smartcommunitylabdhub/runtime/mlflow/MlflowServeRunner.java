@@ -38,6 +38,8 @@ import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreResource;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
 import it.smartcommunitylabdhub.functions.FunctionManager;
@@ -73,6 +75,7 @@ public class MlflowServeRunner {
     private final String image;
     private final int userId;
     private final int groupId;
+    private final String volumeSizeSpec;
     private final MlflowServeFunctionSpec functionSpec;
     private final Map<String, String> secretData;
 
@@ -84,6 +87,7 @@ public class MlflowServeRunner {
         String image,
         Integer userId,
         Integer groupId,
+        String volumeSizeSpec,
         MlflowServeFunctionSpec functionSpec,
         Map<String, String> secretData,
         K8sBuilderHelper k8sBuilderHelper,
@@ -97,6 +101,7 @@ public class MlflowServeRunner {
         this.modelService = modelService;
         this.functionService = functionService;
 
+        this.volumeSizeSpec = volumeSizeSpec;
         this.userId = userId != null ? userId : UID;
         this.groupId = groupId != null ? groupId : GID;
     }
@@ -115,6 +120,17 @@ public class MlflowServeRunner {
             : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
 
         Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
+
+        List<CoreVolume> coreVolumes = new ArrayList<>(
+            taskSpec.getVolumes() != null ? taskSpec.getVolumes() : List.of()
+        );
+
+        //check if scratch disk is requested as resource or set default
+        String volumeSize = taskSpec.getResources() != null && taskSpec.getResources().getDisk() != null
+            ? taskSpec.getResources().getDisk()
+            : volumeSizeSpec;
+        CoreResource diskResource = new CoreResource();
+        diskResource.setDisk(volumeSize);
 
         String path = runSpec.getPath();
         if (path.startsWith(Keys.STORE_PREFIX)) {
@@ -238,7 +254,7 @@ public class MlflowServeRunner {
             .envs(coreEnvList)
             .secrets(coreSecrets)
             .resources(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(taskSpec.getResources()) : null)
-            .volumes(taskSpec.getVolumes())
+            .volumes(coreVolumes)
             .template(taskSpec.getProfile())
             //specific
             .replicas(taskSpec.getReplicas())

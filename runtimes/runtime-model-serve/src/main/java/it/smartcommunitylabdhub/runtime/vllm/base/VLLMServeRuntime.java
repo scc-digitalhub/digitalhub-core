@@ -82,7 +82,7 @@ public abstract class VLLMServeRuntime<F extends VLLMServeFunctionSpec, R extend
     @Value("${runtime.vllmserve.cpu-image}")
     protected String cpuImage;
 
-    @Value("${runtime.vllmserve.volume-size-spec:10Gi}")
+    @Value("${runtime.vllmserve.volume-size:10Gi}")
     protected String volumeSizeSpec;
 
     @Value("${runtime.vllmserve.user-id}")
