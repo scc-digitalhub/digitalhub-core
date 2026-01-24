@@ -102,6 +102,9 @@ public class MlflowServeRuntime
     @Value("${runtime.mlflowserve.group-id}")
     private Integer groupId;
 
+    @Value("${runtime.mlflowserve.volume-size:2Gi}")
+    private String volumeSizeSpec;
+
     @Value("${runtime.mlflowserve.command:mlserver}")
     private String command;
 
@@ -178,6 +181,7 @@ public class MlflowServeRuntime
                     image,
                     userId,
                     groupId,
+                    volumeSizeSpec,
                     MlflowServeRunSpec.with(run.getSpec()).getFunctionSpec(),
                     secrets,
                     k8sBuilderHelper,

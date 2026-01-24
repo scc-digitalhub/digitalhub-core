@@ -226,7 +226,7 @@ class GatewayCRManagerTest {
         // Given
         String runtime = "test-runtime";
         String task = "test-task";
-        GenericService service = new GenericService("test-project", "test-service", "localhost", 8080);
+        GenericService service = new GenericService("test-project", "test-function", "test-service", "localhost", 8080);
 
         // Mock mustache execution
         mockMustacheExecution(genericHttpRouteMustache, "{\"apiVersion\":\"v1\",\"kind\":\"HTTPRoute\"}");
@@ -258,7 +258,7 @@ class GatewayCRManagerTest {
         // Given
         String runtime = "test-runtime";
         String task = "test-task";
-        GenericService service = new GenericService("test-project", "test-service", "localhost", 8080);
+        GenericService service = new GenericService("test-project", "test-function", "test-service", "localhost", 8080);
 
         // Mock mustache execution
         mockMustacheExecution(

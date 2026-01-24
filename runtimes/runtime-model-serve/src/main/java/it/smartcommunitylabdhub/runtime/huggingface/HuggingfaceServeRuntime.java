@@ -93,6 +93,9 @@ public class HuggingfaceServeRuntime
     @Value("${runtime.huggingfaceserve.group-id}")
     private Integer groupId;
 
+    @Value("${runtime.huggingfaceserve.volume-size:10Gi}")
+    private String volumeSizeSpec;
+
     public HuggingfaceServeRuntime() {}
 
     @Override
@@ -164,6 +167,7 @@ public class HuggingfaceServeRuntime
                     image,
                     userId,
                     groupId,
+                    volumeSizeSpec,
                     runSpec.getFunctionSpec(),
                     secretService.getSecretData(run.getProject(), runSpec.getTaskServeSpec().getSecrets()),
                     k8sBuilderHelper,

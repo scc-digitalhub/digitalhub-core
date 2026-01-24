@@ -38,14 +38,18 @@ import lombok.Setter;
 public class CoreResource implements Serializable {
 
     @Nullable
-    @Pattern(regexp = "[\\d]+|^([0-9])+([a-zA-Z])+$")
+    @Pattern(regexp = "^\\d+([a-zA-Z]+)?$")
     private String cpu;
 
     @Nullable
-    @Pattern(regexp = "[\\d]+|^([0-9])+([a-zA-Z])+$")
+    @Pattern(regexp = "^\\d+([a-zA-Z]+)?$")
     private String mem;
 
     @Nullable
-    @Pattern(regexp = "[\\d]+|^([0-9])+([a-zA-Z])+$")
+    @Pattern(regexp = "^\\d+([a-zA-Z]+)?$")
     private String gpu;
+
+    @Nullable
+    @Pattern(regexp = "^\\d+([a-zA-Z]+)?$")
+    private String disk;
 }

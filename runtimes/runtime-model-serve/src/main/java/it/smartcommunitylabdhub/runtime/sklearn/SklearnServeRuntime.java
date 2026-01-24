@@ -95,6 +95,9 @@ public class SklearnServeRuntime
     @Value("${runtime.sklearnserve.group-id}")
     private Integer groupId;
 
+    @Value("${runtime.sklearnserve.volume-size:1Gi}")
+    private String volumeSizeSpec;
+
     public SklearnServeRuntime() {}
 
     @Override
@@ -166,6 +169,7 @@ public class SklearnServeRuntime
                     image,
                     userId,
                     groupId,
+                    volumeSizeSpec,
                     runSpec.getFunctionSpec(),
                     secretService.getSecretData(run.getProject(), runSpec.getTaskServeSpec().getSecrets()),
                     k8sBuilderHelper,

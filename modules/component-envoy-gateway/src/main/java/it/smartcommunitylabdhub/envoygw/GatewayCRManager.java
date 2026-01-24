@@ -26,6 +26,7 @@ import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.envoygw.config.EnvoyGwProperties;
 import it.smartcommunitylabdhub.envoygw.config.PayloadLoggerProperties;
 import it.smartcommunitylabdhub.envoygw.model.ExtProcService;
+import it.smartcommunitylabdhub.envoygw.model.GatewayInfo;
 import it.smartcommunitylabdhub.envoygw.model.GenAIModelService;
 import it.smartcommunitylabdhub.envoygw.model.GenericService;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
@@ -91,7 +92,7 @@ public class GatewayCRManager implements InitializingBean {
     private Mustache genericHttpRouteMustache;
     private static final String GENERIC_HTTPROUTE_API_KIND = "HTTPRoute";
     private static final String GENERIC_HTTPROUTE_API_PLURAL = "httproutes";
-    private static final String GENERIC_HTTPROUTE_API_GROUP = "gateway.envoyproxy.io";
+    private static final String GENERIC_HTTPROUTE_API_GROUP = "gateway.networking.k8s.io";
     private static final String GENERIC_HTTPROUTE_API_VERSION = "v1";
 
     private Mustache payloadLoggerExtProcMustache;
@@ -112,7 +113,7 @@ public class GatewayCRManager implements InitializingBean {
         HashMap<String, Serializable>
     >() {};
 
-    private static final ObjectMapper objectMapper = JacksonMapper.CUSTOM_OBJECT_MAPPER;
+    private static final ObjectMapper objectMapper = JacksonMapper.YAML_OBJECT_MAPPER;
 
     public GatewayCRManager(EnvoyGwProperties envoyGwProperties) {
         Assert.notNull(envoyGwProperties, "envoyGwProperties is required");
@@ -168,25 +169,27 @@ public class GatewayCRManager implements InitializingBean {
 
         String backendName = serviceId + "-backend";
         String aiBackendName = serviceId + "-aibackend";
+        String routeName = serviceId + "-aigatewayroute";
 
-        // AIGateway Route CR
+        // Backend CR
         Map<String, Serializable> context = new HashMap<>();
-        context.put("aiGatewayName", envoyGwProperties.getAiGateway().getName());
-        context.put("modelName", service.getModelName());
-        context.put("aiBackendName", aiBackendName);
-        K8sCRRunnable aigatewayrouteCR = K8sCRRunnable
+        context.put("serviceHost", service.getServiceHost());
+        context.put("servicePort", service.getServicePort());
+        K8sCRRunnable backendCR = K8sCRRunnable
             .builder()
             .runtime(runtime)
             .task(task)
             .state(State.READY.name())
-            .name(serviceId + "-aigatewayroute")
-            .apiGroup(AIGATEWAY_API_GROUP)
-            .apiVersion(AIGATEWAY_API_VERSION)
-            .kind(AIGATEWAY_API_KIND)
-            .plural(AIGATEWAY_API_PLURAL)
-            .spec(generateSpec(aigatewayrouteMustache, context))
+            .name(backendName)
+            .apiGroup(BACKEND_API_GROUP)
+            .apiVersion(BACKEND_API_VERSION)
+            .kind(BACKEND_API_KIND)
+            .plural(BACKEND_API_PLURAL)
+            .spec(generateSpec(backendMustache, context))
             .build();
-        runnables.add(aigatewayrouteCR);
+        backendCR.setId(backendName);
+        backendCR.setProject(service.getProjectName());
+        runnables.add(backendCR);
 
         // AIBackend CR
         context.clear();
@@ -204,25 +207,31 @@ public class GatewayCRManager implements InitializingBean {
             .plural(AIBACKEND_API_PLURAL)
             .spec(generateSpec(aibackendMustache, context))
             .build();
+        aibackendCR.setId(aiBackendName);
+        aibackendCR.setProject(service.getProjectName());
         runnables.add(aibackendCR);
 
-        // Backend CR
+        // AIGatewayRoute CR
         context.clear();
-        context.put("serviceHost", service.getServiceHost());
-        context.put("servicePort", service.getServicePort());
-        K8sCRRunnable backendCR = K8sCRRunnable
+        context.put("aiGatewayName", envoyGwProperties.getAiGateway().getName());
+        context.put("modelName", service.getModelName());
+        context.put("aiBackendName", aiBackendName);
+        K8sCRRunnable aigatewayrouteCR = K8sCRRunnable
             .builder()
             .runtime(runtime)
             .task(task)
             .state(State.READY.name())
-            .name(backendName)
-            .apiGroup(BACKEND_API_GROUP)
-            .apiVersion(BACKEND_API_VERSION)
-            .kind(BACKEND_API_KIND)
-            .plural(BACKEND_API_PLURAL)
-            .spec(generateSpec(backendMustache, context))
+            .name(routeName)
+            .apiGroup(AIGATEWAY_API_GROUP)
+            .apiVersion(AIGATEWAY_API_VERSION)
+            .kind(AIGATEWAY_API_KIND)
+            .plural(AIGATEWAY_API_PLURAL)
+            .spec(generateSpec(aigatewayrouteMustache, context))
             .build();
-        runnables.add(backendCR);
+        aigatewayrouteCR.setId(routeName);
+        aigatewayrouteCR.setProject(service.getProjectName());
+        runnables.add(aigatewayrouteCR);
+
 
         return runnables;
     }
@@ -250,28 +259,9 @@ public class GatewayCRManager implements InitializingBean {
         List<K8sCRRunnable> runnables = new LinkedList<>();
 
         String backendName = serviceId + "-backend";
-        // HTTPRoute CR
+        String routeName = serviceId + "-httproute";
+
         Map<String, Serializable> context = new HashMap<>();
-        context.put("genericGatewayName", envoyGwProperties.getGenericGateway().getName());
-        context.put("backendName", backendName);
-        context.put("servicePath", serviceId);
-
-        K8sCRRunnable genericHttpRouteCR = K8sCRRunnable
-            .builder()
-            .runtime(runtime)
-            .task(task)
-            .state(State.READY.name())
-            .name(serviceId + "-httproute")
-            .apiGroup(GENERIC_HTTPROUTE_API_GROUP)
-            .apiVersion(GENERIC_HTTPROUTE_API_VERSION)
-            .kind(GENERIC_HTTPROUTE_API_KIND)
-            .plural(GENERIC_HTTPROUTE_API_PLURAL)
-            .spec(generateSpec(genericHttpRouteMustache, context))
-            .build();
-        runnables.add(genericHttpRouteCR);
-
-        // Backend CR
-        context.clear();
         context.put("serviceHost", service.getServiceHost());
         context.put("servicePort", service.getServicePort());
         K8sCRRunnable backendCR = K8sCRRunnable
@@ -286,7 +276,31 @@ public class GatewayCRManager implements InitializingBean {
             .plural(BACKEND_API_PLURAL)
             .spec(generateSpec(backendMustache, context))
             .build();
+        backendCR.setId(backendName);
+        backendCR.setProject(service.getProjectName());
         runnables.add(backendCR);
+
+        // HTTPRoute CR
+        context.clear();
+        context.put("genericGatewayName", envoyGwProperties.getGenericGateway().getName());
+        context.put("backendName", backendName);
+        context.put("servicePath", serviceId);
+
+        K8sCRRunnable genericHttpRouteCR = K8sCRRunnable
+            .builder()
+            .runtime(runtime)
+            .task(task)
+            .state(State.READY.name())
+            .name(routeName)
+            .apiGroup(GENERIC_HTTPROUTE_API_GROUP)
+            .apiVersion(GENERIC_HTTPROUTE_API_VERSION)
+            .kind(GENERIC_HTTPROUTE_API_KIND)
+            .plural(GENERIC_HTTPROUTE_API_PLURAL)
+            .spec(generateSpec(genericHttpRouteMustache, context))
+            .build();
+        genericHttpRouteCR.setId(routeName);
+        genericHttpRouteCR.setProject(service.getProjectName());
+        runnables.add(genericHttpRouteCR);
 
         return runnables;
     }
@@ -312,6 +326,7 @@ public class GatewayCRManager implements InitializingBean {
         }
 
         String serviceId = service.getServiceId();
+        String payloadLoggerName = serviceId + "-payload-logger";
         log.debug("createServicePayloadLoggerRunnables for runtime {} task {} serviceId {}", runtime, task, serviceId);
 
         List<K8sCRRunnable> runnables = new LinkedList<>();
@@ -321,6 +336,7 @@ public class GatewayCRManager implements InitializingBean {
         context.put("routeName", serviceId + "-httproute");
         context.put("projectName", service.getProjectName());
         context.put("serviceId", serviceId);
+        context.put("functionName", service.getFunctionName());
         context.put("payloadLoggerHost", payloadLoggerProperties.getHost());
         context.put("payloadLoggerPort", payloadLoggerProperties.getPort());
         K8sCRRunnable payloadLoggerCR = K8sCRRunnable
@@ -328,13 +344,15 @@ public class GatewayCRManager implements InitializingBean {
             .runtime(runtime)
             .task(task)
             .state(State.READY.name())
-            .name(serviceId + "-payload-logger")
+            .name(payloadLoggerName)
             .apiGroup(PAYLOADLOGGER_EXTPROC_API_GROUP)
             .apiVersion(PAYLOADLOGGER_EXTPROC_API_VERSION)
             .kind(PAYLOADLOGGER_EXTPROC_API_KIND)
             .plural(PAYLOADLOGGER_EXTPROC_API_PLURAL)
             .spec(generateSpec(payloadLoggerExtProcMustache, context))
             .build();
+        payloadLoggerCR.setId(payloadLoggerName);
+        payloadLoggerCR.setProject(service.getProjectName());
         runnables.add(payloadLoggerCR);
 
         return runnables;
@@ -357,6 +375,7 @@ public class GatewayCRManager implements InitializingBean {
         Assert.notNull(service, "service is required");
 
         String serviceId = service.getReferenceServiceId();
+        String extprocName = serviceId + "-extproc";
         log.debug("createServiceExtprocRunnables for runtime {} task {} serviceId {}", runtime, task, serviceId);
 
         List<K8sCRRunnable> runnables = new LinkedList<>();
@@ -371,16 +390,40 @@ public class GatewayCRManager implements InitializingBean {
             .runtime(runtime)
             .task(task)
             .state(State.READY.name())
-            .name(serviceId + "-extproc")
+            .name(extprocName)
             .apiGroup(EXTPROC_API_GROUP)
             .apiVersion(EXTPROC_API_VERSION)
             .kind(EXTPROC_API_KIND)
             .plural(EXTPROC_API_PLURAL)
             .spec(generateSpec(extProcMustache, context))
             .build();
+        extProcCR.setId(extprocName);
+        extProcCR.setProject(service.getProjectName());
         runnables.add(extProcCR);
 
         return runnables;
+    }
+
+    /**
+     * Get Gateway Info for GenAI Gateway
+     * @return
+     */
+    public GatewayInfo getGenAIGatewayInfo() {
+        return GatewayInfo.builder()
+            .gatewayName(envoyGwProperties.getAiGateway().getName())
+            .gatewayEndpoint(envoyGwProperties.getAiGateway().getEndpoint())
+            .build();
+    }
+
+    /**
+     * Get Gateway Info for Generic Gateway
+     * @return
+     */
+    public GatewayInfo getGenericGatewayInfo() {
+        return GatewayInfo.builder()
+            .gatewayName(envoyGwProperties.getGenericGateway().getName())
+            .gatewayEndpoint(envoyGwProperties.getGenericGateway().getEndpoint())
+            .build();
     }
 
     private Map<String, Serializable> generateSpec(Mustache mustache, Map<String, Serializable> context)
