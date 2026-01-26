@@ -230,7 +230,8 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
                     ae.setCreatedBy(entity.getCreatedBy());
                 }
 
-                // D prevAsDto = dtoBuilder.convert(entity);
+                //clone entity before persisting the update
+                D prevAsDto = dtoBuilder.convert(entity);
 
                 //persist
                 E updated = repository.saveAndFlush(e);
@@ -243,7 +244,7 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
                     log.debug("publish event: update for {}", id);
                     EntityEvent<E> event = new EntityEvent<>(
                         updated,
-                        entity, // entityBuilder.convert(prevAsDto),
+                        entityBuilder.convert(prevAsDto),
                         EntityAction.UPDATE
                     );
                     if (log.isTraceEnabled()) {
