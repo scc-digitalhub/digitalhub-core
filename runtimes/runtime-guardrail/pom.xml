@@ -36,9 +36,9 @@
             <version>${revision}</version>
         </dependency>
         <dependency>
-            <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-templates</artifactId>
-            <version>${revision}</version>
+            <groupId>com.github.spullara.mustache.java</groupId>
+            <artifactId>compiler</artifactId>
+            <version>0.9.10</version>
         </dependency>
 
 
