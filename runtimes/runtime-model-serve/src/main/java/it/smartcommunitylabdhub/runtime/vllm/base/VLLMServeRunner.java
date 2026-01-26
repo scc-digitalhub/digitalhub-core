@@ -254,7 +254,7 @@ public class VLLMServeRunner {
 
         String img = StringUtils.hasText(functionSpec.getImage())
             ? functionSpec.getImage()
-            : runSpec.getUseCpuImage() ? cpuImage : image;
+            : Boolean.TRUE.equals(runSpec.getUseCpuImage()) ? cpuImage : image;
 
         //validate image
         // if (img == null || !img.startsWith(VLLMServeRuntime.IMAGE)) {

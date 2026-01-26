@@ -36,25 +36,16 @@ import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.Dockerfil
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileGeneratorFactory;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
 import it.smartcommunitylabdhub.runtime.python.PythonRuntime;
-import it.smartcommunitylabdhub.runtime.python.model.NuclioFunctionBuilder;
-import it.smartcommunitylabdhub.runtime.python.model.NuclioFunctionSpec;
-import it.smartcommunitylabdhub.runtime.python.model.PythonSourceCode;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonBuildRunSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonBuildTaskSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonFunctionSpec;
 import java.io.Serializable;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
-import org.springframework.web.util.UriComponents;
-import org.springframework.web.util.UriComponentsBuilder;
 
 @Slf4j
 public class PythonBuildRunner {
@@ -76,21 +67,28 @@ public class PythonBuildRunner {
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
         PythonFunctionSpec functionSpec = runSpec.getFunctionSpec();
 
-        String image = images.get(functionSpec.getPythonVersion().name());
+        // core envs
+        List<CoreEnv> coreEnvList = PythonRunnerHelper.createEnvList(run, taskSpec);    
+        // core secrets
+        List<CoreEnv> coreSecrets = PythonRunnerHelper.createSecrets(secretData);
 
-        List<CoreEnv> coreEnvList = new ArrayList<>(
-            List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))
+        HashMap<String, Serializable> triggers = new HashMap<>();
+        HashMap<String, Serializable> trigger = new HashMap<>(Map.of("kind", "http", "maxWorkers", 2));
+        triggers.put("http", trigger);
+
+        //read source and build context
+        List<ContextRef> contextRefs = PythonRunnerHelper.createContextRefs(functionSpec);
+        List<ContextSource> contextSources = PythonRunnerHelper.createContextSources(
+            functionSpec,
+            null,
+            triggers,
+            "_serve_handler"
         );
-
-        List<CoreEnv> coreSecrets = secretData == null
-            ? null
-            : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
-
-        Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
 
         // Generate docker file
         DockerfileGeneratorFactory dockerfileGenerator = DockerfileGenerator.factory();
 
+        String image = images.get(functionSpec.getPythonVersion().name());
         String baseImage = StringUtils.hasText(functionSpec.getBaseImage()) ? functionSpec.getBaseImage() : image;
 
         // Add base Image
@@ -107,66 +105,6 @@ public class PythonBuildRunner {
 
         // Copy /shared folder (as workdir)
         dockerfileGenerator.copy(".", "/shared");
-
-        // Build Nuclio function
-        //define http trigger
-        //TODO use proper model
-        HashMap<String, Serializable> triggers = new HashMap<>();
-        HashMap<String, Serializable> http = new HashMap<>(Map.of("kind", "http", "maxWorkers", 2));
-        triggers.put("http", http);
-        NuclioFunctionSpec nuclio = NuclioFunctionSpec
-            .builder()
-            .runtime("python")
-            //invoke user code wrapped via default handler
-            .handler("run_handler:handler_serve")
-            //directly invoke user code
-            // .handler("main:" + runSpec.getFunctionSpec().getSource().getHandler())
-            .triggers(triggers)
-            .build();
-
-        String nuclioFunction = NuclioFunctionBuilder.write(nuclio);
-
-        //read source and build context
-        List<ContextRef> contextRefs = null;
-        List<ContextSource> contextSources = new ArrayList<>();
-        ContextSource fn = ContextSource
-            .builder()
-            .name("function.yaml")
-            .base64(Base64.getEncoder().encodeToString(nuclioFunction.getBytes(StandardCharsets.UTF_8)))
-            .build();
-        contextSources.add(fn);
-
-        if (functionSpec.getSource() != null) {
-            PythonSourceCode source = functionSpec.getSource();
-            String path = "main.py";
-
-            if (StringUtils.hasText(source.getSource())) {
-                try {
-                    //evaluate if local path (no scheme)
-                    UriComponents uri = UriComponentsBuilder.fromUriString(source.getSource()).build();
-                    String scheme = uri.getScheme();
-
-                    if (scheme != null) {
-                        //write as ref
-                        contextRefs = Collections.singletonList(ContextRef.from(source.getSource()));
-                    } else {
-                        if (StringUtils.hasText(path)) {
-                            //override path for local src
-                            path = uri.getPath();
-                            if (path.startsWith(".")) {
-                                path = path.substring(1);
-                            }
-                        }
-                    }
-                } catch (IllegalArgumentException e) {
-                    //skip invalid source
-                }
-            }
-
-            if (StringUtils.hasText(source.getBase64())) {
-                contextSources.add(ContextSource.builder().name(path).base64(source.getBase64()).build());
-            }
-        }
 
         // install all requirements
         dockerfileGenerator.run(
@@ -187,16 +125,6 @@ public class PythonBuildRunner {
 
         // If requirements.txt are defined add to build
         if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
-            //write file
-            String path = "requirements.txt";
-            String content = String.join("\n", functionSpec.getRequirements());
-            contextSources.add(
-                ContextSource
-                    .builder()
-                    .name(path)
-                    .base64(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)))
-                    .build()
-            );
             // install all requirements
             dockerfileGenerator.run("python -m pip install -r /shared/requirements.txt");
         }
@@ -206,9 +134,6 @@ public class PythonBuildRunner {
 
         // Generate string docker file
         String dockerfile = dockerfileGenerator.build().generate();
-
-        //merge env with PYTHON path override
-        coreEnvList.add(new CoreEnv("PYTHONPATH", "${PYTHONPATH}:/shared/"));
 
         // Parse run spec
         RunSpecAccessor runSpecAccessor = RunSpecAccessor.with(run.getSpec());

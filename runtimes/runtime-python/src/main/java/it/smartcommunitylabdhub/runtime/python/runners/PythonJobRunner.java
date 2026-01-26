@@ -97,18 +97,10 @@ public class PythonJobRunner {
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
         PythonFunctionSpec functionSpec = runSpec.getFunctionSpec();
 
-        String image = images.get(functionSpec.getPythonVersion().name());
-
         try {
-            List<CoreEnv> coreEnvList = new ArrayList<>(
-                List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))
-            );
 
-            List<CoreEnv> coreSecrets = secretData == null
-                ? null
-                : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
-
-            Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
+            List<CoreEnv> coreEnvList = PythonRunnerHelper.createEnvList(run, taskSpec);
+            List<CoreEnv> coreSecrets = PythonRunnerHelper.createSecrets(secretData);
 
             List<CoreVolume> coreVolumes = new ArrayList<>(
                 taskSpec.getVolumes() != null ? taskSpec.getVolumes() : List.of()
@@ -125,24 +117,16 @@ public class PythonJobRunner {
 
             //build nuclio definition
             HashMap<String, Serializable> event = new HashMap<>();
-
             event.put("body", jsonMapper.writeValueAsString(run));
 
-            NuclioFunctionSpec nuclio = NuclioFunctionSpec
-                .builder()
-                .runtime("python")
-                //invoke user code wrapped via default handler
-                .handler("run_handler:handler_job")
-                //directly invoke user code
-                // .handler("main:" + runSpec.getFunctionSpec().getSource().getHandler())
-                .event(event)
-                .build();
-
-            String nuclioFunction = NuclioFunctionBuilder.write(nuclio);
-
             //read source and build context
-            List<ContextRef> contextRefs = null;
-            List<ContextSource> contextSources = new ArrayList<>();
+            List<ContextRef> contextRefs = PythonRunnerHelper.createContextRefs(functionSpec);
+            List<ContextSource> contextSources = PythonRunnerHelper.createContextSources(
+                functionSpec,
+                event,
+                null,
+                "_job_handler"
+            );
 
             //write entrypoint
             try {
@@ -154,47 +138,6 @@ public class PythonJobRunner {
                 contextSources.add(entry);
             } catch (IOException ioe) {
                 throw new CoreRuntimeException("error with reading entrypoint for runtime-python");
-            }
-
-            //function definition
-            ContextSource fn = ContextSource
-                .builder()
-                .name("function.yaml")
-                .base64(Base64.getEncoder().encodeToString(nuclioFunction.getBytes(StandardCharsets.UTF_8)))
-                .build();
-            contextSources.add(fn);
-
-            //source
-            if (functionSpec.getSource() != null) {
-                PythonSourceCode source = functionSpec.getSource();
-                String path = "main.py";
-
-                if (StringUtils.hasText(source.getSource())) {
-                    try {
-                        //evaluate if local path (no scheme)
-                        UriComponents uri = UriComponentsBuilder.fromUriString(source.getSource()).build();
-                        String scheme = uri.getScheme();
-
-                        if (scheme != null) {
-                            //write as ref
-                            contextRefs = Collections.singletonList(ContextRef.from(source.getSource()));
-                        } else {
-                            if (StringUtils.hasText(path)) {
-                                //override path for local src
-                                path = uri.getPath();
-                                if (path.startsWith(".")) {
-                                    path = path.substring(1);
-                                }
-                            }
-                        }
-                    } catch (IllegalArgumentException e) {
-                        //skip invalid source
-                    }
-                }
-
-                if (StringUtils.hasText(source.getBase64())) {
-                    contextSources.add(ContextSource.builder().name(path).base64(source.getBase64()).build());
-                }
             }
 
             List<String> args = new ArrayList<>(
@@ -209,21 +152,8 @@ public class PythonJobRunner {
                 )
             );
 
-            // requirements.txt
-            if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
-                //write as file
-                String content = String.join("\n", functionSpec.getRequirements());
-                contextSources.add(
-                    ContextSource
-                        .builder()
-                        .name("requirements.txt")
-                        .base64(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)))
-                        .build()
-                );
-            }
-
-            //merge env with PYTHON path override
-            coreEnvList.add(new CoreEnv("PYTHONPATH", "${PYTHONPATH}:/shared/"));
+        
+            String image = images.get(functionSpec.getPythonVersion().name());
 
             K8sJobRunnable k8sJobRunnable = K8sJobRunnable
                 .builder()
