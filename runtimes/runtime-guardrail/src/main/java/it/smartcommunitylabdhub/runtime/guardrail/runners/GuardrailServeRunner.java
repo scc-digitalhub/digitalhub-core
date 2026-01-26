@@ -29,55 +29,38 @@ import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
-import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
-import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
 import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.runtime.guardrail.GuardrailRuntime;
-import it.smartcommunitylabdhub.runtime.guardrail.specs.GuardrailFunctionSpec;
 import it.smartcommunitylabdhub.runtime.guardrail.specs.GuardrailServeRunSpec;
 import it.smartcommunitylabdhub.runtime.guardrail.specs.GuardrailServeTaskSpec;
-import it.smartcommunitylabdhub.runtime.python.model.NuclioFunctionBuilder;
-import it.smartcommunitylabdhub.runtime.python.model.NuclioFunctionSpec;
-import it.smartcommunitylabdhub.runtime.python.model.PythonSourceCode;
-
 import java.io.IOException;
-import java.io.Serializable;
-import java.nio.charset.StandardCharsets;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;
-import org.springframework.web.util.UriComponents;
-import org.springframework.web.util.UriComponentsBuilder;
 
-public class GuardrailServeRunner {
+public class GuardrailServeRunner extends GuardrailBaseRunner {
 
     private static final int UID = 8877;
     private static final int GID = 999;
-    private static final int HTTP_PORT = 8080;
-
-    private final Map<String, String> images;
+    private static final int HTTP_PORT = 5051;
 
     private final int userId;
     private final int groupId;
-    private final String command;
 
-    private final K8sBuilderHelper k8sBuilderHelper;
     private final FunctionManager functionService;
 
     private final Resource entrypoint = new ClassPathResource("runtime-python/docker/entrypoint.sh");
-
+    
     public GuardrailServeRunner(
         Map<String, String> images,
         Integer userId,
@@ -86,54 +69,25 @@ public class GuardrailServeRunner {
         K8sBuilderHelper k8sBuilderHelper,
         FunctionManager functionService
     ) {
-        this.images = images;
-        this.command = command;
-
-        this.k8sBuilderHelper = k8sBuilderHelper;
+        super(images, command, k8sBuilderHelper);
         this.functionService = functionService;
 
         this.userId = userId != null ? userId : UID;
         this.groupId = groupId != null ? groupId : GID;
+        try {
+            this.handlerMustache = mustacheFactory.compile(new InputStreamReader( handlerTemplate.getInputStream()), "guardrail-handler");
+        } catch (IOException ioe) {
+            throw new CoreRuntimeException("error with reading handler template for runtime-guardrail");
+        }
     }
 
     public K8sRunnable produce(Run run, Map<String, String> secretData) {
+        
         GuardrailServeRunSpec runSpec = new GuardrailServeRunSpec(run.getSpec());
-        GuardrailServeTaskSpec taskSpec = runSpec.getTaskServeSpec();
-        TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
-        GuardrailFunctionSpec functionSpec = runSpec.getFunctionSpec();
-
-        String image = images.get(functionSpec.getPythonVersion().name());
-
-        List<CoreEnv> coreEnvList = new ArrayList<>(
-            List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))
-        );
-
-        List<CoreEnv> coreSecrets = secretData == null
-            ? null
-            : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
-
-        Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
-
-        //define extproc trigger
-        HashMap<String, Serializable> triggers = new HashMap<>();
-        HashMap<String, Serializable> attributes = new HashMap<>();
-        attributes.put("type", functionSpec.getProcessingMode());
-        attributes.put("port", 5051);
-        HashMap<String, Serializable> extproc = new HashMap<>(Map.of("kind", "extproc", "maxWorkers", 4, "attributes", attributes));
-        triggers.put("extproc", extproc);
-        NuclioFunctionSpec nuclio = NuclioFunctionSpec
-            .builder()
-            .runtime(GuardrailRuntime.RUNTIME)
-            //invoke user code wrapped via default handler
-            .handler("run_handler:handler_serve")
-            .triggers(triggers)
-            .build();
-
-        String nuclioFunction = NuclioFunctionBuilder.write(nuclio);
-
-        //read source and build context
-        List<ContextRef> contextRefs = null;
-        List<ContextSource> contextSources = new ArrayList<>();
+        TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(runSpec.getTaskServeSpec().toMap());
+        
+        //prepare context
+        Context ctx = prepareContext(run, secretData, runSpec, runSpec.getTaskServeSpec(), runSpec.getFunctionSpec());  
 
         //write entrypoint
         try {
@@ -142,50 +96,9 @@ public class GuardrailServeRunner {
                 .name("entrypoint.sh")
                 .base64(Base64.getEncoder().encodeToString(entrypoint.getContentAsByteArray()))
                 .build();
-            contextSources.add(entry);
+            ctx.contextSources().add(entry);
         } catch (IOException ioe) {
             throw new CoreRuntimeException("error with reading entrypoint for runtime-guardrail");
-        }
-
-        //function definition
-        ContextSource fn = ContextSource
-            .builder()
-            .name("function.yaml")
-            .base64(Base64.getEncoder().encodeToString(nuclioFunction.getBytes(StandardCharsets.UTF_8)))
-            .build();
-        contextSources.add(fn);
-
-        //source
-        if (functionSpec.getSource() != null) {
-            PythonSourceCode source = functionSpec.getSource();
-            String path = "main.py";
-
-            if (StringUtils.hasText(source.getSource())) {
-                try {
-                    //evaluate if local path (no scheme)
-                    UriComponents uri = UriComponentsBuilder.fromUriString(source.getSource()).build();
-                    String scheme = uri.getScheme();
-
-                    if (scheme != null) {
-                        //write as ref
-                        contextRefs = Collections.singletonList(ContextRef.from(source.getSource()));
-                    } else {
-                        if (StringUtils.hasText(path)) {
-                            //override path for local src
-                            path = uri.getPath();
-                            if (path.startsWith(".")) {
-                                path = path.substring(1);
-                            }
-                        }
-                    }
-                } catch (IllegalArgumentException e) {
-                    //skip invalid source
-                }
-            }
-
-            if (StringUtils.hasText(source.getBase64())) {
-                contextSources.add(ContextSource.builder().name(path).base64(source.getBase64()).build());
-            }
         }
 
         List<String> args = new ArrayList<>(
@@ -200,30 +113,14 @@ public class GuardrailServeRunner {
             )
         );
 
-        // requirements.txt
-        if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
-            //write as file
-            String content = String.join("\n", functionSpec.getRequirements());
-            contextSources.add(
-                ContextSource
-                    .builder()
-                    .name("requirements.txt")
-                    .base64(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)))
-                    .build()
-            );
-        }
-
-        //merge env with PYTHON path override
-        coreEnvList.add(new CoreEnv("PYTHONPATH", "${PYTHONPATH}:/shared/"));
-
         //expose http trigger only
         CorePort servicePort = new CorePort(HTTP_PORT, HTTP_PORT);
 
         //evaluate service names
         List<String> serviceNames = new ArrayList<>();
-        if (taskSpec.getServiceName() != null && StringUtils.hasText(taskSpec.getServiceName())) {
+        if (runSpec.getTaskServeSpec().getServiceName() != null && StringUtils.hasText(runSpec.getTaskServeSpec().getServiceName())) {
             //prepend with function name
-            serviceNames.add(taskAccessor.getFunction() + "-" + taskSpec.getServiceName());
+            serviceNames.add(taskAccessor.getFunction() + "-" + runSpec.getTaskServeSpec().getServiceName());
         }
 
         if (functionService != null) {
@@ -234,6 +131,8 @@ public class GuardrailServeRunner {
                 serviceNames.add(taskAccessor.getFunction() + "-latest");
             }
         }
+
+        String image = images.get(runSpec.getFunctionSpec().getPythonVersion().name());
 
         K8sRunnable k8sServeRunnable = K8sServeRunnable
             .builder()
@@ -246,24 +145,24 @@ public class GuardrailServeRunner {
                     : null
             )
             //base
-            .image(StringUtils.hasText(functionSpec.getImage()) ? functionSpec.getImage() : image)
+            .image(StringUtils.hasText(runSpec.getFunctionSpec().getImage()) ? runSpec.getFunctionSpec().getImage() : image)
             .command("/bin/bash")
             .args(args.toArray(new String[0]))
-            .contextRefs(contextRefs)
-            .contextSources(contextSources)
-            .envs(coreEnvList)
-            .secrets(coreSecrets)
-            .resources(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(taskSpec.getResources()) : null)
-            .volumes(taskSpec.getVolumes())
-            .template(taskSpec.getProfile())
+            .contextRefs(ctx.contextRefs())
+            .contextSources(ctx.contextSources())
+            .envs(ctx.coreEnvList())
+            .secrets(ctx.coreSecrets())
+            .resources(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(runSpec.getTaskServeSpec().getResources()) : null)
+            .volumes(runSpec.getTaskServeSpec().getVolumes())
+            .template(runSpec.getTaskServeSpec().getProfile())
             //securityContext
             .fsGroup(groupId)
             .runAsGroup(groupId)
             .runAsUser(userId)
             //specific
-            .replicas(taskSpec.getReplicas())
+            .replicas(runSpec.getTaskServeSpec().getReplicas())
             .servicePorts(List.of(servicePort))
-            .serviceType(taskSpec.getServiceType())
+            .serviceType(runSpec.getTaskServeSpec().getServiceType())
             .serviceNames(serviceNames != null && !serviceNames.isEmpty() ? serviceNames : null)
             .build();
 
@@ -273,3 +172,4 @@ public class GuardrailServeRunner {
         return k8sServeRunnable;
     }
 }
+

@@ -29,11 +29,14 @@ import it.smartcommunitylabdhub.runtime.guardrail.GuardrailRuntime;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonServeTaskSpec;
 import java.io.Serializable;
 import java.util.Map;
+
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
+@NoArgsConstructor
 @SpecType(runtime = GuardrailRuntime.RUNTIME, kind = GuardrailServeTaskSpec.KIND, entity = Task.class)
 public class GuardrailServeTaskSpec extends PythonServeTaskSpec {
 

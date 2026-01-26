@@ -28,8 +28,6 @@ import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
-import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
-import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileGenerator;
@@ -38,60 +36,36 @@ import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRu
 import it.smartcommunitylabdhub.runtime.guardrail.GuardrailRuntime;
 import it.smartcommunitylabdhub.runtime.guardrail.specs.GuardrailBuildRunSpec;
 import it.smartcommunitylabdhub.runtime.guardrail.specs.GuardrailBuildTaskSpec;
-import it.smartcommunitylabdhub.runtime.guardrail.specs.GuardrailFunctionSpec;
-import it.smartcommunitylabdhub.runtime.python.model.NuclioFunctionBuilder;
-import it.smartcommunitylabdhub.runtime.python.model.NuclioFunctionSpec;
-import it.smartcommunitylabdhub.runtime.python.model.PythonSourceCode;
-import java.io.Serializable;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
-import org.springframework.web.util.UriComponents;
-import org.springframework.web.util.UriComponentsBuilder;
 
 @Slf4j
-public class GuardrailBuildRunner {
+public class GuardrailBuildRunner extends GuardrailBaseRunner {
 
-    private final Map<String, String> images;
-    private final String command;
-
-    private final K8sBuilderHelper k8sBuilderHelper;
-
-    public GuardrailBuildRunner(Map<String, String> images, String command, K8sBuilderHelper k8sBuilderHelper) {
-        this.images = images;
-        this.command = command;
-        this.k8sBuilderHelper = k8sBuilderHelper;
+    public GuardrailBuildRunner(
+        Map<String, String> images, 
+        String command, 
+        K8sBuilderHelper k8sBuilderHelper
+    ) {
+        super(images, command, k8sBuilderHelper);
     }
 
     public K8sContainerBuilderRunnable produce(Run run, Map<String, String> secretData) {
+
         GuardrailBuildRunSpec runSpec = new GuardrailBuildRunSpec(run.getSpec());
-        GuardrailBuildTaskSpec taskSpec = runSpec.getTaskBuildSpec();
-        TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
-        GuardrailFunctionSpec functionSpec = runSpec.getFunctionSpec();
+        TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(runSpec.getTaskBuildSpec().toMap());
 
-        String image = images.get(functionSpec.getPythonVersion().name());
-
-        List<CoreEnv> coreEnvList = new ArrayList<>(
-            List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))
-        );
-
-        List<CoreEnv> coreSecrets = secretData == null
-            ? null
-            : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
-
-        Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
+        //prepare context
+        Context ctx = prepareContext(run, secretData, runSpec, runSpec.getTaskBuildSpec(), runSpec.getFunctionSpec());  
 
         // Generate docker file
         DockerfileGeneratorFactory dockerfileGenerator = DockerfileGenerator.factory();
 
-        String baseImage = StringUtils.hasText(functionSpec.getBaseImage()) ? functionSpec.getBaseImage() : image;
+        String image = images.get(runSpec.getFunctionSpec().getPythonVersion().name());
+        String baseImage = StringUtils.hasText(runSpec.getFunctionSpec().getBaseImage()) ? runSpec.getFunctionSpec().getBaseImage() : image;
 
         // Add base Image
         dockerfileGenerator.from(baseImage);
@@ -107,71 +81,12 @@ public class GuardrailBuildRunner {
 
         // Copy /shared folder (as workdir)
         dockerfileGenerator.copy(".", "/shared");
-
-        HashMap<String, Serializable> triggers = new HashMap<>();
-        HashMap<String, Serializable> attributes = new HashMap<>();
-        attributes.put("type", functionSpec.getProcessingMode());
-        attributes.put("port", 5051);
-        HashMap<String, Serializable> extproc = new HashMap<>(Map.of("kind", "extproc", "maxWorkers", 4, "attributes", attributes));
-        triggers.put("extproc", extproc);
-        NuclioFunctionSpec nuclio = NuclioFunctionSpec
-            .builder()
-            .runtime(GuardrailRuntime.RUNTIME)
-            //invoke user code wrapped via default handler
-            .handler("run_handler:handler_serve")
-            .triggers(triggers)
-            .build();
-
-        String nuclioFunction = NuclioFunctionBuilder.write(nuclio);
-
-        //read source and build context
-        List<ContextRef> contextRefs = null;
-        List<ContextSource> contextSources = new ArrayList<>();
-        ContextSource fn = ContextSource
-            .builder()
-            .name("function.yaml")
-            .base64(Base64.getEncoder().encodeToString(nuclioFunction.getBytes(StandardCharsets.UTF_8)))
-            .build();
-        contextSources.add(fn);
-
-        if (functionSpec.getSource() != null) {
-            PythonSourceCode source = functionSpec.getSource();
-            String path = "main.py";
-
-            if (StringUtils.hasText(source.getSource())) {
-                try {
-                    //evaluate if local path (no scheme)
-                    UriComponents uri = UriComponentsBuilder.fromUriString(source.getSource()).build();
-                    String scheme = uri.getScheme();
-
-                    if (scheme != null) {
-                        //write as ref
-                        contextRefs = Collections.singletonList(ContextRef.from(source.getSource()));
-                    } else {
-                        if (StringUtils.hasText(path)) {
-                            //override path for local src
-                            path = uri.getPath();
-                            if (path.startsWith(".")) {
-                                path = path.substring(1);
-                            }
-                        }
-                    }
-                } catch (IllegalArgumentException e) {
-                    //skip invalid source
-                }
-            }
-
-            if (StringUtils.hasText(source.getBase64())) {
-                contextSources.add(ContextSource.builder().name(path).base64(source.getBase64()).build());
-            }
-        }
-
         // install all requirements
         dockerfileGenerator.run(
             "python /opt/nuclio/whl/$(basename /opt/nuclio/whl/pip-*.whl)/pip install pip --no-index --find-links /opt/nuclio/whl " +
             "&& python -m pip install -r /opt/nuclio/requirements/common.txt" +
             "&& python -m pip install -r /opt/nuclio/requirements/" +
-            functionSpec.getPythonVersion().name().toLowerCase() +
+            runSpec.getFunctionSpec().getPythonVersion().name().toLowerCase() +
             ".txt"
         );
 
@@ -180,21 +95,11 @@ public class GuardrailBuildRunner {
 
         // Add user instructions
         Optional
-            .ofNullable(taskSpec.getInstructions())
+            .ofNullable(runSpec.getTaskBuildSpec().getInstructions())
             .ifPresent(instructions -> instructions.forEach(dockerfileGenerator::run));
 
         // If requirements.txt are defined add to build
-        if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
-            //write file
-            String path = "requirements.txt";
-            String content = String.join("\n", functionSpec.getRequirements());
-            contextSources.add(
-                ContextSource
-                    .builder()
-                    .name(path)
-                    .base64(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)))
-                    .build()
-            );
+        if (runSpec.getFunctionSpec().getRequirements() != null && !runSpec.getFunctionSpec().getRequirements().isEmpty()) {           
             // install all requirements
             dockerfileGenerator.run("python -m pip install -r /shared/requirements.txt");
         }
@@ -206,7 +111,7 @@ public class GuardrailBuildRunner {
         String dockerfile = dockerfileGenerator.build().generate();
 
         //merge env with PYTHON path override
-        coreEnvList.add(new CoreEnv("PYTHONPATH", "${PYTHONPATH}:/shared/"));
+        ctx.coreEnvList().add(new CoreEnv("PYTHONPATH", "${PYTHONPATH}:/shared/"));
 
         // Parse run spec
         RunSpecAccessor runSpecAccessor = RunSpecAccessor.with(run.getSpec());
@@ -218,8 +123,8 @@ public class GuardrailBuildRunner {
             K8sBuilderHelper.sanitizeNames(runSpecAccessor.getFunction());
 
         //evaluate user provided image name
-        if (StringUtils.hasText(functionSpec.getImage())) {
-            String name = functionSpec.getImage().split(":")[0]; //remove tag if present
+        if (StringUtils.hasText(runSpec.getFunctionSpec().getImage())) {
+            String name = runSpec.getFunctionSpec().getImage().split(":")[0]; //remove tag if present
             if (StringUtils.hasText(name) && name.length() > 3) {
                 imageName = name;
             }
@@ -239,13 +144,13 @@ public class GuardrailBuildRunner {
             )
             //base
             .image(imageName)
-            .contextRefs(contextRefs)
-            .contextSources(contextSources)
-            .envs(coreEnvList)
-            .secrets(coreSecrets)
-            .resources(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(taskSpec.getResources()) : null)
-            .volumes(taskSpec.getVolumes())
-            .template(taskSpec.getProfile())
+            .contextRefs(ctx.contextRefs())
+            .contextSources(ctx.contextSources())
+            .envs(ctx.coreEnvList())
+            .secrets(ctx.coreSecrets())
+            .resources(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(runSpec.getTaskBuildSpec().getResources()) : null)
+            .volumes(runSpec.getTaskBuildSpec().getVolumes())
+            .template(runSpec.getTaskBuildSpec().getProfile())
             // Task Specific
             .dockerFile(dockerfile)
             //specific
