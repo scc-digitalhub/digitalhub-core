@@ -38,18 +38,13 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
 import it.smartcommunitylabdhub.runtime.python.PythonRuntime;
-import it.smartcommunitylabdhub.runtime.python.model.NuclioFunctionBuilder;
-import it.smartcommunitylabdhub.runtime.python.model.NuclioFunctionSpec;
-import it.smartcommunitylabdhub.runtime.python.model.PythonSourceCode;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonFunctionSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonJobRunSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonJobTaskSpec;
 import java.io.IOException;
 import java.io.Serializable;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,8 +52,6 @@ import java.util.Optional;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;
-import org.springframework.web.util.UriComponents;
-import org.springframework.web.util.UriComponentsBuilder;
 
 public class PythonJobRunner {
 
