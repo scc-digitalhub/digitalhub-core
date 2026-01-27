@@ -65,6 +65,7 @@ public class PythonServeRunner {
     private final int userId;
     private final int groupId;
     private final String command;
+    private final List<String> dependencies;
 
     private final K8sBuilderHelper k8sBuilderHelper;
     private final FunctionManager functionService;
@@ -77,7 +78,8 @@ public class PythonServeRunner {
         Integer groupId,
         String command,
         K8sBuilderHelper k8sBuilderHelper,
-        FunctionManager functionService
+        FunctionManager functionService,
+        List<String> dependencies
     ) {
         this.images = images;
         this.command = command;
@@ -87,6 +89,7 @@ public class PythonServeRunner {
 
         this.userId = userId != null ? userId : UID;
         this.groupId = groupId != null ? groupId : GID;
+        this.dependencies = dependencies;
     }
 
     public K8sRunnable produce(Run run, Map<String, String> secretData) {
@@ -122,7 +125,8 @@ public class PythonServeRunner {
             functionSpec,
             null,
             triggers,
-            "_serve_handler"
+            "_serve_handler",
+            dependencies
         );
 
         //write entrypoint

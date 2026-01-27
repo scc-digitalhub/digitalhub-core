@@ -102,6 +102,9 @@ public class PythonRuntime
     @Value("${runtime.python.group-id}")
     private Integer groupId;
 
+    @Value("${runtime.python.dependencies}")
+    private List<String> dependencies;
+
     public PythonRuntime() {}
 
     @Override
@@ -201,7 +204,7 @@ public class PythonRuntime
 
         K8sRunnable runnable =
             switch (runAccessor.getTask()) {
-                case PythonJobTaskSpec.KIND -> new PythonJobRunner(images, userId, groupId, command, k8sBuilderHelper)
+                case PythonJobTaskSpec.KIND -> new PythonJobRunner(images, userId, groupId, command, k8sBuilderHelper, dependencies)
                     .produce(run, secrets);
                 case PythonServeTaskSpec.KIND -> new PythonServeRunner(
                     images,
@@ -209,10 +212,11 @@ public class PythonRuntime
                     groupId,
                     command,
                     k8sBuilderHelper,
-                    functionService
+                    functionService,
+                    dependencies
                 )
                     .produce(run, secrets);
-                case PythonBuildTaskSpec.KIND -> new PythonBuildRunner(images, command, k8sBuilderHelper)
+                case PythonBuildTaskSpec.KIND -> new PythonBuildRunner(images, command, k8sBuilderHelper, dependencies)
                     .produce(run, secrets);
                 default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
             };

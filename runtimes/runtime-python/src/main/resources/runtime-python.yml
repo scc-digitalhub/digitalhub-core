@@ -9,3 +9,4 @@ runtime:
     user-id: ${RUNTIME_PYTHON_USER_ID:${kubernetes.security.user}}
     group-id: ${RUNTIME_PYTHON_GROUP_ID:${kubernetes.security.group}}
     command: /usr/local/bin/processor
+    dependencies: ${RUNTIME_PYTHON_DEPENDENCIES:digitalhub[full],digitalhub-runtime-python}

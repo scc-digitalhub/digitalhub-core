@@ -54,11 +54,13 @@ public class PythonBuildRunner {
     private final String command;
 
     private final K8sBuilderHelper k8sBuilderHelper;
+    private final List<String> dependencies;
 
-    public PythonBuildRunner(Map<String, String> images, String command, K8sBuilderHelper k8sBuilderHelper) {
+    public PythonBuildRunner(Map<String, String> images, String command, K8sBuilderHelper k8sBuilderHelper, List<String> dependencies) {
         this.images = images;
         this.command = command;
         this.k8sBuilderHelper = k8sBuilderHelper;
+        this.dependencies = dependencies;
     }
 
     public K8sContainerBuilderRunnable produce(Run run, Map<String, String> secretData) {
@@ -82,7 +84,8 @@ public class PythonBuildRunner {
             functionSpec,
             null,
             triggers,
-            "_serve_handler"
+            "_serve_handler",
+            dependencies
         );
 
         // Generate docker file
@@ -109,10 +112,7 @@ public class PythonBuildRunner {
         // install all requirements
         dockerfileGenerator.run(
             "python /opt/nuclio/whl/$(basename /opt/nuclio/whl/pip-*.whl)/pip install pip --no-index --find-links /opt/nuclio/whl " +
-            "&& python -m pip install -r /opt/nuclio/requirements/common.txt" +
-            "&& python -m pip install -r /opt/nuclio/requirements/" +
-            functionSpec.getPythonVersion().name().toLowerCase() +
-            ".txt"
+            "&& python -m pip install -r /opt/nuclio/requirements/common.txt"
         );
 
         //set workdir from now on

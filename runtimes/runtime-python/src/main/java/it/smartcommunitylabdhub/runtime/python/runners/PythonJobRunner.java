@@ -64,6 +64,7 @@ public class PythonJobRunner {
     private final int userId;
     private final int groupId;
     private final String command;
+    private final List<String> dependencies;
 
     private final K8sBuilderHelper k8sBuilderHelper;
     private final Resource entrypoint = new ClassPathResource("runtime-python/docker/entrypoint.sh");
@@ -73,7 +74,8 @@ public class PythonJobRunner {
         Integer userId,
         Integer groupId,
         String command,
-        K8sBuilderHelper k8sBuilderHelper
+        K8sBuilderHelper k8sBuilderHelper,
+        List<String> dependencies
     ) {
         this.images = images;
         this.command = command;
@@ -82,6 +84,7 @@ public class PythonJobRunner {
 
         this.userId = userId != null ? userId : UID;
         this.groupId = groupId != null ? groupId : GID;
+        this.dependencies = dependencies;
     }
 
     public K8sJobRunnable produce(Run run, Map<String, String> secretData) {
@@ -118,7 +121,8 @@ public class PythonJobRunner {
                 functionSpec,
                 event,
                 null,
-                "_job_handler"
+                "_job_handler",
+                dependencies
             );
 
             //write entrypoint

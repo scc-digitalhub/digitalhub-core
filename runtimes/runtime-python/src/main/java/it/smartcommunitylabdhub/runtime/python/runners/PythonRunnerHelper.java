@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -95,7 +96,13 @@ public class PythonRunnerHelper {
      * @param handler
      * @return
      */
-    public static List<ContextSource> createContextSources(PythonFunctionSpec functionSpec, HashMap<String, Serializable> event, Map<String, Serializable> triggers, String handlerFile) {
+    public static List<ContextSource> createContextSources(
+        PythonFunctionSpec functionSpec, 
+        HashMap<String, Serializable> event, 
+        Map<String, Serializable> triggers, 
+        String handlerFile,
+        List<String> dependencies
+    ) {
         List<ContextSource> contextSources = new ArrayList<>();
 
         // Build Nuclio function
@@ -163,11 +170,18 @@ public class PythonRunnerHelper {
             }
         }
 
-                // If requirements.txt are defined add to build
+        List<String> requirements = new LinkedList<>();
+        if (dependencies != null && !dependencies.isEmpty()) {
+            requirements.addAll(dependencies);
+        }
+
         if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
+            requirements.addAll(functionSpec.getRequirements());
+        }
+        if (!requirements.isEmpty()) {
             //write file
             String path = "requirements.txt";
-            String content = String.join("\n", functionSpec.getRequirements());
+            String content = String.join("\n", requirements);
             contextSources.add(
                 ContextSource
                     .builder()
@@ -175,6 +189,7 @@ public class PythonRunnerHelper {
                     .base64(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)))
                     .build()
             );
+
         }
         return contextSources;
     }
