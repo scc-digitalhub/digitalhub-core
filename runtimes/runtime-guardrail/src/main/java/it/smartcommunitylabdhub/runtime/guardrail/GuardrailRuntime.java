@@ -84,6 +84,14 @@ public class GuardrailRuntime
     @Qualifier("pythonImages")
     private Map<String, String> images;
 
+    @Autowired
+    @Qualifier("pythonImages")
+    private Map<String, String> serverlessImages;
+
+    @Autowired
+    @Qualifier("pythonBaseImages")
+    private Map<String, String> baseImages;
+
     @Value("${runtime.python.command}")
     private String command;
 
@@ -92,6 +100,9 @@ public class GuardrailRuntime
 
     @Value("${runtime.python.group-id}")
     private Integer groupId;
+
+    @Value("${runtime.python.volume-size:1Gi}")
+    protected String volumeSizeSpec;
 
     public GuardrailRuntime() {}
 
@@ -158,6 +169,9 @@ public class GuardrailRuntime
             switch (runAccessor.getTask()) {
                 case GuardrailServeTaskSpec.KIND -> new GuardrailServeRunner(
                     images,
+                    serverlessImages,
+                    baseImages,
+                    volumeSizeSpec, 
                     userId,
                     groupId,
                     command,
@@ -165,7 +179,7 @@ public class GuardrailRuntime
                     functionService
                 )
                     .produce(run, secrets);
-                case GuardrailBuildTaskSpec.KIND -> new GuardrailBuildRunner(images, command, k8sBuilderHelper)
+                case GuardrailBuildTaskSpec.KIND -> new GuardrailBuildRunner(images, serverlessImages, baseImages, command, k8sBuilderHelper)
                     .produce(run, secrets);
                 default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
             };

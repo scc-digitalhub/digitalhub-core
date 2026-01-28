@@ -44,6 +44,8 @@ public class GuardrailBaseRunner {
     private static final int HTTP_PORT = 5051;
 
     protected final Map<String, String> images;
+    protected final Map<String, String> serverlessImages;
+    protected final Map<String, String> baseImages;
 
     protected final String command;
 
@@ -62,10 +64,14 @@ public class GuardrailBaseRunner {
 
     public GuardrailBaseRunner(
         Map<String, String> images,
+        Map<String, String> serverlessImages,
+        Map<String, String> baseImages,
         String command,
         K8sBuilderHelper k8sBuilderHelper
     ) {
         this.images = images;
+        this.serverlessImages = serverlessImages;
+        this.baseImages = baseImages;
         this.command = command;
 
         this.k8sBuilderHelper = k8sBuilderHelper;
