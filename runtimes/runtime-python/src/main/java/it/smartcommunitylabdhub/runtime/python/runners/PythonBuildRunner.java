@@ -51,15 +51,23 @@ import org.springframework.util.StringUtils;
 public class PythonBuildRunner {
 
     private final Map<String, String> images;
+    private final Map<String, String> serverlessImages;
+    private final Map<String, String> baseImages;
     private final String command;
 
     private final K8sBuilderHelper k8sBuilderHelper;
     private final List<String> dependencies;
-    private final Map<String, String> serverlessImages;
 
-    public PythonBuildRunner(Map<String, String> images, Map<String, String> serverlessImages, String command, K8sBuilderHelper k8sBuilderHelper, List<String> dependencies) {
+    public PythonBuildRunner(Map<String, String> images, 
+        Map<String, String> serverlessImages, 
+        Map<String, String> baseImages,
+        String command, 
+        K8sBuilderHelper k8sBuilderHelper, 
+        List<String> dependencies
+    ) {
         this.images = images;
         this.serverlessImages = serverlessImages;
+        this.baseImages = baseImages;
         this.command = command;
         this.k8sBuilderHelper = k8sBuilderHelper;
         this.dependencies = dependencies;
@@ -94,17 +102,26 @@ public class PythonBuildRunner {
         DockerfileGeneratorFactory dockerfileGenerator = DockerfileGenerator.factory();
 
         String image = images.get(functionSpec.getPythonVersion().name());
-        String baseImage = StringUtils.hasText(functionSpec.getBaseImage()) ? functionSpec.getBaseImage() : image;
+        String defaultBaseImage = baseImages.get(functionSpec.getPythonVersion().name());
+        String layerImage = serverlessImages.get(functionSpec.getPythonVersion().name());
+ 
+        String baseImage = StringUtils.hasText(functionSpec.getBaseImage()) 
+                    ? functionSpec.getBaseImage() 
+                    : StringUtils.hasText(image) 
+                        ? image 
+                        : defaultBaseImage;
 
         // Add base Image
         dockerfileGenerator.from(baseImage);
 
-        String serverlessImage = serverlessImages.get(functionSpec.getPythonVersion().name());
-        if (serverlessImage != null && StringUtils.hasText(serverlessImage)) {
-            dockerfileGenerator.copy("--from=" + serverlessImage + " /opt/nuclio/", "/opt/nuclio/");
+        // build from layer if user explicitly set base image or no predefined image is set
+        boolean useLayer = StringUtils.hasText(functionSpec.getBaseImage()) || !StringUtils.hasText(image);
+
+        if (useLayer) {
+            dockerfileGenerator.copy("--from=" + layerImage + " /opt/nuclio/", "/opt/nuclio/");
             // TODO uhttpc
             dockerfileGenerator.copy(
-                "--from=" + serverlessImage + " /opt/nuclio/processor",
+                "--from=" + layerImage + " /opt/nuclio/processor",
                 "/usr/local/bin/"
             );
             // Copy /shared folder (as workdir)
@@ -112,10 +129,7 @@ public class PythonBuildRunner {
             dockerfileGenerator.copy("--from=ghcr.io/astral-sh/uv:latest /uv /uvx", "/bin/");
             // install common requirements
             dockerfileGenerator.run(
-                "uv venv"
-            );
-            dockerfileGenerator.run(
-                "uv pip install --no-index --find-links /opt/nuclio/pywhl -r /opt/nuclio/requirements/common.txt"
+                "uv pip install --system --no-index --find-links /opt/nuclio/pywhl -r /opt/nuclio/requirements/common.txt"
             );
 
             //set workdir from now on

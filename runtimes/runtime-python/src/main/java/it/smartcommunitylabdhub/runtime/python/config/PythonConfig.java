@@ -46,4 +46,11 @@ public class PythonConfig {
         public Map<String, String> pythonServerlessImages() {
             return new HashMap<>(); 
         }
+
+            @Bean(name = "pythonBaseImages")
+        @ConfigurationProperties(prefix = "runtime.python.base-images")
+        public Map<String, String> pythonBaseImages() {
+            return new HashMap<>(); 
+        }
+
 }
