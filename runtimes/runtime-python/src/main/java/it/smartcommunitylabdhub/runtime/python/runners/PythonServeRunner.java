@@ -34,23 +34,19 @@ import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreResource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
 import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.runtime.python.PythonRuntime;
-import it.smartcommunitylabdhub.runtime.python.model.NuclioFunctionBuilder;
-import it.smartcommunitylabdhub.runtime.python.model.NuclioFunctionSpec;
-import it.smartcommunitylabdhub.runtime.python.model.PythonSourceCode;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonFunctionSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonServeRunSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonServeTaskSpec;
 import java.io.IOException;
 import java.io.Serializable;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,8 +54,6 @@ import java.util.Optional;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;
-import org.springframework.web.util.UriComponents;
-import org.springframework.web.util.UriComponentsBuilder;
 
 public class PythonServeRunner {
 
@@ -68,10 +62,14 @@ public class PythonServeRunner {
     private static final int HTTP_PORT = 8080;
 
     private final Map<String, String> images;
+    private final Map<String, String> serverlessImages;
+    private final Map<String, String> baseImages;
+    private final String volumeSizeSpec;
 
     private final int userId;
     private final int groupId;
     private final String command;
+    private final List<String> dependencies;
 
     private final K8sBuilderHelper k8sBuilderHelper;
     private final FunctionManager functionService;
@@ -80,13 +78,19 @@ public class PythonServeRunner {
 
     public PythonServeRunner(
         Map<String, String> images,
+        Map<String, String> serverlessImages,
+        Map<String, String> baseImages,
+        String volumeSizeSpec,
         Integer userId,
         Integer groupId,
         String command,
         K8sBuilderHelper k8sBuilderHelper,
-        FunctionManager functionService
+        FunctionManager functionService,
+        List<String> dependencies
     ) {
         this.images = images;
+        this.serverlessImages = serverlessImages;
+        this.baseImages = baseImages;
         this.command = command;
 
         this.k8sBuilderHelper = k8sBuilderHelper;
@@ -94,66 +98,78 @@ public class PythonServeRunner {
 
         this.userId = userId != null ? userId : UID;
         this.groupId = groupId != null ? groupId : GID;
+        this.dependencies = dependencies;
+        this.volumeSizeSpec = volumeSizeSpec;
     }
-
     public K8sRunnable produce(Run run, Map<String, String> secretData) {
         PythonServeRunSpec runSpec = new PythonServeRunSpec(run.getSpec());
         PythonServeTaskSpec taskSpec = runSpec.getTaskServeSpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
         PythonFunctionSpec functionSpec = runSpec.getFunctionSpec();
 
-        String image = images.get(functionSpec.getPythonVersion().name());
-
-        List<CoreEnv> coreEnvList = new ArrayList<>(
-            List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))
-        );
-
-        List<CoreEnv> coreSecrets = secretData == null
-            ? null
-            : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
-
-        Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
+        List<CoreEnv> coreEnvList = PythonRunnerHelper.createEnvList(run, taskSpec);
+        List<CoreEnv> coreSecrets = PythonRunnerHelper.createSecrets(secretData);
 
         List<CoreVolume> coreVolumes = new ArrayList<>(
             taskSpec.getVolumes() != null ? taskSpec.getVolumes() : List.of()
         );
-
-        //check if scratch disk is requested as resource
+        //check if scratch disk is requested as resource or set default
+        String volumeSize = taskSpec.getResources() != null && taskSpec.getResources().getDisk() != null
+            ? taskSpec.getResources().getDisk()
+            : volumeSizeSpec;
+        CoreResource diskResource = new CoreResource();
+        diskResource.setDisk(volumeSize);
         Optional
             .ofNullable(k8sBuilderHelper)
-            .flatMap(helper -> Optional.ofNullable(taskSpec.getResources()))
-            .filter(resources -> resources.getDisk() != null)
-            .ifPresent(resources -> {
-                Optional.ofNullable(k8sBuilderHelper.buildSharedVolume(resources)).ifPresent(coreVolumes::add);
+            .ifPresent(helper -> {
+                Optional.ofNullable(helper.buildSharedVolume(diskResource)).ifPresent(coreVolumes::add);
             });
 
-        //build nuclio definition
-        HashMap<String, Serializable> event = new HashMap<>();
+        List<String> args = new ArrayList<>();
+        String layerImage  = serverlessImages.get(functionSpec.getPythonVersion().name());
+        String defaultImage = images.get(functionSpec.getPythonVersion().name());
+        String defaultBaseImage = baseImages.get(functionSpec.getPythonVersion().name());
+        
+        String userImage = functionSpec.getImage();
+        String baseImage = functionSpec.getBaseImage();
 
-        // event.put("body", jsonMapper.writeValueAsString(run));
+        if (!StringUtils.hasText(baseImage) && !StringUtils.hasText(userImage) && !StringUtils.hasText(defaultImage) && !StringUtils.hasText(defaultBaseImage)) {
+            throw new IllegalArgumentException("No suitable image configuration found");
+        }
+
+        String image = null;
+        
+        // use layer image if no predefined image is set and user set base image or there is no default image defined 
+        boolean useLayer = !StringUtils.hasText(userImage) && (StringUtils.hasText(baseImage) || !StringUtils.hasText(defaultImage));
+        // In this case 
+
+        if (useLayer) {
+            // - assume dependencies from wheel 
+            // - mount image with processor and wheel
+            // - install dependencies at entrypoint
+            args.addAll(PythonRunnerHelper.buildArgs("/opt/nuclio/processor", "/opt/nuclio/uv/uv", "/opt/nuclio/requirements/common.txt", "/opt/nuclio/pywhl"));
+            coreVolumes.add(PythonRunnerHelper.createServerlessImageVolume(layerImage));
+            image = StringUtils.hasText(baseImage) ? baseImage : defaultBaseImage;
+        } else {
+            // use the image as is
+            args.addAll(PythonRunnerHelper.buildArgs(command, null, null, null));
+            image = StringUtils.hasText(userImage) ? userImage :  defaultImage;
+        }
 
         //define http trigger
-        //TODO use proper model
         HashMap<String, Serializable> triggers = new HashMap<>();
         HashMap<String, Serializable> http = new HashMap<>(Map.of("kind", "http", "maxWorkers", 2));
         triggers.put("http", http);
 
-        NuclioFunctionSpec nuclio = NuclioFunctionSpec
-            .builder()
-            .runtime("python")
-            //invoke user code wrapped via default handler
-            .handler("run_handler:handler_serve")
-            .triggers(triggers)
-            //directly invoke user code
-            // .handler("main:" + runSpec.getFunctionSpec().getSource().getHandler())
-            .event(event)
-            .build();
-
-        String nuclioFunction = NuclioFunctionBuilder.write(nuclio);
-
         //read source and build context
-        List<ContextRef> contextRefs = null;
-        List<ContextSource> contextSources = new ArrayList<>();
+        List<ContextRef> contextRefs = PythonRunnerHelper.createContextRefs(functionSpec);
+        List<ContextSource> contextSources = PythonRunnerHelper.createContextSources(
+            functionSpec,
+            null,
+            triggers,
+            "_serve_handler",
+            dependencies
+        );
 
         //write entrypoint
         try {
@@ -166,75 +182,6 @@ public class PythonServeRunner {
         } catch (IOException ioe) {
             throw new CoreRuntimeException("error with reading entrypoint for runtime-python");
         }
-
-        //function definition
-        ContextSource fn = ContextSource
-            .builder()
-            .name("function.yaml")
-            .base64(Base64.getEncoder().encodeToString(nuclioFunction.getBytes(StandardCharsets.UTF_8)))
-            .build();
-        contextSources.add(fn);
-
-        //source
-        if (functionSpec.getSource() != null) {
-            PythonSourceCode source = functionSpec.getSource();
-            String path = "main.py";
-
-            if (StringUtils.hasText(source.getSource())) {
-                try {
-                    //evaluate if local path (no scheme)
-                    UriComponents uri = UriComponentsBuilder.fromUriString(source.getSource()).build();
-                    String scheme = uri.getScheme();
-
-                    if (scheme != null) {
-                        //write as ref
-                        contextRefs = Collections.singletonList(ContextRef.from(source.getSource()));
-                    } else {
-                        if (StringUtils.hasText(path)) {
-                            //override path for local src
-                            path = uri.getPath();
-                            if (path.startsWith(".")) {
-                                path = path.substring(1);
-                            }
-                        }
-                    }
-                } catch (IllegalArgumentException e) {
-                    //skip invalid source
-                }
-            }
-
-            if (StringUtils.hasText(source.getBase64())) {
-                contextSources.add(ContextSource.builder().name(path).base64(source.getBase64()).build());
-            }
-        }
-
-        List<String> args = new ArrayList<>(
-            List.of(
-                "/shared/entrypoint.sh",
-                "--processor",
-                command,
-                "--config",
-                "/shared/function.yaml",
-                "--requirements",
-                "/shared/requirements.txt"
-            )
-        );
-
-        // requirements.txt
-        if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
-            //write as file
-            String content = String.join("\n", functionSpec.getRequirements());
-            contextSources.add(
-                ContextSource
-                    .builder()
-                    .name("requirements.txt")
-                    .base64(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)))
-                    .build()
-            );
-        }
-
-        //merge env with PYTHON path override
-        coreEnvList.add(new CoreEnv("PYTHONPATH", "${PYTHONPATH}:/shared/"));
 
         //expose http trigger only
         CorePort servicePort = new CorePort(HTTP_PORT, HTTP_PORT);
@@ -254,7 +201,7 @@ public class PythonServeRunner {
                 serviceNames.add(taskAccessor.getFunction() + "-latest");
             }
         }
-
+ 
         K8sRunnable k8sServeRunnable = K8sServeRunnable
             .builder()
             .runtime(PythonRuntime.RUNTIME)
@@ -266,7 +213,7 @@ public class PythonServeRunner {
                     : null
             )
             //base
-            .image(StringUtils.hasText(functionSpec.getImage()) ? functionSpec.getImage() : image)
+            .image(image)
             .command("/bin/bash")
             .args(args.toArray(new String[0]))
             .contextRefs(contextRefs)
