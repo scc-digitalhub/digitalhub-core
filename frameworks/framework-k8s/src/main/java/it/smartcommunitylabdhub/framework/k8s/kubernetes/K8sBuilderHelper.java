@@ -33,6 +33,7 @@ import io.kubernetes.client.openapi.models.V1EmptyDirVolumeSource;
 import io.kubernetes.client.openapi.models.V1EnvVar;
 import io.kubernetes.client.openapi.models.V1EnvVarSource;
 import io.kubernetes.client.openapi.models.V1EphemeralVolumeSource;
+import io.kubernetes.client.openapi.models.V1ImageVolumeSource;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimSpec;
 import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimTemplate;
@@ -307,13 +308,25 @@ public class K8sBuilderHelper implements InitializingBean {
                         .medium(emptyDirDefaultMedium) //configured by admin only!
                         .sizeLimit(Quantity.fromString(spec.getOrDefault("sizeLimit", emptyDirDefaultSize)))
                 );
+            case VolumeType.image:
+                //image volume
+                return volume.image(
+                    new V1ImageVolumeSource()
+                    .reference(spec.get("image"))
+                    .pullPolicy("IfNotPresent")
+                    
+                );
             default:
                 return null;
         }
     }
 
     public V1VolumeMount getVolumeMount(@NotNull CoreVolume coreVolume) {
-        return new V1VolumeMount().name(coreVolume.getName()).mountPath(coreVolume.getMountPath());
+        V1VolumeMount mount = new V1VolumeMount().name(coreVolume.getName()).mountPath(coreVolume.getMountPath());
+        if (coreVolume.getSpec() != null && coreVolume.getSpec().containsKey("subPath")) {
+            mount.setSubPath(coreVolume.getSpec().get("subPath"));
+        }
+        return mount;
     }
 
     public CoreResources convertResources(CoreResource resource) {

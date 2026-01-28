@@ -88,7 +88,7 @@ def init_context(context: Context) -> None:
     # user dir (will be taken from run spec in the future),
     # default_py_file filename is "main.py", source is the
     # function source
-    source = run.spec.to_dict().get("source")
+    source = {{source}}
     func, init_function = import_function_and_init_from_source(DEFAULT_PATH, source)
 
     # Set attributes

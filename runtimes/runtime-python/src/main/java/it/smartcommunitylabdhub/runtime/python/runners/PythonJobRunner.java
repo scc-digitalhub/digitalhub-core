@@ -35,6 +35,7 @@ import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreResource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
 import it.smartcommunitylabdhub.runtime.python.PythonRuntime;
@@ -61,27 +62,40 @@ public class PythonJobRunner {
     private static final int GID = 999;
 
     private final Map<String, String> images;
+    private final Map<String, String> serverlessImages;
+    private final Map<String, String> baseImages;
+
+    private final String volumeSizeSpec;
     private final int userId;
     private final int groupId;
     private final String command;
+    private final List<String> dependencies;
 
     private final K8sBuilderHelper k8sBuilderHelper;
     private final Resource entrypoint = new ClassPathResource("runtime-python/docker/entrypoint.sh");
 
     public PythonJobRunner(
         Map<String, String> images,
+        Map<String, String> serverlessImages,
+        Map<String, String> baseImages,
+        String volumeSizeSpec,
         Integer userId,
         Integer groupId,
         String command,
-        K8sBuilderHelper k8sBuilderHelper
+        K8sBuilderHelper k8sBuilderHelper,
+        List<String> dependencies
     ) {
         this.images = images;
+        this.serverlessImages = serverlessImages;
+        this.baseImages = baseImages;
         this.command = command;
 
         this.k8sBuilderHelper = k8sBuilderHelper;
 
         this.userId = userId != null ? userId : UID;
         this.groupId = groupId != null ? groupId : GID;
+        this.dependencies = dependencies;
+        this.volumeSizeSpec = volumeSizeSpec;
     }
 
     public K8sJobRunnable produce(Run run, Map<String, String> secretData) {
@@ -98,6 +112,49 @@ public class PythonJobRunner {
             List<CoreVolume> coreVolumes = new ArrayList<>(
                 taskSpec.getVolumes() != null ? taskSpec.getVolumes() : List.of()
             );
+            //check if scratch disk is requested as resource or set default
+            String volumeSize = taskSpec.getResources() != null && taskSpec.getResources().getDisk() != null
+                ? taskSpec.getResources().getDisk()
+                : volumeSizeSpec;
+            CoreResource diskResource = new CoreResource();
+            diskResource.setDisk(volumeSize);
+            Optional
+                .ofNullable(k8sBuilderHelper)
+                .ifPresent(helper -> {
+                    Optional.ofNullable(helper.buildSharedVolume(diskResource)).ifPresent(coreVolumes::add);
+                });
+
+            List<String> args = new ArrayList<>();
+
+            String layerImage  = serverlessImages.get(functionSpec.getPythonVersion().name());
+            String defaultImage = images.get(functionSpec.getPythonVersion().name());
+            String defaultBaseImage = baseImages.get(functionSpec.getPythonVersion().name());
+            
+            String userImage = functionSpec.getImage();
+            String baseImage = functionSpec.getBaseImage();
+
+            if (!StringUtils.hasText(baseImage) && !StringUtils.hasText(userImage) && !StringUtils.hasText(defaultImage) && !StringUtils.hasText(defaultBaseImage)) {
+                throw new IllegalArgumentException("No suitable image configuration found");
+            }
+
+            String image = null;
+            
+            // use layer image if no predefined image is set and user set base image or there is no default image defined 
+            boolean useLayer = !StringUtils.hasText(userImage) && (StringUtils.hasText(baseImage) || !StringUtils.hasText(defaultImage));
+            // In this case 
+
+            if (useLayer) {
+                // - assume dependencies from wheel 
+                // - mount image with processor and wheel
+                // - install dependencies at entrypoint
+                args.addAll(PythonRunnerHelper.buildArgs("/opt/nuclio/processor", "/opt/nuclio/uv/uv", "/opt/nuclio/requirements/common.txt", "/opt/nuclio/pywhl"));
+                coreVolumes.add(PythonRunnerHelper.createServerlessImageVolume(layerImage));
+                image = StringUtils.hasText(baseImage) ? baseImage : defaultBaseImage;
+            } else {
+                // use the image as is
+                args.addAll(PythonRunnerHelper.buildArgs(command, null, null, null));
+                image = StringUtils.hasText(userImage) ? userImage :  defaultImage;
+            }
 
             //check if scratch disk is requested as resource
             Optional
@@ -118,7 +175,8 @@ public class PythonJobRunner {
                 functionSpec,
                 event,
                 null,
-                "_job_handler"
+                "_job_handler",
+                dependencies
             );
 
             //write entrypoint
@@ -132,21 +190,6 @@ public class PythonJobRunner {
             } catch (IOException ioe) {
                 throw new CoreRuntimeException("error with reading entrypoint for runtime-python");
             }
-
-            List<String> args = new ArrayList<>(
-                List.of(
-                    "/shared/entrypoint.sh",
-                    "--processor",
-                    command,
-                    "--config",
-                    "/shared/function.yaml",
-                    "--requirements",
-                    "/shared/requirements.txt"
-                )
-            );
-
-        
-            String image = images.get(functionSpec.getPythonVersion().name());
 
             K8sJobRunnable k8sJobRunnable = K8sJobRunnable
                 .builder()

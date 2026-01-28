@@ -51,14 +51,26 @@ import org.springframework.util.StringUtils;
 public class PythonBuildRunner {
 
     private final Map<String, String> images;
+    private final Map<String, String> serverlessImages;
+    private final Map<String, String> baseImages;
     private final String command;
 
     private final K8sBuilderHelper k8sBuilderHelper;
+    private final List<String> dependencies;
 
-    public PythonBuildRunner(Map<String, String> images, String command, K8sBuilderHelper k8sBuilderHelper) {
+    public PythonBuildRunner(Map<String, String> images, 
+        Map<String, String> serverlessImages, 
+        Map<String, String> baseImages,
+        String command, 
+        K8sBuilderHelper k8sBuilderHelper, 
+        List<String> dependencies
+    ) {
         this.images = images;
+        this.serverlessImages = serverlessImages;
+        this.baseImages = baseImages;
         this.command = command;
         this.k8sBuilderHelper = k8sBuilderHelper;
+        this.dependencies = dependencies;
     }
 
     public K8sContainerBuilderRunnable produce(Run run, Map<String, String> secretData) {
@@ -82,51 +94,90 @@ public class PythonBuildRunner {
             functionSpec,
             null,
             triggers,
-            "_serve_handler"
+            "_serve_handler",
+            dependencies
         );
 
         // Generate docker file
         DockerfileGeneratorFactory dockerfileGenerator = DockerfileGenerator.factory();
 
         String image = images.get(functionSpec.getPythonVersion().name());
-        String baseImage = StringUtils.hasText(functionSpec.getBaseImage()) ? functionSpec.getBaseImage() : image;
+        String defaultBaseImage = baseImages.get(functionSpec.getPythonVersion().name());
+        String layerImage = serverlessImages.get(functionSpec.getPythonVersion().name());
+ 
+        String baseImage = StringUtils.hasText(functionSpec.getBaseImage()) 
+                    ? functionSpec.getBaseImage() 
+                    : StringUtils.hasText(image) 
+                        ? image 
+                        : defaultBaseImage;
 
         // Add base Image
         dockerfileGenerator.from(baseImage);
 
-        // Copy toolkit from builder if required
-        if (!image.equals(baseImage)) {
-            dockerfileGenerator.copy("--from=" + image + " /opt/nuclio/", "/opt/nuclio/");
+        // build from layer if user explicitly set base image or no predefined image is set
+        boolean useLayer = StringUtils.hasText(functionSpec.getBaseImage()) || !StringUtils.hasText(image);
+
+        if (useLayer) {
+            dockerfileGenerator.copy("--from=" + layerImage + " /opt/nuclio/", "/opt/nuclio/");
+            // TODO uhttpc
             dockerfileGenerator.copy(
-                "--from=" + image + " /usr/local/bin/processor  /usr/local/bin/uhttpc",
+                "--from=" + layerImage + " /opt/nuclio/processor",
                 "/usr/local/bin/"
             );
-        }
+            // Copy /shared folder (as workdir)
+            dockerfileGenerator.copy(".", "/shared");
+            dockerfileGenerator.copy("--from=ghcr.io/astral-sh/uv:latest /uv /uvx", "/bin/");
+            // install common requirements
+            dockerfileGenerator.run(
+                "uv pip install --system --no-index --find-links /opt/nuclio/pywhl -r /opt/nuclio/requirements/common.txt"
+            );
 
-        // Copy /shared folder (as workdir)
-        dockerfileGenerator.copy(".", "/shared");
+            //set workdir from now on
+            dockerfileGenerator.workdir("/shared");
 
-        // install all requirements
-        dockerfileGenerator.run(
-            "python /opt/nuclio/whl/$(basename /opt/nuclio/whl/pip-*.whl)/pip install pip --no-index --find-links /opt/nuclio/whl " +
-            "&& python -m pip install -r /opt/nuclio/requirements/common.txt" +
-            "&& python -m pip install -r /opt/nuclio/requirements/" +
-            functionSpec.getPythonVersion().name().toLowerCase() +
-            ".txt"
-        );
+            // Add user instructions
+            Optional
+                .ofNullable(taskSpec.getInstructions())
+                .ifPresent(instructions -> instructions.forEach(dockerfileGenerator::run));
 
-        //set workdir from now on
-        dockerfileGenerator.workdir("/shared");
+            // If requirements.txt are defined add to build
+            if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
+                // install all requirements
+                dockerfileGenerator.run("uv pip install -r /shared/requirements.txt");
+            }
 
-        // Add user instructions
-        Optional
-            .ofNullable(taskSpec.getInstructions())
-            .ifPresent(instructions -> instructions.forEach(dockerfileGenerator::run));
+        } else {
+            // Copy toolkit from builder if required
+            if (!image.equals(baseImage)) {
+                dockerfileGenerator.copy("--from=" + image + " /opt/nuclio/", "/opt/nuclio/");
+                dockerfileGenerator.copy(
+                    "--from=" + image + " /usr/local/bin/processor  /usr/local/bin/uhttpc",
+                    "/usr/local/bin/"
+                );
+            }
 
-        // If requirements.txt are defined add to build
-        if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
+            // Copy /shared folder (as workdir)
+            dockerfileGenerator.copy(".", "/shared");
+
             // install all requirements
-            dockerfileGenerator.run("python -m pip install -r /shared/requirements.txt");
+            dockerfileGenerator.run(
+                "python /opt/nuclio/whl/$(basename /opt/nuclio/whl/pip-*.whl)/pip install pip --no-index --find-links /opt/nuclio/whl " +
+                "&& python -m pip install -r /opt/nuclio/requirements/common.txt"
+            );
+
+            //set workdir from now on
+            dockerfileGenerator.workdir("/shared");
+
+            // Add user instructions
+            Optional
+                .ofNullable(taskSpec.getInstructions())
+                .ifPresent(instructions -> instructions.forEach(dockerfileGenerator::run));
+
+            // If requirements.txt are defined add to build
+            if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
+                // install all requirements
+                dockerfileGenerator.run("python -m pip install -r /shared/requirements.txt");
+            }
         }
 
         // Set entry point

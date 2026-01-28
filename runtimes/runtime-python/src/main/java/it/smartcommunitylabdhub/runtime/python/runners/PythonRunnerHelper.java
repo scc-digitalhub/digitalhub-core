@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,6 +33,7 @@ import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.runtime.python.model.NuclioFunctionBuilder;
 import it.smartcommunitylabdhub.runtime.python.model.NuclioFunctionSpec;
 import it.smartcommunitylabdhub.runtime.python.model.PythonSourceCode;
@@ -95,7 +97,13 @@ public class PythonRunnerHelper {
      * @param handler
      * @return
      */
-    public static List<ContextSource> createContextSources(PythonFunctionSpec functionSpec, HashMap<String, Serializable> event, Map<String, Serializable> triggers, String handlerFile) {
+    public static List<ContextSource> createContextSources(
+        PythonFunctionSpec functionSpec, 
+        HashMap<String, Serializable> event, 
+        Map<String, Serializable> triggers, 
+        String handlerFile,
+        List<String> dependencies
+    ) {
         List<ContextSource> contextSources = new ArrayList<>();
 
         // Build Nuclio function
@@ -163,11 +171,18 @@ public class PythonRunnerHelper {
             }
         }
 
-                // If requirements.txt are defined add to build
+        List<String> requirements = new LinkedList<>();
+        if (dependencies != null && !dependencies.isEmpty()) {
+            requirements.addAll(dependencies);
+        }
+
         if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
+            requirements.addAll(functionSpec.getRequirements());
+        }
+        if (!requirements.isEmpty()) {
             //write file
             String path = "requirements.txt";
-            String content = String.join("\n", functionSpec.getRequirements());
+            String content = String.join("\n", requirements);
             contextSources.add(
                 ContextSource
                     .builder()
@@ -175,8 +190,34 @@ public class PythonRunnerHelper {
                     .base64(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)))
                     .build()
             );
+
         }
         return contextSources;
+    }
+
+    public static List<String> buildArgs(String processor, String uvPath, String commonRequirementsPath, String wheelPath) {
+        List<String> args = new ArrayList<>();
+        args.addAll(
+            List.of(
+                "/shared/entrypoint.sh",
+                "--processor",
+                processor,
+                "--config",
+                "/shared/function.yaml",
+                "--requirements",
+                "/shared/requirements.txt"
+            )
+        );
+        if (commonRequirementsPath != null) {
+            args.addAll(List.of("--common_requirements", commonRequirementsPath));
+        }
+        if (uvPath != null) {
+            args.addAll(List.of("--uv_path", uvPath));
+        }
+        if (wheelPath != null) {
+            args.addAll(List.of("--wheel_path", wheelPath));
+        }
+        return args;
     }
 
     /**
@@ -204,6 +245,18 @@ public class PythonRunnerHelper {
             }
         }
         return null;
+    }
+
+    public static CoreVolume createServerlessImageVolume(String imageName) {
+        CoreVolume volume = new CoreVolume();
+        volume.setName("serverless-image-volume");
+        volume.setVolumeType(CoreVolume.VolumeType.image);
+        volume.setMountPath("/opt/nuclio");
+        Map<String, String> spec = new HashMap<>();
+        spec.put("image", imageName);
+        spec.put("subPath", "opt/nuclio");
+        volume.setSpec(spec);
+        return volume;
     }
 
     private static class NoEncodingMustacheFactory extends DefaultMustacheFactory {

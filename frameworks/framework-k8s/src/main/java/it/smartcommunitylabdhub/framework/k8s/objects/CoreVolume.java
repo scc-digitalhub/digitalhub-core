@@ -59,5 +59,6 @@ public class CoreVolume implements Serializable {
         persistent_volume_claim,
         ephemeral,
         empty_dir,
+        image
     }
 }
