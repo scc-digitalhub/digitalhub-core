@@ -156,16 +156,6 @@ public class PythonServeRunner {
             image = StringUtils.hasText(userImage) ? userImage :  defaultImage;
         }
 
-
-        //check if scratch disk is requested as resource
-        Optional
-            .ofNullable(k8sBuilderHelper)
-            .flatMap(helper -> Optional.ofNullable(taskSpec.getResources()))
-            .filter(resources -> resources.getDisk() != null)
-            .ifPresent(resources -> {
-                Optional.ofNullable(k8sBuilderHelper.buildSharedVolume(resources)).ifPresent(coreVolumes::add);
-            });
-
         //define http trigger
         HashMap<String, Serializable> triggers = new HashMap<>();
         HashMap<String, Serializable> http = new HashMap<>(Map.of("kind", "http", "maxWorkers", 2));
@@ -223,7 +213,7 @@ public class PythonServeRunner {
                     : null
             )
             //base
-            .image(StringUtils.hasText(functionSpec.getImage()) ? functionSpec.getImage() : image)
+            .image(image)
             .command("/bin/bash")
             .args(args.toArray(new String[0]))
             .contextRefs(contextRefs)

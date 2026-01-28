@@ -119,7 +119,6 @@ def handler(context: Context, event: Event) -> Any:
     # Set inputs
     #############################
     try:
-        context.logger.info("Configuring function inputs.")
         func_args = compose_inputs(
             {},
             {},
@@ -138,7 +137,6 @@ def handler(context: Context, event: Event) -> Any:
     # Call user function
     ############################
     try:
-        context.logger.info("Calling user function.")
         return context.user_function(**func_args)
     except Exception as e:
         raise e

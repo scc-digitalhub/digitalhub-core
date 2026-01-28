@@ -156,15 +156,6 @@ public class PythonJobRunner {
                 image = StringUtils.hasText(userImage) ? userImage :  defaultImage;
             }
 
-            //check if scratch disk is requested as resource
-            Optional
-                .ofNullable(k8sBuilderHelper)
-                .flatMap(helper -> Optional.ofNullable(taskSpec.getResources()))
-                .filter(resources -> resources.getDisk() != null)
-                .ifPresent(resources -> {
-                    Optional.ofNullable(k8sBuilderHelper.buildSharedVolume(resources)).ifPresent(coreVolumes::add);
-                });
-
             //build nuclio definition
             HashMap<String, Serializable> event = new HashMap<>();
             event.put("body", jsonMapper.writeValueAsString(run));
@@ -202,7 +193,7 @@ public class PythonJobRunner {
                         : null
                 )
                 //base
-                .image(StringUtils.hasText(functionSpec.getImage()) ? functionSpec.getImage() : image)
+                .image(image)
                 .command("/bin/bash")
                 .args(args.toArray(new String[0]))
                 .contextRefs(contextRefs)
