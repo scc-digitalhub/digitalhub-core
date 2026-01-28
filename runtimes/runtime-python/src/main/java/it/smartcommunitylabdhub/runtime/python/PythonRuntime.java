@@ -93,6 +93,10 @@ public class PythonRuntime
     @Qualifier("pythonImages")
     private Map<String, String> images;
 
+    @Autowired
+    @Qualifier("pythonServerlessImages")
+    private Map<String, String> serverlessImages;
+
     @Value("${runtime.python.command}")
     private String command;
 
@@ -204,10 +208,11 @@ public class PythonRuntime
 
         K8sRunnable runnable =
             switch (runAccessor.getTask()) {
-                case PythonJobTaskSpec.KIND -> new PythonJobRunner(images, userId, groupId, command, k8sBuilderHelper, dependencies)
+                case PythonJobTaskSpec.KIND -> new PythonJobRunner(images, serverlessImages, userId, groupId, command, k8sBuilderHelper, dependencies)
                     .produce(run, secrets);
                 case PythonServeTaskSpec.KIND -> new PythonServeRunner(
                     images,
+                    serverlessImages,
                     userId,
                     groupId,
                     command,
@@ -216,7 +221,7 @@ public class PythonRuntime
                     dependencies
                 )
                     .produce(run, secrets);
-                case PythonBuildTaskSpec.KIND -> new PythonBuildRunner(images, command, k8sBuilderHelper, dependencies)
+                case PythonBuildTaskSpec.KIND -> new PythonBuildRunner(images, serverlessImages, command, k8sBuilderHelper, dependencies)
                     .produce(run, secrets);
                 default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
             };

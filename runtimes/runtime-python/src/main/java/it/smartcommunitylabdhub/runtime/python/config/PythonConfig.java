@@ -35,9 +35,15 @@ import org.springframework.context.annotation.PropertySource;
 @PropertySource(value = "classpath:/runtime-python.yml", factory = YamlPropertySourceFactory.class)
 public class PythonConfig {
 
-    @Bean(name = "pythonImages")
-    @ConfigurationProperties(prefix = "runtime.python.images")
-    public Map<String, String> pythonImages() {
-        return new HashMap<>();
-    }
+        @Bean(name = "pythonImages")
+        @ConfigurationProperties(prefix = "runtime.python.images")
+        public Map<String, String> pythonImages() {
+            return new HashMap<>();
+        }
+
+        @Bean(name = "pythonServerlessImages")
+        @ConfigurationProperties(prefix = "runtime.python.serverless-images")
+        public Map<String, String> pythonServerlessImages() {
+            return new HashMap<>(); 
+        }
 }

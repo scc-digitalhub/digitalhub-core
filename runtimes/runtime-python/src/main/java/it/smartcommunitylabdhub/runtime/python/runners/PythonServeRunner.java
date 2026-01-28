@@ -61,6 +61,7 @@ public class PythonServeRunner {
     private static final int HTTP_PORT = 8080;
 
     private final Map<String, String> images;
+    private final Map<String, String> serverlessImages;
 
     private final int userId;
     private final int groupId;
@@ -74,6 +75,7 @@ public class PythonServeRunner {
 
     public PythonServeRunner(
         Map<String, String> images,
+        Map<String, String> serverlessImages,
         Integer userId,
         Integer groupId,
         String command,
@@ -82,6 +84,7 @@ public class PythonServeRunner {
         List<String> dependencies
     ) {
         this.images = images;
+        this.serverlessImages = serverlessImages;
         this.command = command;
 
         this.k8sBuilderHelper = k8sBuilderHelper;
@@ -104,6 +107,23 @@ public class PythonServeRunner {
         List<CoreVolume> coreVolumes = new ArrayList<>(
             taskSpec.getVolumes() != null ? taskSpec.getVolumes() : List.of()
         );
+        List<String> args = new ArrayList<>();
+
+        // check serverless image layer exists. In this case 
+        // - assume dependencies from wheel 
+        // - mount image with processor and wheel
+        // - install dependencies at entrypoint
+        String serverlessImage  = functionSpec.getPythonVersion() != null
+            ? serverlessImages.get(functionSpec.getPythonVersion().name())
+            : null;
+
+        if (serverlessImage != null && StringUtils.hasText(serverlessImage)) {
+            args.addAll(PythonRunnerHelper.buildArgs("/opt/nuclio/processor", "/opt/nuclio/uv/uv", "/opt/nuclio/requirements/common.txt", "/opt/nuclio/pywhl"));
+            coreVolumes.add(PythonRunnerHelper.createServerlessImageVolume(serverlessImage));
+        } else {
+            args.addAll(PythonRunnerHelper.buildArgs(command, null, null, null));
+        }
+
 
         //check if scratch disk is requested as resource
         Optional
@@ -140,18 +160,6 @@ public class PythonServeRunner {
         } catch (IOException ioe) {
             throw new CoreRuntimeException("error with reading entrypoint for runtime-python");
         }
-
-        List<String> args = new ArrayList<>(
-            List.of(
-                "/shared/entrypoint.sh",
-                "--processor",
-                command,
-                "--config",
-                "/shared/function.yaml",
-                "--requirements",
-                "/shared/requirements.txt"
-            )
-        );
 
         //expose http trigger only
         CorePort servicePort = new CorePort(HTTP_PORT, HTTP_PORT);

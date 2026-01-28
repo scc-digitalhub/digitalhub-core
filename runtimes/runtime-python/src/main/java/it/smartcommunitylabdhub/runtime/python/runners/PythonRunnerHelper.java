@@ -33,6 +33,7 @@ import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.runtime.python.model.NuclioFunctionBuilder;
 import it.smartcommunitylabdhub.runtime.python.model.NuclioFunctionSpec;
 import it.smartcommunitylabdhub.runtime.python.model.PythonSourceCode;
@@ -194,6 +195,31 @@ public class PythonRunnerHelper {
         return contextSources;
     }
 
+    public static List<String> buildArgs(String processor, String uvPath, String commonRequirementsPath, String wheelPath) {
+        List<String> args = new ArrayList<>();
+        args.addAll(
+            List.of(
+                "/shared/entrypoint.sh",
+                "--processor",
+                processor,
+                "--config",
+                "/shared/function.yaml",
+                "--requirements",
+                "/shared/requirements.txt"
+            )
+        );
+        if (commonRequirementsPath != null) {
+            args.addAll(List.of("--common_requirements", commonRequirementsPath));
+        }
+        if (uvPath != null) {
+            args.addAll(List.of("--uv_path", uvPath));
+        }
+        if (wheelPath != null) {
+            args.addAll(List.of("--wheel_path", wheelPath));
+        }
+        return args;
+    }
+
     /**
      * Generate context refs for the given function spec
      * @param functionSpec
@@ -219,6 +245,18 @@ public class PythonRunnerHelper {
             }
         }
         return null;
+    }
+
+    public static CoreVolume createServerlessImageVolume(String imageName) {
+        CoreVolume volume = new CoreVolume();
+        volume.setName("serverless-image-volume");
+        volume.setVolumeType(CoreVolume.VolumeType.image);
+        volume.setMountPath("/opt/nuclio");
+        Map<String, String> spec = new HashMap<>();
+        spec.put("image", imageName);
+        spec.put("subPath", "opt/nuclio");
+        volume.setSpec(spec);
+        return volume;
     }
 
     private static class NoEncodingMustacheFactory extends DefaultMustacheFactory {
