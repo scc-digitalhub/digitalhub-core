@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.python.runners;
+package it.smartcommunitylabdhub.runtime.guardrail.runners;
 
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
@@ -29,9 +29,7 @@ import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
-import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
-import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreResource;
@@ -39,44 +37,40 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
 import it.smartcommunitylabdhub.functions.FunctionManager;
-import it.smartcommunitylabdhub.runtime.python.PythonRuntime;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonFunctionSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonServeRunSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonServeTaskSpec;
+import it.smartcommunitylabdhub.runtime.guardrail.GuardrailRuntime;
+import it.smartcommunitylabdhub.runtime.guardrail.specs.GuardrailFunctionSpec;
+import it.smartcommunitylabdhub.runtime.guardrail.specs.GuardrailServeRunSpec;
+import it.smartcommunitylabdhub.runtime.guardrail.specs.GuardrailServeTaskSpec;
+import it.smartcommunitylabdhub.runtime.python.runners.PythonRunnerHelper;
+
 import java.io.IOException;
-import java.io.Serializable;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;
 
-public class PythonServeRunner {
+public class GuardrailServeRunner extends GuardrailBaseRunner {
 
     private static final int UID = 8877;
     private static final int GID = 999;
-    private static final int HTTP_PORT = 8080;
-
-    private final Map<String, String> images;
-    private final Map<String, String> serverlessImages;
-    private final Map<String, String> baseImages;
-    private final String volumeSizeSpec;
+    private static final int HTTP_PORT = 5051;
 
     private final int userId;
     private final int groupId;
-    private final String command;
-    private final List<String> dependencies;
 
-    private final K8sBuilderHelper k8sBuilderHelper;
+    private final String volumeSizeSpec;
+
     private final FunctionManager functionService;
 
     private final Resource entrypoint = new ClassPathResource("runtime-python/docker/entrypoint.sh");
-
-    public PythonServeRunner(
+    
+    public GuardrailServeRunner(
         Map<String, String> images,
         Map<String, String> serverlessImages,
         Map<String, String> baseImages,
@@ -88,27 +82,28 @@ public class PythonServeRunner {
         FunctionManager functionService,
         List<String> dependencies
     ) {
-        this.images = images;
-        this.serverlessImages = serverlessImages;
-        this.baseImages = baseImages;
-        this.command = command;
-
-        this.k8sBuilderHelper = k8sBuilderHelper;
+        super(images, serverlessImages, baseImages, command, k8sBuilderHelper, dependencies);
         this.functionService = functionService;
+        this.volumeSizeSpec = volumeSizeSpec;
 
         this.userId = userId != null ? userId : UID;
         this.groupId = groupId != null ? groupId : GID;
-        this.dependencies = dependencies;
-        this.volumeSizeSpec = volumeSizeSpec;
+        try {
+            this.handlerMustache = mustacheFactory.compile(new InputStreamReader( handlerTemplate.getInputStream()), "guardrail-handler");
+        } catch (IOException ioe) {
+            throw new CoreRuntimeException("error with reading handler template for runtime-guardrail");
+        }
     }
-    public K8sRunnable produce(Run run, Map<String, String> secretData) {
-        PythonServeRunSpec runSpec = new PythonServeRunSpec(run.getSpec());
-        PythonServeTaskSpec taskSpec = runSpec.getTaskServeSpec();
-        TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
-        PythonFunctionSpec functionSpec = runSpec.getFunctionSpec();
 
-        List<CoreEnv> coreEnvList = PythonRunnerHelper.createEnvList(run, taskSpec);
-        List<CoreEnv> coreSecrets = PythonRunnerHelper.createSecrets(secretData);
+    public K8sRunnable produce(Run run, Map<String, String> secretData) {
+        
+        GuardrailServeRunSpec runSpec = new GuardrailServeRunSpec(run.getSpec());
+        GuardrailServeTaskSpec taskSpec = runSpec.getTaskServeSpec();
+        TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(runSpec.getTaskServeSpec().toMap());
+        GuardrailFunctionSpec functionSpec = runSpec.getFunctionSpec();
+        
+        //prepare context
+        Context ctx = prepareContext(run, secretData, runSpec, runSpec.getTaskServeSpec(), runSpec.getFunctionSpec());  
 
         List<CoreVolume> coreVolumes = new ArrayList<>(
             taskSpec.getVolumes() != null ? taskSpec.getVolumes() : List.of()
@@ -124,6 +119,17 @@ public class PythonServeRunner {
             .ifPresent(helper -> {
                 Optional.ofNullable(helper.buildSharedVolume(diskResource)).ifPresent(coreVolumes::add);
             });
+        //write entrypoint
+        try {
+            ContextSource entry = ContextSource
+                .builder()
+                .name("entrypoint.sh")
+                .base64(Base64.getEncoder().encodeToString(entrypoint.getContentAsByteArray()))
+                .build();
+            ctx.contextSources().add(entry);
+        } catch (IOException ioe) {
+            throw new CoreRuntimeException("error with reading entrypoint for runtime-guardrail");
+        }
 
         List<String> args = new ArrayList<>();
         String layerImage  = serverlessImages.get(functionSpec.getPythonVersion().name());
@@ -156,41 +162,15 @@ public class PythonServeRunner {
             image = StringUtils.hasText(userImage) ? userImage :  defaultImage;
         }
 
-        //define http trigger
-        HashMap<String, Serializable> triggers = new HashMap<>();
-        HashMap<String, Serializable> http = new HashMap<>(Map.of("kind", "http", "maxWorkers", 2));
-        triggers.put("http", http);
-
-        //read source and build context
-        List<ContextRef> contextRefs = PythonRunnerHelper.createContextRefs(functionSpec);
-        List<ContextSource> contextSources = PythonRunnerHelper.createContextSources(
-            functionSpec,
-            null,
-            triggers,
-            "_serve_handler",
-            dependencies
-        );
-
-        //write entrypoint
-        try {
-            ContextSource entry = ContextSource
-                .builder()
-                .name("entrypoint.sh")
-                .base64(Base64.getEncoder().encodeToString(entrypoint.getContentAsByteArray()))
-                .build();
-            contextSources.add(entry);
-        } catch (IOException ioe) {
-            throw new CoreRuntimeException("error with reading entrypoint for runtime-python");
-        }
 
         //expose http trigger only
         CorePort servicePort = new CorePort(HTTP_PORT, HTTP_PORT);
 
         //evaluate service names
         List<String> serviceNames = new ArrayList<>();
-        if (taskSpec.getServiceName() != null && StringUtils.hasText(taskSpec.getServiceName())) {
+        if (runSpec.getTaskServeSpec().getServiceName() != null && StringUtils.hasText(runSpec.getTaskServeSpec().getServiceName())) {
             //prepend with function name
-            serviceNames.add(taskAccessor.getFunction() + "-" + taskSpec.getServiceName());
+            serviceNames.add(taskAccessor.getFunction() + "-" + runSpec.getTaskServeSpec().getServiceName());
         }
 
         if (functionService != null) {
@@ -201,11 +181,11 @@ public class PythonServeRunner {
                 serviceNames.add(taskAccessor.getFunction() + "-latest");
             }
         }
- 
+
         K8sRunnable k8sServeRunnable = K8sServeRunnable
             .builder()
-            .runtime(PythonRuntime.RUNTIME)
-            .task(PythonServeTaskSpec.KIND)
+            .runtime(GuardrailRuntime.RUNTIME)
+            .task(GuardrailServeTaskSpec.KIND)
             .state(State.READY.name())
             .labels(
                 k8sBuilderHelper != null
@@ -216,11 +196,11 @@ public class PythonServeRunner {
             .image(image)
             .command("/bin/bash")
             .args(args.toArray(new String[0]))
-            .contextRefs(contextRefs)
-            .contextSources(contextSources)
-            .envs(coreEnvList)
-            .secrets(coreSecrets)
-            .resources(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(taskSpec.getResources()) : null)
+            .contextRefs(ctx.contextRefs())
+            .contextSources(ctx.contextSources())
+            .envs(ctx.coreEnvList())
+            .secrets(ctx.coreSecrets())
+            .resources(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(runSpec.getTaskServeSpec().getResources()) : null)
             .volumes(coreVolumes)
             .template(taskSpec.getProfile())
             //securityContext
@@ -240,3 +220,4 @@ public class PythonServeRunner {
         return k8sServeRunnable;
     }
 }
+

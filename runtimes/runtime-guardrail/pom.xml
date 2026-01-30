@@ -10,9 +10,9 @@
         <relativePath>../../</relativePath> <!-- lookup parent from repository -->
     </parent>
     <groupId>it.smartcommunitylabdhub</groupId>
-    <artifactId>dh-runtime-python</artifactId>
-    <name>runtime-python</name>
-    <description>DHCore runtime-python</description>
+    <artifactId>dh-runtime-guardrail</artifactId>
+    <name>runtime-guardrail</name>
+    <description>DHCore runtime-guardrail</description>
 
     <dependencies>
         <dependency>
@@ -30,12 +30,17 @@
             <artifactId>dh-framework-kaniko</artifactId>
             <version>${revision}</version>
         </dependency>
-
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-runtime-python</artifactId>
+            <version>${revision}</version>
+        </dependency>
         <dependency>
             <groupId>com.github.spullara.mustache.java</groupId>
             <artifactId>compiler</artifactId>
             <version>0.9.10</version>
         </dependency>
+
 
         <dependency>
             <groupId>org.projectlombok</groupId>

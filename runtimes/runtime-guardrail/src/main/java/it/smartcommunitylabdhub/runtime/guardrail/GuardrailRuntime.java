@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.python;
+package it.smartcommunitylabdhub.runtime.guardrail;
 
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.CredentialsService;
@@ -33,7 +33,6 @@ import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
-import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
@@ -42,24 +41,17 @@ import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
 import it.smartcommunitylabdhub.functions.FunctionManager;
-import it.smartcommunitylabdhub.relationships.RelationshipDetail;
-import it.smartcommunitylabdhub.relationships.RelationshipName;
-import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
-import it.smartcommunitylabdhub.runtime.python.runners.PythonBuildRunner;
-import it.smartcommunitylabdhub.runtime.python.runners.PythonJobRunner;
-import it.smartcommunitylabdhub.runtime.python.runners.PythonServeRunner;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonBuildRunSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonBuildTaskSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonFunctionSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonJobRunSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonJobTaskSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonRunSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonRunStatus;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonServeRunSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonServeTaskSpec;
+import it.smartcommunitylabdhub.runtime.guardrail.runners.GuardrailBuildRunner;
+import it.smartcommunitylabdhub.runtime.guardrail.runners.GuardrailServeRunner;
+import it.smartcommunitylabdhub.runtime.guardrail.specs.GuardrailBuildRunSpec;
+import it.smartcommunitylabdhub.runtime.guardrail.specs.GuardrailBuildTaskSpec;
+import it.smartcommunitylabdhub.runtime.guardrail.specs.GuardrailFunctionSpec;
+import it.smartcommunitylabdhub.runtime.guardrail.specs.GuardrailRunSpec;
+import it.smartcommunitylabdhub.runtime.guardrail.specs.GuardrailRunStatus;
+import it.smartcommunitylabdhub.runtime.guardrail.specs.GuardrailServeRunSpec;
+import it.smartcommunitylabdhub.runtime.guardrail.specs.GuardrailServeTaskSpec;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -70,13 +62,12 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 
 @Slf4j
-@RuntimeComponent(runtime = PythonRuntime.RUNTIME)
-public class PythonRuntime
-    extends K8sFunctionBaseRuntime<PythonFunctionSpec, PythonRunSpec, PythonRunStatus, K8sRunnable> {
+@RuntimeComponent(runtime = GuardrailRuntime.RUNTIME)
+public class GuardrailRuntime
+    extends K8sFunctionBaseRuntime<GuardrailFunctionSpec, GuardrailRunSpec, GuardrailRunStatus, K8sRunnable> {
 
-    public static final String RUNTIME = "python";
-    public static final String[] KINDS = { PythonJobRunSpec.KIND, PythonServeRunSpec.KIND, PythonBuildRunSpec.KIND };
-
+    public static final String RUNTIME = "guardrail";
+    public static final String[] KINDS = { GuardrailServeRunSpec.KIND, GuardrailBuildRunSpec.KIND };
     @Autowired
     private SecretService secretService;
 
@@ -97,7 +88,7 @@ public class PythonRuntime
     @Qualifier("pythonServerlessImages")
     private Map<String, String> serverlessImages;
 
-        @Autowired
+    @Autowired
     @Qualifier("pythonBaseImages")
     private Map<String, String> baseImages;
 
@@ -110,27 +101,27 @@ public class PythonRuntime
     @Value("${runtime.python.group-id}")
     private Integer groupId;
 
-    @Value("${runtime.python.dependencies}")
-    private List<String> dependencies;
-
-    @Value("${runtime.python.volume-size:1Gi}")
+    @Value("${runtime.guardrail.volume-size:1Gi}")
     protected String volumeSizeSpec;
 
-    public PythonRuntime() {}
+    @Value("${runtime.guardrail.dependencies}")
+    private List<String> dependencies;
+
+
+    public GuardrailRuntime() {}
 
     @Override
-    public PythonRunSpec build(@NotNull Function function, @NotNull Task task, @NotNull Run run) {
+    public GuardrailRunSpec build(@NotNull Function function, @NotNull Task task, @NotNull Run run) {
         //check run kind
         if (!isSupported(run)) {
             throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
         }
 
-        PythonFunctionSpec funSpec = new PythonFunctionSpec(function.getSpec());
-        PythonRunSpec runSpec =
+        GuardrailFunctionSpec funSpec = new GuardrailFunctionSpec(function.getSpec());
+        GuardrailRunSpec runSpec =
             switch (run.getKind()) {
-                case PythonJobRunSpec.KIND -> new PythonJobRunSpec(run.getSpec());
-                case PythonServeRunSpec.KIND -> new PythonServeRunSpec(run.getSpec());
-                case PythonBuildRunSpec.KIND -> new PythonBuildRunSpec(run.getSpec());
+                case GuardrailServeRunSpec.KIND -> new GuardrailServeRunSpec(run.getSpec());
+                case GuardrailBuildRunSpec.KIND -> new GuardrailBuildRunSpec(run.getSpec());
                 default -> throw new IllegalArgumentException(
                     "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
                 );
@@ -139,14 +130,11 @@ public class PythonRuntime
         //build task spec as defined
         Map<String, Serializable> taskSpec =
             switch (task.getKind()) {
-                case PythonJobTaskSpec.KIND -> {
-                    yield new PythonJobTaskSpec(task.getSpec()).toMap();
+                case GuardrailServeTaskSpec.KIND -> {
+                    yield new GuardrailServeTaskSpec(task.getSpec()).toMap();
                 }
-                case PythonServeTaskSpec.KIND -> {
-                    yield new PythonServeTaskSpec(task.getSpec()).toMap();
-                }
-                case PythonBuildTaskSpec.KIND -> {
-                    yield new PythonBuildTaskSpec(task.getSpec()).toMap();
+                case GuardrailBuildTaskSpec.KIND -> {
+                    yield new GuardrailBuildTaskSpec(task.getSpec()).toMap();
                 }
                 default -> throw new IllegalArgumentException(
                     "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
@@ -167,38 +155,6 @@ public class PythonRuntime
     }
 
     @Override
-    public Spec onBuilt(@NotNull Run run) {
-        //build lineage from inputs when needed
-        PythonRunSpec runSpec = new PythonRunSpec(run.getSpec());
-        if (runSpec.getInputs() != null && !runSpec.getInputs().isEmpty()) {
-            RelationshipsMetadata lineage = RelationshipsMetadata.from(run.getMetadata());
-            List<RelationshipDetail> rels = lineage.getRelationships() != null
-                ? new ArrayList<>(lineage.getRelationships())
-                : new ArrayList<>();
-
-            runSpec
-                .getInputs()
-                .forEach((name, input) -> {
-                    if (
-                        rels
-                            .stream()
-                            .noneMatch(r -> r.getType() == RelationshipName.CONSUMES && r.getDest().equals(input))
-                    ) {
-                        //build key
-                        RelationshipDetail dr = new RelationshipDetail(RelationshipName.CONSUMES, run.getKey(), input);
-                        rels.add(dr);
-                    }
-                });
-
-            lineage.setRelationships(rels);
-
-            return lineage;
-        }
-
-        return null;
-    }
-
-    @Override
     public K8sRunnable run(@NotNull Run run) {
         //check run kind
         if (!isSupported(run)) {
@@ -215,13 +171,11 @@ public class PythonRuntime
 
         K8sRunnable runnable =
             switch (runAccessor.getTask()) {
-                case PythonJobTaskSpec.KIND -> new PythonJobRunner(images, serverlessImages, baseImages, volumeSizeSpec, userId, groupId, command, k8sBuilderHelper, dependencies)
-                    .produce(run, secrets);
-                case PythonServeTaskSpec.KIND -> new PythonServeRunner(
+                case GuardrailServeTaskSpec.KIND -> new GuardrailServeRunner(
                     images,
                     serverlessImages,
                     baseImages,
-                    volumeSizeSpec,
+                    volumeSizeSpec, 
                     userId,
                     groupId,
                     command,
@@ -230,7 +184,7 @@ public class PythonRuntime
                     dependencies
                 )
                     .produce(run, secrets);
-                case PythonBuildTaskSpec.KIND -> new PythonBuildRunner(images, serverlessImages, baseImages, command, k8sBuilderHelper, dependencies)
+                case GuardrailBuildTaskSpec.KIND -> new GuardrailBuildRunner(images, serverlessImages, baseImages, command, k8sBuilderHelper, dependencies)
                     .produce(run, secrets);
                 default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
             };
@@ -251,7 +205,7 @@ public class PythonRuntime
     }
 
     @Override
-    public PythonRunStatus onComplete(Run run, RunRunnable runnable) {
+    public GuardrailRunStatus onComplete(Run run, RunRunnable runnable) {
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
         //update image name after build
@@ -263,7 +217,7 @@ public class PythonRuntime
 
             log.debug("update function {} spec to use built image: {}", functionId, image);
 
-            PythonFunctionSpec funSpec = new PythonFunctionSpec(function.getSpec());
+            GuardrailFunctionSpec funSpec = new GuardrailFunctionSpec(function.getSpec());
             if (!image.equals(funSpec.getImage())) {
                 funSpec.setImage(image);
                 function.setSpec(funSpec.toMap());

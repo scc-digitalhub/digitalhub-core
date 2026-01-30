@@ -6,59 +6,43 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
-package it.smartcommunitylabdhub.framework.k8s.objects;
+package it.smartcommunitylabdhub.runtime.guardrail.specs;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
+import it.smartcommunitylabdhub.commons.models.task.Task;
+import it.smartcommunitylabdhub.runtime.guardrail.GuardrailRuntime;
+import it.smartcommunitylabdhub.runtime.python.specs.PythonServeTaskSpec;
 import java.io.Serializable;
 import java.util.Map;
-import lombok.AllArgsConstructor;
+
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@AllArgsConstructor
-@NoArgsConstructor
 @Getter
 @Setter
-public class CoreVolume implements Serializable {
+@NoArgsConstructor
+@SpecType(runtime = GuardrailRuntime.RUNTIME, kind = GuardrailServeTaskSpec.KIND, entity = Task.class)
+public class GuardrailServeTaskSpec extends PythonServeTaskSpec {
 
-    @JsonProperty("volume_type")
-    @NotNull
-    private VolumeType volumeType;
+    public static final String KIND = GuardrailRuntime.RUNTIME + "+serve";
 
-    @JsonProperty("mount_path")
-    @NotBlank
-    private String mountPath;
-
-    @NotBlank
-    private String name;
-
-    private Map<String, String> spec;
-
-    public enum VolumeType {
-        // config_map,
-        // secret,
-        shared_volume,
-        persistent_volume_claim,
-        ephemeral,
-        empty_dir,
-        image
+    public GuardrailServeTaskSpec(Map<String, Serializable> data) {
+        configure(data);
     }
 }

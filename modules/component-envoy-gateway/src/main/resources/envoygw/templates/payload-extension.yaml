@@ -17,6 +17,7 @@ extProc:
     metadata:
       accessibleNamespaces: 
         - digitalhub
+    failOpen: true
     processingMode:
       request: 
         body: Streamed

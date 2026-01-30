@@ -19,6 +19,12 @@
 | RUNTIME_PYTHON_IMAGE_3_10         | ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.10-latest |             |
 | RUNTIME_PYTHON_IMAGE_3_11         | ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.11-latest |             |
 | RUNTIME_PYTHON_IMAGE_3_12         | ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.12-latest |             |
+| RUNTIME_PYTHON_SERVERLESS_IMAGE_3_10 | ghcr.io/scc-digitalhub/digitalhub-serverless/python-serverless:3.10-latest |             |
+| RUNTIME_PYTHON_SERVERLESS_IMAGE_3_11 | ghcr.io/scc-digitalhub/digitalhub-serverless/python-serverless:3.11-latest |             |
+| RUNTIME_PYTHON_SERVERLESS_IMAGE_3_12 | ghcr.io/scc-digitalhub/digitalhub-serverless/python-serverless:3.12-latest |             |
+| RUNTIME_PYTHON_SERVERLESS_IMAGE_3_13 | ghcr.io/scc-digitalhub/digitalhub-serverless/python-serverless:3.13-latest |             |
+| RUNTIME_PYTHON_DEPENDENCIES       | digitalhub[full],digitalhub-runtime-python                              |             |
+| RUNTIME_PYTHON_VOLUME_SIZE        | 1Gi                                                                     |             |
 | RUNTIME_PYTHON_USER_ID            | ${kubernetes.security.user}                                             |             |
 | RUNTIME_PYTHON_GROUP_ID           | ${kubernetes.security.group}                                            |             |
 | RUNTIME_SKLEARN_SERVE_IMAGE       | seldonio/mlserver:latest                                                |             |
