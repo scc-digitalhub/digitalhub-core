@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import os
-import inspect
+import typing
 from pathlib import Path
 from typing import Any, Callable
 
@@ -20,6 +20,8 @@ from digitalhub_runtime_python.utils.configuration import (
 )
 from digitalhub_runtime_python.utils.inputs import compose_init, compose_inputs
 
+if typing.TYPE_CHECKING:
+    from digitalhub_runtime_guardrail.entities.run._base.entity import RunGuardrailRun
 
 DEFAULT_PATH = Path("/shared")
 
@@ -27,7 +29,7 @@ DEFAULT_PATH = Path("/shared")
 def execute_user_init(
     init_function: Callable,
     context: Context,
-    run: Any,
+    run: RunGuardrailRun,
 ) -> None:
     """
     Execute user init function.
@@ -38,7 +40,7 @@ def execute_user_init(
         User init function.
     context : Context
         Nuclio context.
-    run : Any
+    run : RunGuardrailRun
         Run entity.
     """
     init_params: dict = run.spec.to_dict().get("init_parameters", {})
@@ -68,15 +70,14 @@ def init_context(context: Context) -> None:
     ctx = get_context(project.name)
     ctx.root.mkdir(parents=True, exist_ok=True)
 
-    run: Any = None
-    # # Get run TODO
-    # run = get_run(
-    #     os.getenv(RuntimeEnvVar.RUN_ID.value),
-    #     project=project_name,
-    # )
-    # # Set running context
-    # context.logger.info("Starting execution.")
-    # run.start_execution()
+    # Get run
+    run: RunGuardrailRun = get_run(
+        os.getenv(RuntimeEnvVar.RUN_ID.value),
+        project=project_name,
+    )
+    # Set running context
+    context.logger.info("Starting execution.")
+    run.start_execution()
     setattr(context, "run", run)
 
 
@@ -86,7 +87,7 @@ def init_context(context: Context) -> None:
     # default_py_file filename is "main.py", source is the
     # function source
     source = {{source}}
-    func, init_function = import_function_and_init_from_source(DEFAULT_PATH, source, "main.py")
+    func, init_function = import_function_and_init_from_source(DEFAULT_PATH, source)
 
     # Set attributes
     setattr(context, "user_function", func)
@@ -118,7 +119,6 @@ def handler_serve(context: Context, event: Event) -> Any:
     # Set inputs
     #############################
     try:
-        context.logger.info("Configuring function inputs.")
         func_args = compose_inputs(
             {},
             {},
@@ -137,7 +137,6 @@ def handler_serve(context: Context, event: Event) -> Any:
     # Call user function
     ############################
     try:
-        context.logger.info("Calling user function.")
         return context.user_function(**func_args)
     except Exception as e:
         raise e

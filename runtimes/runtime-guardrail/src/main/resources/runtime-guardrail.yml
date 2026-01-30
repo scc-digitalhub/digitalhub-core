@@ -1,0 +1,4 @@
+runtime:
+  guardrail:
+    dependencies: ${RUNTIME_GUARDRAIL_DEPENDENCIES:digitalhub[full],digitalhub-runtime-guardrail}
+    volume-size: ${RUNTIME_GUARDRAIL_VOLUME_SIZE:1Gi}

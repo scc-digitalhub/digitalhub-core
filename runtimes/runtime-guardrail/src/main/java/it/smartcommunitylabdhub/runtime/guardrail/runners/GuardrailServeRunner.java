@@ -42,7 +42,6 @@ import it.smartcommunitylabdhub.runtime.guardrail.specs.GuardrailFunctionSpec;
 import it.smartcommunitylabdhub.runtime.guardrail.specs.GuardrailServeRunSpec;
 import it.smartcommunitylabdhub.runtime.guardrail.specs.GuardrailServeTaskSpec;
 import it.smartcommunitylabdhub.runtime.python.runners.PythonRunnerHelper;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonServeTaskSpec;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -80,9 +79,10 @@ public class GuardrailServeRunner extends GuardrailBaseRunner {
         Integer groupId,
         String command,
         K8sBuilderHelper k8sBuilderHelper,
-        FunctionManager functionService
+        FunctionManager functionService,
+        List<String> dependencies
     ) {
-        super(images, serverlessImages, baseImages, command, k8sBuilderHelper);
+        super(images, serverlessImages, baseImages, command, k8sBuilderHelper, dependencies);
         this.functionService = functionService;
         this.volumeSizeSpec = volumeSizeSpec;
 

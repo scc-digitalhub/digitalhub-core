@@ -85,7 +85,7 @@ public class GuardrailRuntime
     private Map<String, String> images;
 
     @Autowired
-    @Qualifier("pythonImages")
+    @Qualifier("pythonServerlessImages")
     private Map<String, String> serverlessImages;
 
     @Autowired
@@ -101,8 +101,12 @@ public class GuardrailRuntime
     @Value("${runtime.python.group-id}")
     private Integer groupId;
 
-    @Value("${runtime.python.volume-size:1Gi}")
+    @Value("${runtime.guardrail.volume-size:1Gi}")
     protected String volumeSizeSpec;
+
+    @Value("${runtime.guardrail.dependencies}")
+    private List<String> dependencies;
+
 
     public GuardrailRuntime() {}
 
@@ -176,10 +180,11 @@ public class GuardrailRuntime
                     groupId,
                     command,
                     k8sBuilderHelper,
-                    functionService
+                    functionService,
+                    dependencies
                 )
                     .produce(run, secrets);
-                case GuardrailBuildTaskSpec.KIND -> new GuardrailBuildRunner(images, serverlessImages, baseImages, command, k8sBuilderHelper)
+                case GuardrailBuildTaskSpec.KIND -> new GuardrailBuildRunner(images, serverlessImages, baseImages, command, k8sBuilderHelper, dependencies)
                     .produce(run, secrets);
                 default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
             };

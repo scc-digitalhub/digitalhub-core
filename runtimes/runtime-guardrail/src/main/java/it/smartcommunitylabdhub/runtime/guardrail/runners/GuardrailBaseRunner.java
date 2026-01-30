@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -50,6 +51,7 @@ public class GuardrailBaseRunner {
     protected final String command;
 
     protected final K8sBuilderHelper k8sBuilderHelper;
+    protected final List<String> dependencies;
 
     protected MustacheFactory mustacheFactory = new NoEncodingMustacheFactory();
     protected final Resource handlerTemplate = new ClassPathResource("runtime-guardrail/docker/guardrail-handler.py");
@@ -67,12 +69,14 @@ public class GuardrailBaseRunner {
         Map<String, String> serverlessImages,
         Map<String, String> baseImages,
         String command,
-        K8sBuilderHelper k8sBuilderHelper
+        K8sBuilderHelper k8sBuilderHelper,
+        List<String> dependencies
     ) {
         this.images = images;
         this.serverlessImages = serverlessImages;
         this.baseImages = baseImages;
         this.command = command;
+        this.dependencies = dependencies;
 
         this.k8sBuilderHelper = k8sBuilderHelper;
         try {
@@ -170,17 +174,27 @@ public class GuardrailBaseRunner {
                 throw new CoreRuntimeException("error with reading handler template for runtime-guardrail");
             }
         }
-        // requirements.txt
+
+        List<String> requirements = new LinkedList<>();
+        if (dependencies != null && !dependencies.isEmpty()) {
+            requirements.addAll(dependencies);
+        }
+
         if (functionSpec.getRequirements() != null && !functionSpec.getRequirements().isEmpty()) {
-            //write as file
-            String content = String.join("\n", functionSpec.getRequirements());
+            requirements.addAll(functionSpec.getRequirements());
+        }
+        if (!requirements.isEmpty()) {
+            //write file
+            String path = "requirements.txt";
+            String content = String.join("\n", requirements);
             contextSources.add(
                 ContextSource
                     .builder()
-                    .name("requirements.txt")
+                    .name(path)
                     .base64(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)))
                     .build()
             );
+
         }
 
         //merge env with PYTHON path override

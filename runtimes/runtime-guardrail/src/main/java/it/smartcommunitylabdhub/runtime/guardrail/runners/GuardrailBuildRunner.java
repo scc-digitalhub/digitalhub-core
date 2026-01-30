@@ -36,7 +36,6 @@ import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRu
 import it.smartcommunitylabdhub.runtime.guardrail.GuardrailRuntime;
 import it.smartcommunitylabdhub.runtime.guardrail.specs.GuardrailBuildRunSpec;
 import it.smartcommunitylabdhub.runtime.guardrail.specs.GuardrailBuildTaskSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonBuildTaskSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonFunctionSpec;
 
 import java.util.List;
@@ -53,9 +52,10 @@ public class GuardrailBuildRunner extends GuardrailBaseRunner {
         Map<String, String> serverlessImages,
         Map<String, String> baseImages,
         String command, 
-        K8sBuilderHelper k8sBuilderHelper
+        K8sBuilderHelper k8sBuilderHelper,
+        List<String> dependencies
     ) {
-        super(images, serverlessImages, baseImages, command, k8sBuilderHelper);
+        super(images, serverlessImages, baseImages, command, k8sBuilderHelper, dependencies);
     }
 
     public K8sContainerBuilderRunnable produce(Run run, Map<String, String> secretData) {
