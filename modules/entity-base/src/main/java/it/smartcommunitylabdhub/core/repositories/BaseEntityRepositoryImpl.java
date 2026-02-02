@@ -179,7 +179,14 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
                 //publish
                 if (eventPublisher != null) {
                     log.debug("publish event: create for {}", entity.getId());
-                    EntityEvent<E> event = new EntityEvent<>(entity, EntityAction.CREATE);
+
+                    //NOTE: to avoid issues with entity manager owned objs
+                    //we clone entities to detach and keep the version
+                    //sent as event payload immutable
+                    EntityEvent<E> event = new EntityEvent<>(
+                        entityBuilder.convert(dtoBuilder.convert(entity)),
+                        EntityAction.CREATE
+                    );
                     if (log.isTraceEnabled()) {
                         log.trace("event: {}", String.valueOf(event));
                     }
@@ -230,8 +237,6 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
                     ae.setCreatedBy(entity.getCreatedBy());
                 }
 
-                // D prevAsDto = dtoBuilder.convert(entity);
-
                 //persist
                 E updated = repository.saveAndFlush(e);
                 if (log.isTraceEnabled()) {
@@ -241,9 +246,13 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
                 //publish
                 if (eventPublisher != null) {
                     log.debug("publish event: update for {}", id);
+
+                    //NOTE: to avoid issues with entity manager owned objs
+                    //we clone entities to detach and keep the version
+                    //sent as event payload immutable
                     EntityEvent<E> event = new EntityEvent<>(
-                        updated,
-                        entity, // entityBuilder.convert(prevAsDto),
+                        entityBuilder.convert(dtoBuilder.convert(updated)),
+                        entityBuilder.convert(dtoBuilder.convert(entity)),
                         EntityAction.UPDATE
                     );
                     if (log.isTraceEnabled()) {
@@ -282,12 +291,18 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
                             log.trace("entity: {}", entity);
                         }
 
+                        //NOTE: to avoid issues with entity manager owned objs
+                        //we clone entities to detach and keep the version
+                        //sent as event payload immutable
+                        E prev = entityBuilder.convert(dtoBuilder.convert(entity));
+
+                        //delete
                         repository.delete(entity);
 
                         //publish
                         if (eventPublisher != null) {
                             log.debug("publish event: delete for {}", id);
-                            EntityEvent<E> event = new EntityEvent<>(entity, EntityAction.DELETE);
+                            EntityEvent<E> event = new EntityEvent<>(prev, EntityAction.DELETE);
                             if (log.isTraceEnabled()) {
                                 log.trace("event: {}", String.valueOf(event));
                             }
@@ -417,13 +432,19 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
         //collect all via search
         List<E> entities = repository.findAll();
 
+        //NOTE: to avoid issues with entity manager owned objs
+        //we clone entities to detach and keep the version
+        //sent as event payload immutable
+        List<E> prevs = entities.stream().map(entity -> entityBuilder.convert(dtoBuilder.convert(entity))).toList();
+
         //remove in batch
         repository.deleteAllInBatch(entities);
 
         //publish
         if (eventPublisher != null) {
-            entities.forEach(entity -> {
+            prevs.forEach(entity -> {
                 log.debug("publish event: delete for {}", entity.getId());
+
                 EntityEvent<E> event = new EntityEvent<>(entity, EntityAction.DELETE);
                 if (log.isTraceEnabled()) {
                     log.trace("event: {}", String.valueOf(event));
@@ -445,13 +466,19 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
             //collect all via search
             List<E> entities = ((JpaSpecificationExecutor<E>) repository).findAll(specification);
 
+            //NOTE: to avoid issues with entity manager owned objs
+            //we clone entities to detach and keep the version
+            //sent as event payload immutable
+            List<E> prevs = entities.stream().map(entity -> entityBuilder.convert(dtoBuilder.convert(entity))).toList();
+
             //remove in batch
             repository.deleteAllInBatch(entities);
 
             //publish
             if (eventPublisher != null) {
-                entities.forEach(entity -> {
+                prevs.forEach(entity -> {
                     log.debug("publish event: delete for {}", entity.getId());
+
                     EntityEvent<E> event = new EntityEvent<>(entity, EntityAction.DELETE);
                     if (log.isTraceEnabled()) {
                         log.trace("event: {}", String.valueOf(event));
