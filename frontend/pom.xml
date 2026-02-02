@@ -16,7 +16,7 @@
 
     <properties>
         <yarn.version>v1.22.22</yarn.version>
-        <node.version>v20.19.3</node.version>
+        <node.version>v24.13.0</node.version>
     </properties>
     <dependencies>
         <dependency>
