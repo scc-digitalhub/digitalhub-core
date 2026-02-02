@@ -41,7 +41,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 @RestController
 @RequestMapping("/api/v1")
-@PreAuthorize("hasAuthority('ROLE_ADMIN')")
 @Slf4j
 public class ProxyController {
 
@@ -51,6 +50,7 @@ public class ProxyController {
     @Autowired
     RunManager runManager;
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @RequestMapping(value = "/proxy/**")
     public ResponseEntity<String> handleProxyRequest(HttpServletRequest request) throws IOException {
         //custom header for request url forwarding
@@ -67,6 +67,9 @@ public class ProxyController {
         return new ResponseEntity<>(response.getBody(), headers, response.getStatusCode());
     }
 
+    @PreAuthorize(
+        "hasAuthority('ROLE_ADMIN') or (hasAuthority(#project+':ROLE_USER') or hasAuthority(#project+':ROLE_ADMIN'))"
+    )
     @RequestMapping(value = "/-/{project}/runs/{id}/proxy")
     public ResponseEntity<String> proxyRequest(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
