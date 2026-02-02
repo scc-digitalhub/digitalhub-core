@@ -69,6 +69,7 @@
         <module>runtimes/runtime-flower</module>
         <module>runtimes/runtime-model-serve</module>
         <module>runtimes/runtime-kubeai</module>
+        <module>runtimes/runtime-guardrail</module>
         <module>modules/openmetadata-integration</module>
         <module>modules/proxy</module>
         <module>providers/credentials-provider-db</module>
