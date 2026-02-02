@@ -93,6 +93,14 @@ public class PythonRuntime
     @Qualifier("pythonImages")
     private Map<String, String> images;
 
+    @Autowired
+    @Qualifier("pythonServerlessImages")
+    private Map<String, String> serverlessImages;
+
+        @Autowired
+    @Qualifier("pythonBaseImages")
+    private Map<String, String> baseImages;
+
     @Value("${runtime.python.command}")
     private String command;
 
@@ -101,6 +109,12 @@ public class PythonRuntime
 
     @Value("${runtime.python.group-id}")
     private Integer groupId;
+
+    @Value("${runtime.python.dependencies}")
+    private List<String> dependencies;
+
+    @Value("${runtime.python.volume-size:1Gi}")
+    protected String volumeSizeSpec;
 
     public PythonRuntime() {}
 
@@ -201,18 +215,22 @@ public class PythonRuntime
 
         K8sRunnable runnable =
             switch (runAccessor.getTask()) {
-                case PythonJobTaskSpec.KIND -> new PythonJobRunner(images, userId, groupId, command, k8sBuilderHelper)
+                case PythonJobTaskSpec.KIND -> new PythonJobRunner(images, serverlessImages, baseImages, volumeSizeSpec, userId, groupId, command, k8sBuilderHelper, dependencies)
                     .produce(run, secrets);
                 case PythonServeTaskSpec.KIND -> new PythonServeRunner(
                     images,
+                    serverlessImages,
+                    baseImages,
+                    volumeSizeSpec,
                     userId,
                     groupId,
                     command,
                     k8sBuilderHelper,
-                    functionService
+                    functionService,
+                    dependencies
                 )
                     .produce(run, secrets);
-                case PythonBuildTaskSpec.KIND -> new PythonBuildRunner(images, command, k8sBuilderHelper)
+                case PythonBuildTaskSpec.KIND -> new PythonBuildRunner(images, serverlessImages, baseImages, command, k8sBuilderHelper, dependencies)
                     .produce(run, secrets);
                 default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
             };
