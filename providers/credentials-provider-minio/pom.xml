@@ -15,7 +15,7 @@
     <description>credentials-provider-minio</description>
 
     <properties>
-        <minio.version>8.6.0</minio.version>
+        <minio.version>8.5.16</minio.version>
     </properties>
 
     <dependencies>
