@@ -17,94 +17,140 @@
 package it.smartcommunitylabdhub.envoygw;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
 
 import com.github.mustachejava.Mustache;
 import com.github.mustachejava.MustacheFactory;
 import it.smartcommunitylabdhub.commons.models.enums.State;
+import it.smartcommunitylabdhub.envoygw.config.EnvoyGwProperties;
+import it.smartcommunitylabdhub.envoygw.config.PayloadLoggerProperties;
 import it.smartcommunitylabdhub.envoygw.model.ExtProcService;
 import it.smartcommunitylabdhub.envoygw.model.GenAIModelService;
 import it.smartcommunitylabdhub.envoygw.model.GenericService;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 
-// @ExtendWith(MockitoExtension.class)
 class GatewayCRManagerTest {
 
-    // @Mock
     private Resource aigatewayrouteTemplate;
 
-    // @Mock
     private Resource aibackendTemplate;
 
-    // @Mock
     private Resource backendTemplate;
 
-    // @Mock
     private Resource genericHttpRouteTemplate;
 
-    // @Mock
     private Resource payloadLoggerExtProcTemplate;
 
-    // @Mock
     private Resource extProcTemplate;
 
-    // @Mock
+    @Mock
     private MustacheFactory mustacheFactory;
 
-    // @Mock
     private Mustache aigatewayrouteMustache;
 
-    // @Mock
     private Mustache aibackendMustache;
 
-    // @Mock
     private Mustache backendMustache;
 
-    // @Mock
     private Mustache genericHttpRouteMustache;
 
-    // @Mock
     private Mustache payloadLoggerExtProcMustache;
 
-    // @Mock
     private Mustache extProcMustache;
 
-    // @InjectMocks
+    private PayloadLoggerProperties payloadLoggerProperties;
+
+    @Mock
+    private ResourceLoader resourceLoader;
+
     private GatewayCRManager gatewayCRManager;
 
-    // @BeforeEach
+    private EnvoyGwProperties.GatewayInstanceProperties aiGateway;
+    private EnvoyGwProperties.GatewayInstanceProperties genericGateway;
+
+    @BeforeEach
     void setUp() throws Exception {
-        // Set up field values that would normally be injected by Spring
-        setPrivateField(gatewayCRManager, "aiGatewayName", "test-ai-gateway");
-        setPrivateField(gatewayCRManager, "genericGatewayName", "test-generic-gateway");
-        setPrivateField(gatewayCRManager, "payloadLoggerHost", "logger.example.com");
-        setPrivateField(gatewayCRManager, "payloadLoggerPort", 8080);
+        MockitoAnnotations.openMocks(this);
+        EnvoyGwProperties envoyGwProperties = mock(EnvoyGwProperties.class);
+        // Mock EnvoyGwProperties
+        aiGateway = mock(EnvoyGwProperties.GatewayInstanceProperties.class);
+        lenient().when(aiGateway.getName()).thenReturn("test-ai-gateway");
+        lenient().when(envoyGwProperties.getAiGateway()).thenReturn(aiGateway);
+
+        genericGateway = mock(EnvoyGwProperties.GatewayInstanceProperties.class);
+        lenient().when(genericGateway.getName()).thenReturn("test-generic-gateway");
+        lenient().when(envoyGwProperties.getGenericGateway()).thenReturn(genericGateway);
+
+        // Mock PayloadLoggerProperties
+        payloadLoggerProperties = mock(PayloadLoggerProperties.class);
+        lenient().when(payloadLoggerProperties.getHost()).thenReturn("logger.example.com");
+        lenient().when(payloadLoggerProperties.getPort()).thenReturn(8080);
+        lenient().when(payloadLoggerProperties.isEnabled()).thenReturn(true);
+
+        // Create mock template resources
+        aigatewayrouteTemplate = mock(Resource.class);
+        aibackendTemplate = mock(Resource.class);
+        backendTemplate = mock(Resource.class);
+        genericHttpRouteTemplate = mock(Resource.class);
+        payloadLoggerExtProcTemplate = mock(Resource.class);
+        extProcTemplate = mock(Resource.class);
+
+        // Create mock mustaches
+        aigatewayrouteMustache = mock(Mustache.class);
+        aibackendMustache = mock(Mustache.class);
+        backendMustache = mock(Mustache.class);
+        genericHttpRouteMustache = mock(Mustache.class);
+        payloadLoggerExtProcMustache = mock(Mustache.class);
+        extProcMustache = mock(Mustache.class);
 
         // Mock template resources
-        when(aigatewayrouteTemplate.getInputStream()).thenReturn(mock(InputStream.class));
-        when(aibackendTemplate.getInputStream()).thenReturn(mock(InputStream.class));
-        when(backendTemplate.getInputStream()).thenReturn(mock(InputStream.class));
-        when(genericHttpRouteTemplate.getInputStream()).thenReturn(mock(InputStream.class));
-        when(payloadLoggerExtProcTemplate.getInputStream()).thenReturn(mock(InputStream.class));
-        when(extProcTemplate.getInputStream()).thenReturn(mock(InputStream.class));
+        when(aigatewayrouteTemplate.getInputStream()).thenReturn(new ByteArrayInputStream("name: {{name}}".getBytes()));
+        when(aibackendTemplate.getInputStream()).thenReturn(new ByteArrayInputStream("name: {{name}}".getBytes()));
+        when(backendTemplate.getInputStream()).thenReturn(new ByteArrayInputStream("name: {{name}}".getBytes()));
+        when(genericHttpRouteTemplate.getInputStream()).thenReturn(new ByteArrayInputStream("name: {{name}}".getBytes()));
+        when(payloadLoggerExtProcTemplate.getInputStream()).thenReturn(new ByteArrayInputStream("name: {{name}}".getBytes()));
+        when(extProcTemplate.getInputStream()).thenReturn(new ByteArrayInputStream("name: {{name}}".getBytes()));
 
         // Mock mustache factory
-        when(mustacheFactory.compile(any(InputStreamReader.class), anyString())).thenReturn(mock(Mustache.class));
+        lenient().when(mustacheFactory.compile(any(InputStreamReader.class), anyString())).thenReturn(mock(Mustache.class));
+
+        // Create GatewayCRManager instance
+        gatewayCRManager = new GatewayCRManager(envoyGwProperties);
+
+        // Inject the mocked ResourceLoader
+        try {
+            Field field = GatewayCRManager.class.getDeclaredField("resourceLoader");
+            field.setAccessible(true);
+            field.set(gatewayCRManager, resourceLoader);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        // Set the payloadLoggerProperties on the manager
+        gatewayCRManager.setPayloadLoggerProperties(payloadLoggerProperties);
+
+        // Mock resource loader
+        when(resourceLoader.getResource("classpath:envoygw/templates/aigatewayroute.yaml")).thenReturn(aigatewayrouteTemplate);
+        when(resourceLoader.getResource("classpath:envoygw/templates/aibackend.yaml")).thenReturn(aibackendTemplate);
+        when(resourceLoader.getResource("classpath:envoygw/templates/backend.yaml")).thenReturn(backendTemplate);
+        when(resourceLoader.getResource("classpath:envoygw/templates/generic-httproute.yaml")).thenReturn(genericHttpRouteTemplate);
+        when(resourceLoader.getResource("classpath:envoygw/templates/payload-extension.yaml")).thenReturn(payloadLoggerExtProcTemplate);
+        when(resourceLoader.getResource("classpath:envoygw/templates/extproc-extension.yaml")).thenReturn(extProcTemplate);
 
         // Initialize the manager
         gatewayCRManager.afterPropertiesSet();
@@ -124,7 +170,7 @@ class GatewayCRManagerTest {
         field.set(target, value);
     }
 
-    // @Test
+    @Test
     void testCreateGenAIRunnables_Success() throws IOException {
         // Given
         String runtime = "test-runtime";
@@ -149,8 +195,30 @@ class GatewayCRManagerTest {
         assertNotNull(runnables);
         assertEquals(3, runnables.size());
 
+        // Verify Backend CR
+        K8sCRRunnable backend = runnables.get(0);
+        assertEquals("test-service-backend", backend.getName());
+        assertEquals("gateway.envoyproxy.io", backend.getApiGroup());
+        assertEquals("v1alpha1", backend.getApiVersion());
+        assertEquals("Backend", backend.getKind());
+        assertEquals("backends", backend.getPlural());
+        assertEquals(runtime, backend.getRuntime());
+        assertEquals(task, backend.getTask());
+        assertEquals(State.READY.name(), backend.getState());
+
+        // Verify AIBackend CR
+        K8sCRRunnable aiBackend = runnables.get(1);
+        assertEquals("test-service-aibackend", aiBackend.getName());
+        assertEquals("aigateway.envoyproxy.io", aiBackend.getApiGroup());
+        assertEquals("v1alpha1", aiBackend.getApiVersion());
+        assertEquals("AIServiceBackend", aiBackend.getKind());
+        assertEquals("aiservicebackends", aiBackend.getPlural());
+        assertEquals(runtime, aiBackend.getRuntime());
+        assertEquals(task, aiBackend.getTask());
+        assertEquals(State.READY.name(), aiBackend.getState());
+
         // Verify AIGatewayRoute CR
-        K8sCRRunnable aiGatewayRoute = runnables.get(0);
+        K8sCRRunnable aiGatewayRoute = runnables.get(2);
         assertEquals("test-service-aigatewayroute", aiGatewayRoute.getName());
         assertEquals("aigateway.envoyproxy.io", aiGatewayRoute.getApiGroup());
         assertEquals("v1alpha1", aiGatewayRoute.getApiVersion());
@@ -159,21 +227,9 @@ class GatewayCRManagerTest {
         assertEquals(runtime, aiGatewayRoute.getRuntime());
         assertEquals(task, aiGatewayRoute.getTask());
         assertEquals(State.READY.name(), aiGatewayRoute.getState());
-
-        // Verify AIBackend CR
-        K8sCRRunnable aiBackend = runnables.get(1);
-        assertEquals("test-service-aibackend", aiBackend.getName());
-        assertEquals("aigateway.envoyproxy.io", aiBackend.getApiGroup());
-        assertEquals("AIServiceBackend", aiBackend.getKind());
-
-        // Verify Backend CR
-        K8sCRRunnable backend = runnables.get(2);
-        assertEquals("test-service-backend", backend.getName());
-        assertEquals("gateway.envoyproxy.io", backend.getApiGroup());
-        assertEquals("Backend", backend.getKind());
     }
 
-    // @Test
+    @Test
     void testCreateGenAIRunnables_NullRuntime_ThrowsException() {
         // Given
         GenAIModelService service = new GenAIModelService();
@@ -192,7 +248,7 @@ class GatewayCRManagerTest {
         assertEquals("runtime is required", exception.getMessage());
     }
 
-    // @Test
+    @Test
     void testCreateGenAIRunnables_NullTask_ThrowsException() {
         // Given
         GenAIModelService service = new GenAIModelService();
@@ -211,7 +267,7 @@ class GatewayCRManagerTest {
         assertEquals("task is required", exception.getMessage());
     }
 
-    // @Test
+    @Test
     void testCreateGenAIRunnables_NullService_ThrowsException() {
         // When & Then
         IllegalArgumentException exception = assertThrows(
@@ -221,12 +277,12 @@ class GatewayCRManagerTest {
         assertEquals("service is required", exception.getMessage());
     }
 
-    // @Test
+    @Test
     void testCreateGenericServiceRunnables_Success() throws IOException {
         // Given
         String runtime = "test-runtime";
         String task = "test-task";
-        GenericService service = new GenericService("test-project", "test-function", "test-service", "localhost", 8080);
+        GenericService service = new GenericService("test-project", "test-service", "test-function", "localhost", 8080);
 
         // Mock mustache execution
         mockMustacheExecution(genericHttpRouteMustache, "{\"apiVersion\":\"v1\",\"kind\":\"HTTPRoute\"}");
@@ -239,26 +295,27 @@ class GatewayCRManagerTest {
         assertNotNull(runnables);
         assertEquals(2, runnables.size());
 
-        // Verify HTTPRoute CR
-        K8sCRRunnable httpRoute = runnables.get(0);
-        assertEquals("test-service-httproute", httpRoute.getName());
-        assertEquals("gateway.envoyproxy.io", httpRoute.getApiGroup());
-        assertEquals("v1", httpRoute.getApiVersion());
-        assertEquals("HTTPRoute", httpRoute.getKind());
-
         // Verify Backend CR
-        K8sCRRunnable backend = runnables.get(1);
+        K8sCRRunnable backend = runnables.get(0);
         assertEquals("test-service-backend", backend.getName());
         assertEquals("gateway.envoyproxy.io", backend.getApiGroup());
+        assertEquals("v1alpha1", backend.getApiVersion());
         assertEquals("Backend", backend.getKind());
+
+        // Verify HTTPRoute CR
+        K8sCRRunnable httpRoute = runnables.get(1);
+        assertEquals("test-service-httproute", httpRoute.getName());
+        assertEquals("gateway.networking.k8s.io", httpRoute.getApiGroup());
+        assertEquals("v1", httpRoute.getApiVersion());
+        assertEquals("HTTPRoute", httpRoute.getKind());
     }
 
-    // @Test
+    @Test
     void testCreateServicePayloadLoggerRunnables_Success() throws IOException {
         // Given
         String runtime = "test-runtime";
         String task = "test-task";
-        GenericService service = new GenericService("test-project", "test-function", "test-service", "localhost", 8080);
+        GenericService service = new GenericService("test-project", "test-service", "test-function", "localhost", 8080);
 
         // Mock mustache execution
         mockMustacheExecution(
@@ -280,7 +337,7 @@ class GatewayCRManagerTest {
         assertEquals("EnvoyExtensionPolicy", payloadLogger.getKind());
     }
 
-    // @Test
+    @Test
     void testCreateServiceExtprocRunnables_Success() throws IOException {
         // Given
         String runtime = "test-runtime";
@@ -309,7 +366,7 @@ class GatewayCRManagerTest {
         assertEquals("EnvoyExtensionPolicy", extProc.getKind());
     }
 
-    // @Test
+    @Test
     void testGenerateSpec_Success() throws Exception {
         // Given
         Mustache mustache = mock(Mustache.class);
@@ -338,7 +395,7 @@ class GatewayCRManagerTest {
         assertEquals("value", result.get("key"));
     }
 
-    // @Test
+    @Test
     void testGenerateSpec_InvalidJson_ThrowsException() throws Exception {
         // Given
         Mustache mustache = mock(Mustache.class);
