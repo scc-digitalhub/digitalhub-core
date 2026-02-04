@@ -30,5 +30,5 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@SpecType(kind = "dataitem", entity = DataItem.class)
-public class DataItemDataItemSpec extends DataItemBaseSpec {}
+@SpecType(kind = "croissant", entity = DataItem.class)
+public class DataItemCroissantSpec extends DataItemBaseSpec {}
