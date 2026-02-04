@@ -21,48 +21,37 @@
  *
  */
 
-package it.smartcommunitylabdhub.tasks.persistence;
+package it.smartcommunitylabdhub.extensions.persistence;
 
-import it.smartcommunitylabdhub.commons.models.function.FunctionTaskBaseSpec;
-import it.smartcommunitylabdhub.commons.models.task.Task;
-import it.smartcommunitylabdhub.commons.models.workflow.WorkflowTaskBaseSpec;
+import it.smartcommunitylabdhub.extensions.model.Extension;
 import jakarta.persistence.AttributeConverter;
 import java.io.Serializable;
 import java.util.Map;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
+import org.springframework.util.Assert;
 
 @Component
-public class TaskEntityBuilder implements Converter<Task, TaskEntity> {
+public class ExtensionEntityBuilder implements Converter<Extension, ExtensionEntity> {
 
     private final AttributeConverter<Map<String, Serializable>, byte[]> converter;
 
-    public TaskEntityBuilder(AttributeConverter<Map<String, Serializable>, byte[]> cborConverter) {
-        this.converter = cborConverter;
-    }
-
-    /**
-     * Build a Task from a TaskDTO and store extra values as a cbor
-     * <p>
-     *
-     * @param dto TaskDTO
-     * @return Task the task entity
-     */
-    public TaskEntity build(Task dto) {
-        return TaskEntity
-            .builder()
-            .id(dto.getId())
-            .kind(dto.getKind())
-            .project(dto.getProject())
-            .spec(converter.convertToDatabaseColumn(dto.getSpec()))
-            //extract refs from specs
-            .function(FunctionTaskBaseSpec.from(dto.getSpec()).getFunction())
-            .workflow(WorkflowTaskBaseSpec.from(dto.getSpec()).getWorkflow())
-            .build();
+    public ExtensionEntityBuilder(AttributeConverter<Map<String, Serializable>, byte[]> converter) {
+        Assert.notNull(converter, "map converter is required");
+        this.converter = converter;
     }
 
     @Override
-    public TaskEntity convert(Task source) {
-        return build(source);
+    public ExtensionEntity convert(@NonNull Extension dto) {
+        return ExtensionEntity
+            .builder()
+            .id(dto.getId())
+            .project(dto.getProject())
+            .parent(dto.getParent())
+            .name(dto.getName())
+            .kind(dto.getKind())
+            .spec(converter.convertToDatabaseColumn(dto.getSpec()))
+            .build();
     }
 }

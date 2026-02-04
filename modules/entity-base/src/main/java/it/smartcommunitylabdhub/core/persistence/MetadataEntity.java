@@ -21,16 +21,12 @@
  *
  */
 
-package it.smartcommunitylabdhub.artifacts.services;
+package it.smartcommunitylabdhub.core.persistence;
 
-import it.smartcommunitylabdhub.artifacts.Artifact;
-import it.smartcommunitylabdhub.artifacts.persistence.ArtifactEntity;
-import it.smartcommunitylabdhub.core.services.BaseVersionableEntityServiceImpl;
-import jakarta.transaction.Transactional;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import java.io.Serializable;
 
-@Service
-@Transactional
-@Slf4j
-public class ArtifactVersionableEntityServiceImpl extends BaseVersionableEntityServiceImpl<Artifact, ArtifactEntity> {}
+public interface MetadataEntity extends Serializable {
+    byte[] getMetadata();
+
+    void setMetadata(byte[] metadata);
+}

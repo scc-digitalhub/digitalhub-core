@@ -24,6 +24,9 @@
 package it.smartcommunitylabdhub.workflows.persistence;
 
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity;
+import it.smartcommunitylabdhub.core.persistence.MetadataEntity;
+import it.smartcommunitylabdhub.core.persistence.SpecEntity;
+import it.smartcommunitylabdhub.core.persistence.StatusEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -44,12 +47,16 @@ import org.hibernate.annotations.JdbcTypeCode;
 @ToString
 @Entity
 @Table(name = "workflows")
-public class WorkflowEntity extends AbstractEntity {
+public class WorkflowEntity extends AbstractEntity implements MetadataEntity, SpecEntity, StatusEntity {
 
     @Column(nullable = false)
     private String name;
 
     private Boolean embedded;
+
+    @JdbcTypeCode(Types.LONGVARBINARY)
+    @ToString.Exclude
+    protected byte[] metadata;
 
     @JdbcTypeCode(Types.LONGVARBINARY)
     @ToString.Exclude

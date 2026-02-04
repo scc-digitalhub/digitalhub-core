@@ -1,0 +1,20 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "type" : "object",
+  "properties" : {
+    "path" : {
+      "type" : "string",
+      "title" : "fields.path.title",
+      "description" : "fields.path.description",
+      "minLength" : 1
+    },
+    "src_path" : {
+      "type" : "string",
+      "title" : "fields.srcPath.title",
+      "description" : "fields.srcPath.description"
+    }
+  },
+  "required" : [ "path" ],
+  "title" : "specs.artifact.title",
+  "description" : "specs.artifact.description"
+}

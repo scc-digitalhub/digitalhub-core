@@ -21,8 +21,9 @@
  *
  */
 
-package it.smartcommunitylabdhub.commons.models.task;
+package it.smartcommunitylabdhub.extensions.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import it.smartcommunitylabdhub.commons.Keys;
@@ -49,11 +50,27 @@ import org.springframework.lang.Nullable;
 @Builder
 @ToString
 @JsonPropertyOrder(alphabetic = true)
-public class Task implements BaseDTO, SpecDTO {
+public class Extension implements BaseDTO, SpecDTO {
 
     @Nullable
     @Pattern(regexp = Keys.SLUG_PATTERN)
     private String id;
+
+    @Nullable
+    @JsonIgnore
+    private String entity;
+
+    @NotNull
+    @Pattern(regexp = it.smartcommunitylabdhub.extensions.Keys.EXT_PATTERN)
+    private String parent;
+
+    @NotNull
+    @Pattern(regexp = Keys.SLUG_PATTERN)
+    private String name;
+
+    @NotNull
+    @Pattern(regexp = Keys.SLUG_PATTERN)
+    private String kind;
 
     @NotNull
     @Pattern(regexp = Keys.SLUG_PATTERN)
@@ -61,30 +78,21 @@ public class Task implements BaseDTO, SpecDTO {
 
     private String user;
 
-    @NotNull
-    @Pattern(regexp = Keys.SLUG_PATTERN)
-    private String kind;
-
     @Builder.Default
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Map<String, Serializable> spec = new HashMap<>();
 
     @Override
-    public String getName() {
-        return id;
-    }
-
-    @Override
     public String getKey() {
-        return (
-            Keys.STORE_PREFIX +
-            getProject() +
-            Keys.PATH_DIVIDER +
-            EntityUtils.getEntityName(Task.class).toLowerCase() +
-            Keys.PATH_DIVIDER +
-            getKind() +
-            Keys.PATH_DIVIDER +
-            getId()
-        );
+        StringBuilder sb = new StringBuilder();
+        sb.append(Keys.STORE_PREFIX).append(getProject());
+        sb.append(Keys.PATH_DIVIDER).append(EntityUtils.getEntityName(Extension.class).toLowerCase());
+        sb.append(Keys.PATH_DIVIDER).append(getKind());
+        sb.append(Keys.PATH_DIVIDER).append(getName());
+        if (getId() != null) {
+            sb.append(Keys.ID_DIVIDER).append(getId());
+        }
+
+        return sb.toString();
     }
 }

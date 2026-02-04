@@ -21,15 +21,10 @@
  *
  */
 
-package it.smartcommunitylabdhub.artifacts.services;
+package it.smartcommunitylabdhub.extensions.persistence;
 
-import it.smartcommunitylabdhub.artifacts.Artifact;
-import it.smartcommunitylabdhub.search.base.BaseIndexableEntityService;
-import jakarta.transaction.Transactional;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
-@Service
-@Transactional
-@Slf4j
-public class ArtifactIndexableServiceImpl extends BaseIndexableEntityService<Artifact> {}
+public interface ExtensionEntityRepository
+    extends JpaRepository<ExtensionEntity, String>, JpaSpecificationExecutor<ExtensionEntity> {}

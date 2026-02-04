@@ -26,6 +26,13 @@ import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.fsm.Fsm;
 import it.smartcommunitylabdhub.lifecycle.BaseLifecycleManager;
 import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
+import it.smartcommunitylabdhub.core.services.BaseEntityServiceImpl;
+import it.smartcommunitylabdhub.core.services.BaseVersionableEntityServiceImpl;
+import it.smartcommunitylabdhub.core.services.EntityService;
+import it.smartcommunitylabdhub.extensions.ExtensibleEntityService;
+import it.smartcommunitylabdhub.files.base.BaseFilesService;
+import it.smartcommunitylabdhub.relationships.BaseRelationshipsAwareEntityService;
+import it.smartcommunitylabdhub.search.base.BaseIndexableEntityService;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
 import java.util.Optional;
 import org.springframework.context.annotation.Bean;
@@ -54,11 +61,37 @@ public class ArtifactConfig {
         return new BaseLifecycleManager<Artifact>(Artifact.class) {};
     }
 
+    @Bean
+    EntityService<Artifact> artifactEntityService(SearchableEntityRepository<ArtifactEntity, Artifact> repository) {
+        BaseEntityServiceImpl<Artifact, ArtifactEntity> base = new BaseEntityServiceImpl<Artifact, ArtifactEntity>() {};
+        return new ExtensibleEntityService<>(base);
+    }
+
+    @Bean
+    BaseFilesService<Artifact> artifactFilesService() {
+        return new BaseFilesService<Artifact>() {};
+    }
+
+    @Bean
+    BaseIndexableEntityService<Artifact> artifactIndexableEntityService() {
+        return new BaseIndexableEntityService<>() {};
+    }
+
     // build indexer only if a provider is available
     // NOTE: we can not use ConditionalOnBean on the EntityIndexer.Factory because
     // the optional bean could be missing when this is processed
     @Bean
     EntityIndexer<Artifact> artifactEntityIndexer(Optional<EntityIndexer.Factory> entityIndexerFactory) {
         return entityIndexerFactory.map(factory -> factory.build(Artifact.class)).orElse(null);
+    }
+
+    @Bean
+    BaseRelationshipsAwareEntityService<Artifact> artifactRelationshipsAwareEntityService() {
+        return new BaseRelationshipsAwareEntityService<>() {};
+    }
+
+    @Bean
+    BaseVersionableEntityServiceImpl<Artifact, ArtifactEntity> artifactVersionableEntityService() {
+        return new BaseVersionableEntityServiceImpl<>() {};
     }
 }

@@ -39,6 +39,8 @@ import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.services.SpecValidator;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
+import it.smartcommunitylabdhub.core.persistence.SpecEntity;
+import it.smartcommunitylabdhub.core.persistence.StatusEntity;
 import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilterConverter;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
@@ -72,7 +74,9 @@ import org.springframework.validation.BindException;
  */
 @Slf4j
 @Transactional
-public abstract class BaseEntityServiceImpl<D extends BaseDTO & SpecDTO & StatusDTO, E extends BaseEntity>
+public abstract class BaseEntityServiceImpl<
+    D extends BaseDTO & SpecDTO & StatusDTO, E extends BaseEntity & SpecEntity & StatusEntity
+>
     implements EntityService<D>, InitializingBean {
 
     public static final int PAGE_MAX_SIZE = 1000;
@@ -321,6 +325,9 @@ public abstract class BaseEntityServiceImpl<D extends BaseDTO & SpecDTO & Status
         if (!forceUpdate) {
             //spec is not modifiable: enforce current
             dto.setSpec(current.getSpec());
+        } else {
+            //validate spec if changed
+            //TODO diff check to avoid reparsing on same spec
         }
 
         if (!curState.equals(nextState) && getLifecycleManager() != null) {

@@ -10,11 +10,12 @@
         <relativePath>../../</relativePath> <!-- lookup parent from repository -->
     </parent>
     <groupId>it.smartcommunitylabdhub</groupId>
-    <artifactId>dh-entity-artifact</artifactId>
-    <name>entity-artifact</name>
-    <description>DHCore entity-artifact</description>
+    <artifactId>dh-extensions</artifactId>
+    <name>extensions</name>
+    <description>DHCore extensions</description>
 
     <properties>
+        <json-schema-validator.version>1.1.0</json-schema-validator.version>
     </properties>
     <dependencies>
         <dependency>
@@ -27,10 +28,12 @@
             <artifactId>dh-entity-base</artifactId>
             <version>${revision}</version>
         </dependency>
+
+
         <dependency>
-            <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-extensions</artifactId>
-            <version>${revision}</version>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>${json-schema-validator.version}</version>
         </dependency>
 
         <dependency>

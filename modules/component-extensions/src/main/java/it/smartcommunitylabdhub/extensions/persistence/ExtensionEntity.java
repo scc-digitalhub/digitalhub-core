@@ -21,15 +21,15 @@
  *
  */
 
-package it.smartcommunitylabdhub.artifacts.persistence;
+package it.smartcommunitylabdhub.extensions.persistence;
 
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity;
-import it.smartcommunitylabdhub.core.persistence.MetadataEntity;
 import it.smartcommunitylabdhub.core.persistence.SpecEntity;
-import it.smartcommunitylabdhub.core.persistence.StatusEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 import java.sql.Types;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -39,32 +39,28 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 @Getter
 @Setter
 @SuperBuilder
-@ToString
 @Entity
-@Table(name = "artifacts")
-public class ArtifactEntity extends AbstractEntity implements MetadataEntity, SpecEntity, StatusEntity {
+@Table(name = "extensions")
+public class ExtensionEntity extends AbstractEntity implements SpecEntity {
+
+
+    @Column(nullable = false)
+    private String entity;
+
+    @Column(nullable = false)
+    private String parent;
 
     @Column(nullable = false)
     private String name;
 
-    private Boolean embedded;
-
+    @Lob
     @JdbcTypeCode(Types.LONGVARBINARY)
+    @NotNull
     @ToString.Exclude
-    protected byte[] metadata;
-
-    @JdbcTypeCode(Types.LONGVARBINARY)
-    @ToString.Exclude
-    protected byte[] spec;
-
-    @JdbcTypeCode(Types.LONGVARBINARY)
-    @ToString.Exclude
-    protected byte[] status;
-
-    private String state;
+    private byte[] spec;
 }
