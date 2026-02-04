@@ -21,25 +21,18 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.persistence;
+package it.smartcommunitylabdhub.extensions.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import java.io.Serializable;
-import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
-public interface BaseEntity extends Serializable {
-    String getId();
+@JsonPropertyOrder(alphabetic = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public interface ExtensibleDTO extends Serializable {
+    List<Map<String, Serializable>> getExtensions();
 
-    String getName();
-
-    String getKind();
-
-    String getProject();
-
-    Date getCreated();
-
-    Date getUpdated();
-
-    String getCreatedBy();
-
-    String getUpdatedBy();
+    void setExtensions(List<Map<String, Serializable>> extensions);
 }

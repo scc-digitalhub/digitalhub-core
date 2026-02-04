@@ -42,6 +42,7 @@
         <module>modules/component-logs</module>
         <module>modules/component-files</module>
         <module>modules/component-envoy-gateway</module>
+        <module>modules/component-extensions</module>
         <module>modules/entity-base</module>
         <module>modules/runtime-base</module>
         <module>entities/entity-artifact</module>
