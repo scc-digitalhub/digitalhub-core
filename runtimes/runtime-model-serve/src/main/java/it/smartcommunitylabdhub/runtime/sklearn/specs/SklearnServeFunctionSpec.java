@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.runtime.sklearn.specs;
@@ -29,6 +29,7 @@ import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.function.FunctionBaseSpec;
 import it.smartcommunitylabdhub.runtime.sklearn.SklearnServeRuntime;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.Map;
@@ -44,8 +45,6 @@ import lombok.Setter;
 @SpecType(runtime = SklearnServeRuntime.RUNTIME, kind = SklearnServeRuntime.RUNTIME, entity = Function.class)
 public class SklearnServeFunctionSpec extends FunctionBaseSpec {
 
-
-
     @JsonProperty("model_name")
     @Schema(
         title = "fields.modelserve.modelname.title",
@@ -59,6 +58,12 @@ public class SklearnServeFunctionSpec extends FunctionBaseSpec {
     @Schema(title = "fields.container.image.title", description = "fields.container.image.description")
     private String image;
 
+    @JsonProperty("path")
+    @NotNull
+    @Pattern(regexp = "^(store://([^/]+)/model/sklearn/.*)|.*\\.pkl$|.*\\.joblib$")
+    @Schema(title = "fields.path.title", description = "fields.sklearn.path.description")
+    private String path;
+
     @Override
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
@@ -66,6 +71,7 @@ public class SklearnServeFunctionSpec extends FunctionBaseSpec {
         SklearnServeFunctionSpec spec = mapper.convertValue(data, SklearnServeFunctionSpec.class);
         this.modelName = spec.getModelName();
         this.image = spec.getImage();
+        this.path = spec.getPath();
     }
 
     public static SklearnServeFunctionSpec with(Map<String, Serializable> data) {

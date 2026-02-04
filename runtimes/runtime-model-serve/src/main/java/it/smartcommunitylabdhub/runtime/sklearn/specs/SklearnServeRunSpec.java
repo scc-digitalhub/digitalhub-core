@@ -31,7 +31,6 @@ import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.runtime.sklearn.SklearnServeRuntime;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.Map;
@@ -55,7 +54,6 @@ public class SklearnServeRunSpec extends RunBaseSpec {
     private SklearnServeTaskSpec taskServeSpec;
 
     @JsonProperty("path")
-    @NotNull
     @Pattern(regexp = "^(store://([^/]+)/model/sklearn/.*)|.*\\.pkl$|.*\\.joblib$")
     @Schema(title = "fields.path.title", description = "fields.sklearn.path.description")
     private String path;

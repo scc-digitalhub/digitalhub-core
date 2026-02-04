@@ -51,6 +51,7 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 public abstract class VLLMServeRuntime<F extends VLLMServeFunctionSpec, R extends VLLMServeRunSpec>
@@ -121,7 +122,7 @@ public abstract class VLLMServeRuntime<F extends VLLMServeFunctionSpec, R extend
             OpenAIService openai = new OpenAIService();
             openai.setBaseUrl(baseUrl + "/v1");
             openai.setModel(functionSpec.getModelName());
-            openai.setModelUrl(runSpec.getUrl());
+            openai.setModelUrl(StringUtils.hasText(runSpec.getUrl()) ? runSpec.getUrl() : functionSpec.getUrl());
 
             if (functionSpec.getAdapters() != null) {
                 openai.setAdapters(

@@ -28,6 +28,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAIFile;
 import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAIScaling;
+import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,20 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class KubeAIServeRunSpec extends RunBaseSpec {
+
+    @Pattern(
+        regexp = "^(store://([^/]+)/model/huggingface/.*)" +
+        "|" +
+        "^pvc?://.*$" +
+        "|" +
+        "^s3?://.*$" +
+        "|" +
+        "^ollama?://.*$" +
+        "|" +
+        "^hf?://.*$"
+    )
+    @Schema(title = "fields.kubeai.url.title", description = "fields.kubeai.url.description")
+    private String url;
 
     // execution
     @Schema(title = "fields.kubeai.args.title", description = "fields.kubeai.args.description")
@@ -69,6 +84,7 @@ public class KubeAIServeRunSpec extends RunBaseSpec {
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
         KubeAIServeRunSpec spec = mapper.convertValue(data, KubeAIServeRunSpec.class);
+        this.url = spec.getUrl();
         this.args = spec.getArgs();
         this.env = spec.getEnv();
         this.files = spec.getFiles();

@@ -25,10 +25,12 @@ package it.smartcommunitylabdhub.runtime.mlflow.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
+import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.function.FunctionBaseSpec;
 import it.smartcommunitylabdhub.runtime.mlflow.MlflowServeRuntime;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.Map;
@@ -57,6 +59,12 @@ public class MlflowServeFunctionSpec extends FunctionBaseSpec {
     @Schema(title = "fields.container.image.title", description = "fields.container.image.description")
     private String image;
 
+    @JsonProperty("path")
+    @NotNull
+    @Pattern(regexp = "^(store://([^/]+)/model/mlflow/.*)" + "|" + Keys.FOLDER_PATTERN + "|" + Keys.ZIP_PATTERN)
+    @Schema(title = "fields.path.title", description = "fields.mlflow.path.description")
+    private String path;
+
     @Override
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
@@ -64,6 +72,7 @@ public class MlflowServeFunctionSpec extends FunctionBaseSpec {
         MlflowServeFunctionSpec spec = mapper.convertValue(data, MlflowServeFunctionSpec.class);
         this.modelName = spec.getModelName();
         this.image = spec.getImage();
+        this.path = spec.getPath();
     }
 
     public static MlflowServeFunctionSpec with(Map<String, Serializable> data) {

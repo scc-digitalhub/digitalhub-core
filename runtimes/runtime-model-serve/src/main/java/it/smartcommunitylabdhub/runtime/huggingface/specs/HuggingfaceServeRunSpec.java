@@ -32,7 +32,6 @@ import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.runtime.huggingface.HuggingfaceServeRuntime;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.List;
@@ -57,7 +56,6 @@ public class HuggingfaceServeRunSpec extends RunBaseSpec {
     private HuggingfaceServeTaskSpec taskServeSpec;
 
     @JsonProperty("path")
-    @NotNull
     @Pattern(
         regexp = "^(store://([^/]+)/model/huggingface/.*)" +
         "|" +

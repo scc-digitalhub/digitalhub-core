@@ -27,7 +27,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.List;
@@ -41,7 +40,6 @@ import lombok.Setter;
 @NoArgsConstructor
 public class VLLMServeRunSpec extends RunBaseSpec {
 
-    @NotNull
     @Pattern(
         regexp = "^(store://([^/]+)/model/huggingface/.*)" +
         "|" +

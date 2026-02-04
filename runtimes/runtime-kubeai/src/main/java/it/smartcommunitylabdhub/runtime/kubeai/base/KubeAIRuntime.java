@@ -46,6 +46,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 public abstract class KubeAIRuntime<F extends KubeAIServeFunctionSpec, R extends KubeAIServeRunSpec>
@@ -82,6 +83,7 @@ public abstract class KubeAIRuntime<F extends KubeAIServeFunctionSpec, R extends
         KubeAIServeRunStatus status = KubeAIServeRunStatus.with(run.getStatus());
 
         KubeAIServeFunctionSpec functionSpec = KubeAIServeFunctionSpec.with(run.getSpec());
+        KubeAIServeRunSpec runSpec = KubeAIServeRunSpec.with(run.getSpec());
         if (functionSpec.getModelName() == null) {
             //error
             return null;
@@ -93,7 +95,7 @@ public abstract class KubeAIRuntime<F extends KubeAIServeFunctionSpec, R extends
             openai.setBaseUrl(kubeAiEndpoint + "/openai/v1");
 
             openai.setModel(functionSpec.getModelName());
-            openai.setModelUrl(functionSpec.getUrl());
+            openai.setModelUrl(StringUtils.hasText(runSpec.getUrl()) ? runSpec.getUrl() : functionSpec.getUrl());
 
             if (runnable != null && runnable instanceof K8sCRRunnable) {
                 //model name is set via resource name for kubeAi

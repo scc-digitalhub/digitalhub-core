@@ -25,10 +25,12 @@ package it.smartcommunitylabdhub.runtime.huggingface.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
+import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.function.FunctionBaseSpec;
 import it.smartcommunitylabdhub.runtime.huggingface.HuggingfaceServeRuntime;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.Map;
@@ -57,6 +59,22 @@ public class HuggingfaceServeFunctionSpec extends FunctionBaseSpec {
     @Schema(title = "fields.container.image.title", description = "fields.container.image.description")
     private String image;
 
+    @JsonProperty("path")
+    @NotNull
+    @Pattern(
+        regexp = "^(store://([^/]+)/model/huggingface/.*)" +
+        "|" +
+        Keys.FOLDER_PATTERN +
+        "|" +
+        Keys.ZIP_PATTERN +
+        "|" +
+        "^huggingface?://.*$" +
+        "|" +
+        "^hf?://.*$"
+    )
+    @Schema(title = "fields.path.title", description = "fields.huggingface.path.description")
+    private String path;
+
     // @JsonProperty("adapters")
     // @Schema(title = "fields.huggingface.adapters.title", description = "fields.huggingface.adapters.description")
     // private Map<String, String> adapters;
@@ -76,6 +94,7 @@ public class HuggingfaceServeFunctionSpec extends FunctionBaseSpec {
         HuggingfaceServeFunctionSpec spec = mapper.convertValue(data, HuggingfaceServeFunctionSpec.class);
         this.modelName = spec.getModelName();
         this.image = spec.getImage();
+        this.path = spec.getPath();
     }
 
     public static HuggingfaceServeFunctionSpec with(Map<String, Serializable> data) {

@@ -128,7 +128,18 @@ public class HuggingfaceServeRunner {
 
         //read source and build context
         List<ContextRef> contextRefs = null;
-        String path = runSpec.getPath();
+
+        //path is defined in function spec but overridable in run spec
+        String path = functionSpec.getPath();
+        if (StringUtils.hasText(runSpec.getPath())) {
+            //path must begin with function spec path, we allow tags etc as suffixes
+            if (!runSpec.getPath().toLowerCase().startsWith(path.toLowerCase())) {
+                throw new IllegalArgumentException("invalid path override, must be subpath of function path");
+            }
+
+            path = runSpec.getPath();
+        }
+
         if (path.startsWith(Keys.STORE_PREFIX)) {
             KeyAccessor keyAccessor = KeyAccessor.with(path);
             if (!EntityUtils.getEntityName(Model.class).equalsIgnoreCase(keyAccessor.getType())) {

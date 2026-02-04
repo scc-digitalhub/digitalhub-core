@@ -135,7 +135,17 @@ public class SklearnServeRunner {
         CoreResource diskResource = new CoreResource();
         diskResource.setDisk(volumeSize);
 
-        String path = runSpec.getPath();
+        //path is defined in function spec but overridable in run spec
+        String path = functionSpec.getPath();
+        if (StringUtils.hasText(runSpec.getPath())) {
+            //path must begin with function spec path, we allow tags etc as suffixes
+            if (!runSpec.getPath().toLowerCase().startsWith(path.toLowerCase())) {
+                throw new IllegalArgumentException("invalid path override, must be subpath of function path");
+            }
+
+            path = runSpec.getPath();
+        }
+
         // special case: path as entity key - reference to a model
         if (path.startsWith(Keys.STORE_PREFIX)) {
             KeyAccessor keyAccessor = KeyAccessor.with(path);

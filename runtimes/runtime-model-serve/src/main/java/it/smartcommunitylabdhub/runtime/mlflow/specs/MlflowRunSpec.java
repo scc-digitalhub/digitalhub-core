@@ -20,7 +20,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.Map;
@@ -34,7 +33,6 @@ import lombok.Setter;
 public class MlflowRunSpec extends RunBaseSpec {
 
     @JsonProperty("path")
-    @NotNull
     @Pattern(regexp = "^(store://([^/]+)/model/mlflow/.*)" + "|" + Keys.FOLDER_PATTERN + "|" + Keys.ZIP_PATTERN)
     @Schema(title = "fields.path.title", description = "fields.mlflow.path.description")
     private String path;
