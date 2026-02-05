@@ -100,7 +100,9 @@ public class ProxyService {
             // Validate content type
             MediaType contentType = response.getHeaders().getContentType();
             if (contentType == null) {
-                throw new IllegalStateException("Missing or invalid Content-Type");
+                //edge case: no content type, we'll drop body
+                //pass headers only
+                response = new ResponseEntity<>(response.getHeaders(), response.getStatusCode());
             }
 
             MediaType textType = new MediaType("text", "*");
@@ -110,7 +112,7 @@ public class ProxyService {
                 !MediaType.TEXT_HTML.includes(contentType) &&
                 !textType.includes(contentType)
             ) {
-                throw new IllegalStateException("Unsupported Content-Type: " + contentType);
+                throw new IllegalArgumentException("Unsupported Content-Type: " + contentType);
             }
         } catch (HttpClientErrorException hte) {
             //catch exception and build response
