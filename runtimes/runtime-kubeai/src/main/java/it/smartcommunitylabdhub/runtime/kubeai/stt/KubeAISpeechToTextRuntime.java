@@ -53,6 +53,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @RuntimeComponent(runtime = KubeAISpeechToTextRuntime.RUNTIME)
@@ -63,19 +64,12 @@ public class KubeAISpeechToTextRuntime
     private final String FEATURE = "SpeechToText";
     public static final String ENGINE = "FasterWhisper";
 
-    public KubeAISpeechToTextRuntime() {}
-
-    @Override
-    public void afterPropertiesSet() throws Exception {
-        // nothing to do
-    }
-
     @Override
     public KubeAISpeechToTextRunSpec build(@NotNull Function function, @NotNull Task task, @NotNull Run run) {
         //check run kind
         if (!KubeAISpeechToTextRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(
+                "Run kind %s unsupported, expecting %s".formatted(
                         String.valueOf(run.getKind()),
                         KubeAISpeechToTextRunSpec.KIND
                     )
@@ -90,13 +84,26 @@ public class KubeAISpeechToTextRuntime
         //build task spec as defined
         TaskBaseSpec taskSpec =
             switch (kind) {
-                case KubeAISpeechToTextServeTaskSpec.KIND -> {
-                    yield KubeAISpeechToTextServeTaskSpec.with(task.getSpec());
-                }
+                case KubeAISpeechToTextServeTaskSpec.KIND -> KubeAISpeechToTextServeTaskSpec.with(task.getSpec());
                 default -> throw new IllegalArgumentException(
                     "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
                 );
             };
+
+        //url is defined in function spec but overridable in run spec
+        String url = funSpec.getUrl();
+        if (!StringUtils.hasText(url)) {
+            throw new IllegalArgumentException("model url is missing or invalid");
+        }
+        if (StringUtils.hasText(runSpec.getUrl())) {
+            //url must begin with function spec url, we allow tags etc as suffixes
+            if (!runSpec.getUrl().toLowerCase().startsWith(url.toLowerCase())) {
+                throw new IllegalArgumentException("invalid url override, must be subpath of function url");
+            }
+
+            url = runSpec.getUrl();
+        }
+        runSpec.setUrl(url);
 
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();

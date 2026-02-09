@@ -105,15 +105,10 @@ public class MlflowBuildRunner {
         // Parse run spec
         RunSpecAccessor runSpecAccessor = RunSpecAccessor.with(run.getSpec());
 
-        //path is defined in function spec but overridable in run spec
-        String path = functionSpec.getPath();
-        if (StringUtils.hasText(runSpec.getPath())) {
-            //path must begin with function spec path, we allow tags etc as suffixes
-            if (!runSpec.getPath().toLowerCase().startsWith(path.toLowerCase())) {
-                throw new IllegalArgumentException("invalid path override, must be subpath of function path");
-            }
-
-            path = runSpec.getPath();
+        //path is in run spec after build
+        String path = runSpec.getPath();
+        if (!StringUtils.hasText(path)) {
+            throw new IllegalArgumentException("model path is missing or invalid");
         }
 
         if (path.startsWith(Keys.STORE_PREFIX)) {

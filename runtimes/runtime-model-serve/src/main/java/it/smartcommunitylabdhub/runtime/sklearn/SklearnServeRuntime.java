@@ -98,8 +98,6 @@ public class SklearnServeRuntime
     @Value("${runtime.sklearnserve.volume-size:1Gi}")
     private String volumeSizeSpec;
 
-    public SklearnServeRuntime() {}
-
     @Override
     public void afterPropertiesSet() throws Exception {
         Assert.hasText(image, "image can not be null or empty");
@@ -111,7 +109,7 @@ public class SklearnServeRuntime
         //check run kind
         if (!SklearnServeRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(
+                "Run kind %s unsupported, expecting %s".formatted(
                         String.valueOf(run.getKind()),
                         SklearnServeRunSpec.KIND
                     )
@@ -126,13 +124,26 @@ public class SklearnServeRuntime
         //build task spec as defined
         TaskBaseSpec taskSpec =
             switch (kind) {
-                case SklearnServeTaskSpec.KIND -> {
-                    yield SklearnServeTaskSpec.with(task.getSpec());
-                }
+                case SklearnServeTaskSpec.KIND -> SklearnServeTaskSpec.with(task.getSpec());
                 default -> throw new IllegalArgumentException(
                     "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
                 );
             };
+
+        //path is defined in function spec but overridable in run spec
+        String path = funSpec.getPath();
+        if (!StringUtils.hasText(path)) {
+            throw new IllegalArgumentException("model path is missing or invalid");
+        }
+        if (StringUtils.hasText(runSpec.getPath())) {
+            //path must begin with function spec path, we allow tags etc as suffixes
+            if (!runSpec.getPath().toLowerCase().startsWith(path.toLowerCase())) {
+                throw new IllegalArgumentException("invalid path override, must be subpath of function path");
+            }
+
+            path = runSpec.getPath();
+        }
+        runSpec.setPath(path);
 
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
@@ -151,7 +162,7 @@ public class SklearnServeRuntime
         //check run kind
         if (!SklearnServeRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(
+                "Run kind %s unsupported, expecting %s".formatted(
                         String.valueOf(run.getKind()),
                         SklearnServeRunSpec.KIND
                     )
@@ -184,7 +195,7 @@ public class SklearnServeRuntime
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
         if (auth != null) {
             //get credentials from providers
-            List<Credentials> credentials = credentialsService.getCredentials((UserAuthentication<?>) auth);
+            List<Credentials> credentials = credentialsService.getCredentials(auth);
             runnable.setCredentials(credentials);
         }
 

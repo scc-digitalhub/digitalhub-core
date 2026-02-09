@@ -54,6 +54,7 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @RuntimeComponent(runtime = HuggingfaceServeRuntime.RUNTIME)
@@ -96,8 +97,6 @@ public class HuggingfaceServeRuntime
     @Value("${runtime.huggingfaceserve.volume-size:10Gi}")
     private String volumeSizeSpec;
 
-    public HuggingfaceServeRuntime() {}
-
     @Override
     public void afterPropertiesSet() throws Exception {
         Assert.hasText(image, "image can not be null or empty");
@@ -109,7 +108,7 @@ public class HuggingfaceServeRuntime
         //check run kind
         if (!HuggingfaceServeRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(
+                "Run kind %s unsupported, expecting %s".formatted(
                         String.valueOf(run.getKind()),
                         HuggingfaceServeRunSpec.KIND
                     )
@@ -124,13 +123,26 @@ public class HuggingfaceServeRuntime
         //build task spec as defined
         TaskBaseSpec taskSpec =
             switch (kind) {
-                case HuggingfaceServeTaskSpec.KIND -> {
-                    yield HuggingfaceServeTaskSpec.with(task.getSpec());
-                }
+                case HuggingfaceServeTaskSpec.KIND -> HuggingfaceServeTaskSpec.with(task.getSpec());
                 default -> throw new IllegalArgumentException(
                     "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
                 );
             };
+
+        //path is defined in function spec but overridable in run spec
+        String path = funSpec.getPath();
+        if (!StringUtils.hasText(path)) {
+            throw new IllegalArgumentException("model path is missing or invalid");
+        }
+        if (StringUtils.hasText(runSpec.getPath())) {
+            //path must begin with function spec path, we allow tags etc as suffixes
+            if (!runSpec.getPath().toLowerCase().startsWith(path.toLowerCase())) {
+                throw new IllegalArgumentException("invalid path override, must be subpath of function path");
+            }
+
+            path = runSpec.getPath();
+        }
+        runSpec.setPath(path);
 
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
@@ -149,7 +161,7 @@ public class HuggingfaceServeRuntime
         //check run kind
         if (!HuggingfaceServeRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(
+                "Run kind %s unsupported, expecting %s".formatted(
                         String.valueOf(run.getKind()),
                         HuggingfaceServeRunSpec.KIND
                     )
@@ -182,7 +194,7 @@ public class HuggingfaceServeRuntime
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
         if (auth != null) {
             //get credentials from providers
-            List<Credentials> credentials = credentialsService.getCredentials((UserAuthentication<?>) auth);
+            List<Credentials> credentials = credentialsService.getCredentials(auth);
             runnable.setCredentials(credentials);
         }
 

@@ -108,8 +108,6 @@ public class MlflowServeRuntime
     @Value("${runtime.mlflowserve.command:mlserver}")
     private String command;
 
-    public MlflowServeRuntime() {}
-
     @Override
     public void afterPropertiesSet() throws Exception {
         Assert.hasText(image, "image can not be null or empty");
@@ -120,7 +118,7 @@ public class MlflowServeRuntime
     public MlflowRunSpec build(@NotNull Function function, @NotNull Task task, @NotNull Run run) {
         //check run kind
         if (!isSupported(run)) {
-            throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
+            throw new IllegalArgumentException("Run kind " + run.getKind() + " unsupported");
         }
 
         MlflowServeFunctionSpec funSpec = MlflowServeFunctionSpec.with(function.getSpec());
@@ -136,16 +134,27 @@ public class MlflowServeRuntime
         //build task spec as defined
         Map<String, Serializable> taskSpec =
             switch (task.getKind()) {
-                case MlflowServeTaskSpec.KIND -> {
-                    yield MlflowServeTaskSpec.with(task.getSpec()).toMap();
-                }
-                case MlflowBuildTaskSpec.KIND -> {
-                    yield MlflowBuildTaskSpec.with(task.getSpec()).toMap();
-                }
+                case MlflowServeTaskSpec.KIND -> MlflowServeTaskSpec.with(task.getSpec()).toMap();
+                case MlflowBuildTaskSpec.KIND -> MlflowBuildTaskSpec.with(task.getSpec()).toMap();
                 default -> throw new IllegalArgumentException(
                     "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
                 );
             };
+
+        //path is defined in function spec but overridable in run spec
+        String path = funSpec.getPath();
+        if (!StringUtils.hasText(path)) {
+            throw new IllegalArgumentException("model path is missing or invalid");
+        }
+        if (StringUtils.hasText(runSpec.getPath())) {
+            //path must begin with function spec path, we allow tags etc as suffixes
+            if (!runSpec.getPath().toLowerCase().startsWith(path.toLowerCase())) {
+                throw new IllegalArgumentException("invalid path override, must be subpath of function path");
+            }
+
+            path = runSpec.getPath();
+        }
+        runSpec.setPath(path);
 
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
@@ -164,7 +173,7 @@ public class MlflowServeRuntime
     public K8sRunnable run(@NotNull Run run) {
         //check run kind
         if (!isSupported(run)) {
-            throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
+            throw new IllegalArgumentException("Run kind " + run.getKind() + " unsupported");
         }
 
         //read base task spec to extract secrets
@@ -198,7 +207,7 @@ public class MlflowServeRuntime
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
         if (auth != null) {
             //get credentials from providers
-            List<Credentials> credentials = credentialsService.getCredentials((UserAuthentication<?>) auth);
+            List<Credentials> credentials = credentialsService.getCredentials(auth);
             runnable.setCredentials(credentials);
         }
 

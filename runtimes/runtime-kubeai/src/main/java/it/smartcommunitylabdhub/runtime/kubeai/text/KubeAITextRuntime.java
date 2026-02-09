@@ -56,14 +56,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @RuntimeComponent(runtime = KubeAITextRuntime.RUNTIME)
 public class KubeAITextRuntime extends KubeAIRuntime<KubeAITextFunctionSpec, KubeAITextRunSpec> {
 
     public static final String RUNTIME = "kubeai-text";
-
-    public KubeAITextRuntime() {}
 
     @Override
     public void afterPropertiesSet() throws Exception {
@@ -75,7 +74,7 @@ public class KubeAITextRuntime extends KubeAIRuntime<KubeAITextFunctionSpec, Kub
         //check run kind
         if (!KubeAITextRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(String.valueOf(run.getKind()), KubeAITextRunSpec.KIND)
+                "Run kind %s unsupported, expecting %s".formatted(String.valueOf(run.getKind()), KubeAITextRunSpec.KIND)
             );
         }
 
@@ -87,13 +86,26 @@ public class KubeAITextRuntime extends KubeAIRuntime<KubeAITextFunctionSpec, Kub
         //build task spec as defined
         TaskBaseSpec taskSpec =
             switch (kind) {
-                case KubeAITextServeTaskSpec.KIND -> {
-                    yield KubeAITextServeTaskSpec.with(task.getSpec());
-                }
+                case KubeAITextServeTaskSpec.KIND -> KubeAITextServeTaskSpec.with(task.getSpec());
                 default -> throw new IllegalArgumentException(
                     "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
                 );
             };
+
+        //url is defined in function spec but overridable in run spec
+        String url = funSpec.getUrl();
+        if (!StringUtils.hasText(url)) {
+            throw new IllegalArgumentException("model url is missing or invalid");
+        }
+        if (StringUtils.hasText(runSpec.getUrl())) {
+            //url must begin with function spec url, we allow tags etc as suffixes
+            if (!runSpec.getUrl().toLowerCase().startsWith(url.toLowerCase())) {
+                throw new IllegalArgumentException("invalid url override, must be subpath of function url");
+            }
+
+            url = runSpec.getUrl();
+        }
+        runSpec.setUrl(url);
 
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
@@ -113,7 +125,7 @@ public class KubeAITextRuntime extends KubeAIRuntime<KubeAITextFunctionSpec, Kub
         //check run kind
         if (!KubeAITextRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(String.valueOf(run.getKind()), KubeAITextRunSpec.KIND)
+                "Run kind %s unsupported, expecting %s".formatted(String.valueOf(run.getKind()), KubeAITextRunSpec.KIND)
             );
         }
 
@@ -152,7 +164,7 @@ public class KubeAITextRuntime extends KubeAIRuntime<KubeAITextFunctionSpec, Kub
             //get credentials from providers
             //keep only S3
             List<Credentials> credentials = credentialsService
-                .getCredentials((UserAuthentication<?>) auth)
+                .getCredentials(auth)
                 .stream()
                 .filter(s -> s instanceof S3Credentials)
                 .toList();

@@ -95,8 +95,6 @@ public abstract class VLLMServeRuntime<F extends VLLMServeFunctionSpec, R extend
     @Value("${runtime.vllmserve.llm.otel-endpoint:}")
     protected String otelEndpoint;
 
-    public VLLMServeRuntime() {}
-
     public abstract Map<String, String> getOpenAIFeatures();
 
     public abstract Map<String, String> getExtraFeatures();

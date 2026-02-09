@@ -47,6 +47,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @RuntimeComponent(runtime = VLLMServeSpeechRuntime.RUNTIME)
@@ -71,8 +72,6 @@ public class VLLMServeSpeechRuntime extends VLLMServeRuntime<VLLMServeSpeechFunc
         features.put("Custom Detokenizer API", "/detokenize");
     }
 
-    public VLLMServeSpeechRuntime() {}
-
     @Override
     public Map<String, String> getOpenAIFeatures() {
         return openAIFeatures;
@@ -88,10 +87,11 @@ public class VLLMServeSpeechRuntime extends VLLMServeRuntime<VLLMServeSpeechFunc
         //check run kind
         if (!VLLMServeSpeechRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(
-                        String.valueOf(run.getKind()),
-                        VLLMServeSpeechRunSpec.KIND
-                    )
+                String.format(
+                    "Run kind %s unsupported, expecting %s",
+                    String.valueOf(run.getKind()),
+                    VLLMServeSpeechRunSpec.KIND
+                )
             );
         }
 
@@ -103,13 +103,26 @@ public class VLLMServeSpeechRuntime extends VLLMServeRuntime<VLLMServeSpeechFunc
         //build task spec as defined
         TaskBaseSpec taskSpec =
             switch (kind) {
-                case VLLMServeSpeechServeTaskSpec.KIND -> {
-                    yield VLLMServeSpeechServeTaskSpec.with(task.getSpec());
-                }
+                case VLLMServeSpeechServeTaskSpec.KIND -> VLLMServeSpeechServeTaskSpec.with(task.getSpec());
                 default -> throw new IllegalArgumentException(
                     "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
                 );
             };
+
+        //url is defined in function spec but overridable in run spec
+        String url = funSpec.getUrl();
+        if (!StringUtils.hasText(url)) {
+            throw new IllegalArgumentException("model url is missing or invalid");
+        }
+        if (StringUtils.hasText(runSpec.getUrl())) {
+            //url must begin with function spec url, we allow tags etc as suffixes
+            if (!runSpec.getUrl().toLowerCase().startsWith(url.toLowerCase())) {
+                throw new IllegalArgumentException("invalid url override, must be subpath of function url");
+            }
+
+            url = runSpec.getUrl();
+        }
+        runSpec.setUrl(url);
 
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
@@ -128,10 +141,11 @@ public class VLLMServeSpeechRuntime extends VLLMServeRuntime<VLLMServeSpeechFunc
         //check run kind
         if (!VLLMServeSpeechRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(
-                        String.valueOf(run.getKind()),
-                        VLLMServeSpeechRunSpec.KIND
-                    )
+                String.format(
+                    "Run kind %s unsupported, expecting %s",
+                    String.valueOf(run.getKind()),
+                    VLLMServeSpeechRunSpec.KIND
+                )
             );
         }
 
@@ -164,7 +178,7 @@ public class VLLMServeSpeechRuntime extends VLLMServeRuntime<VLLMServeSpeechFunc
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
         if (auth != null) {
             //get credentials from providers
-            List<Credentials> credentials = credentialsService.getCredentials((UserAuthentication<?>) auth);
+            List<Credentials> credentials = credentialsService.getCredentials(auth);
             runnable.setCredentials(credentials);
         }
 

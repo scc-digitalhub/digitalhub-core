@@ -46,6 +46,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @RuntimeComponent(runtime = VLLMServePoolingRuntime.RUNTIME)
@@ -69,8 +70,6 @@ public class VLLMServePoolingRuntime extends VLLMServeRuntime<VLLMServePoolingFu
         features.put("Cohere v2 re-rank API", "/v2/rerank");
     }
 
-    public VLLMServePoolingRuntime() {}
-
     @Override
     public Map<String, String> getOpenAIFeatures() {
         return openAIFeatures;
@@ -86,7 +85,7 @@ public class VLLMServePoolingRuntime extends VLLMServeRuntime<VLLMServePoolingFu
         //check run kind
         if (!VLLMServePoolingRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(
+                "Run kind %s unsupported, expecting %s".formatted(
                         String.valueOf(run.getKind()),
                         VLLMServePoolingRunSpec.KIND
                     )
@@ -101,13 +100,26 @@ public class VLLMServePoolingRuntime extends VLLMServeRuntime<VLLMServePoolingFu
         //build task spec as defined
         TaskBaseSpec taskSpec =
             switch (kind) {
-                case VLLMServePoolingServeTaskSpec.KIND -> {
-                    yield VLLMServePoolingServeTaskSpec.with(task.getSpec());
-                }
+                case VLLMServePoolingServeTaskSpec.KIND -> VLLMServePoolingServeTaskSpec.with(task.getSpec());
                 default -> throw new IllegalArgumentException(
                     "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
                 );
             };
+
+        //url is defined in function spec but overridable in run spec
+        String url = funSpec.getUrl();
+        if (!StringUtils.hasText(url)) {
+            throw new IllegalArgumentException("model url is missing or invalid");
+        }
+        if (StringUtils.hasText(runSpec.getUrl())) {
+            //url must begin with function spec url, we allow tags etc as suffixes
+            if (!runSpec.getUrl().toLowerCase().startsWith(url.toLowerCase())) {
+                throw new IllegalArgumentException("invalid url override, must be subpath of function url");
+            }
+
+            url = runSpec.getUrl();
+        }
+        runSpec.setUrl(url);
 
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
@@ -126,7 +138,7 @@ public class VLLMServePoolingRuntime extends VLLMServeRuntime<VLLMServePoolingFu
         //check run kind
         if (!VLLMServePoolingRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
-                "Run kind {} unsupported, expecting {}".formatted(
+                "Run kind %s unsupported, expecting %s".formatted(
                         String.valueOf(run.getKind()),
                         VLLMServePoolingRunSpec.KIND
                     )
@@ -162,7 +174,7 @@ public class VLLMServePoolingRuntime extends VLLMServeRuntime<VLLMServePoolingFu
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
         if (auth != null) {
             //get credentials from providers
-            List<Credentials> credentials = credentialsService.getCredentials((UserAuthentication<?>) auth);
+            List<Credentials> credentials = credentialsService.getCredentials(auth);
             runnable.setCredentials(credentials);
         }
 
