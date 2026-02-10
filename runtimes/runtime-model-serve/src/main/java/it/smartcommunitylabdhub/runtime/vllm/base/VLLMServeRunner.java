@@ -147,22 +147,17 @@ public class VLLMServeRunner {
         //read source and build context
         List<ContextRef> contextRefs = null;
 
-        //path is defined in function spec but overridable in run spec
-        String path = functionSpec.getUrl();
-        if (StringUtils.hasText(runSpec.getUrl())) {
-            //path must begin with function spec path, we allow tags etc as suffixes
-            if (!runSpec.getUrl().toLowerCase().startsWith(path.toLowerCase())) {
-                throw new IllegalArgumentException("invalid path override, must be subpath of function path");
-            }
-
-            path = runSpec.getUrl();
+        //url is in run spec after build
+        String url = runSpec.getUrl();
+        if (!StringUtils.hasText(url)) {
+            throw new IllegalArgumentException("model url is missing or invalid");
         }
 
-        if (path.startsWith(Keys.STORE_PREFIX)) {
-            path = linkToModel(run, path);
+        if (url.startsWith(Keys.STORE_PREFIX)) {
+            url = linkToModel(run, url);
         }
 
-        UriComponents uri = UriComponentsBuilder.fromUriString(path).build();
+        UriComponents uri = UriComponentsBuilder.fromUriString(url).build();
 
         List<String> args = new ArrayList<>(List.of("serve"));
 
@@ -187,7 +182,7 @@ public class VLLMServeRunner {
 
             contextRefs =
                 Collections.singletonList(
-                    ContextRef.builder().source(path).protocol(uri.getScheme()).destination("model").build()
+                    ContextRef.builder().source(url).protocol(uri.getScheme()).destination("model").build()
                 );
         }
 

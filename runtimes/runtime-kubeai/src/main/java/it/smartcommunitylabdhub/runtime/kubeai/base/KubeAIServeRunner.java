@@ -99,15 +99,10 @@ public class KubeAIServeRunner {
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(run.getSpec());
         KubeAIServeTaskSpec taskSpec = KubeAIServeTaskSpec.with(run.getSpec());
 
-        //url is defined in function spec but overridable in run spec
-        String url = functionSpec.getUrl();
-        if (StringUtils.hasText(runSpec.getUrl())) {
-            //url must begin with function spec url, we allow tags etc as suffixes
-            if (!runSpec.getUrl().toLowerCase().startsWith(url.toLowerCase())) {
-                throw new IllegalArgumentException("invalid url override, must be subpath of function url");
-            }
-
-            url = runSpec.getUrl();
+        //url is in run spec after build
+        String url = runSpec.getUrl();
+        if (!StringUtils.hasText(url)) {
+            throw new IllegalArgumentException("model url is missing or invalid");
         }
 
         if (url.startsWith(Keys.STORE_PREFIX)) {
