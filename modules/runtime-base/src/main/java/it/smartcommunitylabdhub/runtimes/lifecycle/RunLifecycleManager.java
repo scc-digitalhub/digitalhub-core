@@ -34,6 +34,7 @@ import it.smartcommunitylabdhub.runs.lifecycle.RunEvent;
 import it.smartcommunitylabdhub.runs.lifecycle.RunState;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import lombok.extern.slf4j.Slf4j;
@@ -61,16 +62,14 @@ public class RunLifecycleManager<S extends RunBaseSpec, Z extends RunBaseStatus,
             //by default we expect a runnable as optional output from runtimes
             effect =
                 (run, runnable) -> {
-                    if (runnable != null && runnable instanceof RunRunnable) {
-                        //patch user from context if available
-                        if (SecurityContextHolder.getContext().getAuthentication() != null) {
-                            ((RunRunnable) runnable).setUser(
-                                    SecurityContextHolder.getContext().getAuthentication().getName()
-                                );
-                        }
-
-                        //publish to dispatcher
-                        this.eventPublisher.publishEvent(runnable);
+                    //support multiple returns from runtimes, we will publish all runnables returned by the runtime
+                    if (runnable instanceof Collection) {
+                        ((Collection<?>) runnable).stream()
+                            .filter(RunRunnable.class::isInstance)
+                            .map(r -> (RunRunnable) r)
+                            .forEach(this::dispatch);
+                    } else if (runnable instanceof RunRunnable runRunnable) {
+                        dispatch(runRunnable);
                     }
                 };
         }
@@ -84,16 +83,15 @@ public class RunLifecycleManager<S extends RunBaseSpec, Z extends RunBaseStatus,
             //by default we expect a runnable as optional output from runtimes
             effect =
                 (run, runnable) -> {
-                    if (runnable != null && runnable instanceof RunRunnable) {
-                        //patch user from context if available
-                        if (SecurityContextHolder.getContext().getAuthentication() != null) {
-                            ((RunRunnable) runnable).setUser(
-                                    SecurityContextHolder.getContext().getAuthentication().getName()
-                                );
+                    if (runnable != null) {
+                        if (runnable instanceof Collection) {
+                            ((Collection<?>) runnable).stream()
+                                .filter(RunRunnable.class::isInstance)
+                                .map(r -> (RunRunnable) r)
+                                .forEach(this::dispatch);
+                        } else if (runnable instanceof RunRunnable runRunnable) {
+                            dispatch(runRunnable);
                         }
-
-                        //publish to dispatcher, we will receive a callback
-                        this.eventPublisher.publishEvent(runnable);
                     } else if (runnable == null && RunEvent.DELETE.name().equals(event)) {
                         StatusFieldAccessor status = StatusFieldAccessor.with(run.getStatus());
                         if (RunState.DELETING.name().equals(status.getState())) {
@@ -107,5 +105,17 @@ public class RunLifecycleManager<S extends RunBaseSpec, Z extends RunBaseStatus,
         }
 
         return super.perform(dto, event, input, effect);
+    }
+
+    private void dispatch(RunRunnable runnable) {
+        if (runnable != null) {
+            //patch user from context if available
+            if (SecurityContextHolder.getContext().getAuthentication() != null) {
+                runnable.setUser(SecurityContextHolder.getContext().getAuthentication().getName());
+            }
+
+            //publish to dispatcher, we will receive a callback
+            this.eventPublisher.publishEvent(runnable);
+        }
     }
 }
