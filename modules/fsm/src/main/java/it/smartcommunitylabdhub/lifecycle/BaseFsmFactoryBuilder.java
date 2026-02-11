@@ -26,17 +26,28 @@ import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.fsm.AbstractFsmFactory;
 import it.smartcommunitylabdhub.fsm.FsmState;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public abstract class BaseFsmFactory<D extends BaseDTO & StatusDTO> extends AbstractFsmFactory<String, String, D> {
+public abstract class BaseFsmFactoryBuilder<D extends BaseDTO & StatusDTO> {
 
-    protected BaseFsmFactory(List<FsmState.Builder<String, String, D>> builders) {
-        super(builders);
+    List<FsmState.Builder<String, String, D>> builders = new ArrayList<>();
+
+    protected BaseFsmFactoryBuilder() {}
+
+    protected BaseFsmFactoryBuilder<D> builders(List<FsmState.Builder<String, String, D>> builders) {
+        this.builders.addAll(builders);
+        return this;
     }
 
     @SafeVarargs
-    protected BaseFsmFactory(FsmState.Builder<String, String, D>... builders) {
-        super(Arrays.asList(builders));
+    protected final BaseFsmFactoryBuilder<D> builders(FsmState.Builder<String, String, D>... builders) {
+        this.builders.addAll(Arrays.asList(builders));
+        return this;
+    }
+
+    public AbstractFsmFactory<String, String, D> build() {
+        return new AbstractFsmFactory<>(builders) {};
     }
 }

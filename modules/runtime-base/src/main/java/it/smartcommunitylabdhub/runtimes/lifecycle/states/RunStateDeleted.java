@@ -27,17 +27,16 @@ import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.infrastructure.Runtime;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
-import it.smartcommunitylabdhub.runs.lifecycle.RunEvent;
 import it.smartcommunitylabdhub.runs.lifecycle.RunState;
 import java.util.Collections;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class RunStateDeleted<S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable>
-    extends BaseRunState<RunState, RunEvent, S, Z, R> {
+    extends BaseRunState<S, Z, R> {
 
     public RunStateDeleted(Runtime<S, Z, R> runtime) {
-        super(RunState.DELETED, runtime);
+        super(RunState.DELETED.name(), runtime);
         //no transitions: final state!
         txs = Collections.emptyList();
     }

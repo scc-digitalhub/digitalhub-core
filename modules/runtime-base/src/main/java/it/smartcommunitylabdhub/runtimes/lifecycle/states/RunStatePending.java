@@ -38,10 +38,10 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class RunStatePending<S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable>
-    extends BaseRunState<RunState, RunEvent, S, Z, R> {
+    extends BaseRunState<S, Z, R> {
 
     public RunStatePending(Runtime<S, Z, R> runtime) {
-        super(RunState.PENDING, runtime);
+        super(RunState.PENDING.name(), runtime);
         //transitions
         txs =
             List.of(
@@ -58,11 +58,11 @@ public class RunStatePending<S extends RunBaseSpec, Z extends RunBaseStatus, R e
             );
     }
 
-    protected Transition.Builder<RunState, RunEvent, Run> loopPending() {
+    protected Transition.Builder<String, String, Run> loopPending() {
         //(EXECUTE)->RUNNING
-        return new Transition.Builder<RunState, RunEvent, Run>()
-            .event(Enum.valueOf(eventsClass, RunEvent.LOOP.name()))
-            .nextState(Enum.valueOf(stateClass, RunState.PENDING.name()))
+        return new Transition.Builder<String, String, Run>()
+            .event(RunEvent.LOOP.name())
+            .nextState(RunState.PENDING.name())
             .<R, R>withInternalLogic((currentState, nextState, event, run, runnable) -> {
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
                 if (specAccessor.isLocalExecution()) {

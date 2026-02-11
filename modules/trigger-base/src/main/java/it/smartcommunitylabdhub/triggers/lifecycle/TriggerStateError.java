@@ -35,17 +35,17 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class TriggerStateError<X extends TriggerBaseSpec, Z extends TriggerRunBaseStatus>
-    extends TriggerBaseState<TriggerState, TriggerEvent, X, Z> {
+    extends TriggerBaseState<X, Z> {
 
     public TriggerStateError(Actuator<X, ?, Z> actuator) {
-        super(TriggerState.ERROR, actuator);
+        super(TriggerState.ERROR.name(), actuator);
         //transitions
         txs =
             List.of(
                 //(RUN)->RUNNING
-                new Transition.Builder<TriggerState, TriggerEvent, Trigger>()
-                    .event(TriggerEvent.RUN)
-                    .nextState(TriggerState.RUNNING)
+                new Transition.Builder<String, String, Trigger>()
+                    .event(TriggerEvent.RUN.name())
+                    .nextState(TriggerState.RUNNING.name())
                     .withInternalLogic((currentState, nextState, event, trigger, i) -> {
                         //runtime callback
                         Optional

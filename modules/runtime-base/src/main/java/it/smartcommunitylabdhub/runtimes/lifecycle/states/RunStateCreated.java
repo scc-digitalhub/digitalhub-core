@@ -40,19 +40,19 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class RunStateCreated<S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable>
-    extends BaseRunState<RunState, RunEvent, S, Z, R> {
+    extends BaseRunState<S, Z, R> {
 
     public RunStateCreated(Runtime<S, Z, R> runtime) {
-        super(RunState.CREATED, runtime);
+        super(RunState.CREATED.name(), runtime);
     }
 
     @Override
-    public FsmState<RunState, RunEvent, Run> build() {
+    public FsmState<String, String, Run> build() {
         //define state
-        RunState state = RunState.CREATED;
+        String state = RunState.CREATED.name();
 
         //transitions
-        List<Transition<RunState, RunEvent, Run>> txs = List.of(
+        List<Transition<String, String, Run>> txs = List.of(
             //(BUILD)->BUILT
             toBuilt().build(),
             //(ERROR)->ERROR
@@ -64,11 +64,11 @@ public class RunStateCreated<S extends RunBaseSpec, Z extends RunBaseStatus, R e
         return new FsmState<>(state, txs);
     }
 
-    protected Transition.Builder<RunState, RunEvent, Run> toBuilt() {
+    protected Transition.Builder<String, String, Run> toBuilt() {
         //(BUILD)->BUILT
-        return new Transition.Builder<RunState, RunEvent, Run>()
-            .event(RunEvent.BUILD)
-            .nextState(RunState.BUILT)
+        return new Transition.Builder<String, String, Run>()
+            .event(RunEvent.BUILD.name())
+            .nextState(RunState.BUILT.name())
             .<R, R>withInternalLogic((currentState, nextState, event, run, i) -> {
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
                 if (specAccessor.isLocalExecution()) {

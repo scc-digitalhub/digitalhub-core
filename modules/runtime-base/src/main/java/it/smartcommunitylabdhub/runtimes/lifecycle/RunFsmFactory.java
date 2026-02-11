@@ -29,8 +29,6 @@ import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
 import it.smartcommunitylabdhub.lifecycle.BaseFsmFactory;
-import it.smartcommunitylabdhub.runs.lifecycle.RunEvent;
-import it.smartcommunitylabdhub.runs.lifecycle.RunState;
 import it.smartcommunitylabdhub.runtimes.lifecycle.states.RunStateBuilt;
 import it.smartcommunitylabdhub.runtimes.lifecycle.states.RunStateCompleted;
 import it.smartcommunitylabdhub.runtimes.lifecycle.states.RunStateCreated;
@@ -49,7 +47,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class RunFsmFactory<S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable>
-    extends BaseFsmFactory<Run, RunState, RunEvent> {
+    extends BaseFsmFactory<Run> {
 
     public RunFsmFactory(Runtime<S, Z, R> runtime) {
         //build default states, runs are not resumable by default

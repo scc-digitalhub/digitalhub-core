@@ -27,21 +27,20 @@ import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.infrastructure.Runtime;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
-import it.smartcommunitylabdhub.runs.lifecycle.RunEvent;
 import it.smartcommunitylabdhub.runs.lifecycle.RunState;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class RunStateStopped<S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable>
-    extends BaseRunState<RunState, RunEvent, S, Z, R> {
+    extends BaseRunState<S, Z, R> {
 
     public RunStateStopped(Runtime<S, Z, R> runtime) {
         this(runtime, false);
     }
 
     public RunStateStopped(Runtime<S, Z, R> runtime, boolean isResumable) {
-        super(RunState.STOPPED, runtime);
+        super(RunState.STOPPED.name(), runtime);
         //transitions
         txs =
             isResumable

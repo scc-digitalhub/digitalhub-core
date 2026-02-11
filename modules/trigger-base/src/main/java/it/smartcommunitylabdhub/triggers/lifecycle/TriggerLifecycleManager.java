@@ -65,7 +65,7 @@ import org.springframework.validation.BindException;
 public class TriggerLifecycleManager<
     S extends TriggerBaseSpec, Z extends TriggerBaseStatus, R extends TriggerRunBaseStatus
 >
-    extends BaseLifecycleManager<Trigger, TriggerState, TriggerEvent> {
+    extends BaseLifecycleManager<Trigger> {
 
     private TaskService taskService;
     private RunManager runService;

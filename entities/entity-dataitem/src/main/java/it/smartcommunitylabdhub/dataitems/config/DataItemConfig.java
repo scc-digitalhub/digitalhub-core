@@ -20,8 +20,12 @@ package it.smartcommunitylabdhub.dataitems.config;
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.dataitems.DataItem;
+import it.smartcommunitylabdhub.dataitems.lifecycle.DataItemFsmFactoryBuilder;
 import it.smartcommunitylabdhub.dataitems.persistence.DataItemEntity;
 import it.smartcommunitylabdhub.dataitems.persistence.DataItemRepository;
+import it.smartcommunitylabdhub.fsm.Fsm;
+import it.smartcommunitylabdhub.lifecycle.BaseLifecycleManager;
+import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
 import java.util.Optional;
 import org.springframework.context.annotation.Bean;
@@ -38,6 +42,16 @@ public class DataItemConfig {
         Converter<DataItemEntity, DataItem> dtoBuilder
     ) {
         return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
+    }
+
+    @Bean
+    Fsm.Factory<String, String, DataItem> dataItemFsmFactory(DataItemFsmFactoryBuilder builder) {
+        return builder.build();
+    }
+
+    @Bean
+    LifecycleManager<DataItem> dataItemLifecycleManager() {
+        return new BaseLifecycleManager<DataItem>(DataItem.class) {};
     }
 
     // build indexer only if a provider is available
