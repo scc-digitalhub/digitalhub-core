@@ -16,8 +16,6 @@
 
 package it.smartcommunitylabdhub.triggers.lifecycle;
 
-import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvents;
-import it.smartcommunitylabdhub.commons.lifecycle.LifecycleState;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.fsm.FsmState;
 import it.smartcommunitylabdhub.fsm.Transition;
@@ -25,54 +23,37 @@ import it.smartcommunitylabdhub.triggers.Trigger;
 import it.smartcommunitylabdhub.triggers.infrastructure.Actuator;
 import it.smartcommunitylabdhub.triggers.models.TriggerRunBaseStatus;
 import it.smartcommunitylabdhub.triggers.specs.TriggerBaseSpec;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.Assert;
 
 @Slf4j
-public class TriggerBaseState<
-    S extends Enum<S> & LifecycleState<Trigger>,
-    E extends Enum<E> & LifecycleEvents<Trigger>,
-    X extends TriggerBaseSpec,
-    Z extends TriggerRunBaseStatus
->
-    implements FsmState.Builder<S, E, Trigger> {
+public class TriggerBaseState<X extends TriggerBaseSpec, Z extends TriggerRunBaseStatus>
+    implements FsmState.Builder<String, String, Trigger> {
 
-    protected final Class<S> stateClass;
-    protected final Class<E> eventsClass;
-
-    protected final S state;
+    protected final String state;
     protected final Actuator<X, ?, Z> actuator;
 
-    protected List<Transition<S, E, Trigger>> txs;
+    protected List<Transition<String, String, Trigger>> txs;
 
-    @SuppressWarnings("unchecked")
-    public TriggerBaseState(S state, Actuator<X, ?, Z> actuator) {
+    public TriggerBaseState(String state, Actuator<X, ?, Z> actuator) {
         Assert.notNull(state, "state is required");
         Assert.notNull(actuator, "actuator is required");
 
         this.state = state;
         this.actuator = actuator;
-
-        // resolve generics type via subclass trick
-        Type ts = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
-        this.stateClass = (Class<S>) ts;
-        Type te = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
-        this.eventsClass = (Class<E>) te;
     }
 
-    public FsmState<S, E, Trigger> build() {
+    public FsmState<String, String, Trigger> build() {
         return new FsmState<>(state, txs);
     }
 
-    protected Transition.Builder<S, E, Trigger> toDelete() {
+    protected Transition.Builder<String, String, Trigger> toDelete() {
         //(DELETE)->DELETED
-        return new Transition.Builder<S, E, Trigger>()
-            .event(Enum.valueOf(eventsClass, TriggerEvent.DELETE.name()))
-            .nextState(Enum.valueOf(stateClass, TriggerState.DELETED.name()))
+        return new Transition.Builder<String, String, Trigger>()
+            .event(TriggerEvent.DELETE.name())
+            .nextState(TriggerState.DELETED.name())
             .withInternalLogic((currentState, nextState, event, trigger, i) -> {
                 //runtime callback for stop
                 Optional

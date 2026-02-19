@@ -27,8 +27,6 @@ import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.infrastructure.ProcessorRegistry;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvent;
-import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvents;
-import it.smartcommunitylabdhub.commons.lifecycle.LifecycleState;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.metadata.Metadata;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
@@ -58,43 +56,31 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
 
 @Slf4j
-public abstract class BaseLifecycleManager<
-    D extends BaseDTO & SpecDTO & StatusDTO & MetadataDTO,
-    S extends Enum<S> & LifecycleState<D>,
-    E extends Enum<E> & LifecycleEvents<D>
->
+public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusDTO & MetadataDTO>
     extends AbstractLifecycleManager<D>
     implements LifecycleManager<D> {
 
     protected final Class<D> typeClass;
-    protected final Class<S> stateClass;
-    protected final Class<E> eventsClass;
 
     protected ProcessorRegistry<D, Metadata> metadataProcessorRegistry;
     protected ProcessorRegistry<D, Spec> specProcessorRegistry;
     protected ProcessorRegistry<D, Status> statusProcessorRegistry;
 
-    protected Fsm.Factory<S, E, D> fsmFactory;
+    protected Fsm.Factory<String, String, D> fsmFactory;
 
     @SuppressWarnings("unchecked")
-    public BaseLifecycleManager() {
+    protected BaseLifecycleManager() {
         // resolve generics type via subclass trick
         Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
         this.typeClass = (Class<D>) t;
-        Type ts = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
-        this.stateClass = (Class<S>) ts;
-        Type te = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[2];
-        this.eventsClass = (Class<E>) te;
     }
 
-    protected BaseLifecycleManager(Class<D> typeClass, Class<S> stateClass, Class<E> eventsClass) {
+    protected BaseLifecycleManager(Class<D> typeClass) {
         this.typeClass = typeClass;
-        this.stateClass = stateClass;
-        this.eventsClass = eventsClass;
     }
 
     @Autowired(required = false)
-    public void setFsmFactory(Fsm.Factory<S, E, D> fsmFactory) {
+    public void setFsmFactory(Fsm.Factory<String, String, D> fsmFactory) {
         this.fsmFactory = fsmFactory;
     }
 
@@ -113,7 +99,7 @@ public abstract class BaseLifecycleManager<
         this.statusProcessorRegistry = statusProcessorRegistry;
     }
 
-    protected Fsm<S, E, D> fsm(D dto) {
+    protected Fsm<String, String, D> fsm(D dto) {
         if (fsmFactory == null) {
             throw new IllegalStateException("FSM factory not set: provide or override");
         }
@@ -125,11 +111,11 @@ public abstract class BaseLifecycleManager<
         }
 
         //get enum via enum..
-        S initialState = Enum.valueOf(stateClass, state);
+        // S initialState = Enum.valueOf(stateClass, state);
 
         // create state machine via factory
         // context is the dto itself
-        return fsmFactory.create(initialState, dto);
+        return fsmFactory.create(state, dto);
     }
 
     /*
@@ -187,17 +173,17 @@ public abstract class BaseLifecycleManager<
         }
 
         //handle event via FSM
-        E lifecycleEvent = Enum.valueOf(eventsClass, event);
+        // E lifecycleEvent = Enum.valueOf(eventsClass, event);
         D res = dto;
         try {
-            res = transition(dto, fsm -> fsm.perform(lifecycleEvent, input), input, effect);
+            res = transition(dto, fsm -> fsm.perform(event, input), input, effect);
         } catch (CoreRuntimeException e) {
             //on ex try transitioning to ERROR
             log.debug("entity {} transition to {} generated an exception, move to ERROR", dto.getId());
             //merge message
             dto.setStatus(MapUtils.mergeMultipleMaps(dto.getStatus(), Map.of("message", e.getMessage())));
             //transition
-            res = transition(dto, fsm -> fsm.goToState(Enum.valueOf(stateClass, "ERROR"), input), input, effect);
+            res = transition(dto, fsm -> fsm.goToState("ERROR", input), input, effect);
         }
 
         StatusFieldAccessor status = StatusFieldAccessor.with(res.getStatus());
@@ -215,7 +201,7 @@ public abstract class BaseLifecycleManager<
             .kind(res.getKind())
             .user(res.getUser())
             .project(res.getProject())
-            .event(lifecycleEvent.name())
+            .event(event)
             .state(status.getState())
             //append object to event
             .dto(res)
@@ -241,24 +227,14 @@ public abstract class BaseLifecycleManager<
         return handle(dto, nextState, input, null);
     }
 
-    public <I, R> D handle(
-        @NotNull D dto,
-        String nextStateValue,
-        @Nullable I input,
-        @Nullable BiConsumer<D, R> effect
-    ) {
-        log.debug(
-            "handle {} for {} with id {}",
-            nextStateValue,
-            dto.getClass().getSimpleName().toLowerCase(),
-            dto.getId()
-        );
+    public <I, R> D handle(@NotNull D dto, String nextState, @Nullable I input, @Nullable BiConsumer<D, R> effect) {
+        log.debug("handle {} for {} with id {}", nextState, dto.getClass().getSimpleName().toLowerCase(), dto.getId());
         if (log.isTraceEnabled()) {
             log.trace("dto: {}", dto);
         }
 
         //transition to next state via FSM
-        S nextState = Enum.valueOf(stateClass, nextStateValue);
+        // S nextState = Enum.valueOf(stateClass, nextStateValue);
         D res = dto;
         try {
             res = transition(dto, fsm -> fsm.goToState(nextState, input), input, effect);
@@ -268,7 +244,7 @@ public abstract class BaseLifecycleManager<
             //merge message
             dto.setStatus(MapUtils.mergeMultipleMaps(dto.getStatus(), Map.of("message", e.getMessage())));
             //transition
-            res = transition(dto, fsm -> fsm.goToState(Enum.valueOf(stateClass, "ERROR"), input), input, effect);
+            res = transition(dto, fsm -> fsm.goToState("ERROR", input), input, effect);
         }
         StatusFieldAccessor status = StatusFieldAccessor.with(res.getStatus());
         if ("DELETED".equals(status.getState())) {
@@ -301,7 +277,7 @@ public abstract class BaseLifecycleManager<
 
     private <I, R> D transition(
         @NotNull D dto,
-        Function<Fsm<S, E, D>, Optional<R>> logic,
+        Function<Fsm<String, String, D>, Optional<R>> logic,
         @Nullable I input,
         @Nullable BiConsumer<D, R> effect
     ) {
@@ -312,16 +288,15 @@ public abstract class BaseLifecycleManager<
                 try {
                     //build state machine on current context
                     //this will isolate the DTO from external modifications
-                    Fsm<S, E, D> fsm = fsm(d);
+                    Fsm<String, String, D> fsm = fsm(d);
 
                     //perform via FSM
                     Optional<R> output = logic.apply(fsm);
-                    S state = fsm.getCurrentState();
+                    String state = fsm.getCurrentState();
                     D context = fsm.getContext();
 
                     //update status from fsm output
-                    Map<String, Serializable> baseStatus = Map.of("state", state.name());
-
+                    Map<String, Serializable> baseStatus = Map.of("state", state);
                     //merge action context into spec
                     //NOTE: we let transition fully modify metadata
                     d.setMetadata(context.getMetadata());
@@ -376,11 +351,11 @@ public abstract class BaseLifecycleManager<
 
     protected <I> Map<String, Serializable> postProcess(
         @NotNull D dto,
-        @NotNull S state,
+        @NotNull String state,
         @Nullable I input,
         @NotNull ProcessorRegistry<D, ? extends Spec> processorRegistry
     ) {
-        String stage = "on" + StringUtils.capitalize(state.name().toLowerCase());
+        String stage = "on" + StringUtils.capitalize(state.toLowerCase());
         // Iterate over all processor and store all RunBaseStatus as optional
 
         List<Map<String, Serializable>> res = processorRegistry

@@ -19,7 +19,11 @@ package it.smartcommunitylabdhub.models.config;
 
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
+import it.smartcommunitylabdhub.fsm.Fsm;
+import it.smartcommunitylabdhub.lifecycle.BaseLifecycleManager;
+import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
 import it.smartcommunitylabdhub.models.Model;
+import it.smartcommunitylabdhub.models.lifecycle.ModelFsmFactoryBuilder;
 import it.smartcommunitylabdhub.models.persistence.ModelEntity;
 import it.smartcommunitylabdhub.models.persistence.ModelRepository;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
@@ -38,6 +42,16 @@ public class ModelConfig {
         Converter<ModelEntity, Model> dtoBuilder
     ) {
         return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
+    }
+
+    @Bean
+    Fsm.Factory<String, String, Model> modelFsmFactory(ModelFsmFactoryBuilder builder) {
+        return builder.build();
+    }
+
+    @Bean
+    LifecycleManager<Model> modelLifecycleManager() {
+        return new BaseLifecycleManager<Model>(Model.class) {};
     }
 
     // build indexer only if a provider is available

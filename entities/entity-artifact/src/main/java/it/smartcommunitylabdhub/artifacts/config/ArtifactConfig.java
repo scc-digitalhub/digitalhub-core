@@ -18,10 +18,14 @@
 package it.smartcommunitylabdhub.artifacts.config;
 
 import it.smartcommunitylabdhub.artifacts.Artifact;
+import it.smartcommunitylabdhub.artifacts.lifecycle.ArtifactFsmFactoryBuilder;
 import it.smartcommunitylabdhub.artifacts.persistence.ArtifactEntity;
 import it.smartcommunitylabdhub.artifacts.persistence.ArtifactRepository;
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
+import it.smartcommunitylabdhub.fsm.Fsm;
+import it.smartcommunitylabdhub.lifecycle.BaseLifecycleManager;
+import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
 import java.util.Optional;
 import org.springframework.context.annotation.Bean;
@@ -38,6 +42,16 @@ public class ArtifactConfig {
         Converter<ArtifactEntity, Artifact> dtoBuilder
     ) {
         return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
+    }
+
+    @Bean
+    Fsm.Factory<String, String, Artifact> artifactFsmFactory(ArtifactFsmFactoryBuilder builder) {
+        return builder.build();
+    }
+
+    @Bean
+    LifecycleManager<Artifact> artifactLifecycleManager() {
+        return new BaseLifecycleManager<Artifact>(Artifact.class) {};
     }
 
     // build indexer only if a provider is available

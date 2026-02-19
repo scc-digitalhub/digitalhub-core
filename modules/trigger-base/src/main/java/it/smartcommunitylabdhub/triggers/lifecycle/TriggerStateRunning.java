@@ -36,17 +36,17 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class TriggerStateRunning<X extends TriggerBaseSpec, Z extends TriggerRunBaseStatus>
-    extends TriggerBaseState<TriggerState, TriggerEvent, X, Z> {
+    extends TriggerBaseState<X, Z> {
 
     public TriggerStateRunning(Actuator<X, ?, Z> actuator) {
-        super(TriggerState.RUNNING, actuator);
+        super(TriggerState.RUNNING.name(), actuator);
         //transitions
         txs =
             List.of(
                 //(FIRE)->RUNNING
-                new Transition.Builder<TriggerState, TriggerEvent, Trigger>()
-                    .event(TriggerEvent.FIRE)
-                    .nextState(TriggerState.RUNNING)
+                new Transition.Builder<String, String, Trigger>()
+                    .event(TriggerEvent.FIRE.name())
+                    .nextState(TriggerState.RUNNING.name())
                     .<TriggerRun<? extends TriggerJob>, Z>withInternalLogic(
                         (currentState, nextState, event, trigger, run) -> {
                             //runtime callback
@@ -55,9 +55,9 @@ public class TriggerStateRunning<X extends TriggerBaseSpec, Z extends TriggerRun
                     )
                     .build(),
                 //(STOP)->STOPPED
-                new Transition.Builder<TriggerState, TriggerEvent, Trigger>()
-                    .event(TriggerEvent.STOP)
-                    .nextState(TriggerState.STOPPED)
+                new Transition.Builder<String, String, Trigger>()
+                    .event(TriggerEvent.STOP.name())
+                    .nextState(TriggerState.STOPPED.name())
                     .withInternalLogic((currentState, nextState, event, trigger, i) -> {
                         //runtime callback
                         Optional
@@ -70,9 +70,9 @@ public class TriggerStateRunning<X extends TriggerBaseSpec, Z extends TriggerRun
                     })
                     .build(),
                 //(ERROR)->ERROR
-                new Transition.Builder<TriggerState, TriggerEvent, Trigger>()
-                    .event(TriggerEvent.ERROR)
-                    .nextState(TriggerState.ERROR)
+                new Transition.Builder<String, String, Trigger>()
+                    .event(TriggerEvent.ERROR.name())
+                    .nextState(TriggerState.ERROR.name())
                     .withInternalLogic((currentState, nextState, event, trigger, i) -> {
                         //no-op, nothing happened yet
                         return Optional.empty();

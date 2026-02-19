@@ -27,17 +27,16 @@ import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.infrastructure.Runtime;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
-import it.smartcommunitylabdhub.runs.lifecycle.RunEvent;
 import it.smartcommunitylabdhub.runs.lifecycle.RunState;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class RunStateCompleted<S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable>
-    extends BaseRunState<RunState, RunEvent, S, Z, R> {
+    extends BaseRunState<S, Z, R> {
 
     public RunStateCompleted(Runtime<S, Z, R> runtime) {
-        super(RunState.COMPLETED, runtime);
+        super(RunState.COMPLETED.name(), runtime);
         txs =
             List.of(
                 //(DELETE)->DELETING

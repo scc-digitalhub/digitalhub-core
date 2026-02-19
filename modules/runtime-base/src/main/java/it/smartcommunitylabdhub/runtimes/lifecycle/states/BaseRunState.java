@@ -26,8 +26,6 @@ package it.smartcommunitylabdhub.runtimes.lifecycle.states;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.infrastructure.Runtime;
-import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvents;
-import it.smartcommunitylabdhub.commons.lifecycle.LifecycleState;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
@@ -36,56 +34,38 @@ import it.smartcommunitylabdhub.fsm.FsmState;
 import it.smartcommunitylabdhub.fsm.Transition;
 import it.smartcommunitylabdhub.runs.lifecycle.RunEvent;
 import it.smartcommunitylabdhub.runs.lifecycle.RunState;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.Assert;
 
 @Slf4j
-public class BaseRunState<
-    S extends Enum<S> & LifecycleState<Run>,
-    E extends Enum<E> & LifecycleEvents<Run>,
-    X extends RunBaseSpec,
-    Z extends RunBaseStatus,
-    R extends RunRunnable
->
-    implements FsmState.Builder<S, E, Run> {
+public class BaseRunState<X extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable>
+    implements FsmState.Builder<String, String, Run> {
 
-    protected final Class<S> stateClass;
-    protected final Class<E> eventsClass;
-
-    protected final S state;
+    protected final String state;
     protected final Runtime<X, Z, R> runtime;
 
-    protected List<Transition<S, E, Run>> txs;
+    protected List<Transition<String, String, Run>> txs;
 
-    @SuppressWarnings("unchecked")
-    public BaseRunState(S state, Runtime<X, Z, R> runtime) {
+    public BaseRunState(String state, Runtime<X, Z, R> runtime) {
         Assert.notNull(state, "state is required");
         Assert.notNull(runtime, "runtime is required");
 
         this.state = state;
         this.runtime = runtime;
-
-        // resolve generics type via subclass trick
-        Type ts = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
-        this.stateClass = (Class<S>) ts;
-        Type te = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
-        this.eventsClass = (Class<E>) te;
     }
 
-    public FsmState<S, E, Run> build() {
+    public FsmState<String, String, Run> build() {
         return new FsmState<>(state, txs);
     }
 
     //TODO evaluate splitting to factory classes
-    protected Transition.Builder<S, E, Run> toError() {
+    protected Transition.Builder<String, String, Run> toError() {
         //(ERROR)->ERROR
-        return new Transition.Builder<S, E, Run>()
-            .event(Enum.valueOf(eventsClass, RunEvent.ERROR.name()))
-            .nextState(Enum.valueOf(stateClass, RunState.ERROR.name()))
+        return new Transition.Builder<String, String, Run>()
+            .event(RunEvent.ERROR.name())
+            .nextState(RunState.ERROR.name())
             .<R, R>withInternalLogic((currentState, nextState, event, run, runnable) -> {
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
                 if (specAccessor.isLocalExecution()) {
@@ -107,11 +87,11 @@ public class BaseRunState<
             });
     }
 
-    protected Transition.Builder<S, E, Run> toDeleting() {
+    protected Transition.Builder<String, String, Run> toDeleting() {
         //(DELETE)->DELETING
-        return new Transition.Builder<S, E, Run>()
-            .event(Enum.valueOf(eventsClass, RunEvent.DELETE.name()))
-            .nextState(Enum.valueOf(stateClass, RunState.DELETING.name()))
+        return new Transition.Builder<String, String, Run>()
+            .event(RunEvent.DELETE.name())
+            .nextState(RunState.DELETING.name())
             .<R, R>withInternalLogic((currentState, nextState, event, run, runnable) -> {
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
                 if (specAccessor.isLocalExecution()) {
@@ -123,11 +103,11 @@ public class BaseRunState<
             });
     }
 
-    protected Transition.Builder<S, E, Run> toDelete() {
+    protected Transition.Builder<String, String, Run> toDelete() {
         //(DELETE)->DELETED
-        return new Transition.Builder<S, E, Run>()
-            .event(Enum.valueOf(eventsClass, RunEvent.DELETE.name()))
-            .nextState(Enum.valueOf(stateClass, RunState.DELETED.name()))
+        return new Transition.Builder<String, String, Run>()
+            .event(RunEvent.DELETE.name())
+            .nextState(RunState.DELETED.name())
             .<R, R>withInternalLogic((currentState, nextState, event, run, runnable) -> {
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
                 if (specAccessor.isLocalExecution()) {
@@ -143,11 +123,11 @@ public class BaseRunState<
             });
     }
 
-    protected Transition.Builder<S, E, Run> toReady() {
+    protected Transition.Builder<String, String, Run> toReady() {
         //(RUN)->READY
-        return new Transition.Builder<S, E, Run>()
-            .event(Enum.valueOf(eventsClass, RunEvent.RUN.name()))
-            .nextState(Enum.valueOf(stateClass, RunState.READY.name()))
+        return new Transition.Builder<String, String, Run>()
+            .event(RunEvent.RUN.name())
+            .nextState(RunState.READY.name())
             .<R, R>withInternalLogic((currentState, nextState, event, run, i) -> {
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
                 if (specAccessor.isLocalExecution()) {
@@ -167,11 +147,11 @@ public class BaseRunState<
             });
     }
 
-    protected Transition.Builder<S, E, Run> toPending() {
+    protected Transition.Builder<String, String, Run> toPending() {
         //(EXECUTE)->RUNNING
-        return new Transition.Builder<S, E, Run>()
-            .event(Enum.valueOf(eventsClass, RunEvent.SCHEDULE.name()))
-            .nextState(Enum.valueOf(stateClass, RunState.PENDING.name()))
+        return new Transition.Builder<String, String, Run>()
+            .event(RunEvent.SCHEDULE.name())
+            .nextState(RunState.PENDING.name())
             .<R, R>withInternalLogic((currentState, nextState, event, run, runnable) -> {
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
                 if (specAccessor.isLocalExecution()) {
@@ -185,11 +165,11 @@ public class BaseRunState<
             });
     }
 
-    protected Transition.Builder<S, E, Run> toRunning() {
+    protected Transition.Builder<String, String, Run> toRunning() {
         //(EXECUTE)->RUNNING
-        return new Transition.Builder<S, E, Run>()
-            .event(Enum.valueOf(eventsClass, RunEvent.EXECUTE.name()))
-            .nextState(Enum.valueOf(stateClass, RunState.RUNNING.name()))
+        return new Transition.Builder<String, String, Run>()
+            .event(RunEvent.EXECUTE.name())
+            .nextState(RunState.RUNNING.name())
             .<R, R>withInternalLogic((currentState, nextState, event, run, runnable) -> {
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
                 if (specAccessor.isLocalExecution()) {
@@ -205,11 +185,11 @@ public class BaseRunState<
             });
     }
 
-    protected Transition.Builder<S, E, Run> loopRunning() {
+    protected Transition.Builder<String, String, Run> loopRunning() {
         //(LOOP)->RUNNING
-        return new Transition.Builder<S, E, Run>()
-            .event(Enum.valueOf(eventsClass, RunEvent.LOOP.name()))
-            .nextState(Enum.valueOf(stateClass, RunState.RUNNING.name()))
+        return new Transition.Builder<String, String, Run>()
+            .event(RunEvent.LOOP.name())
+            .nextState(RunState.RUNNING.name())
             .<R, R>withInternalLogic((currentState, nextState, event, run, runnable) -> {
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
                 if (specAccessor.isLocalExecution()) {
@@ -225,11 +205,11 @@ public class BaseRunState<
             });
     }
 
-    protected Transition.Builder<S, E, Run> toCompleted() {
+    protected Transition.Builder<String, String, Run> toCompleted() {
         //(COMPLETE)->COMPLETED
-        return new Transition.Builder<S, E, Run>()
-            .event(Enum.valueOf(eventsClass, RunEvent.COMPLETE.name()))
-            .nextState(Enum.valueOf(stateClass, RunState.COMPLETED.name()))
+        return new Transition.Builder<String, String, Run>()
+            .event(RunEvent.COMPLETE.name())
+            .nextState(RunState.COMPLETED.name())
             .<R, R>withInternalLogic((currentState, nextState, event, run, runnable) -> {
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
                 if (specAccessor.isLocalExecution()) {
@@ -250,11 +230,11 @@ public class BaseRunState<
             });
     }
 
-    protected Transition.Builder<S, E, Run> toStop() {
+    protected Transition.Builder<String, String, Run> toStop() {
         //(STOP)->STOP
-        return new Transition.Builder<S, E, Run>()
-            .event(Enum.valueOf(eventsClass, RunEvent.STOP.name()))
-            .nextState(Enum.valueOf(stateClass, RunState.STOP.name()))
+        return new Transition.Builder<String, String, Run>()
+            .event(RunEvent.STOP.name())
+            .nextState(RunState.STOP.name())
             .<R, R>withInternalLogic((currentState, nextState, event, run, runnable) -> {
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
                 if (specAccessor.isLocalExecution()) {
@@ -266,11 +246,11 @@ public class BaseRunState<
             });
     }
 
-    protected Transition.Builder<S, E, Run> toStopped() {
+    protected Transition.Builder<String, String, Run> toStopped() {
         //(STOP)->STOPPED
-        return new Transition.Builder<S, E, Run>()
-            .event(Enum.valueOf(eventsClass, RunEvent.STOP.name()))
-            .nextState(Enum.valueOf(stateClass, RunState.STOPPED.name()))
+        return new Transition.Builder<String, String, Run>()
+            .event(RunEvent.STOP.name())
+            .nextState(RunState.STOPPED.name())
             .<R, R>withInternalLogic((currentState, nextState, event, run, runnable) -> {
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
                 if (specAccessor.isLocalExecution()) {
@@ -286,11 +266,11 @@ public class BaseRunState<
             });
     }
 
-    protected Transition.Builder<S, E, Run> toResume() {
+    protected Transition.Builder<String, String, Run> toResume() {
         //(RESUME)->RESUME
-        return new Transition.Builder<S, E, Run>()
-            .event(Enum.valueOf(eventsClass, RunEvent.RESUME.name()))
-            .nextState(Enum.valueOf(stateClass, RunState.RESUME.name()))
+        return new Transition.Builder<String, String, Run>()
+            .event(RunEvent.RESUME.name())
+            .nextState(RunState.RESUME.name())
             .<R, R>withInternalLogic((currentState, nextState, event, run, runnable) -> {
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
                 if (specAccessor.isLocalExecution()) {

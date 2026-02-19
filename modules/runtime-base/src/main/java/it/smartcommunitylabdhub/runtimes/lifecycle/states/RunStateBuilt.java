@@ -27,17 +27,16 @@ import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.infrastructure.Runtime;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
-import it.smartcommunitylabdhub.runs.lifecycle.RunEvent;
 import it.smartcommunitylabdhub.runs.lifecycle.RunState;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class RunStateBuilt<S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable>
-    extends BaseRunState<RunState, RunEvent, S, Z, R> {
+    extends BaseRunState<S, Z, R> {
 
     public RunStateBuilt(Runtime<S, Z, R> runtime) {
-        super(RunState.BUILT, runtime);
+        super(RunState.BUILT.name(), runtime);
         txs =
             List.of(
                 //(RUN)->READY

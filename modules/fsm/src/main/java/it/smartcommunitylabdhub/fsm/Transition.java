@@ -61,6 +61,30 @@ public class Transition<S, E, C> {
         return Optional.ofNullable((TransitionLogic<S, E, C, I, R>) internalLogic);
     }
 
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((event == null) ? 0 : event.hashCode());
+        result = prime * result + ((nextState == null) ? 0 : nextState.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null) return false;
+        if (getClass() != obj.getClass()) return false;
+        Transition<?, ?, ?> other = (Transition<?, ?, ?>) obj;
+        if (event == null) {
+            if (other.event != null) return false;
+        } else if (!event.equals(other.event)) return false;
+        if (nextState == null) {
+            if (other.nextState != null) return false;
+        } else if (!nextState.equals(other.nextState)) return false;
+        return true;
+    }
+
     /**
      * Builder
      */
