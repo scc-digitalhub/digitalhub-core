@@ -6,24 +6,18 @@ from __future__ import annotations
 
 import os
 import typing
-from pathlib import Path
 from typing import Any, Callable
 
 from digitalhub.context.api import get_context
 from digitalhub.entities.project.crud import get_project
 from digitalhub.entities.run.crud import get_run
 from digitalhub.runtimes.enums import RuntimeEnvVar
-from digitalhub_runtime_python.utils.configuration import (
-    import_function_and_init_from_source,
-)
+from digitalhub_runtime_python.utils.configuration import import_function_and_init_from_source
 from digitalhub_runtime_python.utils.inputs import compose_init, compose_inputs
 
 if typing.TYPE_CHECKING:
     from digitalhub_runtime_python.entities.run._base.entity import RunPythonRun
     from nuclio_sdk import Context, Event, Response
-
-
-DEFAULT_PATH = Path("/shared")
 
 
 def execute_user_init(
@@ -85,7 +79,7 @@ def init_context(context: Context) -> None:
     # default_py_file filename is "main.py", source is the
     # function source
     source = {{source}}
-    func, init_function = import_function_and_init_from_source(DEFAULT_PATH, source)
+    func, init_function = import_function_and_init_from_source(source)
 
     # Set attributes
     setattr(context, "project", project)
