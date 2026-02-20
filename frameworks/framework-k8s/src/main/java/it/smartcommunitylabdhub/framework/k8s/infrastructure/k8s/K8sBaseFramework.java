@@ -899,8 +899,25 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
             // Create config map volume mount with fixed definition
             V1VolumeMount configMapMount = new V1VolumeMount().name("init-config-map").mountPath("/init-config-map");
             volumeMounts.add(configMapMount);
-        }
 
+            //process additional mounts for context sources if defined
+            if (runnable.getContextSources() != null) {
+                runnable
+                    .getContextSources()
+                    .forEach(cs -> {
+                        if (StringUtils.hasText(cs.getMountPath())) {
+                            //add additional mount for this context source
+                            V1VolumeMount mount = new V1VolumeMount()
+                                .name("init-config-map")
+                                .mountPath(cs.getMountPath())
+                                .subPath(
+                                    Base64.getUrlEncoder().withoutPadding().encodeToString(cs.getName().getBytes())
+                                );
+                            volumeMounts.add(mount);
+                        }
+                    });
+            }
+        }
         return volumeMounts;
     }
 
