@@ -39,6 +39,7 @@ import it.smartcommunitylabdhub.runtime.vllm.base.models.VLLMAdapter;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeFunctionSpec;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeRunSpec;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeRunStatus;
+import it.smartcommunitylabdhub.runtime.vllm.config.VLLMProperties;
 import it.smartcommunitylabdhub.runtime.vllm.text.specs.VLLMServeTextFunctionSpec;
 import jakarta.validation.constraints.NotNull;
 import java.util.ArrayList;
@@ -49,7 +50,6 @@ import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -77,23 +77,8 @@ public abstract class VLLMServeRuntime<F extends VLLMServeFunctionSpec, R extend
     @Autowired
     protected ConfigurationService configurationService;
 
-    @Value("${runtime.vllmserve.image}")
-    protected String image;
-
-    @Value("${runtime.vllmserve.cpu-image}")
-    protected String cpuImage;
-
-    @Value("${runtime.vllmserve.volume-size:10Gi}")
-    protected String volumeSizeSpec;
-
-    @Value("${runtime.vllmserve.user-id}")
-    protected Integer userId;
-
-    @Value("${runtime.vllmserve.group-id}")
-    protected Integer groupId;
-
-    @Value("${runtime.vllmserve.llm.otel-endpoint:}")
-    protected String otelEndpoint;
+    @Autowired
+    protected VLLMProperties properties;
 
     public abstract Map<String, String> getOpenAIFeatures();
 
@@ -151,7 +136,7 @@ public abstract class VLLMServeRuntime<F extends VLLMServeFunctionSpec, R extend
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        Assert.hasText(image, "image can not be null or empty");
+        Assert.hasText(properties.getImage(), "image can not be null or empty");
         // Assert.isTrue(image.startsWith(IMAGE), "image must be a version of " + IMAGE);
     }
 }

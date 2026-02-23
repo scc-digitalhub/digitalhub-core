@@ -46,7 +46,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.StringUtils;
 
 @Slf4j
@@ -54,12 +53,6 @@ import org.springframework.util.StringUtils;
 public class VLLMServeSpeechRuntime extends VLLMServeRuntime<VLLMServeSpeechFunctionSpec, VLLMServeSpeechRunSpec> {
 
     public static final String RUNTIME = "vllmserve-speech";
-
-    @Value("${runtime.vllmserve.image-audio}")
-    protected String audioImage;
-
-    @Value("${runtime.vllmserve.cpu-image-audio}")
-    protected String audioCpuImage;
 
     private static final Map<String, String> features = new LinkedHashMap<>();
     private static final Map<String, String> openAIFeatures = new LinkedHashMap<>();
@@ -151,6 +144,12 @@ public class VLLMServeSpeechRuntime extends VLLMServeRuntime<VLLMServeSpeechFunc
 
         VLLMServeSpeechRunSpec runSpec = VLLMServeSpeechRunSpec.with(run.getSpec());
 
+        String image = StringUtils.hasText(runSpec.getFunctionSpec().getImage())
+            ? runSpec.getFunctionSpec().getImage()
+            : Boolean.TRUE.equals(runSpec.getUseCpuImage())
+                ? properties.getCpuImageAudio()
+                : properties.getImageAudio();
+
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
@@ -158,12 +157,8 @@ public class VLLMServeSpeechRuntime extends VLLMServeRuntime<VLLMServeSpeechFunc
             switch (runAccessor.getTask()) {
                 case VLLMServeSpeechServeTaskSpec.KIND -> new VLLMServeRunner(
                     RUNTIME,
-                    audioImage,
-                    audioCpuImage,
-                    userId,
-                    groupId,
-                    volumeSizeSpec,
-                    otelEndpoint,
+                    image,
+                    properties,
                     runSpec.getFunctionSpec(),
                     secretService.getSecretData(run.getProject(), runSpec.getTaskServeSpec().getSecrets()),
                     k8sBuilderHelper,

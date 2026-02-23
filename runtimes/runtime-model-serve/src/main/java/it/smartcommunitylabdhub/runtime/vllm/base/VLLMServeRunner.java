@@ -23,6 +23,9 @@
 
 package it.smartcommunitylabdhub.runtime.vllm.base;
 
+import com.github.mustachejava.DefaultMustacheFactory;
+import com.github.mustachejava.Mustache;
+import com.github.mustachejava.MustacheFactory;
 import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.accessors.fields.KeyAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
@@ -33,6 +36,7 @@ import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
+import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
@@ -50,29 +54,44 @@ import it.smartcommunitylabdhub.runtime.vllm.base.models.VLLMAdapter;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeFunctionSpec;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeRunSpec;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeTaskSpec;
+import it.smartcommunitylabdhub.runtime.vllm.config.VLLMProperties;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
+@Slf4j
 public class VLLMServeRunner {
 
     private static final int HTTP_PORT = 8000;
     private static final int UID = 1000;
-    private static final int GID = 1000;
+    private static final int GID = 100;
+    private static final String HOME_DIR = "/shared";
+    private final Resource passwdTemplate = new ClassPathResource("runtime-vllm/passwd.template");
+    private final MustacheFactory mustacheFactory = new DefaultMustacheFactory();
+    private final String passwdFile;
 
     private final String runtime;
     private final String image;
-    private final String cpuImage;
     private final String volumeSizeSpec;
     private final int userId;
     private final int groupId;
+    private final String homeDir;
     private final String otelEndpoint;
     private final VLLMServeFunctionSpec functionSpec;
     private final Map<String, String> secretData;
@@ -84,30 +103,53 @@ public class VLLMServeRunner {
     public VLLMServeRunner(
         String runtime,
         String image,
-        String cpuImage,
-        Integer userId,
-        Integer groupId,
-        String volumeSizeSpec,
-        String otelEndpoint,
+        VLLMProperties properties,
         VLLMServeFunctionSpec functionSpec,
         Map<String, String> secretData,
         K8sBuilderHelper k8sBuilderHelper,
         ModelManager modelService,
         FunctionManager functionService
     ) {
+        Assert.notNull(properties, "properties are required");
+        Assert.hasText(image, "image can not be null");
+
         this.runtime = runtime;
         this.image = image;
-        this.cpuImage = cpuImage;
-        this.volumeSizeSpec = volumeSizeSpec;
+
         this.functionSpec = functionSpec;
         this.secretData = secretData;
         this.k8sBuilderHelper = k8sBuilderHelper;
         this.modelService = modelService;
         this.functionService = functionService;
 
-        this.userId = userId != null ? userId : UID;
-        this.groupId = groupId != null ? groupId : GID;
-        this.otelEndpoint = otelEndpoint;
+        this.userId = properties.getUserId() != null ? properties.getUserId() : UID;
+        this.groupId = properties.getGroupId() != null ? properties.getGroupId() : GID;
+        this.homeDir = properties.getHomeDir() != null ? properties.getHomeDir() : HOME_DIR;
+        this.volumeSizeSpec = properties.getVolumeSize();
+
+        this.otelEndpoint = properties.getLlmOtelEndpoint();
+
+        String passwd = null;
+        try {
+            log.debug("Buuilding passwd template for {}:{} with home {}", this.userId, this.groupId, this.homeDir);
+            Mustache template = mustacheFactory.compile(
+                new InputStreamReader(passwdTemplate.getInputStream()),
+                "passwd"
+            );
+
+            passwd =
+                template
+                    .execute(
+                        new StringWriter(),
+                        Map.of("userId", this.userId, "groupId", this.groupId, "homeDir", this.homeDir)
+                    )
+                    .toString();
+        } catch (IOException ioe) {
+            log.error("error with building passwd template for runtime-vllm", ioe);
+            //disable template
+        }
+
+        this.passwdFile = passwd;
     }
 
     public K8sRunnable produce(Run run) {
@@ -146,6 +188,18 @@ public class VLLMServeRunner {
 
         //read source and build context
         List<ContextRef> contextRefs = null;
+        List<ContextSource> contextSources = new ArrayList<>();
+
+        //inject custom passwd to add our user
+        if (passwdFile != null) {
+            ContextSource entry = ContextSource
+                .builder()
+                .name("passwd")
+                .base64(Base64.getEncoder().encodeToString(passwdFile.getBytes(StandardCharsets.UTF_8)))
+                .mountPath("/etc/passwd")
+                .build();
+            contextSources.add(entry);
+        }
 
         //url is in run spec after build
         String url = runSpec.getUrl();
@@ -258,10 +312,6 @@ public class VLLMServeRunner {
             }
         }
 
-        String img = StringUtils.hasText(functionSpec.getImage())
-            ? functionSpec.getImage()
-            : Boolean.TRUE.equals(runSpec.getUseCpuImage()) ? cpuImage : image;
-
         //validate image
         // if (img == null || !img.startsWith(VLLMServeRuntime.IMAGE)) {
         //     throw new IllegalArgumentException(
@@ -285,10 +335,11 @@ public class VLLMServeRunner {
                     : null
             )
             //base
-            .image(img)
+            .image(image)
             .command("vllm")
             .args(args.toArray(new String[0]))
             .contextRefs(contextRefs)
+            .contextSources(contextSources)
             .envs(coreEnvList)
             .secrets(coreSecrets)
             .resources(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(taskSpec.getResources()) : null)

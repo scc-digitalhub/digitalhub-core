@@ -146,6 +146,9 @@ public class VLLMServePoolingRuntime extends VLLMServeRuntime<VLLMServePoolingFu
         }
 
         VLLMServePoolingRunSpec runSpec = VLLMServePoolingRunSpec.with(run.getSpec());
+        String image = StringUtils.hasText(runSpec.getFunctionSpec().getImage())
+            ? runSpec.getFunctionSpec().getImage()
+            : Boolean.TRUE.equals(runSpec.getUseCpuImage()) ? properties.getCpuImage() : properties.getImage();
 
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
@@ -155,11 +158,7 @@ public class VLLMServePoolingRuntime extends VLLMServeRuntime<VLLMServePoolingFu
                 case VLLMServePoolingServeTaskSpec.KIND -> new VLLMServeRunner(
                     RUNTIME,
                     image,
-                    cpuImage,
-                    userId,
-                    groupId,
-                    volumeSizeSpec,
-                    otelEndpoint,
+                    properties,
                     runSpec.getFunctionSpec(),
                     secretService.getSecretData(run.getProject(), runSpec.getTaskServeSpec().getSecrets()),
                     k8sBuilderHelper,
