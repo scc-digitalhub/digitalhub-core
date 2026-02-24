@@ -46,6 +46,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 @Slf4j
@@ -187,5 +188,11 @@ public class VLLMServeSpeechRuntime extends VLLMServeRuntime<VLLMServeSpeechFunc
     @Override
     public boolean isSupported(@NotNull Run run) {
         return VLLMServeSpeechRunSpec.KIND.equals(run.getKind());
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        Assert.hasText(properties.getImageAudio(), "image can not be null or empty");
+        // Assert.isTrue(image.startsWith(IMAGE), "image must be a version of " + IMAGE);
     }
 }

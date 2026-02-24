@@ -213,7 +213,7 @@ public class VLLMServeRunner {
 
         UriComponents uri = UriComponentsBuilder.fromUriString(url).build();
 
-        List<String> args = new ArrayList<>(List.of("serve"));
+        List<String> args = new ArrayList<>();
 
         String defaultServedModelName = "model";
         // model dir or model id
@@ -247,6 +247,9 @@ public class VLLMServeRunner {
             "--served-model-name",
             List.of(functionSpec.getModelName() != null ? functionSpec.getModelName() : defaultServedModelName)
         );
+
+        //enable caching by default
+        defaultArgMap.put("--enable-prefix-caching", List.of());
 
         if (otelEndpoint != null && !otelEndpoint.isBlank() && Boolean.TRUE.equals(runSpec.getEnableTelemetry())) {
             defaultArgMap.put("--otlp-traces-endpoint", List.of(otelEndpoint));
@@ -336,8 +339,8 @@ public class VLLMServeRunner {
             )
             //base
             .image(image)
-            .command("vllm")
-            .args(args.toArray(new String[0]))
+            .command("python3", "-m", "vllm.entrypoints.openai.api_server")
+            .args(args)
             .contextRefs(contextRefs)
             .contextSources(contextSources)
             .envs(coreEnvList)
