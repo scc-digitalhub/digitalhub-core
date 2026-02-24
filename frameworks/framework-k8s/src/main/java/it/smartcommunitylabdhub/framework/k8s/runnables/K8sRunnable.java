@@ -39,7 +39,6 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLog;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreMetric;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreNodeSelector;
-import it.smartcommunitylabdhub.framework.k8s.objects.CoreResourceDefinition;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreResources;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreToleration;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
@@ -77,7 +76,7 @@ public class K8sRunnable implements RunRunnable, SecuredRunnable, ConfigurableRu
 
     private String image;
 
-    private String command;
+    private String[] command;
 
     private String[] args;
 
@@ -177,34 +176,37 @@ public class K8sRunnable implements RunRunnable, SecuredRunnable, ConfigurableRu
                     .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
         }
     }
-    // @Override
-    // public void setCredentials(Collection<Credentials> credentials) {
-    //     if (credentials != null) {
-    //         //try to coerce into map
-    //         HashMap<String, Object> map = JacksonMapper.CUSTOM_OBJECT_MAPPER.convertValue(
-    //             credentials,
-    //             JacksonMapper.typeRef
-    //         );
 
-    //         this.credentials =
-    //             map
-    //                 .entrySet()
-    //                 .stream()
-    //                 .filter(e -> e.getValue() != null)
-    //                 .map(e -> {
-    //                     if (e.getValue() instanceof String) {
-    //                         return Map.entry(e.getKey(), (String) e.getValue());
-    //                     }
+    public abstract static class K8sRunnableBuilder<
+        C extends K8sRunnable, B extends K8sRunnable.K8sRunnableBuilder<C, B>
+    > {
 
-    //                     try {
-    //                         String value = JacksonMapper.CUSTOM_OBJECT_MAPPER.writeValueAsString(e.getValue());
-    //                         return Map.entry(e.getKey(), value);
-    //                     } catch (JsonProcessingException je) {
-    //                         return null;
-    //                     }
-    //                 })
-    //                 .filter(e -> e.getValue() != null)
-    //                 .collect(Collectors.toMap(Entry::getKey, Entry::getValue, (o1, o2) -> o1, HashMap::new));
-    //     }
-    // }
+        public B command(String command) {
+            return this.command(command);
+        }
+
+        public B command(String... command) {
+            this.command = command;
+            return (B) this;
+        }
+
+        public B command(List<String> command) {
+            this.command = command.toArray(new String[0]);
+            return (B) this;
+        }
+
+        public B arg(String arg) {
+            return this.args(arg);
+        }
+
+        public B args(String... args) {
+            this.args = args;
+            return (B) this;
+        }
+
+        public B args(List<String> args) {
+            this.args = args.toArray(new String[0]);
+            return (B) this;
+        }
+    }
 }

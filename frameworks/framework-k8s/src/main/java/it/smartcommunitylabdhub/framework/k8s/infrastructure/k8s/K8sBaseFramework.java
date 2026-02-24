@@ -1267,7 +1267,7 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
     }
 
     protected List<String> buildCommand(T runnable) {
-        return Optional.ofNullable(runnable.getCommand()).map(Collections::singletonList).orElse(null);
+        return Optional.ofNullable(runnable.getCommand()).map(Arrays::asList).orElse(null);
     }
 
     protected List<String> buildArgs(T runnable) {
