@@ -182,7 +182,11 @@ public class K8sRunnable implements RunRunnable, SecuredRunnable, ConfigurableRu
     > {
 
         public B command(String command) {
-            return this.command(command);
+            if (command != null) {
+                this.command = new String[] { command };
+            }
+
+            return (B) this;
         }
 
         public B command(String... command) {
@@ -191,12 +195,17 @@ public class K8sRunnable implements RunRunnable, SecuredRunnable, ConfigurableRu
         }
 
         public B command(List<String> command) {
-            this.command = command.toArray(new String[0]);
+            if (command != null) {
+                this.command = command.toArray(new String[0]);
+            }
             return (B) this;
         }
 
         public B arg(String arg) {
-            return this.args(arg);
+            if (arg != null) {
+                this.args = new String[] { arg };
+            }
+            return (B) this;
         }
 
         public B args(String... args) {
@@ -205,7 +214,9 @@ public class K8sRunnable implements RunRunnable, SecuredRunnable, ConfigurableRu
         }
 
         public B args(List<String> args) {
-            this.args = args.toArray(new String[0]);
+            if (args != null) {
+                this.args = args.toArray(new String[0]);
+            }
             return (B) this;
         }
     }
