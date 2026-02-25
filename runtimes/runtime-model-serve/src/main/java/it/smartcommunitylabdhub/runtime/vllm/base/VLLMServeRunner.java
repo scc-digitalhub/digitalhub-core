@@ -26,6 +26,7 @@ package it.smartcommunitylabdhub.runtime.vllm.base;
 import com.github.mustachejava.DefaultMustacheFactory;
 import com.github.mustachejava.Mustache;
 import com.github.mustachejava.MustacheFactory;
+import io.kubernetes.client.custom.Quantity;
 import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.accessors.fields.KeyAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
@@ -58,6 +59,8 @@ import it.smartcommunitylabdhub.runtime.vllm.config.VLLMProperties;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -81,6 +84,9 @@ public class VLLMServeRunner {
     private static final int HTTP_PORT = 8000;
     private static final int UID = 1000;
     private static final int GID = 100;
+    private static final String DEFAULT_MEM_SIZE = "16Gi";
+    private static final String DEFAULT_VOLUME_SIZE = "10Gi";
+
     private static final String HOME_DIR = "/shared";
     private final Resource passwdTemplate = new ClassPathResource("runtime-vllm/passwd.template");
     private final MustacheFactory mustacheFactory = new DefaultMustacheFactory();
@@ -89,6 +95,7 @@ public class VLLMServeRunner {
     private final String runtime;
     private final String image;
     private final String volumeSizeSpec;
+    private final String memSizeSpec;
     private final int userId;
     private final int groupId;
     private final String homeDir;
@@ -125,7 +132,8 @@ public class VLLMServeRunner {
         this.userId = properties.getUserId() != null ? properties.getUserId() : UID;
         this.groupId = properties.getGroupId() != null ? properties.getGroupId() : GID;
         this.homeDir = properties.getHomeDir() != null ? properties.getHomeDir() : HOME_DIR;
-        this.volumeSizeSpec = properties.getVolumeSize();
+        this.volumeSizeSpec = properties.getVolumeSize() != null ? properties.getVolumeSize() : DEFAULT_VOLUME_SIZE;
+        this.memSizeSpec = properties.getMemSize() != null ? properties.getMemSize() : DEFAULT_MEM_SIZE;
 
         this.otelEndpoint = properties.getLlmOtelEndpoint();
 
@@ -173,10 +181,22 @@ public class VLLMServeRunner {
             taskSpec.getVolumes() != null ? taskSpec.getVolumes() : List.of()
         );
 
+        //define resources: we need RAM size to evaluate cache if cpu is used, otherwise VLLM will take 50% of the whole node RAM as cache
+        CoreResource resources = taskSpec.getResources() != null ? taskSpec.getResources() : new CoreResource();
+        String memSize = resources != null && resources.getMem() != null ? resources.getMem() : memSizeSpec;
+
+        if (Boolean.TRUE.equals(runSpec.getUseCpuImage())) {
+            coreEnvList.add(new CoreEnv("VLLM_BACKEND", "cpu"));
+
+            // define VLLM_CPU_KVCACHE_SPACE as 50% of mem size if not defined, to avoid using too much memory for caching and OOM
+            Integer cacheSize = calculateCacheSize(memSize);
+            Optional
+                .ofNullable(cacheSize)
+                .ifPresent(size -> coreEnvList.add(new CoreEnv("VLLM_CPU_KVCACHE_SPACE", String.valueOf(size))));
+        }
+
         //check if scratch disk is requested as resource or set default
-        String volumeSize = taskSpec.getResources() != null && taskSpec.getResources().getDisk() != null
-            ? taskSpec.getResources().getDisk()
-            : volumeSizeSpec;
+        String volumeSize = resources != null && resources.getDisk() != null ? resources.getDisk() : volumeSizeSpec;
         CoreResource diskResource = new CoreResource();
         diskResource.setDisk(volumeSize);
 
@@ -324,8 +344,6 @@ public class VLLMServeRunner {
 
         appendHFVariables(coreEnvList);
 
-        // create volume for model
-
         //build runnable
         K8sRunnable k8sServeRunnable = K8sServeRunnable
             .builder()
@@ -345,7 +363,7 @@ public class VLLMServeRunner {
             .contextSources(contextSources)
             .envs(coreEnvList)
             .secrets(coreSecrets)
-            .resources(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(taskSpec.getResources()) : null)
+            .resources(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(resources) : null)
             .volumes(coreVolumes)
             .template(taskSpec.getProfile())
             //specific
@@ -363,6 +381,22 @@ public class VLLMServeRunner {
         k8sServeRunnable.setProject(run.getProject());
 
         return k8sServeRunnable;
+    }
+
+    private Integer calculateCacheSize(String memSize) {
+        if (memSize == null || memSize.isEmpty()) {
+            return 1; // Default 1Gi
+        }
+
+        // Calculate 50% and convert to GiB
+        Quantity quantity = Quantity.fromString(memSize);
+        BigDecimal value = quantity
+            .getNumber()
+            .multiply(new BigDecimal("0.5"))
+            .setScale(0, RoundingMode.UP)
+            .divide(new BigDecimal(1024L * 1024L * 1024L), 0, RoundingMode.DOWN);
+
+        return value.intValue();
     }
 
     private void appendHFVariables(List<CoreEnv> coreEnvList) {

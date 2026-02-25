@@ -23,5 +23,6 @@ runtime:
     group-id: ${RUNTIME_VLLM_GROUP_ID:${kubernetes.security.group}}
     home-dir: ${RUNTIME_VLLM_HOME_DIR:/shared}
     volume-size: ${RUNTIME_VLLM_VOLUME_SIZE:10Gi}
+    mem-size: ${RUNTIME_VLLM_MEM_SIZE:16Gi}
     llm-otel-endpoint: ${LLM_OTEL_ENDPOINT:}
 

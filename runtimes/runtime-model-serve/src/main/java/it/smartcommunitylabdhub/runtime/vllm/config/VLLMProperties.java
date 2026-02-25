@@ -41,6 +41,7 @@ public class VLLMProperties {
     private Integer groupId;
     private String homeDir;
     private String volumeSize;
+    private String memSize;
 
     private String llmOtelEndpoint;
 }
