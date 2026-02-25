@@ -180,8 +180,11 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         } catch (CoreRuntimeException e) {
             //on ex try transitioning to ERROR
             log.debug("entity {} transition to {} generated an exception, move to ERROR", dto.getId());
-            //merge message
-            dto.setStatus(MapUtils.mergeMultipleMaps(dto.getStatus(), Map.of("message", e.getMessage())));
+            if (e.getMessage() != null) {
+                //merge message
+                dto.setStatus(MapUtils.mergeMultipleMaps(dto.getStatus(), Map.of("message", e.getMessage())));
+            }
+
             //transition
             res = transition(dto, fsm -> fsm.goToState("ERROR", input), input, effect);
         }
@@ -241,8 +244,10 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         } catch (CoreRuntimeException e) {
             //on ex try transitioning to ERROR
             log.debug("entity {} transition to {} generated an exception, move to ERROR", dto.getId());
-            //merge message
-            dto.setStatus(MapUtils.mergeMultipleMaps(dto.getStatus(), Map.of("message", e.getMessage())));
+            if (e.getMessage() != null) {
+                //merge message
+                dto.setStatus(MapUtils.mergeMultipleMaps(dto.getStatus(), Map.of("message", e.getMessage())));
+            }
             //transition
             res = transition(dto, fsm -> fsm.goToState("ERROR", input), input, effect);
         }
