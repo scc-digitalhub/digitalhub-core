@@ -1,0 +1,4 @@
+runtime:
+  openinference:
+    dependencies: ${RUNTIME_OPENINFERENCE_DEPENDENCIES:digitalhub[full],digitalhub-runtime-openinference}
+    volume-size: ${RUNTIME_OPENINFERENCE_VOLUME_SIZE:1Gi}
