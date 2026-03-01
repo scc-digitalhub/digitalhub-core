@@ -111,22 +111,22 @@ public class OpeninferenceBaseRunner {
         attributes.put("enable_grpc", true);
 
         LinkedList<Map<String, Serializable>> inputs = new LinkedList<>();
-        attributes.put("inputs", inputs);
+        attributes.put("input_tensors", inputs);
         functionSpec.getInputs().forEach(i -> {
             Map<String, Serializable> input = new HashMap<>();
             input.put("name", i.getName());
             input.put("datatype", i.getDatatype());
-            input.put("shape", i.getShape().stream().map(String::valueOf).toArray(String[]::new));
+            input.put("shape", i.getShape().stream().mapToInt(Integer::intValue).toArray());
             inputs.add(input);
         });
 
         LinkedList<Map<String, Serializable>> outputs = new LinkedList<>();
-        attributes.put("outputs", outputs);
+        attributes.put("output_tensors", outputs);
         functionSpec.getOutputs().forEach(o -> {
             Map<String, Serializable> output = new HashMap<>();
             output.put("name", o.getName());
             output.put("datatype", o.getDatatype());
-            output.put("shape", o.getShape().stream().map(String::valueOf).toArray(String[]::new));
+            output.put("shape", o.getShape().stream().mapToInt(Integer::intValue).toArray());
             outputs.add(output);
         });
 

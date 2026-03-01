@@ -23,8 +23,6 @@ from digitalhub_runtime_python.utils.inputs import compose_init, compose_inputs
 if typing.TYPE_CHECKING:
     from digitalhub_runtime_guardrail.entities.run._base.entity import RunGuardrailRun
 
-DEFAULT_PATH = Path("/shared")
-
 
 def execute_user_init(
     init_function: Callable,
@@ -87,7 +85,7 @@ def init_context(context: Context) -> None:
     # default_py_file filename is "main.py", source is the
     # function source
     source = {{source}}
-    func, init_function = import_function_and_init_from_source(DEFAULT_PATH, source)
+    func, init_function = import_function_and_init_from_source(source)
 
     # Set attributes
     setattr(context, "user_function", func)

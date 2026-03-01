@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import os
 import typing
+import json
 from pathlib import Path
 from typing import Any, Callable
 
@@ -13,23 +14,17 @@ from digitalhub.context.api import get_context
 from digitalhub.entities.project.crud import get_project
 from digitalhub.entities.run.crud import get_run
 from digitalhub.runtimes.enums import RuntimeEnvVar
-
-from nuclio_sdk import Context, Event, Response
-from digitalhub_runtime_python.utils.configuration import (
-    import_function_and_init_from_source,
-)
+from digitalhub_runtime_python.utils.configuration import import_function_and_init_from_source
 from digitalhub_runtime_python.utils.inputs import compose_init, compose_inputs
 
 if typing.TYPE_CHECKING:
-    from digitalhub_runtime_guardrail.entities.run._base.entity import RunGuardrailRun
-
-DEFAULT_PATH = Path("/shared")
-
+    from digitalhub_runtime_guardrail.entities.run._base.entity import RunOpeninferenceRun
+    from nuclio_sdk import Context, Event, Response
 
 def execute_user_init(
     init_function: Callable,
     context: Context,
-    run: RunGuardrailRun,
+    run: RunOpeninferenceRun,
 ) -> None:
     """
     Execute user init function.
@@ -40,7 +35,7 @@ def execute_user_init(
         User init function.
     context : Context
         Nuclio context.
-    run : RunGuardrailRun
+    run : RunOpeninferenceRun
         Run entity.
     """
     init_params: dict = run.spec.to_dict().get("init_parameters", {})
@@ -71,7 +66,7 @@ def init_context(context: Context) -> None:
     ctx.root.mkdir(parents=True, exist_ok=True)
 
     # Get run
-    run: RunGuardrailRun = get_run(
+    run: RunOpeninferenceRun = get_run(
         os.getenv(RuntimeEnvVar.RUN_ID.value),
         project=project_name,
     )
@@ -87,7 +82,7 @@ def init_context(context: Context) -> None:
     # default_py_file filename is "main.py", source is the
     # function source
     source = {{source}}
-    func, init_function = import_function_and_init_from_source(DEFAULT_PATH, source)
+    func, init_function = import_function_and_init_from_source(source)
 
     # Set attributes
     setattr(context, "user_function", func)
@@ -121,7 +116,7 @@ def handler_serve(context: Context, event: Event) -> Any:
     try:
         func_args = compose_inputs(
             {},
-            {"request": event.body},
+            {"request": InferenceRequest(event.body)},
             False,
             context.user_function,
             context.project,
@@ -142,3 +137,96 @@ def handler_serve(context: Context, event: Event) -> Any:
         raise e
     finally:
         context.run.end_execution()
+
+
+class InferenceRequest:
+    id: str | None = None
+    parameters: dict | None = None
+    inputs: list[RequestInput] = []
+    outputs: list[RequestOutput] = []
+
+    def __init__(self, request: dict) -> None:
+        self.id = request.get("id")
+        self.parameters = request.get("parameters")
+        self.inputs = [RequestInput(**input) for input in request.get("inputs", [])]
+        self.outputs = [RequestOutput(**output) for output in request.get("outputs", [])]
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def __str__(self) -> str:
+        return f"InferenceRequest(id={self.id}, parameters={self.parameters}, inputs={self.inputs}, outputs={self.outputs})"
+
+    def dict(self) -> dict:
+        return {
+            "id": self.id,
+            "parameters": self.parameters,
+            "inputs": [i.dict() for i in self.inputs],
+            "outputs": [o.dict() for o in self.outputs],
+        }
+
+    def json(self) -> str:
+        return json.dumps(self.dict())
+
+
+class RequestInput:
+    name: str
+    datatype: str
+    shape: list[int]
+    data: list[any]
+    parameters: dict | None = {}
+
+    def __init__(self, **kwargs) -> None:
+        self.name = kwargs.get("name")
+        self.datatype = kwargs.get("datatype")
+        self.shape = kwargs.get("shape")
+        self.data = kwargs.get("data")
+        self.parameters = kwargs.get("parameters")
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def __str__(self) -> str:
+        return f"RequestInput(name={self.name}, datatype={self.datatype}, shape={self.shape}, data={self.data}, parameters={self.parameters})"
+
+    def dict(self) -> dict:
+        return {
+            "name": self.name,
+            "datatype": self.datatype,
+            "shape": self.shape,
+            "data": self.data,
+            "parameters": self.parameters,
+        }
+
+    def json(self) -> str:
+        return json.dumps(self.dict())
+
+
+class RequestOutput:
+    name: str
+    datatype: str
+    shape: list[int]
+    parameters: dict | None = {}
+
+    def __init__(self, **kwargs) -> None:
+        self.name = kwargs.get("name")
+        self.datatype = kwargs.get("datatype")
+        self.shape = kwargs.get("shape")
+        self.parameters = kwargs.get("parameters")
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def __str__(self) -> str:
+        return f"RequestOutput(name={self.name}, datatype={self.datatype}, shape={self.shape}, parameters={self.parameters})"
+
+    def dict(self) -> dict:
+        return {
+            "name": self.name,
+            "datatype": self.datatype,
+            "shape": self.shape,
+            "parameters": self.parameters,
+        }
+
+    def json(self) -> str:
+        return json.dumps(self.dict())

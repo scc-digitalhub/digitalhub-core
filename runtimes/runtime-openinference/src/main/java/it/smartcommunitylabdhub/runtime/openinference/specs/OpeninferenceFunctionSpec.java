@@ -30,6 +30,8 @@ import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.runtime.openinference.OpeninferenceRuntime;
 import it.smartcommunitylabdhub.runtime.openinference.model.TensorModel;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonFunctionSpec;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.List;
@@ -49,10 +51,11 @@ public class OpeninferenceFunctionSpec extends PythonFunctionSpec {
     @Schema(title = "fields.openinference.modelname.title", description = "fields.openinference.modelname.description")
     private String modelName;
 
+    @NotEmpty
     @Schema(title = "fields.openinference.inputs.title", description = "fields.openinference.inputs.description")
-    List<TensorModel> inputs;
+    List<@Valid TensorModel> inputs;
     @Schema(title = "fields.openinference.outputs.title", description = "fields.openinference.outputs.description")
-    List<TensorModel> outputs;
+    List<@Valid TensorModel> outputs;
 
     public OpeninferenceFunctionSpec(Map<String, Serializable> data) {
         configure(data);
