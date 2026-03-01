@@ -38,11 +38,13 @@ import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
+import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
 import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.runtime.openinference.runners.OpeninferenceBuildRunner;
 import it.smartcommunitylabdhub.runtime.openinference.runners.OpeninferenceServeRunner;
+import it.smartcommunitylabdhub.runtime.openinference.specs.InferenceV2Service;
 import it.smartcommunitylabdhub.runtime.openinference.specs.OpeninferenceBuildRunSpec;
 import it.smartcommunitylabdhub.runtime.openinference.specs.OpeninferenceBuildTaskSpec;
 import it.smartcommunitylabdhub.runtime.openinference.specs.OpeninferenceFunctionSpec;
@@ -52,10 +54,14 @@ import it.smartcommunitylabdhub.runtime.openinference.specs.OpeninferenceServeRu
 import it.smartcommunitylabdhub.runtime.openinference.specs.OpeninferenceServeTaskSpec;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -231,5 +237,51 @@ public class OpeninferenceRuntime
     @Override
     public boolean isSupported(@NotNull Run run) {
         return Arrays.asList(KINDS).contains(run.getKind());
+    }
+
+    @Override
+    public OpeninferenceRunStatus onRunning(@NotNull Run run, RunRunnable runnable) {
+        OpeninferenceRunStatus status = OpeninferenceRunStatus.with(run.getStatus());
+
+        OpeninferenceFunctionSpec funSpec = OpeninferenceFunctionSpec.with(run.getSpec());
+
+        if (status.getService() != null && status.getService().getUrl() != null) {
+            //add additional urls  for inference v2
+            K8sServiceInfo service = status.getService();
+            String baseUrl = service.getUrl();
+
+            Set<String> urls = new HashSet<>();
+            if (service.getUrls() != null) {
+                urls.addAll(service.getUrls());
+            }
+
+            // Server Metadata
+            urls.add(baseUrl + "/v2");
+
+            // Model Metadata
+            urls.add(baseUrl + "/v2/models/" + funSpec.getModelName());
+
+            // Inference
+            urls.add(baseUrl + "/v2/models/" + funSpec.getModelName() + "/infer");
+
+            service.setUrls(new ArrayList<>(urls));
+            status.setService(service);
+
+            //add inference specific info
+            InferenceV2Service inferenceService = new InferenceV2Service();
+            inferenceService.setBaseUrl(baseUrl);
+
+            inferenceService.setModel(funSpec.getModelName());
+            inferenceService.setInferenceUrl(baseUrl + "/v2/models/" + funSpec.getModelName() + "/infer");
+            inferenceService.setModelMetadataUrl(baseUrl + "/v2/models/" + funSpec.getModelName());
+            inferenceService.setModelReadinessUrl(baseUrl + "/v2/models/" + funSpec.getModelName() + "/ready");
+            inferenceService.setReadinessUrl(baseUrl + "/v2/health/ready");
+            inferenceService.setLivenessUrl(baseUrl + "/v2/health/live");
+            //TODO
+            // inferenceService.setStatus(service.getStatus());
+            status.setInferenceV2(inferenceService);
+        }
+
+        return status;
     }
 }

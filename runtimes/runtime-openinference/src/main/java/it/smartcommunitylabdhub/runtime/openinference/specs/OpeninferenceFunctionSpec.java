@@ -71,4 +71,10 @@ public class OpeninferenceFunctionSpec extends PythonFunctionSpec {
         this.inputs = spec.getInputs();
         this.outputs = spec.getOutputs();
     }
+
+    public static OpeninferenceFunctionSpec with(Map<String, Serializable> data) {
+        OpeninferenceFunctionSpec spec = new OpeninferenceFunctionSpec();
+        spec.configure(data);
+        return spec;
+    }
 }

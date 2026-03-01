@@ -23,8 +23,15 @@
 
 package it.smartcommunitylabdhub.runtime.openinference.specs;
 
+import java.io.Serializable;
+import java.util.Map;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
+import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -33,6 +40,28 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class OpeninferenceRunStatus extends RunBaseStatus {}
+public class OpeninferenceRunStatus extends RunBaseStatus {
+    private K8sServiceInfo service;
+
+    @JsonProperty("inference_v2")
+    private InferenceV2Service inferenceV2;
+
+    @Override
+    public void configure(Map<String, Serializable> data) {
+        super.configure(data);
+
+        OpeninferenceRunStatus spec = mapper.convertValue(data, OpeninferenceRunStatus.class);
+        this.service = spec.getService();
+        this.inferenceV2 = spec.getInferenceV2();
+    }
+
+    public static OpeninferenceRunStatus with(Map<String, Serializable> data) {
+        OpeninferenceRunStatus spec = new OpeninferenceRunStatus();
+        spec.configure(data);
+
+        return spec;
+    }
+}
