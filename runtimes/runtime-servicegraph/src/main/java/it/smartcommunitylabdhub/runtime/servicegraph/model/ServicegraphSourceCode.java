@@ -26,8 +26,10 @@ package it.smartcommunitylabdhub.runtime.servicegraph.model;
 import java.io.Serializable;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import it.smartcommunitylabdhub.commons.models.objects.SourceCode;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -36,8 +38,14 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ServicegraphSourceCode implements Serializable {
+public class ServicegraphSourceCode extends SourceCode<ServicegraphSourceCode.ServicegraphSourceCodeLanguages> {
 
-    @Schema(title = "fields.sourceCode.base64.title", description = "fields.sourceCode.base64.description")
-    private String base64;
+    @Override
+    public ServicegraphSourceCodeLanguages getLang() {
+        return ServicegraphSourceCodeLanguages.yaml;
+    }
+
+    public enum ServicegraphSourceCodeLanguages {
+        yaml,
+    }
 }

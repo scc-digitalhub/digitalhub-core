@@ -44,10 +44,10 @@ import lombok.Setter;
 @SpecType(runtime = ServicegraphRuntime.RUNTIME, kind = ServicegraphRuntime.RUNTIME, entity = Function.class)
 public class ServicegraphFunctionSpec extends FunctionBaseSpec {
 
-    @JsonProperty("definition")
+    @JsonProperty("source")
     @NotNull
-    @Schema(title = "fields.definition.title", description = "fields.definition.description")
-    private ServicegraphSourceCode definition;
+    @Schema(title = "fields.servicegraph.source.title", description = "fields.servicegraph.source.description")
+    private ServicegraphSourceCode source;
 
 
     public ServicegraphFunctionSpec(Map<String, Serializable> data) {
@@ -60,6 +60,6 @@ public class ServicegraphFunctionSpec extends FunctionBaseSpec {
 
         ServicegraphFunctionSpec spec = mapper.convertValue(data, ServicegraphFunctionSpec.class);
 
-        this.definition = spec.getDefinition();
+        this.source = spec.getSource();
     }
 }
