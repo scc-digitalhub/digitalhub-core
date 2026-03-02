@@ -21,8 +21,9 @@
  *
  */
 
-package it.smartcommunitylabdhub.credentials.s3.config;
+package it.smartcommunitylabdhub.s3.config;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -31,6 +32,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @Getter
 @Setter
+@AllArgsConstructor
 @NoArgsConstructor
 @ToString
 @ConfigurationProperties(prefix = "credentials.provider.s3", ignoreUnknownFields = true)
@@ -39,20 +41,39 @@ public class S3Properties {
     private Boolean enable;
 
     private String endpoint;
-    private String region;
+    private String region = "us-east-1";
     private String bucket;
-    private String signatureVersion;
+    private String signatureVersion = "s3v4";
     private Boolean pathStyleAccess;
 
     private String accessKey;
     private String secretKey;
 
-    public boolean isEnabled() {
+    private String claim;
+    private String policy;
+    private String roleArn;
+
+    public boolean isStaticProviderEnabled() {
+        return (
+            ((enable != null && enable.booleanValue()) &&
+                (endpoint != null && !endpoint.isBlank()) &&
+                (accessKey != null && !accessKey.isBlank()) &&
+                (secretKey != null && !secretKey.isBlank())) &&
+            !isAssumeRoleProviderEnabled()
+        );
+    }
+
+    public boolean isAssumeRoleProviderEnabled() {
         return (
             (enable != null && enable.booleanValue()) &&
             (endpoint != null && !endpoint.isBlank()) &&
             (accessKey != null && !accessKey.isBlank()) &&
-            (secretKey != null && !secretKey.isBlank())
+            (secretKey != null && !secretKey.isBlank()) &&
+            // either static roleArn or static policy or claim mapping
+            // must be provided to enable assume role provider
+            ((roleArn != null && !roleArn.isBlank()) ||
+                (policy != null && !policy.isBlank()) ||
+                (claim != null && !claim.isBlank()))
         );
     }
 

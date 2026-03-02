@@ -21,16 +21,16 @@
  *
  */
 
-package it.smartcommunitylabdhub.files.s3;
+package it.smartcommunitylabdhub.s3.files;
 
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.files.models.DownloadInfo;
 import it.smartcommunitylabdhub.files.models.FileInfo;
 import it.smartcommunitylabdhub.files.models.UploadInfo;
-import it.smartcommunitylabdhub.files.provider.S3Config;
-import it.smartcommunitylabdhub.files.provider.S3Credentials;
 import it.smartcommunitylabdhub.files.service.FilesStore;
+import it.smartcommunitylabdhub.s3.config.S3Config;
+import it.smartcommunitylabdhub.s3.credentials.S3Credentials;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
