@@ -71,6 +71,7 @@
         <module>runtimes/runtime-kubeai</module>
         <module>runtimes/runtime-guardrail</module>
         <module>runtimes/runtime-openinference</module>
+        <module>runtimes/runtime-servicegraph</module>
         <module>modules/openmetadata-integration</module>
         <module>modules/proxy</module>
         <module>providers/credentials-provider-db</module>
