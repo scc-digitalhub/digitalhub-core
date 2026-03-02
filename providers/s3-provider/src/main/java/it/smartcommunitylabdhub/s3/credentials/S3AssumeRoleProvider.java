@@ -20,33 +20,27 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.credentials.minio;
+package it.smartcommunitylabdhub.s3.credentials;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import io.minio.credentials.AssumeRoleProvider;
-import io.minio.messages.ResponseDate;
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.CredentialsProvider;
 import it.smartcommunitylabdhub.authorization.services.JwtTokenService;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.infrastructure.ConfigurationProvider;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
-import it.smartcommunitylabdhub.files.provider.S3Config;
-import it.smartcommunitylabdhub.files.provider.S3Config.S3ConfigBuilder;
-import it.smartcommunitylabdhub.files.provider.S3Credentials;
-import it.smartcommunitylabdhub.files.s3.S3FilesStore;
-import it.smartcommunitylabdhub.files.service.FilesService;
+import it.smartcommunitylabdhub.s3.base.S3BaseProvider;
+import it.smartcommunitylabdhub.s3.config.S3Properties;
 import jakarta.annotation.Nonnull;
 import jakarta.validation.constraints.NotNull;
-import java.lang.reflect.Field;
-import java.security.NoSuchAlgorithmException;
-import java.security.ProviderException;
+import java.net.URI;
 import java.time.Duration;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
@@ -57,37 +51,30 @@ import org.springframework.data.util.Pair;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
-import org.springframework.util.Assert;
-import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.StsClientBuilder;
+import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
+import software.amazon.awssdk.services.sts.model.AssumeRoleResponse;
+import software.amazon.awssdk.services.sts.model.StsException;
 
 @Slf4j
-public class MinioProvider implements ConfigurationProvider, CredentialsProvider, InitializingBean {
+public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsProvider, InitializingBean {
 
     private static final int DEFAULT_DURATION = 24 * 3600; //24 hour
     private static final int MIN_DURATION = 300; //5 min
 
-    private final MinioProperties properties;
-
     private int duration = DEFAULT_DURATION;
     private int accessTokenDuration = JwtTokenService.DEFAULT_ACCESS_TOKEN_DURATION;
 
-    private final FilesService filesService;
-    private S3Config config;
-
     // cache credentials for up to DURATION
-    LoadingCache<Pair<String, MinioPolicy>, S3Credentials> cache;
+    LoadingCache<Pair<String, S3PolicyMapping>, S3Credentials> cache;
 
-    public MinioProvider(FilesService filesService, MinioProperties properties) {
-        Assert.notNull(filesService, "files service is required");
-        Assert.notNull(properties, "minio properties are required");
-
-        if (log.isTraceEnabled()) {
-            log.trace("properties: {}", properties);
-        }
-
-        this.filesService = filesService;
-        this.properties = properties;
+    public S3AssumeRoleProvider(S3Properties properties) {
+        super(properties);
     }
 
     @Autowired
@@ -101,6 +88,12 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
     public void afterPropertiesSet() throws Exception {
         //set duration to 2x access token duration to ensure we have valid credentials for a full cycle
         if (accessTokenDuration * 2 > duration || accessTokenDuration * 3 < duration) {
+            log.warn(
+                "Configured STS credentials duration {} is not aligned with access token duration {}, adjusting to {}",
+                duration,
+                accessTokenDuration,
+                accessTokenDuration * 2
+            );
             duration = accessTokenDuration * 2;
         }
 
@@ -113,117 +106,135 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
                 .newBuilder()
                 .expireAfterWrite(cacheDuration, TimeUnit.SECONDS)
                 .build(
-                    new CacheLoader<Pair<String, MinioPolicy>, S3Credentials>() {
+                    new CacheLoader<Pair<String, S3PolicyMapping>, S3Credentials>() {
                         @Override
-                        public S3Credentials load(@Nonnull Pair<String, MinioPolicy> key) throws Exception {
+                        public S3Credentials load(@Nonnull Pair<String, S3PolicyMapping> key) throws Exception {
                             log.debug("load credentials for {}", key.getFirst());
                             return generate(key.getFirst(), key.getSecond());
                         }
                     }
                 );
-
-        //build config
-        S3ConfigBuilder builder = S3Config
-            .builder()
-            .endpoint(properties.getEndpoint())
-            .bucket(properties.getBucket())
-            .region(properties.getRegion())
-            .signatureVersion("s3v4")
-            .pathStyle(true);
-
-        this.config = builder.build();
-
-        if (log.isTraceEnabled()) {
-            log.trace("config: {}", config.toJson());
-        }
-
-        //build a file store
-        S3FilesStore store = new S3FilesStore(config);
-
-        //register with service
-        if (StringUtils.hasText(properties.getBucket())) {
-            filesService.registerStore("s3://" + properties.getBucket(), store);
-            filesService.registerStore("zip+s3://" + properties.getBucket(), store);
-        } else {
-            filesService.registerStore("s3://", store);
-            filesService.registerStore("zip+s3://", store);
-        }
     }
 
-    private S3Credentials generate(@NotNull String username, @NotNull MinioPolicy policy) throws StoreException {
+    private S3Credentials generate(@NotNull String username, @NotNull S3PolicyMapping policy) throws StoreException {
         log.debug("generate credentials for user authentication {} via STS service", username);
         if (log.isTraceEnabled()) {
             log.trace("policy: {}", policy);
         }
 
         try {
-            //assume role as user
-            //NOTE: roleArn or policy scoping does NOT work via assumeRole, only with external OIDC provider
-            //credentials will receive the same set of privileges as the accessKey used to sign the request!
-            AssumeRoleProvider provider = new AssumeRoleProvider(
-                properties.getEndpoint(),
+            // Create AWS credentials from properties
+            AwsBasicCredentials awsCredentials = AwsBasicCredentials.create(
                 properties.getAccessKey(),
-                properties.getSecretKey(),
-                duration,
-                policy.getPolicy(),
-                properties.getRegion(),
-                policy.getRoleArn(),
-                null,
-                null,
-                null
+                properties.getSecretKey()
             );
 
-            io.minio.credentials.Credentials response = provider.fetch();
+            // Build STS client with custom endpoint
+            StsClientBuilder stsBuilder = StsClient
+                .builder()
+                .credentialsProvider(StaticCredentialsProvider.create(awsCredentials));
 
-            //extract private field because minio obj has no getter for expiration...
-            ZonedDateTime exp = ZonedDateTime.now().plus(Duration.ofSeconds(duration - MIN_DURATION));
-            try {
-                Field field = io.minio.credentials.Credentials.class.getDeclaredField("expiration");
-                field.setAccessible(true);
+            // Set region - default to us-east-1 if not provided (required by SDK)
+            String region = properties.getRegion() != null && !properties.getRegion().isEmpty()
+                ? properties.getRegion()
+                : "us-east-1";
+            stsBuilder.region(Region.of(region));
 
-                ResponseDate rd = (ResponseDate) ReflectionUtils.getField(field, response);
-                if (rd != null) {
-                    exp = rd.zonedDateTime();
-                }
-            } catch (NoSuchFieldException | SecurityException e) {
-                //no expiration, assume duration is valid
+            // Set custom endpoint if provided
+            if (properties.getEndpoint() != null && !properties.getEndpoint().isEmpty()) {
+                stsBuilder.endpointOverride(URI.create(properties.getEndpoint()));
             }
 
-            return S3Credentials
+            // Generate session name
+            String sessionName = "s3-" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+
+            // Build assume role request
+            //NOTE: roleArn is required by STS, we don't check because some third party
+            // implementations allow to use policies without roleArn
+            AssumeRoleRequest.Builder requestBuilder = AssumeRoleRequest
                 .builder()
-                .accessKey(response.accessKey())
-                .secretKey(response.secretKey())
-                .sessionToken(response.sessionToken())
-                .expiration(exp)
-                .build();
-        } catch (NoSuchAlgorithmException | ProviderException e) {
+                .roleArn(policy.getRoleArn())
+                .roleSessionName(sessionName)
+                .durationSeconds(duration);
+
+            // Add policy if provided
+            if (policy.getPolicy() != null && !policy.getPolicy().isEmpty()) {
+                requestBuilder.policy(policy.getPolicy());
+            }
+
+            AssumeRoleRequest assumeRoleRequest = requestBuilder.build();
+
+            if (log.isTraceEnabled()) {
+                log.trace(
+                    "AssumeRole request - roleArn: {}, sessionName: {}, duration: {}",
+                    policy.getRoleArn(),
+                    sessionName,
+                    duration
+                );
+            }
+
+            // Call STS to assume role
+            try (StsClient stsClient = stsBuilder.build()) {
+                AssumeRoleResponse response = stsClient.assumeRole(assumeRoleRequest);
+                software.amazon.awssdk.services.sts.model.Credentials credentials = response.credentials();
+
+                // Convert expiration from Instant to ZonedDateTime
+                ZonedDateTime exp = credentials.expiration() != null
+                    ? ZonedDateTime.ofInstant(credentials.expiration(), ZoneId.systemDefault())
+                    : ZonedDateTime.now().plus(Duration.ofSeconds(duration - MIN_DURATION));
+
+                return S3Credentials
+                    .builder()
+                    .accessKey(credentials.accessKeyId())
+                    .secretKey(credentials.secretAccessKey())
+                    .sessionToken(credentials.sessionToken())
+                    .expiration(exp)
+                    .build();
+            }
+        } catch (StsException e) {
             //error, no recovery
-            log.error("Error with provider {}", e);
+            log.error(
+                "STS AssumeRole failed - Status: {}, Error Code: {}, Message: {}",
+                e.statusCode(),
+                e.awsErrorDetails() != null ? e.awsErrorDetails().errorCode() : "N/A",
+                e.getMessage()
+            );
+            if (log.isDebugEnabled() && e.awsErrorDetails() != null) {
+                log.debug("Full STS error details: {}", e.awsErrorDetails());
+            }
+            throw new StoreException(
+                "Failed to assume role: " +
+                e.getMessage() +
+                (e.awsErrorDetails() != null ? " (" + e.awsErrorDetails().errorCode() + ")" : "")
+            );
+        } catch (Exception e) {
+            //error, no recovery
+            log.error("Error with STS provider: {}", e.getMessage(), e);
             throw new StoreException(e.getMessage());
         }
     }
 
     @Override
     public Credentials get(@NotNull UserAuthentication<?> auth) {
-        if (properties.isEnabled() && cache != null) {
+        if (properties.isAssumeRoleProviderEnabled() && cache != null) {
             //we expect a policy credentials in context
-            MinioPolicy policy = Optional
+            S3PolicyMapping policy = Optional
                 .ofNullable(auth.getCredentials())
                 .map(creds ->
                     creds
                         .stream()
-                        .filter(MinioPolicy.class::isInstance)
-                        .map(c -> (MinioPolicy) c)
+                        .filter(S3PolicyMapping.class::isInstance)
+                        .map(c -> (S3PolicyMapping) c)
                         .findFirst()
                         .orElse(null)
                 )
                 .orElse(null);
 
-            if (policy != null) {
+            if (policy != null && auth.getName() != null) {
                 String username = auth.getName();
                 log.debug("get credentials for user authentication {} from cache", username);
                 try {
-                    Pair<String, MinioPolicy> key = Pair.of(username, policy);
+                    Pair<String, S3PolicyMapping> key = Pair.of(username, policy);
                     S3Credentials credentials = cache.get(key);
                     if (credentials == null) {
                         return null;
@@ -250,38 +261,6 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
                     //error, no recovery
                     log.error("Error with provider {}", e);
                 }
-                // //TODO cache on username+policy for EXPIRE-skew
-                // log.debug("generate credentials for user authentication {} via STS service", auth.getName());
-
-                // try {
-                //     AssumeRoleProvider provider = new AssumeRoleProvider(
-                //         endpointUrl,
-                //         accessKey,
-                //         secretKey,
-                //         defaultDuration,
-                //         policy.getPolicy(),
-                //         region,
-                //         null,
-                //         null,
-                //         null,
-                //         null
-                //     );
-
-                //     io.minio.credentials.Credentials response = provider.fetch();
-
-                //     return S3Credentials
-                //         .builder()
-                //         .accessKey(response.accessKey())
-                //         .secretKey(response.secretKey())
-                //         .sessionToken(response.sessionToken())
-                //         .endpoint(endpointUrl)
-                //         .region(region)
-                //         .signatureVersion("s3v4")
-                //         .build();
-                // } catch (NoSuchAlgorithmException | ProviderException e) {
-                //     //error, no recovery
-                //     log.error("Error with provider {}", e);
-                // }
             }
         }
 
@@ -289,13 +268,8 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
     }
 
     @Override
-    public S3Config getConfig() {
-        return config;
-    }
-
-    @Override
     public <T extends AbstractAuthenticationToken> Credentials process(@NotNull T token) {
-        if (properties.isEnabled()) {
+        if (properties.isAssumeRoleProviderEnabled()) {
             //extract a policy from jwt tokens
             if (token instanceof JwtAuthenticationToken) {
                 //check if role or policy is set
@@ -307,7 +281,7 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
                 String roleArn = StringUtils.hasText(roleArnParam) ? roleArnParam : properties.getRoleArn();
                 String policy = StringUtils.hasText(policyParam) ? policyParam : properties.getPolicy();
 
-                return MinioPolicy.builder().claim(properties.getClaim()).roleArn(roleArn).policy(policy).build();
+                return S3PolicyMapping.builder().claim(properties.getClaim()).roleArn(roleArn).policy(policy).build();
             }
 
             //extract stored policy from bearer
@@ -320,11 +294,11 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
                         Credentials
                     >) ((BearerTokenAuthentication) token).getTokenAttributes().get("credentials");
                 if (credentials != null) {
-                    Optional<MinioPolicy> p = credentials
+                    Optional<S3PolicyMapping> p = credentials
                         .stream()
-                        .filter(c -> c instanceof MinioPolicy)
+                        .filter(c -> c instanceof S3PolicyMapping)
                         .findFirst()
-                        .map(c -> (MinioPolicy) c);
+                        .map(c -> (S3PolicyMapping) c);
                     if (p.isPresent()) {
                         return p.get();
                     }
@@ -332,7 +306,7 @@ public class MinioProvider implements ConfigurationProvider, CredentialsProvider
             }
 
             //fallback to default
-            return MinioPolicy
+            return S3PolicyMapping
                 .builder()
                 .claim(properties.getClaim())
                 .policy(properties.getPolicy())

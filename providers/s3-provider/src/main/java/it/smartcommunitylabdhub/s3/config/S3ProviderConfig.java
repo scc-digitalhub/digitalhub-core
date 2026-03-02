@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.credentials.s3.config;
+package it.smartcommunitylabdhub.s3.config;
 
 import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
-import it.smartcommunitylabdhub.credentials.s3.S3Provider;
 import it.smartcommunitylabdhub.files.service.FilesService;
+import it.smartcommunitylabdhub.s3.S3Provider;
+import it.smartcommunitylabdhub.s3.credentials.S3AssumeRoleProvider;
+import it.smartcommunitylabdhub.s3.credentials.S3StaticProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -34,5 +36,17 @@ public class S3ProviderConfig {
     @ConditionalOnProperty(name = "credentials.provider.s3.enable", havingValue = "true", matchIfMissing = false)
     S3Provider s3Provider(FilesService filesService, S3Properties s3Properties) {
         return new S3Provider(filesService, s3Properties);
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "credentials.provider.s3.enable", havingValue = "true", matchIfMissing = false)
+    S3StaticProvider s3StaticProvider(S3Properties s3Properties) {
+        return new S3StaticProvider(s3Properties);
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "credentials.provider.s3.enable", havingValue = "true", matchIfMissing = false)
+    S3AssumeRoleProvider s3AssumeRoleProvider(S3Properties s3Properties) {
+        return new S3AssumeRoleProvider(s3Properties);
     }
 }

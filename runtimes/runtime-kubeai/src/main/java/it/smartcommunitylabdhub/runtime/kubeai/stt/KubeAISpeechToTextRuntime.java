@@ -34,7 +34,6 @@ import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
-import it.smartcommunitylabdhub.files.provider.S3Credentials;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
 import it.smartcommunitylabdhub.runs.lifecycle.RunState;
@@ -159,13 +158,7 @@ public class KubeAISpeechToTextRuntime
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
         if (auth != null) {
             //get credentials from providers
-            //keep only S3
-            List<Credentials> credentials = credentialsService
-                .getCredentials((UserAuthentication<?>) auth)
-                .stream()
-                .filter(s -> s instanceof S3Credentials)
-                .toList();
-
+            List<Credentials> credentials = credentialsService.getCredentials(auth);
             runnable.setCredentials(credentials);
         }
 
