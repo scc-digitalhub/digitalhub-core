@@ -27,7 +27,6 @@ import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.core.services.BaseEntityServiceImpl;
-import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
 import it.smartcommunitylabdhub.runs.persistence.RunEntity;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
@@ -50,12 +49,5 @@ public class RunEntityServiceImpl extends BaseEntityServiceImpl<Run, RunEntity> 
             dto.setName(name);
         }
         return super.create(dto);
-    }
-
-    @Override
-    protected LifecycleManager<Run> getLifecycleManager() {
-        //disable direct lm access to avoid triggering on externally managed
-        //TODO refactor
-        return null;
     }
 }
