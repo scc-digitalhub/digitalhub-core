@@ -65,8 +65,8 @@ public class TriggerDTOBuilder implements Converter<TriggerEntity, Trigger> {
         Map<String, Serializable> metadata = new HashMap<>();
         metadata.putAll(meta);
 
-        Optional.of(baseMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
-        Optional.of(auditingMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
+        Optional.ofNullable(baseMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
+        Optional.ofNullable(auditingMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
 
         return Trigger
             .builder()
