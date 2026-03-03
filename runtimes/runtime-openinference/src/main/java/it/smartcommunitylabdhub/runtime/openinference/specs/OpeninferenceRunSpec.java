@@ -21,16 +21,13 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.modelserve.specs;
+package it.smartcommunitylabdhub.runtime.openinference.specs;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
-import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
+import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.Map;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -38,29 +35,21 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public class ModelServeRunStatus extends RunBaseStatus {
+public class OpeninferenceRunSpec extends RunBaseSpec {
 
-    private K8sServiceInfo service;
+    @JsonProperty("init_parameters")
+    private Map<String, Serializable> initParameters = new HashMap<>();
 
-    @JsonProperty("inference_v2")
-    private InferenceV2Service inferenceV2;
+    public OpeninferenceRunSpec(Map<String, Serializable> data) {
+        configure(data);
+    }
 
     @Override
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
 
-        ModelServeRunStatus spec = mapper.convertValue(data, ModelServeRunStatus.class);
-        this.service = spec.getService();
-        this.inferenceV2 = spec.getInferenceV2();
-    }
+        OpeninferenceRunSpec spec = mapper.convertValue(data, OpeninferenceRunSpec.class);
 
-    public static ModelServeRunStatus with(Map<String, Serializable> data) {
-        ModelServeRunStatus spec = new ModelServeRunStatus();
-        spec.configure(data);
-
-        return spec;
+        this.initParameters = spec.getInitParameters();
     }
 }

@@ -6,31 +6,31 @@
 
 /*
  * Copyright 2025 the original author or authors.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * 
  * https://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
+ * 
  */
 
-package it.smartcommunitylabdhub.runtime.modelserve.specs;
+package it.smartcommunitylabdhub.runtime.openinference.specs;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
-import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
+import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
+import it.smartcommunitylabdhub.commons.models.task.Task;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
+import it.smartcommunitylabdhub.runtime.openinference.OpeninferenceRuntime;
+
 import java.io.Serializable;
+import java.util.List;
 import java.util.Map;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -38,29 +38,22 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public class ModelServeRunStatus extends RunBaseStatus {
+@SpecType(runtime = OpeninferenceRuntime.RUNTIME, kind = OpeninferenceBuildTaskSpec.KIND, entity = Task.class)
+public class OpeninferenceBuildTaskSpec extends K8sFunctionTaskBaseSpec {
 
-    private K8sServiceInfo service;
+    public static final String KIND = OpeninferenceRuntime.RUNTIME + "+build";
 
-    @JsonProperty("inference_v2")
-    private InferenceV2Service inferenceV2;
+    private List<String> instructions;
+
+    public OpeninferenceBuildTaskSpec(Map<String, Serializable> data) {
+        configure(data);
+    }
 
     @Override
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
 
-        ModelServeRunStatus spec = mapper.convertValue(data, ModelServeRunStatus.class);
-        this.service = spec.getService();
-        this.inferenceV2 = spec.getInferenceV2();
-    }
-
-    public static ModelServeRunStatus with(Map<String, Serializable> data) {
-        ModelServeRunStatus spec = new ModelServeRunStatus();
-        spec.configure(data);
-
-        return spec;
+        OpeninferenceBuildTaskSpec spec = mapper.convertValue(data, OpeninferenceBuildTaskSpec.class);
+        this.instructions = spec.getInstructions();
     }
 }

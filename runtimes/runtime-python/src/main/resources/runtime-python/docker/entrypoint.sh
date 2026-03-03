@@ -20,6 +20,12 @@ usage() {
     echo ""
 }
 
+# Check and fix HOME directory - if not set or pointing to root, use /shared
+if [ -z "${HOME}" ] || [ "${HOME}" = "/" ]; then
+    export HOME=/shared
+    echo "HOME directory not set or pointing to root, setting to /shared"
+fi
+
 config="/etc/nuclio/config/processor/processor.yaml"
 
 # Parse parameters
