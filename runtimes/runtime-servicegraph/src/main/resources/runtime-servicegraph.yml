@@ -1,0 +1,7 @@
+runtime:
+  servicegraph:
+    volume-size: ${RUNTIME_SERVICEGRAPH_VOLUME_SIZE:1Gi}
+    command: ${RUNTIME_SERVICEGRAPH_COMMAND:/app/servicegraph}
+    image: ${RUNTIME_SERVICEGRAPH_IMAGE:ghcr.io/scc-digitalhub/digitalhub-servicegraph:latest}
+    user-id: ${RUNTIME_SERVICEGRAPH_USER_ID:${kubernetes.security.user}}
+    group-id: ${RUNTIME_SERVICEGRAPH_GROUP_ID:${kubernetes.security.group}}
