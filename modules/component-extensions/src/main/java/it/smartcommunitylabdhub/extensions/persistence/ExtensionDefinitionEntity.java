@@ -21,18 +21,14 @@
  *
  */
 
-package it.smartcommunitylabdhub.logs.persistence;
+package it.smartcommunitylabdhub.extensions.persistence;
 
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity;
 import it.smartcommunitylabdhub.core.persistence.MetadataEntity;
 import it.smartcommunitylabdhub.core.persistence.SpecEntity;
 import it.smartcommunitylabdhub.core.persistence.StatusEntity;
-import it.smartcommunitylabdhub.logs.service.LogServiceImpl;
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotNull;
 import java.sql.Types;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -42,23 +38,15 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 @Getter
 @Setter
 @SuperBuilder
+@ToString
 @Entity
-@Table(name = "logs")
-public class LogEntity extends AbstractEntity implements MetadataEntity, SpecEntity, StatusEntity {
-
-    @Column(nullable = false)
-    private String run;
-
-    @Lob
-    @JdbcTypeCode(Types.LONGVARBINARY)
-    @Column(length = LogServiceImpl.MAX_LENGTH)
-    @ToString.Exclude
-    private byte[] content;
+@Table(name = "extensions_definitions")
+public class ExtensionDefinitionEntity extends AbstractEntity implements MetadataEntity, SpecEntity, StatusEntity {
 
     @JdbcTypeCode(Types.LONGVARBINARY)
     @ToString.Exclude
@@ -72,28 +60,15 @@ public class LogEntity extends AbstractEntity implements MetadataEntity, SpecEnt
     @ToString.Exclude
     protected byte[] status;
 
+    private String state;
+
     @Override
-    public @NotNull String getName() {
+    public String getName() {
         return id;
     }
 
     @Override
     public void setName(String name) {
-        //not available
-    }
-
-    @Override
-    public @NotNull String getKind() {
-        return "log";
-    }
-
-    @Override
-    public String getState() {
-        return null;
-    }
-
-    @Override
-    public void setState(String state) {
-        //not available
+        id = name;
     }
 }

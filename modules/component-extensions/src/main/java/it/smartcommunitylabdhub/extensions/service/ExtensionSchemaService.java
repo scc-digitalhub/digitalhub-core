@@ -1,28 +1,42 @@
 package it.smartcommunitylabdhub.extensions.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.schemas.Schema;
+import it.smartcommunitylabdhub.core.services.EntityService;
+import it.smartcommunitylabdhub.core.specs.SchemaImpl;
+import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
 import it.smartcommunitylabdhub.extensions.config.ExtensionsProperties;
-import it.smartcommunitylabdhub.extensions.model.ExtensionSchema;
+import it.smartcommunitylabdhub.extensions.model.Extension;
+import it.smartcommunitylabdhub.extensions.model.ExtensionDefinition;
+import it.smartcommunitylabdhub.extensions.model.ExtensionSpec;
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.Resource;
@@ -33,8 +47,9 @@ import org.springframework.util.StringUtils;
 
 @Service
 @Slf4j
-public class ExtensionSchemaService implements InitializingBean {
+public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
 
+    public static final long CACHE_TIMEOUT = 30; //seconds
     private static final ObjectMapper objectMapper = JacksonMapper.CUSTOM_OBJECT_MAPPER;
     private static final TypeReference<HashMap<String, Serializable>> typeRef = new TypeReference<>() {};
 
@@ -42,10 +57,34 @@ public class ExtensionSchemaService implements InitializingBean {
     private static final String KIND = "kind";
 
     protected ResourceLoader resourceLoader;
-
     private List<String> extensionPaths;
 
-    private Map<String, Schema> schemas = new LinkedHashMap<>();
+    private EntityService<ExtensionDefinition> extensionService;
+
+    //loading cache
+    LoadingCache<String, Schema> extCache = CacheBuilder
+        .newBuilder()
+        .expireAfterWrite(CACHE_TIMEOUT, TimeUnit.SECONDS)
+        .build(
+            new CacheLoader<String, Schema>() {
+                @Override
+                public Schema load(@Nonnull String key) throws Exception {
+                    log.debug("reload schema for {}", key);
+                    ExtensionDefinition ext = extensionService.find(key);
+                    if (ext == null) {
+                        log.warn("extension definition not found for {}", key);
+                        throw new IllegalArgumentException("extension definition not found for " + key);
+                    }
+
+                    return loadSchema(ext);
+                }
+            }
+        );
+
+    @Autowired
+    public void setExtensionService(EntityService<ExtensionDefinition> extensionService) {
+        this.extensionService = extensionService;
+    }
 
     @Autowired
     public void setResourceLoader(ResourceLoader resourceLoader) {
@@ -57,12 +96,51 @@ public class ExtensionSchemaService implements InitializingBean {
         this.extensionPaths = extensionProperties.getPath();
     }
 
-    public Schema getSchema(@NotNull String kind) {
-        if (!schemas.containsKey(kind)) {
-            throw new IllegalArgumentException("no schema found for kind " + kind);
+    @Override
+    public Schema getSchema(String kind) {
+        SpecRegistration reg = registrations.get(kind);
+        if (reg != null) {
+            return reg.schema();
         }
 
-        return schemas.get(kind);
+        try {
+            //check for definition matching the kind
+            return extCache.get(kind);
+        } catch (ExecutionException e) {
+            throw new IllegalArgumentException("no schema found for kind " + kind);
+        }
+    }
+
+    @Override
+    public Collection<Schema> listSchemas() {
+        List<Schema> result = new ArrayList<>();
+        registrations.values().stream().map(e -> e.schema()).forEach(result::add);
+
+        try {
+            //pick from db
+            extensionService
+                .listAll()
+                .stream()
+                .forEach(def -> {
+                    try {
+                        Schema s = loadSchema(def);
+                        extCache.put(def.getId(), s);
+                        result.add(s);
+                    } catch (JsonProcessingException e) {
+                        log.warn("cannot load schema for extension {}: {}", def.getId(), e.getMessage());
+                    }
+                });
+        } catch (StoreException e) {
+            log.error("cannot load extension definitions: {}", e.getMessage());
+        }
+
+        return result;
+    }
+
+    private Schema loadSchema(ExtensionDefinition ext) throws JsonProcessingException {
+        ExtensionSpec spec = ExtensionSpec.from(ext.getSpec());
+        JsonNode schemaNode = objectMapper.readTree(spec.getSchema());
+        return SchemaImpl.builder().entity("extension").kind(ext.getId()).schema(schemaNode).build();
     }
 
     public Set<ValidationMessage> validateSchema(@NotNull String kind, @Nullable Map<String, Serializable> map)
@@ -72,7 +150,7 @@ public class ExtensionSchemaService implements InitializingBean {
             log.trace("map: {}", map);
         }
 
-        if (!schemas.containsKey(kind)) {
+        if (!registrations.containsKey(kind)) {
             log.warn("no schema found for kind {}", kind);
             throw new IllegalArgumentException("no schema found for kind " + kind);
         }
@@ -82,7 +160,7 @@ public class ExtensionSchemaService implements InitializingBean {
         }
 
         // convert schema and build validator
-        Schema schema = schemas.get(kind);
+        Schema schema = getSchema(kind);
         JsonSchema jsonSchema = factory.getSchema(schema.schema());
 
         // convert data and validate
@@ -99,13 +177,13 @@ public class ExtensionSchemaService implements InitializingBean {
      * @return a new map containing only fields defined in the schema
      * @throws IllegalArgumentException if no schema is found for the kind
      */
-    public Map<String, Serializable> createSpec(@NotNull String kind, @Nullable Map<String, Serializable> data) {
+    public Map<String, Serializable> buildSpec(@NotNull String kind, @Nullable Map<String, Serializable> data) {
         log.debug("create spec for kind {}", kind);
         if (log.isTraceEnabled()) {
             log.trace("data: {}", data);
         }
 
-        if (!schemas.containsKey(kind)) {
+        if (!registrations.containsKey(kind)) {
             log.warn("no schema found for kind {}", kind);
             throw new IllegalArgumentException("no schema found for kind " + kind);
         }
@@ -114,7 +192,7 @@ public class ExtensionSchemaService implements InitializingBean {
             return new LinkedHashMap<>();
         }
 
-        Schema schema = schemas.get(kind);
+        Schema schema = getSchema(kind);
         JsonNode schemaNode = schema.schema();
 
         // Convert data to JsonNode for traversal
@@ -185,10 +263,11 @@ public class ExtensionSchemaService implements InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        if (resourceLoader != null && extensionPaths != null) {
-            //flush existing
-            schemas = new LinkedHashMap<>();
+        //let super scan for java-based registrations
+        super.afterPropertiesSet();
 
+        //load from resources
+        if (resourceLoader != null && extensionPaths != null) {
             //load all schemas
             for (String path : extensionPaths) {
                 if (!StringUtils.hasText(path)) {
@@ -201,9 +280,8 @@ public class ExtensionSchemaService implements InitializingBean {
                     JsonNode schemaNode = objectMapper.readTree(schemaContent);
                     String kind = schemaNode.get(KIND).asText();
 
-                    ExtensionSchema schema = ExtensionSchema.builder().kind(kind).schema(schemaNode).build();
-
-                    schemas.put(kind, schema);
+                    SchemaImpl schema = SchemaImpl.builder().entity("extension").kind(kind).schema(schemaNode).build();
+                    registerSpec(kind, schema);
 
                     log.debug("loaded schema for kind {} from {}", kind, path);
                 } catch (IOException e) {

@@ -26,7 +26,12 @@ package it.smartcommunitylabdhub.extensions.config;
 import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
+import it.smartcommunitylabdhub.core.services.BaseEntityServiceImpl;
+import it.smartcommunitylabdhub.core.services.EntityService;
+import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
 import it.smartcommunitylabdhub.extensions.model.Extension;
+import it.smartcommunitylabdhub.extensions.model.ExtensionDefinition;
+import it.smartcommunitylabdhub.extensions.persistence.ExtensionDefinitionEntity;
 import it.smartcommunitylabdhub.extensions.persistence.ExtensionEntity;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -47,5 +52,25 @@ public class ExtensionConfig {
         Converter<ExtensionEntity, Extension> dtoBuilder
     ) {
         return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
+    }
+
+    @Bean
+    SearchableEntityRepository<
+        ExtensionDefinitionEntity,
+        ExtensionDefinition
+    > extensionDefinitionSearchableEntityRepository(JpaRepository<ExtensionDefinitionEntity, String> repository) {
+        return new BaseEntityRepositoryImpl<>(repository) {};
+    }
+
+    @Bean
+    SpecRegistryImpl<ExtensionDefinition> extensionDefinitionSpecRegistry() {
+        return new SpecRegistryImpl<>(ExtensionDefinition.class);
+    }
+
+    @Bean
+    EntityService<ExtensionDefinition> extensionDefinitionEntityService(
+        SearchableEntityRepository<ExtensionDefinitionEntity, ExtensionDefinition> repository
+    ) {
+        return new BaseEntityServiceImpl<ExtensionDefinition, ExtensionDefinitionEntity>() {};
     }
 }

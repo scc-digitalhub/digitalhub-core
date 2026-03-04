@@ -20,6 +20,7 @@ package it.smartcommunitylabdhub.tasks.config;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
+import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
 import it.smartcommunitylabdhub.tasks.persistence.TaskEntity;
 import it.smartcommunitylabdhub.tasks.persistence.TaskRepository;
 import org.springframework.context.annotation.Bean;
@@ -36,5 +37,10 @@ public class TaskConfig {
         Converter<TaskEntity, Task> dtoBuilder
     ) {
         return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
+    }
+
+    @Bean
+    SpecRegistryImpl<Task> taskSpecRegistry() {
+        return new SpecRegistryImpl<>(Task.class);
     }
 }

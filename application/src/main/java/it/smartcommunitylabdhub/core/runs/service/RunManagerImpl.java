@@ -78,7 +78,7 @@ public class RunManagerImpl implements RunManager {
     private EntityRepository<Project> projectService;
 
     @Autowired
-    private SpecRegistry specRegistry;
+    private SpecRegistry<Run> specRegistry;
 
     @Autowired
     private SpecValidator validator;

@@ -1,4 +1,10 @@
 /*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
  * Copyright 2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,22 +21,24 @@
  *
  */
 
-package it.smartcommunitylabdhub.extensions.model;
+package it.smartcommunitylabdhub.core.specs;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonNode;
 import it.smartcommunitylabdhub.commons.models.schemas.Schema;
-import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import java.io.Serializable;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 
 @AllArgsConstructor
 @Builder
-public class ExtensionSchema implements Schema, Serializable {
+public class SchemaImpl implements Schema, Serializable {
 
-    private static final String ENTITY = EntityUtils.getEntityName(Extension.class);
     private final String kind;
+    private final String runtime;
+
+    @JsonIgnore
+    private final String entity;
 
     @JsonIgnore
     private final transient JsonNode schema;
@@ -42,12 +50,12 @@ public class ExtensionSchema implements Schema, Serializable {
 
     @Override
     public String runtime() {
-        return null;
+        return runtime;
     }
 
     @Override
     public String entity() {
-        return ENTITY;
+        return entity;
     }
 
     @Override
