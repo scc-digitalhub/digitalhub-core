@@ -54,6 +54,7 @@ public class RefreshTokenRepository {
     private static final String SELECT_FOR_UPDATE_SQL = "SELECT * FROM refresh_tokens WHERE token = ?";
     private static final String SELECT_USER_SQL =
         "SELECT * FROM refresh_tokens WHERE _user = ? ORDER BY issued_at DESC";
+    private static final String DELETE_FOR_CONSUME_SQL = "DELETE FROM refresh_tokens WHERE token = ?";
     private static final String DELETE_SQL = "DELETE FROM refresh_tokens WHERE id = ?";
     private static final String DELETE_EXPIRED_SQL = "DELETE FROM refresh_tokens WHERE expires_at < ?";
 
@@ -161,7 +162,7 @@ public class RefreshTokenRepository {
             }
 
             //remove
-            jdbcTemplate.update(DELETE_SQL, value);
+            jdbcTemplate.update(DELETE_FOR_CONSUME_SQL, value);
 
             return token;
         } catch (EmptyResultDataAccessException e) {
