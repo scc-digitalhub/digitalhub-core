@@ -86,7 +86,7 @@ public class TaskServiceImpl implements TaskService {
     private SearchableEntityRepository<RunEntity, Run> runService;
 
     @Autowired
-    private SpecRegistry specRegistry;
+    private SpecRegistry<Task> specRegistry;
 
     @Autowired
     private SpecValidator validator;

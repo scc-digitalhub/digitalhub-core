@@ -23,14 +23,15 @@ import it.smartcommunitylabdhub.artifacts.persistence.ArtifactEntity;
 import it.smartcommunitylabdhub.artifacts.persistence.ArtifactRepository;
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
-import it.smartcommunitylabdhub.fsm.Fsm;
-import it.smartcommunitylabdhub.lifecycle.BaseLifecycleManager;
-import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
 import it.smartcommunitylabdhub.core.services.BaseEntityServiceImpl;
 import it.smartcommunitylabdhub.core.services.BaseVersionableEntityServiceImpl;
 import it.smartcommunitylabdhub.core.services.EntityService;
+import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
 import it.smartcommunitylabdhub.extensions.ExtensibleEntityService;
 import it.smartcommunitylabdhub.files.base.BaseFilesService;
+import it.smartcommunitylabdhub.fsm.Fsm;
+import it.smartcommunitylabdhub.lifecycle.BaseLifecycleManager;
+import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
 import it.smartcommunitylabdhub.relationships.BaseRelationshipsAwareEntityService;
 import it.smartcommunitylabdhub.search.base.BaseIndexableEntityService;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
@@ -65,6 +66,11 @@ public class ArtifactConfig {
     EntityService<Artifact> artifactEntityService(SearchableEntityRepository<ArtifactEntity, Artifact> repository) {
         BaseEntityServiceImpl<Artifact, ArtifactEntity> base = new BaseEntityServiceImpl<Artifact, ArtifactEntity>() {};
         return new ExtensibleEntityService<>(base);
+    }
+
+    @Bean
+    SpecRegistryImpl<Artifact> artifactSpecRegistry() {
+        return new SpecRegistryImpl<>(Artifact.class);
     }
 
     @Bean

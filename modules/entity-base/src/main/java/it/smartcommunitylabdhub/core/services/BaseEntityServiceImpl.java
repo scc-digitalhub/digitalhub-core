@@ -82,13 +82,12 @@ public abstract class BaseEntityServiceImpl<
     public static final int PAGE_MAX_SIZE = 1000;
     public static final int DEFAULT_TIMEOUT = 30;
     protected final Class<D> type;
+    protected final Class<E> clazz;
 
     protected SearchableEntityRepository<E, D> repository;
-    protected Converter<D, E> entityBuilder;
-    protected Converter<E, D> dtoBuilder;
 
     protected EntityFinalizer<D> finalizer;
-    protected SpecRegistry specRegistry;
+    protected SpecRegistry<D> specRegistry;
     protected SpecValidator validator;
     protected LifecycleManager<D> lifecycleManager;
     protected Converter<SearchFilter<D>, SearchFilter<E>> filterConverter = new AbstractEntityFilterConverter<>();
@@ -100,40 +99,25 @@ public abstract class BaseEntityServiceImpl<
         // resolve generics type via subclass trick
         Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
         this.type = (Class<D>) t;
+        Type t2 = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+        this.clazz = (Class<E>) t2;
     }
 
     @SuppressWarnings("unchecked")
-    protected BaseEntityServiceImpl(
-        SearchableEntityRepository<E, D> repository,
-        Converter<D, E> entityBuilder,
-        Converter<E, D> dtoBuilder
-    ) {
+    protected BaseEntityServiceImpl(SearchableEntityRepository<E, D> repository) {
         Assert.notNull(repository, "repository can not be null");
-        Assert.notNull(entityBuilder, "entity builder can not be null");
-        Assert.notNull(dtoBuilder, "dto builder can not be null");
-
         this.repository = repository;
-        this.entityBuilder = entityBuilder;
-        this.dtoBuilder = dtoBuilder;
 
         // resolve generics type via subclass trick
         Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
         this.type = (Class<D>) t;
+        Type t2 = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+        this.clazz = (Class<E>) t2;
     }
 
     @Autowired
     public void setRepository(SearchableEntityRepository<E, D> repository) {
         this.repository = repository;
-    }
-
-    @Autowired
-    public void setEntityBuilder(Converter<D, E> entityBuilder) {
-        this.entityBuilder = entityBuilder;
-    }
-
-    @Autowired
-    public void setDtoBuilder(Converter<E, D> dtoBuilder) {
-        this.dtoBuilder = dtoBuilder;
     }
 
     @Autowired(required = false)
@@ -142,7 +126,7 @@ public abstract class BaseEntityServiceImpl<
     }
 
     @Autowired(required = false)
-    public void setSpecRegistry(SpecRegistry specRegistry) {
+    public void setSpecRegistry(SpecRegistry<D> specRegistry) {
         this.specRegistry = specRegistry;
     }
 
@@ -172,8 +156,6 @@ public abstract class BaseEntityServiceImpl<
     @Override
     public void afterPropertiesSet() throws Exception {
         Assert.notNull(repository, "repository can not be null");
-        Assert.notNull(entityBuilder, "entity builder can not be null");
-        Assert.notNull(dtoBuilder, "dto builder can not be null");
         Assert.notNull(filterConverter, "filter converter can not be null");
     }
 
@@ -186,7 +168,7 @@ public abstract class BaseEntityServiceImpl<
         return finalizer;
     }
 
-    protected SpecRegistry getSpecRegistry() {
+    protected SpecRegistry<D> getSpecRegistry() {
         return specRegistry;
     }
 
@@ -328,6 +310,21 @@ public abstract class BaseEntityServiceImpl<
         } else {
             //validate spec if changed
             //TODO diff check to avoid reparsing on same spec
+            if (getSpecRegistry() != null) {
+                // Parse and export Spec
+                Spec spec = getSpecRegistry().createSpec(dto.getKind(), dto.getSpec());
+                if (spec == null) {
+                    throw new IllegalArgumentException("invalid kind");
+                }
+
+                if (getValidator() != null) {
+                    //validate spec
+                    getValidator().validateSpec(spec);
+                }
+
+                //update spec as exported
+                dto.setSpec(spec.toMap());
+            }
         }
 
         if (!curState.equals(nextState) && getLifecycleManager() != null) {

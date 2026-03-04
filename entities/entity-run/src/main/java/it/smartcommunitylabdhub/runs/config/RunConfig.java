@@ -20,6 +20,7 @@ package it.smartcommunitylabdhub.runs.config;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
+import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
 import it.smartcommunitylabdhub.runs.persistence.RunEntity;
 import it.smartcommunitylabdhub.runs.persistence.RunRepository;
 import org.springframework.context.annotation.Bean;
@@ -36,5 +37,10 @@ public class RunConfig {
         Converter<RunEntity, Run> dtoBuilder
     ) {
         return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
+    }
+
+    @Bean
+    SpecRegistryImpl<Run> runSpecRegistry() {
+        return new SpecRegistryImpl<>(Run.class);
     }
 }

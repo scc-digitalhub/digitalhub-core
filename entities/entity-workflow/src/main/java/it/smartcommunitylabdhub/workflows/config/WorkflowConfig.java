@@ -20,6 +20,7 @@ package it.smartcommunitylabdhub.workflows.config;
 import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
+import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
 import it.smartcommunitylabdhub.workflows.persistence.WorkflowEntity;
 import it.smartcommunitylabdhub.workflows.persistence.WorkflowRepository;
@@ -38,6 +39,11 @@ public class WorkflowConfig {
         Converter<WorkflowEntity, Workflow> dtoBuilder
     ) {
         return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
+    }
+
+    @Bean
+    SpecRegistryImpl<Workflow> workflowSpecRegistry() {
+        return new SpecRegistryImpl<>(Workflow.class);
     }
 
     // build indexer only if a provider is available

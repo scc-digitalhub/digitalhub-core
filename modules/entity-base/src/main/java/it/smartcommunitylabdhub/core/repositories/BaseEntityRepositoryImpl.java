@@ -43,6 +43,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.convert.converter.Converter;
@@ -60,21 +61,39 @@ import org.springframework.util.Assert;
 @Slf4j
 @Transactional
 public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends BaseDTO>
-    implements SearchableEntityRepository<E, D> {
+    implements SearchableEntityRepository<E, D>, InitializingBean {
 
     public static final int PAGE_MAX_SIZE = 1000;
     public static final int DEFAULT_TIMEOUT = 30;
     protected final JpaRepository<E, String> repository;
     protected final Class<D> type;
+    protected final Class<E> clazz;
 
-    protected final Converter<D, E> entityBuilder;
-    protected final Converter<E, D> dtoBuilder;
+    protected Converter<D, E> entityBuilder;
+    protected Converter<E, D> dtoBuilder;
 
     private StringKeyGenerator keyGenerator = () -> UUID.randomUUID().toString().replace("-", "");
     private ApplicationEventPublisher eventPublisher;
 
     private Map<String, Pair<ReentrantLock, Instant>> locks = new ConcurrentHashMap<>();
     private int timeout = DEFAULT_TIMEOUT;
+
+    @SuppressWarnings("unchecked")
+    protected BaseEntityRepositoryImpl(JpaRepository<E, String> repository) {
+        Assert.notNull(repository, "repository can not be null");
+        this.repository = repository;
+
+        // resolve generics type via subclass trick
+        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+        this.type = (Class<D>) t;
+        Type t2 = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+        this.clazz = (Class<E>) t2;
+
+        //build generic converters, can be overridden by autowired specific ones
+        MapToCborAttributeConverter converter = new MapToCborAttributeConverter();
+        this.entityBuilder = new BaseEntityBuilder<>(clazz, converter);
+        this.dtoBuilder = new BaseDTOBuilder<>(type, converter);
+    }
 
     @SuppressWarnings("unchecked")
     protected BaseEntityRepositoryImpl(
@@ -93,6 +112,18 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
         // resolve generics type via subclass trick
         Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
         this.type = (Class<D>) t;
+        Type t2 = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+        this.clazz = (Class<E>) t2;
+    }
+
+    @Autowired(required = false)
+    public void setEntityBuilder(Converter<D, E> entityBuilder) {
+        this.entityBuilder = entityBuilder;
+    }
+
+    @Autowired(required = false)
+    public void setDtoBuilder(Converter<E, D> dtoBuilder) {
+        this.dtoBuilder = dtoBuilder;
     }
 
     @Autowired(required = false)
@@ -104,6 +135,13 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
     @Autowired
     public void setEventPublisher(ApplicationEventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        Assert.notNull(repository, "repository can not be null");
+        Assert.notNull(entityBuilder, "entity builder can not be null");
+        Assert.notNull(dtoBuilder, "dto builder can not be null");
     }
 
     @Override

@@ -22,65 +22,32 @@
 
 package it.smartcommunitylabdhub.core.components.infrastructure.specs;
 
-import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.schemas.Schema;
 import it.smartcommunitylabdhub.commons.services.SchemaService;
-import it.smartcommunitylabdhub.commons.utils.ClassPathUtils;
-import it.smartcommunitylabdhub.commons.utils.EntityUtils;
-import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
 @Profile("generate-schemas")
-public class SchemaExportRunner implements CommandLineRunner, ApplicationContextAware {
+public class SchemaExportRunner implements CommandLineRunner {
 
     @Autowired
     ApplicationContext context;
 
     @Autowired
-    SchemaService service;
-
-    private List<String> types = Collections.emptyList();
-    private ApplicationContext applicationContext;
-
-    @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.applicationContext = applicationContext;
-    }
-
-    @PostConstruct
-    public void scanForEntities() {
-        List<String> basePackages = ClassPathUtils.getBasePackages(applicationContext);
-        log.info("Scanning for specDTOs under packages {}", basePackages);
-        Set<Class<? extends BaseDTO>> classes = EntityUtils
-            .scanForEntities(basePackages)
-            .stream()
-            .collect(Collectors.toSet());
-
-        //persist unmodifiable
-        this.types =
-            Collections.unmodifiableList(
-                classes.stream().map(s -> EntityUtils.getEntityName(s).toLowerCase()).toList()
-            );
-    }
+    List<SchemaService<?>> services;
 
     @Override
     public void run(String... args) throws Exception {
@@ -89,11 +56,16 @@ public class SchemaExportRunner implements CommandLineRunner, ApplicationContext
         String path = "specs/";
         int returnCode = 0;
         try {
-            for (String type : types) {
-                String dest = path + type;
-                log.info("exporting specs for {} to {}...", type, dest);
+            for (SchemaService<?> service : services) {
+                log.info("exporting specs for {}...", service);
 
-                for (Schema schema : service.listSchemas(type)) {
+                for (Schema schema : service.listSchemas()) {
+                    if (schema.entity() == null) {
+                        log.warn("skipping schema with null entity: {}", schema);
+                        continue;
+                    }
+                    String type = schema.entity().toLowerCase();
+                    String dest = path + type;
                     String out = dest + "/" + schema.kind() + ".json";
                     Path fp = Paths.get(out);
                     Files.createDirectories(fp.getParent());

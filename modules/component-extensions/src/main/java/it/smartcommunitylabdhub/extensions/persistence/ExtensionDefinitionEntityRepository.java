@@ -21,20 +21,10 @@
  *
  */
 
-package it.smartcommunitylabdhub.commons.services;
+package it.smartcommunitylabdhub.extensions.persistence;
 
-import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
-import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.specs.Spec;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
-import java.io.Serializable;
-import java.util.Map;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
-@Valid
-public interface SpecRegistry<D extends BaseDTO> {
-    Class<D> getType();
-
-    <S extends Spec> S getSpec(@NotNull String kind) throws NoSuchEntityException;
-    <S extends Spec> S createSpec(@NotNull String kind, Map<String, Serializable> data) throws NoSuchEntityException;
-}
+public interface ExtensionDefinitionEntityRepository
+    extends JpaRepository<ExtensionDefinitionEntity, String>, JpaSpecificationExecutor<ExtensionDefinitionEntity> {}
