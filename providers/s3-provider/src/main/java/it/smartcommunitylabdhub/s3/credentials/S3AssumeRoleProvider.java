@@ -86,15 +86,15 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        //set duration to 2x access token duration to ensure we have valid credentials for a full cycle
-        if (accessTokenDuration * 2 > duration || accessTokenDuration * 3 < duration) {
+        //let's make sure duration is bigger than access token to avoid releasing soon to be expired credentials
+        if (accessTokenDuration < (duration + MIN_DURATION)) {
             log.warn(
                 "Configured STS credentials duration {} is not aligned with access token duration {}, adjusting to {}",
                 duration,
                 accessTokenDuration,
-                accessTokenDuration * 2
+                accessTokenDuration + MIN_DURATION
             );
-            duration = accessTokenDuration * 2;
+            duration = accessTokenDuration + MIN_DURATION;
         }
 
         //keep cache shorter than token duration to avoid releasing soon to be expired keys
