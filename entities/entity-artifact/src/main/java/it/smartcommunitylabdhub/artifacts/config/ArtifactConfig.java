@@ -65,6 +65,7 @@ public class ArtifactConfig {
     @Bean
     EntityService<Artifact> artifactEntityService(SearchableEntityRepository<ArtifactEntity, Artifact> repository) {
         BaseEntityServiceImpl<Artifact, ArtifactEntity> base = new BaseEntityServiceImpl<Artifact, ArtifactEntity>() {};
+        base.setRepository(repository);
         return new ExtensibleEntityService<>(base);
     }
 

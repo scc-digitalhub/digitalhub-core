@@ -37,9 +37,6 @@ import it.smartcommunitylabdhub.commons.models.schemas.Schema;
 import it.smartcommunitylabdhub.commons.services.SchemaService;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
-import it.smartcommunitylabdhub.extensions.ExtensionManager;
-import it.smartcommunitylabdhub.extensions.model.Extension;
-import it.smartcommunitylabdhub.extensions.persistence.ExtensionBuilder;
 import it.smartcommunitylabdhub.files.models.DownloadInfo;
 import it.smartcommunitylabdhub.files.models.FileInfo;
 import it.smartcommunitylabdhub.files.models.UploadInfo;
@@ -99,9 +96,6 @@ public class ArtifactContextController {
 
     @Autowired
     RelationshipsAwareEntityService<Artifact> relationshipsService;
-
-    @Autowired
-    ExtensionManager extensionManager;
 
     @Autowired
     SchemaService<Artifact> schemaService;
@@ -388,48 +382,6 @@ public class ArtifactContextController {
         return relationshipsService.getRelationships(id);
     }
 
-    @Operation(summary = "Get extensions for a given artifact, if available")
-    @GetMapping(path = "/{id}/extensions", produces = "application/json; charset=UTF-8")
-    public List<Extension> getArtifactExtensionsById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
-    ) throws NoSuchEntityException {
-        Artifact artifact = artifactManager.getArtifact(id);
-
-        //check for project and name match
-        if (!artifact.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        return extensionManager.listExtensionsByParent(ExtensionBuilder.from(artifact).getParent());
-    }
-
-    @Operation(summary = "Store extensions for a given entity, if available")
-    @PutMapping(path = "/{id}/extensions", produces = "application/json; charset=UTF-8")
-    public void storeExtensionsById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @RequestBody List<Extension> extensions
-    ) throws NoSuchEntityException, IllegalArgumentException, SystemException, BindException {
-        Artifact entity = artifactManager.getArtifact(id);
-
-        //check for project and name match
-        if (!entity.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        if (extensions != null) {
-            //enforce parent+project
-            String parent = ExtensionBuilder.from(entity).getParent();
-
-            for (Extension ext : extensions) {
-                ext.setParent(parent);
-                ext.setProject(entity.getProject());
-                extensionManager.createOrUpdateExtension(ext);
-            }
-        }
-    }
-
     @Operation(
         summary = "List entity schemas",
         description = "Return a list of all the spec schemas available for the given entity"
@@ -440,7 +392,9 @@ public class ArtifactContextController {
         @RequestParam(required = false) Optional<String> runtime,
         Pageable pageable
     ) {
-        Collection<Schema> schemas = schemaService.listSchemas(runtime.orElse(null));
+        Collection<Schema> schemas = runtime.isPresent()
+            ? schemaService.listSchemas(runtime.get())
+            : schemaService.listSchemas();
         PageImpl<Schema> page = new PageImpl<>(new ArrayList<>(schemas), pageable, schemas.size());
 
         return ResponseEntity.ok(page);

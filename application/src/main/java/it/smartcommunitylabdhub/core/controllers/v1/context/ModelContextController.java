@@ -32,8 +32,13 @@ import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.metrics.NumberOrNumberArray;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
+import it.smartcommunitylabdhub.commons.models.schemas.Schema;
+import it.smartcommunitylabdhub.commons.services.SchemaService;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
+import it.smartcommunitylabdhub.extensions.ExtensionManager;
+import it.smartcommunitylabdhub.extensions.model.Extension;
+import it.smartcommunitylabdhub.extensions.persistence.ExtensionBuilder;
 import it.smartcommunitylabdhub.files.models.DownloadInfo;
 import it.smartcommunitylabdhub.files.models.FileInfo;
 import it.smartcommunitylabdhub.files.models.UploadInfo;
@@ -47,19 +52,25 @@ import it.smartcommunitylabdhub.relationships.RelationshipsAwareEntityService;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.SortDefault;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.BindException;
 import org.springframework.validation.annotation.Validated;
@@ -95,6 +106,12 @@ public class ModelContextController {
 
     @Autowired
     MetricsService<Model> metricsService;
+
+    @Autowired
+    ExtensionManager extensionManager;
+
+    @Autowired
+    SchemaService<Model> schemaService;
 
     @Operation(summary = "Create a model in a project context")
     @PostMapping(
@@ -230,7 +247,7 @@ public class ModelContextController {
         return filesService.downloadFileAsUrl(id);
     }
 
-    @Operation(summary = "Get download url for a given artifact file, if available")
+    @Operation(summary = "Get download url for a given model file, if available")
     @GetMapping(path = "/{id}/files/download/**", produces = "application/json; charset=UTF-8")
     public DownloadInfo downloadAsUrlFile(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
@@ -431,5 +448,88 @@ public class ModelContextController {
         }
 
         metricsService.saveMetrics(id, name, data);
+    }
+
+    @Operation(summary = "Get extensions for a given model, if available")
+    @GetMapping(path = "/{id}/extensions", produces = "application/json; charset=UTF-8")
+    public List<Extension> getModelExtensionsById(
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
+    ) throws NoSuchEntityException {
+        Model model = modelManager.getModel(id);
+
+        //check for project and name match
+        if (!model.getProject().equals(project)) {
+            throw new IllegalArgumentException("invalid project");
+        }
+
+        return extensionManager.listExtensionsByParent(ExtensionBuilder.from(model).getParent());
+    }
+
+    @Operation(summary = "Store extensions for a given entity, if available")
+    @PutMapping(path = "/{id}/extensions", produces = "application/json; charset=UTF-8")
+    public void storeExtensionsById(
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
+        @RequestBody List<Extension> extensions
+    ) throws NoSuchEntityException, IllegalArgumentException, SystemException, BindException {
+        Model entity = modelManager.getModel(id);
+
+        //check for project and name match
+        if (!entity.getProject().equals(project)) {
+            throw new IllegalArgumentException("invalid project");
+        }
+
+        if (extensions != null) {
+            //enforce parent+project
+            String parent = ExtensionBuilder.from(entity).getParent();
+            List<Extension> previous = extensionManager.listExtensionsByParent(parent);
+            List<Extension> updated = new ArrayList<>();
+
+            //update or create as defined
+            for (Extension ext : extensions) {
+                ext.setParent(parent);
+                ext.setProject(entity.getProject());
+                Extension e = extensionManager.createOrUpdateExtension(ext);
+                updated.add(e);
+            }
+
+            //delete removed
+            List<Extension> toDelete = previous
+                .stream()
+                .filter(e -> updated.stream().noneMatch(u -> u.getId().equals(e.getId())))
+                .toList();
+            for (Extension ext : toDelete) {
+                extensionManager.deleteExtension(ext.getId());
+            }
+        }
+    }
+
+    @Operation(
+        summary = "List entity schemas",
+        description = "Return a list of all the spec schemas available for the given entity"
+    )
+    @GetMapping(path = "/schemas")
+    public ResponseEntity<Page<Schema>> listModelSchemas(
+        @PathVariable @Valid @NotNull String project,
+        @RequestParam(required = false) Optional<String> runtime,
+        Pageable pageable
+    ) {
+        Collection<Schema> schemas = runtime.isPresent()
+            ? schemaService.listSchemas(runtime.get())
+            : schemaService.listSchemas();
+        PageImpl<Schema> page = new PageImpl<>(new ArrayList<>(schemas), pageable, schemas.size());
+
+        return ResponseEntity.ok(page);
+    }
+
+    @GetMapping(path = "/schemas/{kind}", produces = "application/json; charset=UTF-8")
+    public ResponseEntity<Schema> getModelSchema(
+        @PathVariable @Valid @NotNull String project,
+        @PathVariable @NotBlank String kind
+    ) {
+        Schema schema = schemaService.getSchema(kind);
+
+        return ResponseEntity.ok(schema);
     }
 }

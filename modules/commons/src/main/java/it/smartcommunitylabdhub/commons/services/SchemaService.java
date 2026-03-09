@@ -26,7 +26,6 @@ package it.smartcommunitylabdhub.commons.services;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.schemas.Schema;
-import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import java.util.Collection;
 
@@ -35,5 +34,5 @@ public interface SchemaService<D extends BaseDTO> {
 
     Schema getSchema(@NotNull String kind);
     Collection<Schema> listSchemas() throws NoSuchEntityException;
-    Collection<Schema> listSchemas(@Nullable String runtime) throws NoSuchEntityException;
+    Collection<Schema> listSchemas(@NotNull String runtime) throws NoSuchEntityException;
 }

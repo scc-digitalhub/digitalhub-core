@@ -36,7 +36,7 @@ import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.utils.ClassPathUtils;
 import it.smartcommunitylabdhub.commons.utils.SchemaUtils;
 import it.smartcommunitylabdhub.core.specs.SchemaImpl.SchemaImplBuilder;
-import jakarta.annotation.Nullable;
+import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -287,17 +287,8 @@ public class SpecRegistryImpl<D extends BaseDTO>
     }
 
     @Override
-    public Collection<Schema> listSchemas(@Nullable String runtime) {
-        if (runtime == null) {
-            return listSchemas();
-        } else {
-            return registrations
-                .values()
-                .stream()
-                .filter(e -> runtime.equals(e.runtime()))
-                .map(e -> e.schema())
-                .toList();
-        }
+    public Collection<Schema> listSchemas(@NotNull String runtime) {
+        return registrations.values().stream().filter(e -> runtime.equals(e.runtime())).map(e -> e.schema()).toList();
     }
 
     protected record SpecRegistration(
