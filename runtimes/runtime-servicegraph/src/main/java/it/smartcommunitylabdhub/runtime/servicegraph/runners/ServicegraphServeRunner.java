@@ -45,6 +45,7 @@ import it.smartcommunitylabdhub.runtime.servicegraph.specs.ServicegraphRunSpec;
 import it.smartcommunitylabdhub.runtime.servicegraph.specs.ServicegraphServeRunSpec;
 import it.smartcommunitylabdhub.runtime.servicegraph.specs.ServicegraphServeTaskSpec;
 
+import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -141,6 +142,16 @@ public class ServicegraphServeRunner {
             if (taskAccessor.getFunctionId().equals(latest.getId())) {
                 //prepend with function name
                 serviceNames.add(taskAccessor.getFunction() + "-latest");
+            }
+        }
+
+        if (runSpec.getParameters() != null && !runSpec.getParameters().isEmpty()) {
+            //add parameters as env vars
+            args = new ArrayList<>(args);
+            for (Map.Entry<String, Serializable> entry : runSpec.getParameters().entrySet()) {
+                String key = entry.getKey();
+                String value = String.valueOf(entry.getValue());
+                args.add(key + "=" + value);
             }
         }
 
