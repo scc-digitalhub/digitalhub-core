@@ -15,7 +15,6 @@
     <description>DH Files</description>
 
     <properties>
-        <aws.version>2.25.70</aws.version>
     </properties>
 
     <dependencies>
@@ -47,18 +46,7 @@
             <artifactId>spring-boot-starter-web</artifactId>
             <version>${spring-boot.version}</version>
         </dependency>
-        <!-- <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>bom</artifactId>
-            <version>${aws.version}</version>
-            <type>pom</type>
-            <scope>import</scope>
-        </dependency> -->
-        <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>s3</artifactId>
-            <version>${aws.version}</version>
-        </dependency>
+
 
         <dependency>
             <groupId>org.slf4j</groupId>

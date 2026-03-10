@@ -10,11 +10,12 @@
         <relativePath>../../</relativePath> <!-- lookup parent from repository -->
     </parent>
     <groupId>it.smartcommunitylabdhub</groupId>
-    <artifactId>credentials-provider-s3</artifactId>
-    <name>credentials-provider-s3</name>
-    <description>credentials-provider-s3</description>
+    <artifactId>dh-s3-provider</artifactId>
+    <name>dh-s3-provider</name>
+    <description>dh-s3-provider</description>
 
     <properties>
+        <aws.version>2.42.4</aws.version>
     </properties>
 
     <dependencies>
@@ -34,7 +35,16 @@
             <version>${revision}</version>
         </dependency>
 
-
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>${aws.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sts</artifactId>
+            <version>${aws.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>

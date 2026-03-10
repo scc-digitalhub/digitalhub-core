@@ -402,12 +402,7 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>credentials-provider-minio</artifactId>
-            <version>${revision}</version>
-        </dependency>
-        <dependency>
-            <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>credentials-provider-s3</artifactId>
+            <artifactId>dh-s3-provider</artifactId>
             <version>${revision}</version>
         </dependency>
         <dependency>

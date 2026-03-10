@@ -18,7 +18,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package it.smartcommunitylabdhub.credentials.minio;
+package it.smartcommunitylabdhub.s3.credentials;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -40,7 +40,7 @@ import org.springframework.util.StringUtils;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class MinioPolicy extends AbstractCredentials {
+public class S3PolicyMapping extends AbstractCredentials {
 
     @JsonIgnore
     private String claim;
@@ -83,7 +83,7 @@ public class MinioPolicy extends AbstractCredentials {
         if (this == obj) return true;
         if (obj == null) return false;
         if (getClass() != obj.getClass()) return false;
-        MinioPolicy other = (MinioPolicy) obj;
+        S3PolicyMapping other = (S3PolicyMapping) obj;
 
         if (toMap() == null) {
             return other.toMap() == null;
