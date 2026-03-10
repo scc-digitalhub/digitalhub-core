@@ -1,34 +1,53 @@
-# Use a base image with necessary tools
-FROM alpine:latest
+# --------------------------
+# Minimal Alpine image for builder-tool.sh
+# --------------------------
+FROM alpine:3.18
 
 ARG USER=builder
 ARG USER_ID=1000
 ARG USER_GROUP=builder
 ARG USER_GROUP_ID=1000
 
-# Install dependencies
-RUN apk update && \
-    apk add --no-cache \
+# --------------------------
+# Install essential dependencies + AWS CLI from Alpine repos
+# --------------------------
+RUN apk add --no-cache \
         rsync \
         git \
         curl \
         bash \
-        unzip
+        unzip \
+        tar \
+        gzip \
+        aws-cli \
+    && aws --version
 
-# Install MinIO client (mc)
-RUN curl -sL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/bin/mc && \
-    chmod +x /usr/bin/mc
+# --------------------------
+# Create non-root user
+# --------------------------
+RUN addgroup -g ${USER_GROUP_ID} ${USER_GROUP} && \
+    adduser -D -u ${USER_ID} -G ${USER_GROUP} ${USER}
 
-# create user
-RUN addgroup -g ${USER_GROUP_ID} ${USER_GROUP} && adduser -D -u ${USER_ID} -G ${USER_GROUP} ${USER}
-
-# Set the working directory
+# --------------------------
+# Set working directory
+# --------------------------
 WORKDIR /app
 
-# Copy your bash script and context-refs.txt into the Docker container
-COPY builder-tool.sh .
+# --------------------------
+# Copy builder script and make it world-executable
+# --------------------------
+COPY --chown=${USER_GROUP_ID}:${USER_GROUP_ID} builder-tool.sh /app/builder-tool.sh
 
-# Make the bash script executable
-RUN chmod +x builder-tool.sh
+# Make it executable by any user (for runAsUser with arbitrary UIDs)
+RUN chmod 555 /app/builder-tool.sh && \
+    chmod 755 /app
 
+# --------------------------
+# Run as non-root user
+# --------------------------
 USER ${USER_GROUP_ID}
+
+# --------------------------
+# Set entrypoint to invoke builder-tool.sh
+# --------------------------
+ENTRYPOINT ["/app/builder-tool.sh"]
