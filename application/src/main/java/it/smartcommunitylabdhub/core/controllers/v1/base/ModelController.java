@@ -124,9 +124,10 @@ public class ModelController {
     )
     public Model updateModel(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
+        @RequestParam(required = false) Boolean force,
         @RequestBody @Valid @NotNull Model dto
     ) throws NoSuchEntityException, SystemException, IllegalArgumentException, BindException {
-        return modelManager.updateModel(id, dto);
+        return modelManager.updateModel(id, dto, force != null && force.booleanValue());
     }
 
     @Operation(summary = "Delete a model", description = "Delete a specific model")

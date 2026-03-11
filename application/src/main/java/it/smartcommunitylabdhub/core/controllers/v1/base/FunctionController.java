@@ -124,9 +124,10 @@ public class FunctionController {
     )
     public Function updateFunction(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
+        @RequestParam(required = false) Boolean force,
         @RequestBody @Valid @NotNull Function dto
     ) throws NoSuchEntityException, IllegalArgumentException, SystemException, BindException {
-        return functionManager.updateFunction(id, dto);
+        return functionManager.updateFunction(id, dto, force != null && force.booleanValue());
     }
 
     @Operation(summary = "Delete a function", description = "Delete a specific function, with optional cascade on runs")

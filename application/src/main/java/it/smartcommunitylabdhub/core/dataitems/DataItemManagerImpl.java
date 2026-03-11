@@ -282,6 +282,12 @@ public class DataItemManagerImpl implements DataItemManager {
     @Override
     public DataItem updateDataItem(@NotNull String id, @NotNull DataItem dto)
         throws NoSuchEntityException, IllegalArgumentException, BindException {
+        return updateDataItem(id, dto, false);
+    }
+
+    @Override
+    public DataItem updateDataItem(@NotNull String id, @NotNull DataItem dto, boolean force)
+        throws NoSuchEntityException, IllegalArgumentException, BindException {
         log.debug("update dataItem with id {}", String.valueOf(id));
         try {
             return entityService.update(id, dto);

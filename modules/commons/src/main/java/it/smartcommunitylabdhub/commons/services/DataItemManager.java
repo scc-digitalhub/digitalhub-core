@@ -201,7 +201,8 @@ public interface DataItemManager {
      */
     DataItem updateDataItem(@NotNull String id, @NotNull DataItem dataItemDTO)
         throws NoSuchEntityException, BindException, IllegalArgumentException, SystemException;
-
+    DataItem updateDataItem(@NotNull String id, @NotNull DataItem dataItemDTO, boolean force)
+        throws NoSuchEntityException, BindException, IllegalArgumentException, SystemException;
     /**
      * Delete a specific dataItem (version) via unique ID
      * @param id
