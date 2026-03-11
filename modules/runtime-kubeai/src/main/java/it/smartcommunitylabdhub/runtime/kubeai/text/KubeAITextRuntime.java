@@ -34,7 +34,7 @@ import it.smartcommunitylabdhub.commons.models.base.Executable;
 import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
-import it.smartcommunitylabdhub.files.provider.S3Credentials;
+import it.smartcommunitylabdhub.files.s3.S3Credentials;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
 import it.smartcommunitylabdhub.runtime.kubeai.base.KubeAIRuntime;

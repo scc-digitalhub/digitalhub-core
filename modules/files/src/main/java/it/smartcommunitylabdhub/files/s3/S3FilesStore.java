@@ -28,8 +28,6 @@ import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.files.models.DownloadInfo;
 import it.smartcommunitylabdhub.files.models.FileInfo;
 import it.smartcommunitylabdhub.files.models.UploadInfo;
-import it.smartcommunitylabdhub.files.provider.S3Config;
-import it.smartcommunitylabdhub.files.provider.S3Credentials;
 import it.smartcommunitylabdhub.files.service.FilesStore;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
