@@ -47,6 +47,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
 @Slf4j
+@Transactional
 public class JdbcTriggerJobStore<T extends TriggerJob> implements TriggerJobStore<T> {
 
     private final Class<T> clazz;

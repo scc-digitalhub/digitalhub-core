@@ -35,7 +35,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.stream.Stream;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -100,29 +100,33 @@ public abstract class K8sBaseMonitor<T extends K8sRunnable> implements Runnable 
 
     public void monitor() {
         log.debug("monitor all active...");
-        store
+        //fetch all active runnables and THEN update to detach from repository and avoid lazy loading issues
+        List<T> runnables = store
             .findAll()
             .stream()
             .filter(runnable -> runnable.getState() != null && Arrays.asList(STATES).contains(runnable.getState()))
-            .flatMap(runnable -> {
+            .toList();
+
+        runnables
+            .stream()
+            .forEach(runnable -> {
                 log.debug("monitor run {}", runnable.getId());
 
                 if (log.isTraceEnabled()) {
                     log.trace("runnable: {}", runnable);
                 }
-                return Stream.of(refresh(runnable));
-            })
-            .forEach(runnable -> {
+
+                T refreshed = refresh(runnable);
                 if (log.isTraceEnabled()) {
-                    log.trace("refreshed: {}", runnable);
+                    log.trace("refreshed: {}", refreshed);
                 }
 
                 // Update the runnable
                 try {
-                    log.debug("store run {}", runnable.getId());
-                    store.store(runnable.getId(), runnable);
+                    log.debug("store run {}", refreshed.getId());
+                    store.store(refreshed.getId(), refreshed);
 
-                    publish(runnable);
+                    publish(refreshed);
                 } catch (StoreException e) {
                     log.error("Error with runnable store: {}", e.getMessage());
                 }

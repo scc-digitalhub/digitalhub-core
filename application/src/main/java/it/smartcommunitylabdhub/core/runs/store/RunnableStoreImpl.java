@@ -65,7 +65,7 @@ public class RunnableStoreImpl<T extends RunRunnable> implements RunnableStore<T
     }
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    @Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
     public T find(String id) throws StoreException {
         log.debug("find runnable {} with id {}", clazz.getName(), id);
 
@@ -84,7 +84,7 @@ public class RunnableStoreImpl<T extends RunRunnable> implements RunnableStore<T
     }
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    @Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
     public List<T> findAll() {
         log.debug("find all runnable {}", clazz.getName());
 
@@ -105,7 +105,7 @@ public class RunnableStoreImpl<T extends RunRunnable> implements RunnableStore<T
     }
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = false)
+    @Transactional(propagation = Propagation.REQUIRED, readOnly = false)
     public void store(String id, T e) throws StoreException {
         log.debug("store runnable {} with id {}", clazz.getName(), id);
         try {
@@ -126,7 +126,7 @@ public class RunnableStoreImpl<T extends RunRunnable> implements RunnableStore<T
     }
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = false)
+    @Transactional(propagation = Propagation.REQUIRED, readOnly = false)
     public void remove(String id) throws StoreException {
         log.debug("remove runnable {} with id {}", clazz.getName(), id);
 
