@@ -25,6 +25,7 @@ spring:
     jdbc:
       initialize-schema: always
   jpa:
+    open-in-view: false
     generate-ddl: true
     hibernate:
       ddl-auto: update
@@ -34,6 +35,8 @@ spring:
     password: ${JDBC_PASS:password}
     username: ${JDBC_USER:sa}
     url: ${JDBC_URL:jdbc:h2:file:./data/db}
+    hikari:
+      leak-detection-threshold: 5000  # 5s max        
   quartz:
     job-store-type: jdbc
     jdbc:
