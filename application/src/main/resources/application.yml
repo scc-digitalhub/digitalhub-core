@@ -36,6 +36,7 @@ spring:
     username: ${JDBC_USER:sa}
     url: ${JDBC_URL:jdbc:h2:file:./data/db}
     hikari:
+      maximum-pool-size: 20    
       leak-detection-threshold: 5000  # 5s max        
   quartz:
     job-store-type: jdbc
