@@ -195,6 +195,11 @@ public class GatewayCRManager implements InitializingBean {
         context.clear();
         context.put("schemaName", service.getSchemaName());
         context.put("backendName", backendName);
+        if (service.getSchemaPrefix() != null) {
+            context.put("schemaPrefix", service.getSchemaPrefix());
+        } else {
+            context.put("schemaPrefix", "");
+        }
         K8sCRRunnable aibackendCR = K8sCRRunnable
             .builder()
             .runtime(runtime)
@@ -216,6 +221,11 @@ public class GatewayCRManager implements InitializingBean {
         context.put("aiGatewayName", envoyGwProperties.getAiGateway().getName());
         context.put("modelName", service.getModelName());
         context.put("aiBackendName", aiBackendName);
+        if (service.getSchemaPrefix() != null) {
+            context.put("schemaPrefix", service.getSchemaPrefix());
+        } else {
+            context.put("schemaPrefix", "");
+        }
         K8sCRRunnable aigatewayrouteCR = K8sCRRunnable
             .builder()
             .runtime(runtime)
