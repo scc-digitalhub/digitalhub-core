@@ -1,3 +1,23 @@
+# [0.14.2](https://github.com/scc-digitalhub/digitalhub-core/compare/0.14.1...0.14.0) (2026-03-16)
+
+Maintenance release for 14.x
+
+
+### Bug Fixes
+
+* avoid transaction NEW on async listeners and make sure they execute *after* repository commits ([e3bab00](https://github.com/scc-digitalhub/digitalhub-core/commit/e3bab00dc896d7de330153f8a3fc0cf2a59825ed))
+* disable open-in-view and further detach baseMonitor from runnableStore to early close connections ([9fc723b](https://github.com/scc-digitalhub/digitalhub-core/commit/9fc723b9bffb274af8cca4009a7d8ed7fe42d23c))
+* separate runnablestore from repository to mitigate connection issues ([0857048](https://github.com/scc-digitalhub/digitalhub-core/commit/08570487aeaec75185ccffc75b32e4f8406fd488))
+
+
+### Features
+
+* backport new s3 providers ([748f5bf](https://github.com/scc-digitalhub/digitalhub-core/commit/748f5bf7d562d6287fe24eb1a9d5e111e042c8d0))
+* increment default db pool size ([250c205](https://github.com/scc-digitalhub/digitalhub-core/commit/250c205c7529a7b4efde46479c118ce340255b22))
+* let admin use force update for entitites ([d543753](https://github.com/scc-digitalhub/digitalhub-core/commit/d543753353476452109b9e5f8f0fc1a7109554e8))
+
+
+
 # [0.14.0](https://github.com/scc-digitalhub/digitalhub-core/compare/0.14.0-beta19...0.14.0) (2025-10-24)
 
 ## What's Changed
