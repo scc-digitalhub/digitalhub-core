@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.framework.k8s.model;
+package it.smartcommunitylabdhub.framework.kaniko.infrastructure.processor;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
@@ -39,20 +39,20 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class K8sRunStatus extends RunBaseStatus {
+public class K8sBuildStatus extends RunBaseStatus {
 
-    private Map<String, Serializable> k8s;
+    private String dockerfile;
 
     @Override
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
 
-        K8sRunStatus spec = mapper.convertValue(data, K8sRunStatus.class);
-        this.k8s = spec.getK8s();
+        K8sBuildStatus spec = mapper.convertValue(data, K8sBuildStatus.class);
+        this.dockerfile = spec.getDockerfile();
     }
 
-    public static K8sRunStatus with(Map<String, Serializable> data) {
-        K8sRunStatus spec = new K8sRunStatus();
+    public static K8sBuildStatus with(Map<String, Serializable> data) {
+        K8sBuildStatus spec = new K8sBuildStatus();
         spec.configure(data);
 
         return spec;

@@ -401,7 +401,6 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
         List<V1EnvVar> env = new ArrayList<>(buildEnv(runnable));
         // Add Kaniko specific environment variables
         env.add(new V1EnvVar().name("BUILDKITD_FLAGS").value("--oci-worker-no-process-sandbox"));
-        env.add(new V1EnvVar().name("DOCKER_CONFIG").value("/kaniko/.docker"));
 
         // Volumes to attach to the pod based on the volume spec with the additional volume_type
         List<V1Volume> volumes = new LinkedList<>(buildVolumes(runnable));
@@ -431,9 +430,11 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
             volumeMounts.add(sharedVolumeMount);
         }
 
-        // Add secret for kaniko
+        // Add secret for docker
         // NOTE: we support *only* docker config files
         if (StringUtils.hasText(properties.getSecret())) {
+            env.add(new V1EnvVar().name("DOCKER_CONFIG").value("/buildkit/.docker"));
+
             V1Volume secretVolume = new V1Volume()
                 .name(properties.getSecret())
                 .secret(
@@ -444,7 +445,7 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
 
             V1VolumeMount secretVolumeMount = new V1VolumeMount()
                 .name(properties.getSecret())
-                .mountPath("/kaniko/.docker");
+                .mountPath("/buildkit/.docker");
             volumes.add(secretVolume);
             volumeMounts.add(secretVolumeMount);
         }
@@ -464,10 +465,10 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
         // resources
         V1ResourceRequirements resources = buildResources(runnable);
 
-        List<String> kanikoArgsAll = new ArrayList<>(properties.getArgs());
+        List<String> argsAll = new ArrayList<>(properties.getArgs());
 
         // Add Kaniko args
-        kanikoArgsAll.addAll(
+        argsAll.addAll(
             List.of(
                 "--local",
                 "dockerfile=/init-config-map",
@@ -495,7 +496,7 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
             .command(properties.getCommand())
             .image(properties.getImage())
             .imagePullPolicy("IfNotPresent")
-            .args(kanikoArgsAll)
+            .args(argsAll)
             .resources(resources)
             .volumeMounts(volumeMounts)
             .envFrom(envFrom)
