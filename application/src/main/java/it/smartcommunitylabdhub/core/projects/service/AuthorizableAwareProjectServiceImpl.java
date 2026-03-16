@@ -32,7 +32,6 @@ import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.core.projects.persistence.ProjectEntity;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
-import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.util.Collections;
 import java.util.List;
@@ -42,7 +41,6 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 @Service
-@Transactional
 @Slf4j
 public class AuthorizableAwareProjectServiceImpl implements AuthorizableAwareEntityService<Project> {
 

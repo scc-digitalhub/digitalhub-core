@@ -33,12 +33,11 @@ import it.smartcommunitylabdhub.core.events.EntityEvent;
 import it.smartcommunitylabdhub.core.workflows.persistence.WorkflowEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.event.EventListener;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 @Component
 @Slf4j
@@ -56,8 +55,7 @@ public class WorkflowEntityListener extends AbstractEntityListener<WorkflowEntit
     }
 
     @Async
-    @EventListener
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void receive(EntityEvent<WorkflowEntity> event) {
         if (event.getEntity() == null) {
             return;
