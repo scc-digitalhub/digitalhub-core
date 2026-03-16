@@ -328,13 +328,13 @@ fi
 # --------------------------
 # Set permissions
 # --------------------------
-FILES="$(ls -A "$destination_dir")"
-if [ -n "$FILES" ]; then
-    for f in $FILES; do
-        [ "$f" == "lost+found" ] && continue
-        chmod u=rwxX,g=rwxX -R "$destination_dir/$f"
-    done
-fi
+# Use glob pattern to handle filenames with spaces
+shopt -s dotglob
+for f in "$destination_dir"/*; do
+    [ ! -e "$f" ] && continue
+    [ "$(basename "$f")" == "lost+found" ] && continue
+    chmod u=rwxX,g=rwxX -R "$f"
+done
 
 # --------------------------
 # Final recap
