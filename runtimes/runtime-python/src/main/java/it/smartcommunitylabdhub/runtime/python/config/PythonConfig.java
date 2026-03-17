@@ -24,33 +24,32 @@
 package it.smartcommunitylabdhub.runtime.python.config;
 
 import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
-import java.util.HashMap;
-import java.util.Map;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.PropertySource;
 
 @Configuration
 @PropertySource(value = "classpath:/runtime-python.yml", factory = YamlPropertySourceFactory.class)
 public class PythonConfig {
 
-        @Bean(name = "pythonImages")
-        @ConfigurationProperties(prefix = "runtime.python.images")
-        public Map<String, String> pythonImages() {
-            return new HashMap<>();
-        }
+    @Bean("pythonProperties")
+    @Primary
+    @ConfigurationProperties(prefix = "runtime.python", ignoreUnknownFields = true)
+    public PythonProperties pythonProperties() {
+        return new PythonProperties();
+    }
 
-        @Bean(name = "pythonServerlessImages")
-        @ConfigurationProperties(prefix = "runtime.python.serverless-images")
-        public Map<String, String> pythonServerlessImages() {
-            return new HashMap<>(); 
-        }
+    @Bean("guardrailProperties")
+    @ConfigurationProperties(prefix = "runtime.guardrail", ignoreUnknownFields = true)
+    public PythonProperties guardrailProperties() {
+        return new PythonProperties();
+    }
 
-            @Bean(name = "pythonBaseImages")
-        @ConfigurationProperties(prefix = "runtime.python.base-images")
-        public Map<String, String> pythonBaseImages() {
-            return new HashMap<>(); 
-        }
-
+    @Bean("openinferenceProperties")
+    @ConfigurationProperties(prefix = "runtime.openinference", ignoreUnknownFields = true)
+    public PythonProperties openinferenceProperties() {
+        return new PythonProperties();
+    }
 }

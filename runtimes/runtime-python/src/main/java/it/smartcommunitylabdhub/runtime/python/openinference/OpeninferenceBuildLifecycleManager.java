@@ -14,19 +14,20 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.runtime.python;
+package it.smartcommunitylabdhub.runtime.python.openinference;
 
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
-import it.smartcommunitylabdhub.runtime.python.build.PythonBuildRunSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonRunSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonRunStatus;
+import it.smartcommunitylabdhub.runtime.python.openinference.specs.OpeninferenceBuildRunSpec;
+import it.smartcommunitylabdhub.runtime.python.openinference.specs.OpeninferenceRunSpec;
+import it.smartcommunitylabdhub.runtime.python.openinference.specs.OpeninferenceRunStatus;
 import it.smartcommunitylabdhub.runtimes.lifecycle.RunLifecycleManager;
 
-@RuntimeComponent(runtime = PythonBuildRunSpec.KIND)
-public class PythonBuildLifecycleManager extends RunLifecycleManager<PythonRunSpec, PythonRunStatus, K8sRunnable> {
+@RuntimeComponent(runtime = OpeninferenceBuildRunSpec.KIND)
+public class OpeninferenceBuildLifecycleManager
+    extends RunLifecycleManager<OpeninferenceRunSpec, OpeninferenceRunStatus, K8sRunnable> {
 
-    PythonBuildLifecycleManager(PythonRuntime runtime) {
+    OpeninferenceBuildLifecycleManager(OpeninferenceRuntime runtime) {
         super(runtime);
     }
 }

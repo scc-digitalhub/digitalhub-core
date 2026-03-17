@@ -17,6 +17,58 @@ runtime:
       PYTHON3_13: ${RUNTIME_PYTHON_BASE_IMAGE_3_13:python:3.13-slim}
     user-id: ${RUNTIME_PYTHON_USER_ID:${kubernetes.security.user}}
     group-id: ${RUNTIME_PYTHON_GROUP_ID:${kubernetes.security.group}}
+    home-dir: ${RUNTIME_PYTHON_HOME_DIR:/shared}
     command: /usr/local/bin/processor
+    entrypoint: classpath:/runtime-python/docker/entrypoint.sh
+    passwd-template: classpath:/runtime-python/docker/passwd.template
     dependencies: ${RUNTIME_PYTHON_DEPENDENCIES:digitalhub[full],digitalhub-runtime-python}
     volume-size: ${RUNTIME_PYTHON_VOLUME_SIZE:1Gi}
+  guardrail:
+    images:
+      PYTHON3_10: ${RUNTIME_GUARDRAIL_IMAGE_3_10:${runtime.python.images.PYTHON3_10}}
+      PYTHON3_11: ${RUNTIME_GUARDRAIL_IMAGE_3_11:${runtime.python.images.PYTHON3_11}}
+      PYTHON3_12: ${RUNTIME_GUARDRAIL_IMAGE_3_12:${runtime.python.images.PYTHON3_12}}
+      PYTHON3_13: ${RUNTIME_GUARDRAIL_IMAGE_3_13:${runtime.python.images.PYTHON3_13}}
+    serverless-images:
+      PYTHON3_10: ${RUNTIME_GUARDRAIL_SERVERLESS_IMAGE_3_10:${runtime.python.serverless-images.PYTHON3_10}}
+      PYTHON3_11: ${RUNTIME_GUARDRAIL_SERVERLESS_IMAGE_3_11:${runtime.python.serverless-images.PYTHON3_11}}
+      PYTHON3_12: ${RUNTIME_GUARDRAIL_SERVERLESS_IMAGE_3_12:${runtime.python.serverless-images.PYTHON3_12}}
+      PYTHON3_13: ${RUNTIME_GUARDRAIL_SERVERLESS_IMAGE_3_13:${runtime.python.serverless-images.PYTHON3_13}}
+    base-images:
+      PYTHON3_10: ${RUNTIME_GUARDRAIL_BASE_IMAGE_3_10:${runtime.python.base-images.PYTHON3_10}}
+      PYTHON3_11: ${RUNTIME_GUARDRAIL_BASE_IMAGE_3_11:${runtime.python.base-images.PYTHON3_11}}
+      PYTHON3_12: ${RUNTIME_GUARDRAIL_BASE_IMAGE_3_12:${runtime.python.base-images.PYTHON3_12}}
+      PYTHON3_13: ${RUNTIME_GUARDRAIL_BASE_IMAGE_3_13:${runtime.python.base-images.PYTHON3_13}}
+    user-id: ${RUNTIME_GUARDRAIL_USER_ID:${runtime.python.user-id}}
+    group-id: ${RUNTIME_GUARDRAIL_GROUP_ID:${runtime.python.group-id}}
+    home-dir: ${RUNTIME_GUARDRAIL_HOME_DIR:${runtime.python.home-dir}}
+    command: /usr/local/bin/processor
+    entrypoint: ${runtime.python.entrypoint:classpath:/runtime-python/docker/entrypoint.sh}
+    passwd-template: ${runtime.python.passwd-template:classpath:/runtime-python/docker/passwd.template}
+    dependencies: ${RUNTIME_GUARDRAIL_DEPENDENCIES:digitalhub[full],digitalhub-runtime-guardrail}
+    volume-size: ${RUNTIME_GUARDRAIL_VOLUME_SIZE:${runtime.python.volume-size}}
+  openinference:
+    images:
+      PYTHON3_10: ${RUNTIME_OPENINFERENCE_IMAGE_3_10:${runtime.python.images.PYTHON3_10}}
+      PYTHON3_11: ${RUNTIME_OPENINFERENCE_IMAGE_3_11:${runtime.python.images.PYTHON3_11}}
+      PYTHON3_12: ${RUNTIME_OPENINFERENCE_IMAGE_3_12:${runtime.python.images.PYTHON3_12}}
+      PYTHON3_13: ${RUNTIME_OPENINFERENCE_IMAGE_3_13:${runtime.python.images.PYTHON3_13}}
+    serverless-images:
+      PYTHON3_10: ${RUNTIME_OPENINFERENCE_SERVERLESS_IMAGE_3_10:${runtime.python.serverless-images.PYTHON3_10}}
+      PYTHON3_11: ${RUNTIME_OPENINFERENCE_SERVERLESS_IMAGE_3_11:${runtime.python.serverless-images.PYTHON3_11}}
+      PYTHON3_12: ${RUNTIME_OPENINFERENCE_SERVERLESS_IMAGE_3_12:${runtime.python.serverless-images.PYTHON3_12}}
+      PYTHON3_13: ${RUNTIME_OPENINFERENCE_SERVERLESS_IMAGE_3_13:${runtime.python.serverless-images.PYTHON3_13}}
+    base-images:
+      PYTHON3_10: ${RUNTIME_OPENINFERENCE_BASE_IMAGE_3_10:${runtime.python.base-images.PYTHON3_10}}
+      PYTHON3_11: ${RUNTIME_OPENINFERENCE_BASE_IMAGE_3_11:${runtime.python.base-images.PYTHON3_11}}
+      PYTHON3_12: ${RUNTIME_OPENINFERENCE_BASE_IMAGE_3_12:${runtime.python.base-images.PYTHON3_12}}
+      PYTHON3_13: ${RUNTIME_OPENINFERENCE_BASE_IMAGE_3_13:${runtime.python.base-images.PYTHON3_13}}
+    user-id: ${RUNTIME_OPENINFERENCE_USER_ID:${runtime.python.user-id}}
+    group-id: ${RUNTIME_OPENINFERENCE_GROUP_ID:${runtime.python.group-id}}
+    home-dir: ${RUNTIME_OPENINFERENCE_HOME_DIR:${runtime.python.home-dir}}
+    command: /usr/local/bin/processor
+    entrypoint: ${runtime.python.entrypoint:classpath:/runtime-python/docker/entrypoint.sh}
+    passwd-template: ${runtime.python.passwd-template:classpath:/runtime-python/docker/passwd.template}
+    dependencies: ${RUNTIME_OPENINFERENCE_DEPENDENCIES:digitalhub[full],digitalhub-runtime-openinference}
+    volume-size: ${RUNTIME_OPENINFERENCE_VOLUME_SIZE:${runtime.python.volume-size}}    
+        
