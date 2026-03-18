@@ -46,10 +46,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.StringUtils;
@@ -88,21 +86,13 @@ public class OpeninferenceBuildRunner extends PythonBaseBuildRunner {
         String nuclioFunction = buildNuclioFunction(triggers, null);
         String handler = buildHandler(sourceCode);
 
-        Set<String> fnDependencies = new HashSet<>(dependencies != null ? dependencies : List.of());
-        if (functionSpec.getRequirements() != null) {
-            fnDependencies.addAll(functionSpec.getRequirements());
-        }
+        //requirements
+        List<String> requirements = buildRequirements(baseImage, functionSpec.getRequirements());
 
         //read source and build context
         List<ContextRef> contextRefs = PythonRunnerHelper.createContextRefs(sourceCode);
         List<ContextSource> contextSources = new ArrayList<>(
-            PythonRunnerHelper.createContextSources(
-                entrypoint,
-                handler,
-                nuclioFunction,
-                sourceCode,
-                new ArrayList<>(fnDependencies)
-            )
+            PythonRunnerHelper.createContextSources(entrypoint, handler, nuclioFunction, sourceCode, requirements)
         );
 
         //inject custom passwd to add our user
@@ -116,12 +106,7 @@ public class OpeninferenceBuildRunner extends PythonBaseBuildRunner {
         }
 
         // Generate string docker file
-        String dockerfile = generateDockerfile(
-            pythonVersion,
-            baseImage,
-            new ArrayList<>(fnDependencies),
-            taskSpec.getInstructions()
-        );
+        String dockerfile = generateDockerfile(pythonVersion, baseImage, requirements, taskSpec.getInstructions());
 
         // Parse run spec
         RunSpecAccessor runSpecAccessor = RunSpecAccessor.with(run.getSpec());

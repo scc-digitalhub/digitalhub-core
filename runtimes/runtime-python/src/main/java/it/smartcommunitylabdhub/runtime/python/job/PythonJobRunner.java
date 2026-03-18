@@ -47,10 +47,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 
@@ -83,6 +81,7 @@ public class PythonJobRunner extends PythonBaseRunner {
 
             List<String> args = buildArgs(pythonVersion, baseImage, userImage);
             String image = buildImage(pythonVersion, baseImage, userImage);
+            List<String> requirements = buildRequirements(image, functionSpec.getRequirements());
 
             //fetch source code
             PythonSourceCode sourceCode = functionSpec.getSource();
@@ -98,21 +97,10 @@ public class PythonJobRunner extends PythonBaseRunner {
             String nuclioFunction = buildNuclioFunction(triggers, event);
             String handler = buildHandler(sourceCode);
 
-            Set<String> fnDependencies = new HashSet<>(dependencies != null ? dependencies : List.of());
-            if (functionSpec.getRequirements() != null) {
-                fnDependencies.addAll(functionSpec.getRequirements());
-            }
-
             //read source and build context
             List<ContextRef> contextRefs = PythonRunnerHelper.createContextRefs(sourceCode);
             List<ContextSource> contextSources = new ArrayList<>(
-                PythonRunnerHelper.createContextSources(
-                    entrypoint,
-                    handler,
-                    nuclioFunction,
-                    sourceCode,
-                    new ArrayList<>(fnDependencies)
-                )
+                PythonRunnerHelper.createContextSources(entrypoint, handler, nuclioFunction, sourceCode, requirements)
             );
 
             //inject custom passwd to add our user

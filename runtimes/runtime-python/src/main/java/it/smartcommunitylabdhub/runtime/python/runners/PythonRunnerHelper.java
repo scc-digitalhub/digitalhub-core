@@ -321,7 +321,7 @@ public class PythonRunnerHelper {
     public static List<String> buildEntrypointArgs(
         String processor,
         String uvPath,
-        String commonRequirementsPath,
+        List<String> commonRequirementsPath,
         String wheelPath
     ) {
         List<String> args = new ArrayList<>();
@@ -336,8 +336,8 @@ public class PythonRunnerHelper {
                 "/shared/requirements.txt"
             )
         );
-        if (commonRequirementsPath != null) {
-            args.addAll(List.of("--common_requirements", commonRequirementsPath));
+        if (commonRequirementsPath != null && !commonRequirementsPath.isEmpty()) {
+            args.addAll(List.of("--common_requirements", String.join(",", commonRequirementsPath)));
         }
         if (uvPath != null) {
             args.addAll(List.of("--uv_path", uvPath));

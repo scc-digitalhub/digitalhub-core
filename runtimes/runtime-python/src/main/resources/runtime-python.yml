@@ -18,10 +18,11 @@ runtime:
     user-id: ${RUNTIME_PYTHON_USER_ID:${kubernetes.security.user}}
     group-id: ${RUNTIME_PYTHON_GROUP_ID:${kubernetes.security.group}}
     home-dir: ${RUNTIME_PYTHON_HOME_DIR:/shared}
-    command: /usr/local/bin/processor
+    command: ${RUNTIME_PYTHON_COMMAND:/opt/nuclio/processor}
     entrypoint: classpath:/runtime-python/docker/entrypoint.sh
     passwd-template: classpath:/runtime-python/docker/passwd.template
     dependencies: ${RUNTIME_PYTHON_DEPENDENCIES:digitalhub[full],digitalhub-runtime-python}
+    use-beta-dependencies: ${RUNTIME_PYTHON_USE_BETA_DEPENDENCIES:false}
     volume-size: ${RUNTIME_PYTHON_VOLUME_SIZE:1Gi}
   guardrail:
     images:
@@ -42,10 +43,11 @@ runtime:
     user-id: ${RUNTIME_GUARDRAIL_USER_ID:${runtime.python.user-id}}
     group-id: ${RUNTIME_GUARDRAIL_GROUP_ID:${runtime.python.group-id}}
     home-dir: ${RUNTIME_GUARDRAIL_HOME_DIR:${runtime.python.home-dir}}
-    command: /usr/local/bin/processor
+    command: ${RUNTIME_GUARDRAIL_COMMAND:${runtime.python.command}}
     entrypoint: ${runtime.python.entrypoint:classpath:/runtime-python/docker/entrypoint.sh}
     passwd-template: ${runtime.python.passwd-template:classpath:/runtime-python/docker/passwd.template}
     dependencies: ${RUNTIME_GUARDRAIL_DEPENDENCIES:digitalhub[full],digitalhub-runtime-guardrail}
+    use-beta-dependencies: ${RUNTIME_GUARDRAIL_USE_BETA_DEPENDENCIES:${runtime.python.use-beta-dependencies}}
     volume-size: ${RUNTIME_GUARDRAIL_VOLUME_SIZE:${runtime.python.volume-size}}
   openinference:
     images:
@@ -66,9 +68,10 @@ runtime:
     user-id: ${RUNTIME_OPENINFERENCE_USER_ID:${runtime.python.user-id}}
     group-id: ${RUNTIME_OPENINFERENCE_GROUP_ID:${runtime.python.group-id}}
     home-dir: ${RUNTIME_OPENINFERENCE_HOME_DIR:${runtime.python.home-dir}}
-    command: /usr/local/bin/processor
+    command: ${RUNTIME_OPENINFERENCE_COMMAND:${runtime.python.command}}
     entrypoint: ${runtime.python.entrypoint:classpath:/runtime-python/docker/entrypoint.sh}
     passwd-template: ${runtime.python.passwd-template:classpath:/runtime-python/docker/passwd.template}
     dependencies: ${RUNTIME_OPENINFERENCE_DEPENDENCIES:digitalhub[full],digitalhub-runtime-openinference}
+    use-beta-dependencies: ${RUNTIME_OPENINFERENCE_USE_BETA_DEPENDENCIES:${runtime.python.use-beta-dependencies}}
     volume-size: ${RUNTIME_OPENINFERENCE_VOLUME_SIZE:${runtime.python.volume-size}}    
         

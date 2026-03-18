@@ -78,74 +78,46 @@ public abstract class PythonBaseBuildRunner extends PythonBaseRunner {
         }
 
         // build from layer if user explicitly set base image or no predefined image is set
-        boolean useLayer = StringUtils.hasText(baseImage) || !StringUtils.hasText(image);
-
+        // otherwise we'll build from pre-built
+        boolean useLayer = !fromImage.equals(image);
         if (useLayer) {
-            dockerfileGenerator.copy("--from=" + layerImage + " /opt/nuclio/", "/opt/nuclio/");
-            // TODO uhttpc
-            dockerfileGenerator.copy("--from=" + layerImage + " /opt/nuclio/processor", "/usr/local/bin/");
+            // since we are using a custom base image we need to copy
+            // nuclio and uhttpc binaries and common requirements to the image
 
-            // Copy /shared folder (as workdir)
-            dockerfileGenerator.copy(".", homeDir);
+            // nuclio
+            dockerfileGenerator.copy("--from=" + layerImage + " /opt/nuclio/", "/opt/nuclio/");
+            // uhttpc
+            dockerfileGenerator.copy("--from=nuclio/uhttpc:0.0.1-amd64 /bin/uhttpc", "/usr/local/bin/");
 
             // install common requirements
-            dockerfileGenerator.copy("--from=ghcr.io/astral-sh/uv:latest /uv /uvx", "/bin/");
             dockerfileGenerator.run(
-                "uv pip install --system --no-index --find-links /opt/nuclio/pywhl " +
+                "/opt/nuclio/uv/uv pip install --system --no-index --find-links /opt/nuclio/pywhl " +
+                "-r /opt/nuclio/requirements/nuclio.txt"
+            );
+            dockerfileGenerator.run(
+                "/opt/nuclio/uv/uv pip install --system --no-index --find-links /opt/nuclio/pywhl " +
                 "-r /opt/nuclio/requirements/common.txt"
             );
+        }
 
-            //set workdir from now on
-            dockerfileGenerator.workdir(homeDir);
+        // Copy /shared folder (as workdir)
+        dockerfileGenerator.copy(".", homeDir);
 
-            // Add user instructions
-            // NOTE: we let user run as ROOT as they might need to install packages and dependencies
-            // we will switch to final user at the end of the docker file
-            if (instructions != null) {
-                instructions.forEach(dockerfileGenerator::run);
-            }
+        //set workdir from now on
+        dockerfileGenerator.workdir(homeDir);
 
-            // If requirements.txt are defined add to build
-            // we do it after user instructions as they might install prerequisites
-            if (requirements != null && !requirements.isEmpty()) {
-                // install all requirements
-                dockerfileGenerator.run("uv pip install --system -r " + homeDir + "/requirements.txt");
-            }
-        } else {
-            // Copy toolkit from builder if required
-            if (!fromImage.equals(baseImage)) {
-                dockerfileGenerator.copy("--from=" + image + " /opt/nuclio/", "/opt/nuclio/");
-                dockerfileGenerator.copy(
-                    "--from=" + image + " /usr/local/bin/processor  /usr/local/bin/uhttpc",
-                    "/usr/local/bin/"
-                );
-            }
+        // Add user instructions
+        // NOTE: we let user run as ROOT as they might need to install packages and dependencies
+        // we will switch to final user at the end of the docker file
+        if (instructions != null) {
+            instructions.forEach(dockerfileGenerator::run);
+        }
 
-            // Copy /shared folder (as workdir)
-            dockerfileGenerator.copy(".", homeDir);
-
+        // If requirements.txt are defined add to build
+        // we do it after user instructions as they might install prerequisites
+        if (requirements != null && !requirements.isEmpty()) {
             // install all requirements
-            dockerfileGenerator.run(
-                "python /opt/nuclio/whl/$(basename /opt/nuclio/whl/pip-*.whl)/pip install pip " +
-                "--no-index --find-links /opt/nuclio/whl " +
-                "&& python -m pip install -r /opt/nuclio/requirements/common.txt"
-            );
-
-            //set workdir from now on
-            dockerfileGenerator.workdir(homeDir);
-
-            // Add user instructions
-            if (instructions != null) {
-                instructions.forEach(dockerfileGenerator::run);
-            }
-
-            // If requirements.txt are defined add to build
-            // we do it after user instructions as they might install prerequisites
-
-            if (requirements != null && !requirements.isEmpty()) {
-                // install all requirements
-                dockerfileGenerator.run("python -m pip install -r " + homeDir + "/requirements.txt");
-            }
+            dockerfileGenerator.run("/opt/nuclio/uv/uv pip install --system -r " + homeDir + "/requirements.txt");
         }
 
         //switch to final user

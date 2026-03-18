@@ -50,9 +50,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.Resource;
@@ -227,10 +229,10 @@ public abstract class PythonBaseRunner {
         if (useLayer(pythonVersion, baseImage, userImage)) {
             args.addAll(
                 PythonRunnerHelper.buildEntrypointArgs(
-                    "/opt/nuclio/processor",
+                    command,
                     "/opt/nuclio/uv/uv",
-                    "/opt/nuclio/requirements/common.txt",
-                    "/opt/nuclio/pywhl"
+                    List.of("/opt/nuclio/requirements/nuclio.txt", "/opt/nuclio/requirements/common.txt"),
+                    "/opt/nuclio/whl"
                 )
             );
         } else {
@@ -254,6 +256,30 @@ public abstract class PythonBaseRunner {
         }
 
         return coreVolumes;
+    }
+
+    protected List<String> buildRequirements(String image, @Nullable List<String> functionRequirements) {
+        Set<String> reqs = new HashSet<>();
+        if (dependencies != null && !dependencies.isEmpty()) {
+            if (images.containsValue(image)) {
+                //prebuild images already contain dependencies, no need to add them again
+                log.debug("Skip adding runtime dependencies to pre-build images");
+            } else {
+                log.debug("Adding runtime dependencies {} to custom image {}", dependencies, image);
+                reqs.addAll(dependencies);
+            }
+        }
+
+        if (functionRequirements != null) {
+            log.debug("Adding function dependencies to custom image {}", image);
+            reqs.addAll(functionRequirements);
+        }
+
+        if (log.isTraceEnabled()) {
+            log.trace("Requirements for image {}: {}", image, reqs);
+        }
+
+        return new ArrayList<>(reqs);
     }
 
     protected String buildImage(String pythonVersion, @Nullable String baseImage, @Nullable String userImage) {
