@@ -47,6 +47,7 @@ public class ExtensionEntityBuilder implements Converter<Extension, ExtensionEnt
         return ExtensionEntity
             .builder()
             .id(dto.getId())
+            .entity(dto.getEntity())
             .project(dto.getProject())
             .parent(dto.getParent())
             .name(dto.getName())

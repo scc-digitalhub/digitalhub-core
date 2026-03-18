@@ -63,7 +63,7 @@ import org.springframework.validation.annotation.Validated;
 
 @Slf4j
 @Validated
-public class SpecRegistryImpl<D extends BaseDTO>
+public class SpecRegistryImpl<D>
     implements SpecRegistry<D>, SchemaService<D>, ApplicationContextAware, InitializingBean {
 
     protected final Class<D> type;

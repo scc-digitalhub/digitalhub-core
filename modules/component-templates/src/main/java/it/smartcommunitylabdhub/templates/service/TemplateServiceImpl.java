@@ -122,7 +122,18 @@ public class TemplateServiceImpl implements SearchableTemplateService, Initializ
         this.specRegistries =
             specRegistries
                 .stream()
-                .collect(Collectors.toMap(r -> EntityUtils.getEntityName(r.getType()).toLowerCase(), r -> r));
+                .collect(
+                    Collectors.toMap(
+                        r -> {
+                            if (BaseDTO.class.isAssignableFrom(r.getType())) {
+                                return EntityUtils.getEntityName((Class<? extends BaseDTO>) r.getType()).toLowerCase();
+                            }
+
+                            return r.getType().getSimpleName().toLowerCase();
+                        },
+                        r -> r
+                    )
+                );
     }
 
     @PostConstruct

@@ -41,12 +41,15 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.lang.Nullable;
+import org.springframework.security.crypto.keygen.StringKeyGenerator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
@@ -59,6 +62,7 @@ import org.springframework.validation.BindException;
 public class ExtensionServiceImpl implements EntityService<Extension>, ExtensionManager {
 
     private final SearchableEntityRepository<ExtensionEntity, Extension> entityRepository;
+    protected StringKeyGenerator nameGenerator = () -> UUID.randomUUID().toString().replace("-", "");
 
     private ExtensionSchemaService schemaService;
 
@@ -71,6 +75,12 @@ public class ExtensionServiceImpl implements EntityService<Extension>, Extension
     @Autowired
     public void setSchemaService(ExtensionSchemaService schemaService) {
         this.schemaService = schemaService;
+    }
+
+    @Autowired(required = false)
+    @Qualifier("namesGenerator")
+    public void setNameGenerator(StringKeyGenerator nameGenerator) {
+        this.nameGenerator = nameGenerator;
     }
 
     @Override
@@ -376,10 +386,14 @@ public class ExtensionServiceImpl implements EntityService<Extension>, Extension
             throw new IllegalArgumentException("invalid or missing parent");
         }
 
+        if (!StringUtils.hasText(dto.getName())) {
+            dto.setName(nameGenerator.generateKey());
+        }
+
         if (schemaService != null) {
             try {
                 // Parse and validate spec
-                Map<String, Serializable> data = schemaService.createSpec(dto.getKind(), dto.getSpec());
+                Map<String, Serializable> data = schemaService.buildSpec(dto.getKind(), dto.getSpec());
                 Set<ValidationMessage> errors = schemaService.validateSchema(dto.getKind(), data);
                 if (!errors.isEmpty()) {
                     BindException bindException = new BindException(dto, "Extension");
@@ -424,7 +438,7 @@ public class ExtensionServiceImpl implements EntityService<Extension>, Extension
         if (schemaService != null) {
             try {
                 // Parse and validate spec
-                Map<String, Serializable> data = schemaService.createSpec(dto.getKind(), dto.getSpec());
+                Map<String, Serializable> data = schemaService.buildSpec(dto.getKind(), dto.getSpec());
                 Set<ValidationMessage> errors = schemaService.validateSchema(dto.getKind(), data);
                 if (!errors.isEmpty()) {
                     BindException bindException = new BindException(dto, "Extension");

@@ -48,6 +48,7 @@ public class ExtensionBuilder implements Converter<ExtensionEntity, Extension> {
         return Extension
             .builder()
             .id(entity.getId())
+            .entity(entity.getEntity())
             .project(entity.getProject())
             .parent(entity.getParent())
             .name(entity.getName())
@@ -63,13 +64,6 @@ public class ExtensionBuilder implements Converter<ExtensionEntity, Extension> {
         sb.append(dto.getName()).append(":").append(dto.getId());
         String parent = sb.toString();
 
-        return Extension
-            .builder()
-            .id(dto.getId())
-            .project(dto.getProject())
-            .parent(parent)
-            .name(dto.getName())
-            .kind(dto.getKind())
-            .build();
+        return Extension.builder().project(dto.getProject()).parent(parent).build();
     }
 }

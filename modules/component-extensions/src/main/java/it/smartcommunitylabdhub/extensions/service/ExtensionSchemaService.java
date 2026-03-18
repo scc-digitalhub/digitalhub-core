@@ -14,6 +14,7 @@ import com.networknt.schema.ValidationMessage;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.schemas.Schema;
+import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.core.services.EntityService;
 import it.smartcommunitylabdhub.core.specs.SchemaImpl;
 import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
@@ -38,9 +39,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -55,8 +55,9 @@ public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
 
     private static final JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
     private static final String KIND = "kind";
+    private static final String SCHEMA = "schema";
 
-    protected ResourceLoader resourceLoader;
+    protected ResourcePatternResolver resourceLoader;
     private List<String> extensionPaths;
 
     private EntityService<ExtensionDefinition> extensionService;
@@ -87,7 +88,7 @@ public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
     }
 
     @Autowired
-    public void setResourceLoader(ResourceLoader resourceLoader) {
+    public void setResourceLoader(ResourcePatternResolver resourceLoader) {
         this.resourceLoader = resourceLoader;
     }
 
@@ -254,13 +255,6 @@ public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
         return prunedObject;
     }
 
-    private String loadSchemaResource(@NonNull String path) throws IOException {
-        DefaultResourceLoader loader = new DefaultResourceLoader();
-        Resource entrypoint = loader.getResource(path);
-
-        return entrypoint.getContentAsString(StandardCharsets.UTF_8);
-    }
-
     @Override
     public void afterPropertiesSet() throws Exception {
         //let super scan for java-based registrations
@@ -274,20 +268,37 @@ public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
                     continue;
                 }
 
-                log.debug("loading extension schema from {}", path);
-                try {
-                    String schemaContent = loadSchemaResource(path);
-                    JsonNode schemaNode = objectMapper.readTree(schemaContent);
-                    String kind = schemaNode.get(KIND).asText();
-
-                    SchemaImpl schema = SchemaImpl.builder().entity("extension").kind(kind).schema(schemaNode).build();
-                    registerSpec(kind, schema);
-
-                    log.debug("loaded schema for kind {} from {}", kind, path);
-                } catch (IOException e) {
-                    log.error("cannot load extension schema from {}: {}", path, e.getMessage());
+                if (!path.endsWith(".json")) {
+                    //list all resources in the folder
+                    Resource[] resources = resourceLoader.getResources(path + "*.json");
+                    for (Resource res : resources) {
+                        loadFromResource(res.getURI().toString());
+                    }
+                } else {
+                    loadFromResource(path);
                 }
             }
+        }
+    }
+
+    private void loadFromResource(String path) throws IOException {
+        log.debug("loading extension schema from {}", path);
+        try {
+            Resource res = resourceLoader.getResource(path);
+            JsonNode schemaNode = objectMapper.readTree(res.getContentAsString(StandardCharsets.UTF_8));
+            String kind = schemaNode.get(KIND).asText();
+
+            SchemaImpl schema = SchemaImpl
+                .builder()
+                .entity("extension")
+                .kind(kind)
+                .schema(schemaNode.get(SCHEMA))
+                .build();
+            registerSpec(kind, schema);
+
+            log.debug("loaded schema for kind {} from {}", kind, path);
+        } catch (IOException e) {
+            log.error("cannot load extension schema from {}: {}", path, e.getMessage());
         }
     }
 }

@@ -58,12 +58,25 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Schema context API", description = "Endpoints related to spec schemas")
 public class SchemaContextController {
 
-    private Map<String, SchemaService<? extends BaseDTO>> services;
+    private Map<String, SchemaService<?>> services;
 
     @Autowired
-    public void setServices(List<SchemaService<? extends BaseDTO>> services) {
+    public void setServices(List<SchemaService<?>> services) {
         this.services =
-            services.stream().collect(Collectors.toMap(s -> EntityUtils.getEntityName(s.getType()), s -> s));
+            services
+                .stream()
+                .collect(
+                    Collectors.toMap(
+                        r -> {
+                            if (BaseDTO.class.isAssignableFrom(r.getType())) {
+                                return EntityUtils.getEntityName((Class<? extends BaseDTO>) r.getType()).toLowerCase();
+                            }
+
+                            return r.getType().getSimpleName().toLowerCase();
+                        },
+                        r -> r
+                    )
+                );
     }
 
     @Operation(
@@ -77,7 +90,7 @@ public class SchemaContextController {
         @RequestParam(required = false) Optional<String> runtime,
         Pageable pageable
     ) {
-        SchemaService<? extends BaseDTO> service = services.get(entity);
+        SchemaService<?> service = services.get(entity);
         if (service == null) {
             return ResponseEntity.notFound().build();
         }
@@ -98,7 +111,7 @@ public class SchemaContextController {
         @PathVariable @Valid @NotNull String entity,
         @PathVariable @NotBlank String kind
     ) {
-        SchemaService<? extends BaseDTO> service = services.get(entity);
+        SchemaService<?> service = services.get(entity);
         if (service == null) {
             return ResponseEntity.notFound().build();
         }

@@ -32,7 +32,7 @@ import java.io.Serializable;
 import java.util.Map;
 
 @Valid
-public interface SpecRegistry<D extends BaseDTO> {
+public interface SpecRegistry<D> {
     Class<D> getType();
 
     <S extends Spec> S getSpec(@NotNull String kind) throws NoSuchEntityException;

@@ -29,7 +29,7 @@ import it.smartcommunitylabdhub.commons.models.schemas.Schema;
 import jakarta.validation.constraints.NotNull;
 import java.util.Collection;
 
-public interface SchemaService<D extends BaseDTO> {
+public interface SchemaService<D> {
     Class<D> getType();
 
     Schema getSchema(@NotNull String kind);
