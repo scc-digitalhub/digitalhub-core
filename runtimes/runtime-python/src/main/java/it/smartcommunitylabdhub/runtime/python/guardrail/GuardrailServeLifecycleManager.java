@@ -14,19 +14,18 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.runtime.python;
+package it.smartcommunitylabdhub.runtime.python.guardrail;
 
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
-import it.smartcommunitylabdhub.runtime.python.build.PythonBuildRunSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonRunSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonRunStatus;
+import it.smartcommunitylabdhub.runtime.python.guardrail.specs.GuardrailRunSpec;
+import it.smartcommunitylabdhub.runtime.python.guardrail.specs.GuardrailRunStatus;
+import it.smartcommunitylabdhub.runtime.python.guardrail.specs.GuardrailServeRunSpec;
 import it.smartcommunitylabdhub.runtimes.lifecycle.RunLifecycleManager;
 
-@RuntimeComponent(runtime = PythonBuildRunSpec.KIND)
-public class PythonBuildLifecycleManager extends RunLifecycleManager<PythonRunSpec, PythonRunStatus, K8sRunnable> {
-
-    PythonBuildLifecycleManager(PythonRuntime runtime) {
+@RuntimeComponent(runtime = GuardrailServeRunSpec.KIND)
+public class GuardrailServeLifecycleManager extends RunLifecycleManager<GuardrailRunSpec, GuardrailRunStatus, K8sRunnable> {
+    GuardrailServeLifecycleManager(GuardrailRuntime runtime) {
         super(runtime);
     }
 }

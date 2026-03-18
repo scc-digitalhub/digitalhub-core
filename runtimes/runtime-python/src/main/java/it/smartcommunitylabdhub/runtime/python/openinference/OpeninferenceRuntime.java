@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.python;
+package it.smartcommunitylabdhub.runtime.python.openinference;
 
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.CredentialsService;
@@ -33,38 +33,35 @@ import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.run.Run;
-import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
+import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
 import it.smartcommunitylabdhub.functions.FunctionManager;
-import it.smartcommunitylabdhub.relationships.RelationshipDetail;
-import it.smartcommunitylabdhub.relationships.RelationshipName;
-import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
-import it.smartcommunitylabdhub.runtime.python.build.PythonBuildRunSpec;
-import it.smartcommunitylabdhub.runtime.python.build.PythonBuildRunner;
-import it.smartcommunitylabdhub.runtime.python.build.PythonBuildTaskSpec;
 import it.smartcommunitylabdhub.runtime.python.config.PythonProperties;
-import it.smartcommunitylabdhub.runtime.python.job.PythonJobRunSpec;
-import it.smartcommunitylabdhub.runtime.python.job.PythonJobRunner;
-import it.smartcommunitylabdhub.runtime.python.job.PythonJobTaskSpec;
-import it.smartcommunitylabdhub.runtime.python.serve.PythonServeRunSpec;
-import it.smartcommunitylabdhub.runtime.python.serve.PythonServeRunner;
-import it.smartcommunitylabdhub.runtime.python.serve.PythonServeTaskSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonFunctionSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonRunSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonRunStatus;
+import it.smartcommunitylabdhub.runtime.python.openinference.model.InferenceV2Service;
+import it.smartcommunitylabdhub.runtime.python.openinference.runners.OpeninferenceBuildRunner;
+import it.smartcommunitylabdhub.runtime.python.openinference.runners.OpeninferenceServeRunner;
+import it.smartcommunitylabdhub.runtime.python.openinference.specs.OpeninferenceBuildRunSpec;
+import it.smartcommunitylabdhub.runtime.python.openinference.specs.OpeninferenceBuildTaskSpec;
+import it.smartcommunitylabdhub.runtime.python.openinference.specs.OpeninferenceFunctionSpec;
+import it.smartcommunitylabdhub.runtime.python.openinference.specs.OpeninferenceRunSpec;
+import it.smartcommunitylabdhub.runtime.python.openinference.specs.OpeninferenceRunStatus;
+import it.smartcommunitylabdhub.runtime.python.openinference.specs.OpeninferenceServeRunSpec;
+import it.smartcommunitylabdhub.runtime.python.openinference.specs.OpeninferenceServeTaskSpec;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -72,23 +69,24 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.util.Assert;
 
 @Slf4j
-@RuntimeComponent(runtime = PythonRuntime.RUNTIME)
-public class PythonRuntime
-    extends K8sFunctionBaseRuntime<PythonFunctionSpec, PythonRunSpec, PythonRunStatus, K8sRunnable>
+@RuntimeComponent(runtime = OpeninferenceRuntime.RUNTIME)
+public class OpeninferenceRuntime
+    extends K8sFunctionBaseRuntime<OpeninferenceFunctionSpec, OpeninferenceRunSpec, OpeninferenceRunStatus, K8sRunnable>
     implements InitializingBean {
 
-    public static final String RUNTIME = "python";
-    public static final String[] KINDS = { PythonJobRunSpec.KIND, PythonServeRunSpec.KIND, PythonBuildRunSpec.KIND };
-
+    public static final int HTTP_PORT = 8080;
+    public static final int GRPC_PORT = 9000;
     public static final int UID = 8877;
     public static final int GID = 999;
-    public static final String HOME_DIR = "/shared";
+    public static final String HOME_DIR = "/home/openinference";
+
+    public static final String RUNTIME = "openinference";
+    public static final String[] KINDS = { OpeninferenceServeRunSpec.KIND, OpeninferenceBuildRunSpec.KIND };
 
     private final PythonProperties properties;
 
-    private PythonBuildRunner buildRunner;
-    private PythonJobRunner jobRunner;
-    private PythonServeRunner serveRunner;
+    private OpeninferenceBuildRunner buildRunner;
+    private OpeninferenceServeRunner serveRunner;
 
     @Autowired
     private SecretService secretService;
@@ -102,31 +100,29 @@ public class PythonRuntime
     @Autowired
     private ConfigurationService configurationService;
 
-    public PythonRuntime(@Qualifier("pythonProperties") PythonProperties properties) {
+    public OpeninferenceRuntime(@Qualifier("openinferenceProperties") PythonProperties properties) {
         Assert.notNull(properties, "properties are required");
         this.properties = properties;
     }
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        this.buildRunner = new PythonBuildRunner(properties, k8sBuilderHelper);
-        this.jobRunner = new PythonJobRunner(properties, k8sBuilderHelper);
-        this.serveRunner = new PythonServeRunner(properties, k8sBuilderHelper, functionService);
+        this.buildRunner = new OpeninferenceBuildRunner(properties, k8sBuilderHelper);
+        this.serveRunner = new OpeninferenceServeRunner(properties, k8sBuilderHelper, functionService);
     }
 
     @Override
-    public PythonRunSpec build(@NotNull Function function, @NotNull Task task, @NotNull Run run) {
+    public OpeninferenceRunSpec build(@NotNull Function function, @NotNull Task task, @NotNull Run run) {
         //check run kind
         if (!isSupported(run)) {
             throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
         }
 
-        PythonFunctionSpec funSpec = new PythonFunctionSpec(function.getSpec());
-        PythonRunSpec runSpec =
+        OpeninferenceFunctionSpec funSpec = new OpeninferenceFunctionSpec(function.getSpec());
+        OpeninferenceRunSpec runSpec =
             switch (run.getKind()) {
-                case PythonJobRunSpec.KIND -> new PythonJobRunSpec(run.getSpec());
-                case PythonServeRunSpec.KIND -> new PythonServeRunSpec(run.getSpec());
-                case PythonBuildRunSpec.KIND -> new PythonBuildRunSpec(run.getSpec());
+                case OpeninferenceServeRunSpec.KIND -> new OpeninferenceServeRunSpec(run.getSpec());
+                case OpeninferenceBuildRunSpec.KIND -> new OpeninferenceBuildRunSpec(run.getSpec());
                 default -> throw new IllegalArgumentException(
                     "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
                 );
@@ -135,14 +131,11 @@ public class PythonRuntime
         //build task spec as defined
         Map<String, Serializable> taskSpec =
             switch (task.getKind()) {
-                case PythonJobTaskSpec.KIND -> {
-                    yield new PythonJobTaskSpec(task.getSpec()).toMap();
+                case OpeninferenceServeTaskSpec.KIND -> {
+                    yield new OpeninferenceServeTaskSpec(task.getSpec()).toMap();
                 }
-                case PythonServeTaskSpec.KIND -> {
-                    yield new PythonServeTaskSpec(task.getSpec()).toMap();
-                }
-                case PythonBuildTaskSpec.KIND -> {
-                    yield new PythonBuildTaskSpec(task.getSpec()).toMap();
+                case OpeninferenceBuildTaskSpec.KIND -> {
+                    yield new OpeninferenceBuildTaskSpec(task.getSpec()).toMap();
                 }
                 default -> throw new IllegalArgumentException(
                     "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
@@ -163,38 +156,6 @@ public class PythonRuntime
     }
 
     @Override
-    public Spec onBuilt(@NotNull Run run) {
-        //build lineage from inputs when needed
-        PythonRunSpec runSpec = new PythonRunSpec(run.getSpec());
-        if (runSpec.getInputs() != null && !runSpec.getInputs().isEmpty()) {
-            RelationshipsMetadata lineage = RelationshipsMetadata.from(run.getMetadata());
-            List<RelationshipDetail> rels = lineage.getRelationships() != null
-                ? new ArrayList<>(lineage.getRelationships())
-                : new ArrayList<>();
-
-            runSpec
-                .getInputs()
-                .forEach((name, input) -> {
-                    if (
-                        rels
-                            .stream()
-                            .noneMatch(r -> r.getType() == RelationshipName.CONSUMES && r.getDest().equals(input))
-                    ) {
-                        //build key
-                        RelationshipDetail dr = new RelationshipDetail(RelationshipName.CONSUMES, run.getKey(), input);
-                        rels.add(dr);
-                    }
-                });
-
-            lineage.setRelationships(rels);
-
-            return lineage;
-        }
-
-        return null;
-    }
-
-    @Override
     public K8sRunnable run(@NotNull Run run) {
         //check run kind
         if (!isSupported(run)) {
@@ -211,9 +172,8 @@ public class PythonRuntime
 
         K8sRunnable runnable =
             switch (runAccessor.getTask()) {
-                case PythonJobTaskSpec.KIND -> jobRunner.produce(run, secrets);
-                case PythonServeTaskSpec.KIND -> serveRunner.produce(run, secrets);
-                case PythonBuildTaskSpec.KIND -> buildRunner.produce(run, secrets);
+                case OpeninferenceServeTaskSpec.KIND -> serveRunner.produce(run, secrets);
+                case OpeninferenceBuildTaskSpec.KIND -> buildRunner.produce(run, secrets);
                 default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
             };
 
@@ -233,7 +193,7 @@ public class PythonRuntime
     }
 
     @Override
-    public PythonRunStatus onComplete(Run run, RunRunnable runnable) {
+    public OpeninferenceRunStatus onComplete(Run run, RunRunnable runnable) {
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
         //update image name after build
@@ -245,7 +205,7 @@ public class PythonRuntime
 
             log.debug("update function {} spec to use built image: {}", functionId, image);
 
-            PythonFunctionSpec funSpec = new PythonFunctionSpec(function.getSpec());
+            OpeninferenceFunctionSpec funSpec = new OpeninferenceFunctionSpec(function.getSpec());
             if (!image.equals(funSpec.getImage())) {
                 funSpec.setImage(image);
                 function.setSpec(funSpec.toMap());
@@ -259,5 +219,51 @@ public class PythonRuntime
     @Override
     public boolean isSupported(@NotNull Run run) {
         return Arrays.asList(KINDS).contains(run.getKind());
+    }
+
+    @Override
+    public OpeninferenceRunStatus onRunning(@NotNull Run run, RunRunnable runnable) {
+        OpeninferenceRunStatus status = OpeninferenceRunStatus.with(run.getStatus());
+
+        OpeninferenceFunctionSpec funSpec = OpeninferenceFunctionSpec.with(run.getSpec());
+
+        if (status.getService() != null && status.getService().getUrl() != null) {
+            //add additional urls  for inference v2
+            K8sServiceInfo service = status.getService();
+            String baseUrl = service.getUrl();
+
+            Set<String> urls = new HashSet<>();
+            if (service.getUrls() != null) {
+                urls.addAll(service.getUrls());
+            }
+
+            // Server Metadata
+            urls.add(baseUrl + "/v2");
+
+            // Model Metadata
+            urls.add(baseUrl + "/v2/models/" + funSpec.getModelName());
+
+            // Inference
+            urls.add(baseUrl + "/v2/models/" + funSpec.getModelName() + "/infer");
+
+            service.setUrls(new ArrayList<>(urls));
+            status.setService(service);
+
+            //add inference specific info
+            InferenceV2Service inferenceService = new InferenceV2Service();
+            inferenceService.setBaseUrl(baseUrl);
+
+            inferenceService.setModel(funSpec.getModelName());
+            inferenceService.setInferenceUrl(baseUrl + "/v2/models/" + funSpec.getModelName() + "/infer");
+            inferenceService.setModelMetadataUrl(baseUrl + "/v2/models/" + funSpec.getModelName());
+            inferenceService.setModelReadinessUrl(baseUrl + "/v2/models/" + funSpec.getModelName() + "/ready");
+            inferenceService.setReadinessUrl(baseUrl + "/v2/health/ready");
+            inferenceService.setLivenessUrl(baseUrl + "/v2/health/live");
+            //TODO
+            // inferenceService.setStatus(service.getStatus());
+            status.setInferenceV2(inferenceService);
+        }
+
+        return status;
     }
 }
