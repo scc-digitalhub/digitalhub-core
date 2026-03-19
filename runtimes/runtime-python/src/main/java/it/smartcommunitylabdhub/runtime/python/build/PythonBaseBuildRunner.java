@@ -87,7 +87,10 @@ public abstract class PythonBaseBuildRunner extends PythonBaseRunner {
             // nuclio
             dockerfileGenerator.copy("--from=" + layerImage + " /opt/nuclio/", "/opt/nuclio/");
             // uhttpc
-            dockerfileGenerator.copy("--from=nuclio/uhttpc:0.0.1-amd64 /bin/uhttpc", "/usr/local/bin/");
+            dockerfileGenerator.copy(
+                "--from=nuclio/uhttpc:0.0.1-amd64 /home/nuclio/bin/uhttpc",
+                "/usr/local/bin/uhttpc"
+            );
 
             // install common requirements
             dockerfileGenerator.run(
