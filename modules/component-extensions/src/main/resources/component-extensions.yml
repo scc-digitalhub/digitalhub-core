@@ -1,2 +1,2 @@
 extensions:
-  path: ${EXTENSIONS__PATH:classpath:/extensions/}
+  path: ${EXTENSIONS_PATH:classpath:/extensions/}
