@@ -19,6 +19,7 @@ package it.smartcommunitylabdhub.dataitems.config;
 
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
+import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
 import it.smartcommunitylabdhub.dataitems.DataItem;
 import it.smartcommunitylabdhub.dataitems.lifecycle.DataItemFsmFactoryBuilder;
 import it.smartcommunitylabdhub.dataitems.persistence.DataItemEntity;
@@ -42,6 +43,11 @@ public class DataItemConfig {
         Converter<DataItemEntity, DataItem> dtoBuilder
     ) {
         return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
+    }
+
+    @Bean
+    SpecRegistryImpl<DataItem> dataItemSpecRegistry() {
+        return new SpecRegistryImpl<>(DataItem.class);
     }
 
     @Bean

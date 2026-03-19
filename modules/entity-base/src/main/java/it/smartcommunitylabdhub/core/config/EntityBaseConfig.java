@@ -1,10 +1,4 @@
 /*
- * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
-/*
  * Copyright 2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,15 +15,19 @@
  *
  */
 
-package it.smartcommunitylabdhub.artifacts.services;
+package it.smartcommunitylabdhub.core.config;
 
-import it.smartcommunitylabdhub.artifacts.Artifact;
-import it.smartcommunitylabdhub.search.base.BaseIndexableEntityService;
-import jakarta.transaction.Transactional;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import it.smartcommunitylabdhub.commons.models.metadata.Metadata;
+import it.smartcommunitylabdhub.commons.models.project.Project;
+import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
-@Service
-@Transactional
-@Slf4j
-public class ArtifactIndexableServiceImpl extends BaseIndexableEntityService<Artifact> {}
+@Configuration
+public class EntityBaseConfig {
+
+    @Bean
+    SpecRegistryImpl<Metadata> metadataSpecRegistry() {
+        return new SpecRegistryImpl<>(Metadata.class);
+    }
+}

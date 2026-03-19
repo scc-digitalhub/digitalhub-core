@@ -73,8 +73,8 @@ public class SecretDTOBuilder implements Converter<SecretEntity, Secret> {
         embeddable.setEmbedded(entity.getEmbedded());
         metadata.putAll(embeddable.toMap());
 
-        Optional.of(baseMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
-        Optional.of(auditingMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
+        Optional.ofNullable(baseMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
+        Optional.ofNullable(auditingMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
 
         return Secret
             .builder()

@@ -21,16 +21,13 @@
  *
  */
 
-package it.smartcommunitylabdhub.artifacts.services;
+package it.smartcommunitylabdhub.extensions;
 
-import it.smartcommunitylabdhub.artifacts.Artifact;
-import it.smartcommunitylabdhub.artifacts.persistence.ArtifactEntity;
-import it.smartcommunitylabdhub.core.services.BaseEntityServiceImpl;
-import jakarta.transaction.Transactional;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+public class Keys {
 
-@Service
-@Transactional
-@Slf4j
-public class ArtifactEntityServiceImpl extends BaseEntityServiceImpl<Artifact, ArtifactEntity> {}
+    public static final String EXT_PATTERN = "([^:/]+)://([^/]+)/([^:]+):(.+)";
+
+    private Keys() {
+        //private constructor
+    }
+}

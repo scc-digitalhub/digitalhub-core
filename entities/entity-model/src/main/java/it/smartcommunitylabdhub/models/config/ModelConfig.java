@@ -19,6 +19,7 @@ package it.smartcommunitylabdhub.models.config;
 
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
+import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
 import it.smartcommunitylabdhub.fsm.Fsm;
 import it.smartcommunitylabdhub.lifecycle.BaseLifecycleManager;
 import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
@@ -42,6 +43,11 @@ public class ModelConfig {
         Converter<ModelEntity, Model> dtoBuilder
     ) {
         return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
+    }
+
+    @Bean
+    SpecRegistryImpl<Model> modelSpecRegistry() {
+        return new SpecRegistryImpl<>(Model.class);
     }
 
     @Bean

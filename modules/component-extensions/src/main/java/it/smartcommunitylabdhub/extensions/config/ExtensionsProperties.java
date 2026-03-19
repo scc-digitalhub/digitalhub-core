@@ -21,16 +21,21 @@
  *
  */
 
-package it.smartcommunitylabdhub.artifacts.services;
+package it.smartcommunitylabdhub.extensions.config;
 
-import it.smartcommunitylabdhub.artifacts.Artifact;
-import it.smartcommunitylabdhub.artifacts.persistence.ArtifactEntity;
-import it.smartcommunitylabdhub.core.services.BaseVersionableEntityServiceImpl;
-import jakarta.transaction.Transactional;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import java.util.List;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@Service
-@Transactional
-@Slf4j
-public class ArtifactVersionableEntityServiceImpl extends BaseVersionableEntityServiceImpl<Artifact, ArtifactEntity> {}
+@Getter
+@Setter
+@NoArgsConstructor
+@ToString
+@ConfigurationProperties(prefix = "extensions", ignoreUnknownFields = true)
+public class ExtensionsProperties {
+
+    private List<String> path = List.of();
+}

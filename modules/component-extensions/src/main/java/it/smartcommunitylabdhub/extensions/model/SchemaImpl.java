@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.components.infrastructure.specs;
+package it.smartcommunitylabdhub.extensions.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -29,8 +29,10 @@ import it.smartcommunitylabdhub.commons.models.schemas.Schema;
 import java.io.Serializable;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Setter;
 
 @AllArgsConstructor
+@Setter
 @Builder
 public class SchemaImpl implements Schema, Serializable {
 
@@ -41,7 +43,10 @@ public class SchemaImpl implements Schema, Serializable {
     private final String entity;
 
     @JsonIgnore
-    private final transient JsonNode schema;
+    private final JsonNode schema;
+
+    @JsonIgnore
+    private final JsonNode uiSchema;
 
     @Override
     public String kind() {
@@ -61,5 +66,10 @@ public class SchemaImpl implements Schema, Serializable {
     @Override
     public JsonNode schema() {
         return schema;
+    }
+
+    @Override
+    public JsonNode uiSchema() {
+        return uiSchema;
     }
 }

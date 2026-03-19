@@ -24,18 +24,20 @@
 package it.smartcommunitylabdhub.triggers.persistence;
 
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity;
+import it.smartcommunitylabdhub.core.persistence.MetadataEntity;
 import it.smartcommunitylabdhub.core.persistence.SpecEntity;
 import it.smartcommunitylabdhub.core.persistence.StatusEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
+import java.sql.Types;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.JdbcTypeCode;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -45,7 +47,7 @@ import lombok.experimental.SuperBuilder;
 @ToString
 @Entity
 @Table(name = "triggers")
-public class TriggerEntity extends AbstractEntity implements SpecEntity, StatusEntity {
+public class TriggerEntity extends AbstractEntity implements MetadataEntity, SpecEntity, StatusEntity {
 
     @Column(nullable = false)
     private String task;
@@ -53,11 +55,15 @@ public class TriggerEntity extends AbstractEntity implements SpecEntity, StatusE
     @Column(nullable = false)
     private String name;
 
-    @Lob
+    @JdbcTypeCode(Types.LONGVARBINARY)
+    @ToString.Exclude
+    protected byte[] metadata;
+
+    @JdbcTypeCode(Types.LONGVARBINARY)
     @ToString.Exclude
     protected byte[] spec;
 
-    @Lob
+    @JdbcTypeCode(Types.LONGVARBINARY)
     @ToString.Exclude
     protected byte[] status;
 

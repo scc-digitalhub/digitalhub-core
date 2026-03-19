@@ -21,25 +21,27 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.components.infrastructure.specs;
+package it.smartcommunitylabdhub.core.specs;
 
 import com.github.victools.jsonschema.generator.SchemaGenerator;
 import com.github.victools.jsonschema.generator.SchemaGeneratorConfigBuilder;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.infrastructure.SpecFactory;
+import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.schemas.Schema;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.services.SchemaService;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
-import it.smartcommunitylabdhub.commons.services.SpecValidator;
 import it.smartcommunitylabdhub.commons.utils.ClassPathUtils;
 import it.smartcommunitylabdhub.commons.utils.SchemaUtils;
-import it.smartcommunitylabdhub.core.components.infrastructure.specs.SchemaImpl.SchemaImplBuilder;
-import jakarta.annotation.PostConstruct;
+import it.smartcommunitylabdhub.core.specs.SchemaImpl.SchemaImplBuilder;
+import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -53,40 +55,42 @@ import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
-import org.springframework.core.MethodParameter;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
-import org.springframework.stereotype.Component;
+import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
-import org.springframework.validation.DataBinder;
-import org.springframework.validation.SmartValidator;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 
-@Component
 @Slf4j
 @Validated
-public class SpecRegistryImpl
-    implements SpecRegistry, SpecValidator, SchemaService, ApplicationContextAware, InitializingBean {
+public class SpecRegistryImpl<D>
+    implements SpecRegistry<D>, SchemaService<D>, ApplicationContextAware, InitializingBean {
 
-    private SmartValidator validator;
+    protected final Class<D> type;
     private ApplicationContext applicationContext;
 
     private List<com.github.victools.jsonschema.generator.Module> modules;
 
     // A map to store spec types and their corresponding classes.
-    private final Map<String, SpecRegistration> registrations = new HashMap<>();
+    protected final Map<String, SpecRegistration> registrations = new HashMap<>();
 
-    private SchemaGenerator generator = SchemaUtils.generator();
+    protected SchemaGenerator generator = SchemaUtils.generator();
 
-    @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.applicationContext = applicationContext;
+    @SuppressWarnings("unchecked")
+    protected SpecRegistryImpl() {
+        // resolve generics type via subclass trick
+        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+        this.type = (Class<D>) t;
     }
 
-    @Autowired
-    public void setValidator(SmartValidator validator) {
-        this.validator = validator;
+    public SpecRegistryImpl(Class<D> type) {
+        Assert.notNull(type, "type is required");
+        this.type = type;
+    }
+
+    @Override
+    public void setApplicationContext(@NonNull ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
     }
 
     @Autowired(required = false)
@@ -94,7 +98,11 @@ public class SpecRegistryImpl
         this.modules = modules;
     }
 
-    @PostConstruct
+    @Override
+    public Class<D> getType() {
+        return this.type;
+    }
+
     @SuppressWarnings("unchecked")
     private void scanForSpecTypes() {
         // Create a component scanner to find classes with SpecType annotations.
@@ -113,10 +121,15 @@ public class SpecRegistryImpl
                 try {
                     // Load the class and check for SpecType annotation.
                     Class<? extends Spec> specClass = (Class<? extends Spec>) Class.forName(className);
-                    SpecType type = specClass.getAnnotation(SpecType.class);
-                    String kind = type.kind();
-                    Class<?> entity = type.entity();
-                    String runtime = type.runtime();
+                    SpecType st = specClass.getAnnotation(SpecType.class);
+                    String kind = st.kind();
+                    Class<?> entity = st.entity();
+                    String runtime = st.runtime();
+
+                    //we'll keep only specs matching our entity type
+                    if (!st.entity().isAssignableFrom(this.type)) {
+                        continue;
+                    }
 
                     //enforce runtime prefix rule on kind
                     if (StringUtils.hasText(runtime) && !kind.startsWith(runtime)) {
@@ -153,11 +166,11 @@ public class SpecRegistryImpl
                     ) {
                         //invalid spec
                         //TODO check for factory annotation as fallback
-                        throw new IllegalArgumentException("missing or invalida default constructor ");
+                        throw new IllegalArgumentException("missing or invalid default constructor ");
                     }
 
                     log.debug("discovered spec for {}:{} with class {}", entity, kind, specClass.getName());
-                    registerSpec(type, specClass, factory);
+                    registerSpec(st, specClass, factory);
                 } catch (IllegalArgumentException | ClassNotFoundException e) {
                     log.error("error registering spec {}: {}", className, e.getMessage());
                 }
@@ -174,6 +187,9 @@ public class SpecRegistryImpl
         }
 
         generator = new SchemaGenerator(builder.build());
+
+        //now we can scan for spec types and register them
+        scanForSpecTypes();
     }
 
     private String getEntityName(Class<?> clazz) {
@@ -183,7 +199,7 @@ public class SpecRegistryImpl
     /*
      * Spec Registry
      */
-    private void registerSpec(SpecType type, Class<? extends Spec> spec, SpecFactory<? extends Spec> factory) {
+    public void registerSpec(SpecType type, Class<? extends Spec> spec, SpecFactory<? extends Spec> factory) {
         Assert.notNull(type, "type is required");
         Assert.notNull(spec, "spec can not be null");
         Assert.notNull(factory, "spec factory can not be null");
@@ -214,14 +230,26 @@ public class SpecRegistryImpl
         SchemaImpl schema = builder.build();
 
         log.debug("register spec for {}:{} with class {}", entity, kind, spec.getName());
-        registrations.put(kind, new SpecRegistration(type, spec, factory, schema));
+        registrations.put(kind, new SpecRegistration(kind, type.runtime(), spec, factory, schema));
+    }
+
+    public void registerSpec(String kind, Schema schema) {
+        Assert.notNull(kind, "kind is required");
+        Assert.notNull(schema, "schema can not be null");
+
+        if (registrations.containsKey(kind)) {
+            throw new IllegalArgumentException("duplicated registration for kind " + kind);
+        }
+
+        log.debug("register spec for kind {} with schema", kind);
+        registrations.put(kind, new SpecRegistration(kind, null, null, null, schema));
     }
 
     @Override
     public <S extends Spec> S getSpec(String kind) {
         // Retrieve the registration associated with the specified spec type.
         SpecRegistration reg = registrations.get(kind);
-        if (reg == null) {
+        if (reg == null || reg.factory() == null || reg.schema() == null) {
             throw new NoSuchEntityException(Spec.class);
         }
 
@@ -240,38 +268,6 @@ public class SpecRegistryImpl
         return spec;
     }
 
-    @Override
-    public void validateSpec(Spec spec) throws IllegalArgumentException {
-        // check with validator
-        if (validator != null) {
-            DataBinder binder = new DataBinder(spec);
-            validator.validate(spec, binder.getBindingResult());
-            if (binder.getBindingResult().hasErrors()) {
-                try {
-                    MethodParameter methodParameter = new MethodParameter(
-                        this.getClass().getMethod("validateSpec", Spec.class),
-                        0
-                    );
-                    MethodArgumentNotValidException ex = new MethodArgumentNotValidException(
-                        methodParameter,
-                        binder.getBindingResult()
-                    );
-                    throw new IllegalArgumentException(ex.getMessage());
-                } catch (NoSuchMethodException | SecurityException ex) {
-                    StringBuilder sb = new StringBuilder();
-                    binder
-                        .getBindingResult()
-                        .getFieldErrors()
-                        .forEach(e -> {
-                            sb.append(e.getField()).append(" ").append(e.getDefaultMessage()).append(", ");
-                        });
-                    String errorMsg = sb.toString();
-                    throw new IllegalArgumentException(errorMsg);
-                }
-            }
-        }
-    }
-
     /*
      * Schema registry
      */
@@ -286,28 +282,18 @@ public class SpecRegistryImpl
     }
 
     @Override
-    public Collection<Schema> listSchemas(String entity) {
-        return registrations
-            .values()
-            .stream()
-            .filter(e -> entity.equalsIgnoreCase(getEntityName(e.type().entity())))
-            .map(e -> e.schema())
-            .toList();
+    public Collection<Schema> listSchemas() {
+        return registrations.values().stream().map(e -> e.schema()).toList();
     }
 
     @Override
-    public Collection<Schema> getSchemas(String entity, String runtime) {
-        return registrations
-            .values()
-            .stream()
-            .filter(e -> entity.equalsIgnoreCase(getEntityName(e.type().entity())) && runtime.equals(e.type().runtime())
-            )
-            .map(e -> e.schema())
-            .toList();
+    public Collection<Schema> listSchemas(@NotNull String runtime) {
+        return registrations.values().stream().filter(e -> runtime.equals(e.runtime())).map(e -> e.schema()).toList();
     }
 
-    private record SpecRegistration(
-        SpecType type,
+    protected record SpecRegistration(
+        String kind,
+        String runtime,
         Class<? extends Spec> spec,
         SpecFactory<? extends Spec> factory,
         Schema schema

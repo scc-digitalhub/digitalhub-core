@@ -19,6 +19,7 @@ package it.smartcommunitylabdhub.logs.config;
 
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
+import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
 import it.smartcommunitylabdhub.logs.Log;
 import it.smartcommunitylabdhub.logs.persistence.LogEntity;
 import it.smartcommunitylabdhub.logs.persistence.LogRepository;
@@ -36,5 +37,10 @@ public class LogConfig {
         Converter<LogEntity, Log> dtoBuilder
     ) {
         return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
+    }
+
+    @Bean
+    SpecRegistryImpl<Log> logSpecRegistry() {
+        return new SpecRegistryImpl<>(Log.class);
     }
 }

@@ -20,6 +20,7 @@ package it.smartcommunitylabdhub.functions.config;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
+import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
 import it.smartcommunitylabdhub.functions.persistence.FunctionEntity;
 import it.smartcommunitylabdhub.functions.persistence.FunctionRepository;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
@@ -38,6 +39,11 @@ public class FunctionConfig {
         Converter<FunctionEntity, Function> dtoBuilder
     ) {
         return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
+    }
+
+    @Bean
+    SpecRegistryImpl<Function> functionSpecRegistry() {
+        return new SpecRegistryImpl<>(Function.class);
     }
 
     // build indexer only if a provider is available

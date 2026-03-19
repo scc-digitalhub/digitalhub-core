@@ -24,12 +24,15 @@
 package it.smartcommunitylabdhub.commons.services;
 
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.schemas.Schema;
 import jakarta.validation.constraints.NotNull;
 import java.util.Collection;
 
-public interface SchemaService {
+public interface SchemaService<D> {
+    Class<D> getType();
+
     Schema getSchema(@NotNull String kind);
-    Collection<Schema> getSchemas(@NotNull String entity, @NotNull String runtime) throws NoSuchEntityException;
-    Collection<Schema> listSchemas(@NotNull String entity) throws NoSuchEntityException;
+    Collection<Schema> listSchemas() throws NoSuchEntityException;
+    Collection<Schema> listSchemas(@NotNull String runtime) throws NoSuchEntityException;
 }

@@ -78,9 +78,9 @@ public class ModelDTOBuilder implements Converter<ModelEntity, Model> {
         embeddable.setEmbedded(entity.getEmbedded());
         metadata.putAll(embeddable.toMap());
 
-        Optional.of(baseMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
-        Optional.of(auditingMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
-        Optional.of(versioningMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
+        Optional.ofNullable(baseMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
+        Optional.ofNullable(auditingMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
+        Optional.ofNullable(versioningMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
 
         return Model
             .builder()
