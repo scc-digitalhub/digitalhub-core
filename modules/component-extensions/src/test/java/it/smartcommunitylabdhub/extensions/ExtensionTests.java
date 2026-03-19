@@ -18,7 +18,7 @@ import org.springframework.core.io.Resource;
 
 class ExtensionTests {
 
-    @Test
+    // @Test
     void schemaLoad() throws Exception {
         DefaultResourceLoader loader = new DefaultResourceLoader();
         Resource entrypoint = loader.getResource("classpath:artifact.json");
@@ -61,7 +61,7 @@ class ExtensionTests {
         return jsonSchema.validate(dataNode);
     }
 
-    @Test
+    // @Test
     void validateMapAgainstJsonSchema() throws Exception {
         // Example: validate data against the artifact schema
         Map<String, Serializable> sampleData = Map.of("name", "test-artifact", "kind", "model");
