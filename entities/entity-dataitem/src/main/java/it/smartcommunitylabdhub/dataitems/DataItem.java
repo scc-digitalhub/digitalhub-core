@@ -31,10 +31,13 @@ import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
+import it.smartcommunitylabdhub.extensions.model.ExtensibleDTO;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -51,7 +54,7 @@ import org.springframework.lang.Nullable;
 @Builder
 @ToString
 @JsonPropertyOrder(alphabetic = true)
-public class DataItem implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO {
+public class DataItem implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO, ExtensibleDTO {
 
     @Nullable
     @Pattern(regexp = Keys.SLUG_PATTERN)
@@ -80,6 +83,10 @@ public class DataItem implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO {
 
     @Builder.Default
     private Map<String, Serializable> status = new HashMap<>();
+
+    @Nullable
+    @Builder.Default
+    private List<Map<String, Serializable>> extensions = new LinkedList<>();
 
     @Override
     public String getKey() {
