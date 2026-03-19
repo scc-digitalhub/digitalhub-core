@@ -16,12 +16,12 @@ import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.schemas.Schema;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.core.services.EntityService;
-import it.smartcommunitylabdhub.core.specs.SchemaImpl;
 import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
 import it.smartcommunitylabdhub.extensions.config.ExtensionsProperties;
 import it.smartcommunitylabdhub.extensions.model.Extension;
 import it.smartcommunitylabdhub.extensions.model.ExtensionDefinition;
 import it.smartcommunitylabdhub.extensions.model.ExtensionSpec;
+import it.smartcommunitylabdhub.extensions.model.SchemaImpl;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
@@ -56,6 +56,7 @@ public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
     private static final JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
     private static final String KIND = "kind";
     private static final String SCHEMA = "schema";
+    private static final String UI_SCHEMA = "uiSchema";
 
     protected ResourcePatternResolver resourceLoader;
     private List<String> extensionPaths;
@@ -293,6 +294,7 @@ public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
                 .entity("extension")
                 .kind(kind)
                 .schema(schemaNode.get(SCHEMA))
+                .uiSchema(schemaNode.get(UI_SCHEMA))
                 .build();
             registerSpec(kind, schema);
 

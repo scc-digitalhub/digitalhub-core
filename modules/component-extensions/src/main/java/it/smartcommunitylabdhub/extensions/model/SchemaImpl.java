@@ -21,45 +21,55 @@
  *
  */
 
-package it.smartcommunitylabdhub.commons.models.schemas;
+package it.smartcommunitylabdhub.extensions.model;
 
-import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonRawValue;
 import com.fasterxml.jackson.databind.JsonNode;
+import it.smartcommunitylabdhub.commons.models.schemas.Schema;
+import java.io.Serializable;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Setter;
 
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public interface Schema {
-    @JsonGetter
-    String kind();
+@AllArgsConstructor
+@Setter
+@Builder
+public class SchemaImpl implements Schema, Serializable {
 
-    @JsonGetter
-    String runtime();
-
-    @JsonGetter
-    String entity();
-
-    @JsonIgnore
-    JsonNode schema();
-
-    @JsonRawValue
-    default String getSchema() {
-        return schema() == null ? null : schema().toString();
-    }
+    private final String kind;
+    private final String runtime;
 
     @JsonIgnore
-    default JsonNode uiSchema() {
-        return null;
+    private final String entity;
+
+    @JsonIgnore
+    private final JsonNode schema;
+
+    @JsonIgnore
+    private final JsonNode uiSchema;
+
+    @Override
+    public String kind() {
+        return kind;
     }
 
-    @JsonRawValue
-    default String getUiSchema() {
-        return uiSchema() == null ? null : uiSchema().toString();
+    @Override
+    public String runtime() {
+        return runtime;
     }
 
-    @JsonGetter
-    default String getId() {
-        return entity() + ":" + kind();
+    @Override
+    public String entity() {
+        return entity;
+    }
+
+    @Override
+    public JsonNode schema() {
+        return schema;
+    }
+
+    @Override
+    public JsonNode uiSchema() {
+        return uiSchema;
     }
 }

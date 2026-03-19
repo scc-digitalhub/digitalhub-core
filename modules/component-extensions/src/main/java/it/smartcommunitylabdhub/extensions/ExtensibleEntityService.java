@@ -106,24 +106,34 @@ public class ExtensibleEntityService<D extends ExtensibleDTO & BaseDTO> implemen
                 log.trace("extensions: {}", extensions);
             }
 
-            extensions.forEach(e -> {
-                try {
-                    Extension ed = mapper.convertValue(e, Extension.class);
-                    Extension ext = ExtensionBuilder.from(res);
-                    ext.setKind(ed.getKind());
-                    ext.setName(ed.getName());
-                    ext.setSpec(ed.getSpec());
-                    ext.setEntity(EntityUtils.getEntityName(getType()));
+            List<Extension> exts = extensions
+                .stream()
+                .map(e -> {
+                    try {
+                        Extension ed = mapper.convertValue(e, Extension.class);
+                        Extension ext = ExtensionBuilder.from(res);
+                        ext.setKind(ed.getKind());
+                        ext.setName(ed.getName());
+                        ext.setSpec(ed.getSpec());
+                        ext.setEntity(EntityUtils.getEntityName(getType()));
 
-                    extManager.createExtension(ext);
-                } catch (DuplicatedEntityException | BindException | IllegalArgumentException | SystemException ex) {
-                    log.error(
-                        "error creating extension for entity {}: {}",
-                        String.valueOf(res.getId()),
-                        ex.getMessage()
-                    );
-                }
-            });
+                        return extManager.createExtension(ext);
+                    } catch (
+                        DuplicatedEntityException | BindException | IllegalArgumentException | SystemException ex
+                    ) {
+                        log.error(
+                            "error creating extension for entity {}: {}",
+                            String.valueOf(res.getId()),
+                            ex.getMessage()
+                        );
+
+                        return null;
+                    }
+                })
+                .filter(e -> e != null)
+                .toList();
+
+            res.setExtensions(exts.stream().map(e -> mapper.convertValue(e, typeRef)).collect(Collectors.toList()));
         }
 
         return res;
@@ -132,41 +142,7 @@ public class ExtensibleEntityService<D extends ExtensibleDTO & BaseDTO> implemen
     @Override
     public D update(@NotNull String id, @NotNull D dto)
         throws BindException, IllegalArgumentException, NoSuchEntityException, StoreException {
-        //keep extensions aside
-        List<Map<String, Serializable>> extensions = dto.getExtensions();
-
-        //update via delegate
-        D res = delegate.update(id, dto);
-
-        //extract and create extensions
-        //NOTE: we keep definition from source dto
-        if (extensions != null) {
-            log.debug("update extensions for dto with id {}", String.valueOf(res.getId()));
-            if (log.isTraceEnabled()) {
-                log.trace("extensions: {}", extensions);
-            }
-
-            extensions.forEach(e -> {
-                try {
-                    Extension ed = mapper.convertValue(e, Extension.class);
-                    Extension ext = ExtensionBuilder.from(res);
-                    ext.setKind(ed.getKind());
-                    ext.setName(ed.getName());
-                    ext.setSpec(ed.getSpec());
-                    ext.setEntity(EntityUtils.getEntityName(getType()));
-
-                    extManager.createOrUpdateExtension(ext);
-                } catch (BindException | IllegalArgumentException | SystemException ex) {
-                    log.error(
-                        "error creating extension for entity {}: {}",
-                        String.valueOf(res.getId()),
-                        ex.getMessage()
-                    );
-                }
-            });
-        }
-
-        return res;
+        return update(id, dto, false);
     }
 
     @Override
@@ -185,24 +161,48 @@ public class ExtensibleEntityService<D extends ExtensibleDTO & BaseDTO> implemen
                 log.trace("extensions: {}", extensions);
             }
 
-            extensions.forEach(e -> {
-                try {
-                    Extension ed = mapper.convertValue(e, Extension.class);
-                    Extension ext = ExtensionBuilder.from(res);
-                    ext.setKind(ed.getKind());
-                    ext.setName(ed.getName());
-                    ext.setSpec(ed.getSpec());
-                    ext.setEntity(EntityUtils.getEntityName(getType()));
+            String parentId = ExtensionBuilder.from(res).getParent();
 
-                    extManager.createOrUpdateExtension(ext);
-                } catch (BindException | IllegalArgumentException | SystemException ex) {
-                    log.error(
-                        "error creating extension for entity {}: {}",
-                        String.valueOf(res.getId()),
-                        ex.getMessage()
-                    );
+            //fetch existing extensions and delete those not present in the new list
+            List<Extension> existing = extManager.listExtensionsByParent(parentId);
+
+            List<Extension> exts = extensions
+                .stream()
+                .map(e -> {
+                    try {
+                        Extension ed = mapper.convertValue(e, Extension.class);
+                        Extension ext = ExtensionBuilder.from(res);
+                        ext.setKind(ed.getKind());
+                        ext.setName(ed.getName());
+                        ext.setSpec(ed.getSpec());
+                        ext.setEntity(EntityUtils.getEntityName(getType()));
+
+                        return extManager.createOrUpdateExtension(ext);
+                    } catch (BindException | IllegalArgumentException | SystemException ex) {
+                        log.error(
+                            "error creating extension for entity {}: {}",
+                            String.valueOf(res.getId()),
+                            ex.getMessage()
+                        );
+
+                        return null;
+                    }
+                })
+                .filter(e -> e != null)
+                .toList();
+
+            //remove missing
+            existing.forEach(e -> {
+                if (exts.stream().noneMatch(k -> e.getId().equals(k.getId()))) {
+                    try {
+                        extManager.deleteExtension(e.getId());
+                    } catch (SystemException ex) {
+                        log.error("error deleting extension with id {}: {}", e.getId(), ex.getMessage());
+                    }
                 }
             });
+
+            res.setExtensions(exts.stream().map(e -> mapper.convertValue(e, typeRef)).collect(Collectors.toList()));
         }
 
         return res;
