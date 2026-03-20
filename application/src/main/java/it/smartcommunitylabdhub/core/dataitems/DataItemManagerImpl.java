@@ -290,7 +290,7 @@ public class DataItemManagerImpl implements DataItemManager {
         throws NoSuchEntityException, IllegalArgumentException, BindException {
         log.debug("update dataItem with id {}", String.valueOf(id));
         try {
-            return entityService.update(id, dto);
+            return entityService.update(id, dto, force);
         } catch (NoSuchEntityException e) {
             throw new NoSuchEntityException(EntityName.DATAITEM.toString());
         } catch (StoreException e) {
