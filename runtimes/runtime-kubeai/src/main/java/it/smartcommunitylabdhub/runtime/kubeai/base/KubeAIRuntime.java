@@ -25,7 +25,6 @@ package it.smartcommunitylabdhub.runtime.kubeai.base;
 
 import it.smartcommunitylabdhub.authorization.services.CredentialsService;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
@@ -34,6 +33,7 @@ import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.models.ModelManager;
+import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAIAdapter;
 import it.smartcommunitylabdhub.runtime.kubeai.models.OpenAIService;
 import jakarta.validation.constraints.NotNull;
@@ -116,13 +116,13 @@ public abstract class KubeAIRuntime<F extends KubeAIServeFunctionSpec, R extends
         }
 
         if (status.getService() == null) {
-            String baseUrl = kubeAiEndpoint + "/openai";
+            String baseUrl = kubeAiEndpoint + "/openai/v1";
             K8sServiceInfo service = new K8sServiceInfo();
             service.setUrl(baseUrl);
 
             List<String> urls = new ArrayList<>();
             //model always available
-            urls.add(baseUrl + "/v1/models");
+            urls.add(baseUrl + "/models");
             service.setUrls(urls);
 
             status.setService(service);

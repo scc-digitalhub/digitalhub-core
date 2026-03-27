@@ -23,10 +23,11 @@
 
 package it.smartcommunitylabdhub.runtime.hera.specs;
 
-import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
+
+import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;

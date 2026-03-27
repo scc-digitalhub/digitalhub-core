@@ -23,10 +23,10 @@
 
 package it.smartcommunitylabdhub.core.runs.listeners;
 
-import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.core.runs.lifecycle.KindAwareRunLifecycleManager;
 import it.smartcommunitylabdhub.events.EntityAction;
 import it.smartcommunitylabdhub.events.EntityOperation;
+import it.smartcommunitylabdhub.runs.Run;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;

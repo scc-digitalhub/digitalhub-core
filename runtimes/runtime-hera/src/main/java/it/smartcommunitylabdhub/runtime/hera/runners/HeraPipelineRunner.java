@@ -24,9 +24,9 @@
 package it.smartcommunitylabdhub.runtime.hera.runners;
 
 import it.smartcommunitylabdhub.commons.models.enums.State;
-import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.framework.argo.runnables.K8sArgoWorkflowRunnable;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
+import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.hera.HeraRuntime;
 import it.smartcommunitylabdhub.runtime.hera.specs.HeraPipelineRunSpec;
 import it.smartcommunitylabdhub.runtime.hera.specs.HeraPipelineTaskSpec;

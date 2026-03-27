@@ -24,7 +24,8 @@
 package it.smartcommunitylabdhub.runtime.container.specs;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
+import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
+
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;

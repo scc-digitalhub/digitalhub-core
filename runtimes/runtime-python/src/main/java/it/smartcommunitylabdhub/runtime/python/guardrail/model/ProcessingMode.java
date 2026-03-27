@@ -25,7 +25,8 @@ package it.smartcommunitylabdhub.runtime.python.guardrail.model;
 
 public enum ProcessingMode {
     preprocessor("preprocessor"),
-    postprocessor("postprocessor");
+    postprocessor("postprocessor"),
+    wrapprocessor("wrapprocessor");
 
     private final String mode;
 

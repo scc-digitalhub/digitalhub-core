@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.runtime.python.serve;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
-import it.smartcommunitylabdhub.commons.models.run.Run;
+import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.python.PythonRuntime;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonFunctionSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonRunSpec;

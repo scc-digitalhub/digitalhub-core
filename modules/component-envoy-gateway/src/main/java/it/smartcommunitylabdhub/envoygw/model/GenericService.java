@@ -32,4 +32,5 @@ public class GenericService {
     private String functionName;
     private String serviceHost;
     private Integer servicePort;
+    private String path;
 }

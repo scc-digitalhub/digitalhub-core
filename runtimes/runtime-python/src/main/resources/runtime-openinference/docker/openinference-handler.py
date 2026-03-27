@@ -18,7 +18,7 @@ from digitalhub_runtime_python.utils.configuration import import_function_and_in
 from digitalhub_runtime_python.utils.inputs import compose_init, compose_inputs
 
 if typing.TYPE_CHECKING:
-    from digitalhub_runtime_guardrail.entities.run._base.entity import RunOpeninferenceRun
+    from digitalhub_runtime_openinference.entities.run._base.entity import RunOpeninferenceRun
     from nuclio_sdk import Context, Event, Response
 
 def execute_user_init(
@@ -94,7 +94,7 @@ def init_context(context: Context) -> None:
 
     context.logger.info("Context initialized.")
 
-def handler_serve(context: Context, event: Event) -> Any:
+def handler(context: Context, event: Event) -> Any:
     """
     Main function.
 
