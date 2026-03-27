@@ -156,7 +156,9 @@ public class HuggingfaceServeRunner {
             RelationshipsMetadata relationships = RelationshipsMetadata.from(run.getMetadata());
             relationships.getRelationships().add(rel);
             run.getMetadata().putAll(relationships.toMap());
-            path = (String) model.getSpec().get("path");
+            HuggingFaceModelSpec modelSpec = new HuggingFaceModelSpec();
+            modelSpec.configure(model.getSpec());
+            path = modelSpec.getPath();
         }
 
         UriComponents uri = UriComponentsBuilder.fromUriString(path).build();
@@ -195,7 +197,7 @@ public class HuggingfaceServeRunner {
 
             contextRefs =
                 Collections.singletonList(
-                    ContextRef.builder().source(path).protocol(uri.getScheme()).destination("model").build()
+                    ContextRef.builder().source(path).protocol(uri.getScheme()).destination("model/").build()
                 );
         }
 

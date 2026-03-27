@@ -319,6 +319,7 @@ public class PythonRunnerHelper {
     }
 
     public static List<String> buildEntrypointArgs(
+        String basePath,
         String processor,
         String uvPath,
         List<String> commonRequirementsPath,
@@ -327,13 +328,13 @@ public class PythonRunnerHelper {
         List<String> args = new ArrayList<>();
         args.addAll(
             List.of(
-                "/shared/entrypoint.sh",
+                basePath + "/entrypoint.sh",
                 "--processor",
                 processor,
                 "--config",
-                "/shared/function.yaml",
+                basePath + "/function.yaml",
                 "--requirements",
-                "/shared/requirements.txt"
+                basePath + "/requirements.txt"
             )
         );
         if (commonRequirementsPath != null && !commonRequirementsPath.isEmpty()) {

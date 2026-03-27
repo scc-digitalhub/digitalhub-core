@@ -229,6 +229,7 @@ public abstract class PythonBaseRunner {
         if (useLayer(pythonVersion, baseImage, userImage)) {
             args.addAll(
                 PythonRunnerHelper.buildEntrypointArgs(
+                    homeDir,
                     command,
                     "/opt/nuclio/uv/uv",
                     List.of("/opt/nuclio/requirements/nuclio.txt", "/opt/nuclio/requirements/common.txt"),
@@ -236,7 +237,7 @@ public abstract class PythonBaseRunner {
                 )
             );
         } else {
-            args.addAll(PythonRunnerHelper.buildEntrypointArgs(command, null, null, null));
+            args.addAll(PythonRunnerHelper.buildEntrypointArgs(homeDir, command, null, null, null));
         }
 
         return args;
