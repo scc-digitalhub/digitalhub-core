@@ -153,7 +153,7 @@ public class SklearnServeRunner {
 
         //read source and build context
         List<ContextRef> contextRefs = Collections.singletonList(
-            ContextRef.builder().source(path).protocol(uri.getScheme()).destination("model").build()
+            ContextRef.builder().source(path).protocol(uri.getScheme()).destination(fileName).build()
         );
 
         List<ContextSource> contextSources = new ArrayList<>();
@@ -166,7 +166,7 @@ public class SklearnServeRunner {
             .parameters(
                 MLServerSettingsParameters
                     .builder()
-                    .uri("./model/" + fileName)
+                    .uri("./" + fileName)
                     // .contentType()
                     .build()
             )

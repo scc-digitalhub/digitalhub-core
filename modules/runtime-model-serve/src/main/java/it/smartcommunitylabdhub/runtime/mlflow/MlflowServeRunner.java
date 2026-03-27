@@ -151,7 +151,7 @@ public class MlflowServeRunner {
 
         //read source and build context
         List<ContextRef> contextRefs = Collections.singletonList(
-            ContextRef.builder().source(path).protocol(uri.getScheme()).destination("model").build()
+            ContextRef.builder().source(path).protocol(uri.getScheme()).destination("model/").build()
         );
         List<ContextSource> contextSources = new ArrayList<>();
 

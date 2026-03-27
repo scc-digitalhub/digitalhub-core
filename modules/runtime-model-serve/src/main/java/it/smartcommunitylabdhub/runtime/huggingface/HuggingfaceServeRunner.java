@@ -173,7 +173,7 @@ public class HuggingfaceServeRunner {
 
             contextRefs =
                 Collections.singletonList(
-                    ContextRef.builder().source(path).protocol(uri.getScheme()).destination("model").build()
+                    ContextRef.builder().source(path).protocol(uri.getScheme()).destination("model/").build()
                 );
         }
 
