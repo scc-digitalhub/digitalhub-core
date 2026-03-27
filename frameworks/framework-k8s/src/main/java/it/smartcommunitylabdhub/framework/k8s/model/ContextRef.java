@@ -24,6 +24,8 @@
 package it.smartcommunitylabdhub.framework.k8s.model;
 
 import java.io.Serializable;
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -43,6 +45,12 @@ public class ContextRef implements Serializable {
     private String destination;
     private String protocol;
     private String source;
+
+    public String toCsv() {
+        return StringUtils.hasText(destination)
+            ? String.join(",", List.of(protocol, destination, source))
+            : String.join(",", List.of(protocol, "", source));
+    }
 
     public static ContextRef from(String source) {
         if (!StringUtils.hasText(source)) {

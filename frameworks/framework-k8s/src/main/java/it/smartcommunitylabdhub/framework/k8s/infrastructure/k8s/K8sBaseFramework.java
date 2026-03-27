@@ -1374,12 +1374,7 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
                             .map(contextRefsList ->
                                 Map.of(
                                     "context-refs.txt",
-                                    contextRefsList
-                                        .stream()
-                                        .map(v ->
-                                            v.getProtocol() + "," + v.getDestination() + "," + v.getSource() + "\n"
-                                        )
-                                        .collect(Collectors.joining(""))
+                                    contextRefsList.stream().map(v -> v.toCsv()).collect(Collectors.joining("\n"))
                                 )
                             )
                             .orElseGet(Map::of),
