@@ -40,7 +40,8 @@ import org.springframework.stereotype.Component;
 @ConditionalOnKubernetes
 public class K8sLabelHelper {
 
-    public static final String NAMESPACE = "dhcore/";
+    public static final String NAME = "dhcore";
+    public static final String NAMESPACE = NAME + "/";
 
     @Autowired
     ApplicationProperties applicationProperties;
@@ -63,10 +64,12 @@ public class K8sLabelHelper {
             K8sBuilderHelper.sanitizeNames(applicationProperties.getName() + "-" + runnable.getId()),
             "app.kubernetes.io/version",
             runnable.getId(),
-            "app.kubernetes.io/part-of",
+            "app.kubernetes.io/component",
             K8sBuilderHelper.sanitizeNames(applicationProperties.getName() + "-" + runnable.getProject()),
+            "app.kubernetes.io/part-of",
+            K8sBuilderHelper.sanitizeNames(applicationProperties.getName()),
             "app.kubernetes.io/managed-by",
-            K8sBuilderHelper.sanitizeNames(applicationProperties.getName())
+            NAME
         );
     }
 

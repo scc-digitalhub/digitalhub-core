@@ -44,6 +44,8 @@ public class K8sJobWatcher extends K8sBaseWatcher<K8sJobRunnable> {
         //build core labels for jobs
         Map<String, String> labels = Map.of(
             "app.kubernetes.io/managed-by",
+            K8sLabelHelper.NAME,
+            "app.kubernetes.io/part-of",
             K8sBuilderHelper.sanitizeNames(applicationProperties.getName()),
             K8sLabelHelper.NAMESPACE + "framework",
             K8sJobFramework.FRAMEWORK

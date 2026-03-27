@@ -44,6 +44,8 @@ public class K8sServeWatcher extends K8sBaseWatcher<K8sServeRunnable> {
         //build core labels for deployment
         Map<String, String> labels = Map.of(
             "app.kubernetes.io/managed-by",
+            K8sLabelHelper.NAME,
+            "app.kubernetes.io/part-of",
             K8sBuilderHelper.sanitizeNames(applicationProperties.getName()),
             K8sLabelHelper.NAMESPACE + "framework",
             K8sServeFramework.FRAMEWORK
