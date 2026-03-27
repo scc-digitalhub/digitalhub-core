@@ -40,6 +40,8 @@ import org.springframework.stereotype.Component;
 @ConditionalOnKubernetes
 public class K8sLabelHelper {
 
+    public static final String NAMESPACE = "dhcore/";
+
     @Autowired
     ApplicationProperties applicationProperties;
 
@@ -70,33 +72,26 @@ public class K8sLabelHelper {
 
     public <T extends K8sRunnable> Map<String, String> buildCoreLabels(@NotNull T runnable) {
         //create custom core labels
-        String prefix = getCoreLabelsNamespace() + "/";
-
         return Map.of(
-            prefix + "project",
+            NAMESPACE + "project",
             K8sBuilderHelper.sanitizeNames(runnable.getProject()),
-            prefix + "framework",
+            NAMESPACE + "framework",
             K8sBuilderHelper.sanitizeNames(runnable.getFramework()),
-            prefix + "runtime",
+            NAMESPACE + "runtime",
             K8sBuilderHelper.sanitizeNames(runnable.getRuntime()),
-            prefix + "run",
+            NAMESPACE + "run",
             K8sBuilderHelper.sanitizeNames(runnable.getId()),
-            prefix + "user",
+            NAMESPACE + "user",
             K8sBuilderHelper.sanitizeNames(runnable.getUser() != null ? runnable.getUser() : "")
         );
     }
 
     public Map.Entry<String, String> buildCoreLabel(@NotNull String label, String value) {
-        String prefix = getCoreLabelsNamespace() + "/";
-        return Map.entry(prefix + label, K8sBuilderHelper.sanitizeNames(value));
-    }
-
-    public String getCoreLabelsNamespace() {
-        return "dhcore." + K8sBuilderHelper.sanitizeNames(applicationProperties.getName());
+        return Map.entry(NAMESPACE + label, K8sBuilderHelper.sanitizeNames(value));
     }
 
     public Map<String, String> extractCoreLabels(@NotNull Map<String, String> labels) {
-        String prefix = K8sBuilderHelper.sanitizeNames(applicationProperties.getName()) + "/";
+        String prefix = NAMESPACE;
 
         List<String> coreLabels = List.of("project", "framework", "runtime", "run", "user");
 
