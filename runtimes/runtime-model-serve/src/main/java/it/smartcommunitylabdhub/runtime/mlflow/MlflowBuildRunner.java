@@ -139,7 +139,7 @@ public class MlflowBuildRunner {
         //read source and build context
         List<ContextSource> contextSources = new ArrayList<>();
         List<ContextRef> contextRefs = Collections.singletonList(
-            ContextRef.builder().source(path).protocol(uri.getScheme()).destination("model").build()
+            ContextRef.builder().source(path).protocol(uri.getScheme()).destination("model/").build()
         );
 
         //set workdir from now on
