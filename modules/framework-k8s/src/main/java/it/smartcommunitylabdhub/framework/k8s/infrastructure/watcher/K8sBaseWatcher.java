@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.framework.k8s.infrastructure.watcher;
@@ -27,6 +27,7 @@ import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
+import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.monitor.K8sBaseMonitor;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
@@ -51,6 +52,7 @@ public abstract class K8sBaseWatcher<T extends K8sRunnable> implements Initializ
 
     protected String namespace;
     protected K8sLabelHelper k8sLabelHelper;
+    protected ApplicationProperties applicationProperties;
 
     // Debounce map and interval
     // TODO add cleanup for expired entries
@@ -71,6 +73,11 @@ public abstract class K8sBaseWatcher<T extends K8sRunnable> implements Initializ
     }
 
     @Autowired
+    public void setApplicationProperties(ApplicationProperties applicationProperties) {
+        this.applicationProperties = applicationProperties;
+    }
+
+    @Autowired
     public void setNamespace(@Value("${kubernetes.namespace}") String namespace) {
         this.namespace = namespace;
     }
@@ -79,6 +86,7 @@ public abstract class K8sBaseWatcher<T extends K8sRunnable> implements Initializ
     public void afterPropertiesSet() throws Exception {
         Assert.notNull(k8sLabelHelper, "k8s label helper is required");
         Assert.notNull(namespace, "k8s namespace required");
+        Assert.notNull(applicationProperties, "application properties required");
     }
 
     public abstract void start();
