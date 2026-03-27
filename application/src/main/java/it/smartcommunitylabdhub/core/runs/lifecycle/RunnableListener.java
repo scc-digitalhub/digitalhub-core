@@ -25,8 +25,8 @@ package it.smartcommunitylabdhub.core.runs.lifecycle;
 
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.models.run.Run;
-import it.smartcommunitylabdhub.commons.services.RunManager;
+import it.smartcommunitylabdhub.runs.Run;
+import it.smartcommunitylabdhub.runs.RunManager;
 import it.smartcommunitylabdhub.runtimes.events.RunnableChangedEvent;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
 import java.util.Collection;

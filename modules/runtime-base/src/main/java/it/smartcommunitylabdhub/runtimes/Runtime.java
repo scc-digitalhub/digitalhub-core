@@ -21,12 +21,13 @@
  *
  */
 
-package it.smartcommunitylabdhub.commons.infrastructure;
+package it.smartcommunitylabdhub.runtimes;
 
-import it.smartcommunitylabdhub.commons.models.run.Run;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
+import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
+import it.smartcommunitylabdhub.runs.Run;
+import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
+import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.lang.Nullable;
 

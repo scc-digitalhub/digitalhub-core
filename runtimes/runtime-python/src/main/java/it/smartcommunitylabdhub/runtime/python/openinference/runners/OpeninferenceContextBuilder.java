@@ -23,7 +23,7 @@
 
 package it.smartcommunitylabdhub.runtime.python.openinference.runners;
 
-import it.smartcommunitylabdhub.commons.models.run.Run;
+import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.python.openinference.OpeninferenceRuntime;
 import it.smartcommunitylabdhub.runtime.python.openinference.specs.OpeninferenceFunctionSpec;
 import java.io.Serializable;

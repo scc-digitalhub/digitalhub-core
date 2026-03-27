@@ -54,9 +54,7 @@ class GatewayCRManagerTest {
 
     private Resource genericHttpRouteTemplate;
 
-    private Resource payloadLoggerExtProcTemplate;
-
-    private Resource extProcTemplate;
+    private Resource envoyPolicyTemplate;
 
     @Mock
     private MustacheFactory mustacheFactory;
@@ -69,10 +67,8 @@ class GatewayCRManagerTest {
 
     private Mustache genericHttpRouteMustache;
 
-    private Mustache payloadLoggerExtProcMustache;
-
-    private Mustache extProcMustache;
-
+    private Mustache envoyPolicyMustache;
+    
     private PayloadLoggerProperties payloadLoggerProperties;
 
     @Mock
@@ -107,24 +103,21 @@ class GatewayCRManagerTest {
         aibackendTemplate = mock(Resource.class);
         backendTemplate = mock(Resource.class);
         genericHttpRouteTemplate = mock(Resource.class);
-        payloadLoggerExtProcTemplate = mock(Resource.class);
-        extProcTemplate = mock(Resource.class);
+        envoyPolicyTemplate = mock(Resource.class);
 
         // Create mock mustaches
         aigatewayrouteMustache = mock(Mustache.class);
         aibackendMustache = mock(Mustache.class);
         backendMustache = mock(Mustache.class);
         genericHttpRouteMustache = mock(Mustache.class);
-        payloadLoggerExtProcMustache = mock(Mustache.class);
-        extProcMustache = mock(Mustache.class);
+        envoyPolicyMustache = mock(Mustache.class);
 
         // Mock template resources
         when(aigatewayrouteTemplate.getInputStream()).thenReturn(new ByteArrayInputStream("name: {{name}}".getBytes()));
         when(aibackendTemplate.getInputStream()).thenReturn(new ByteArrayInputStream("name: {{name}}".getBytes()));
         when(backendTemplate.getInputStream()).thenReturn(new ByteArrayInputStream("name: {{name}}".getBytes()));
         when(genericHttpRouteTemplate.getInputStream()).thenReturn(new ByteArrayInputStream("name: {{name}}".getBytes()));
-        when(payloadLoggerExtProcTemplate.getInputStream()).thenReturn(new ByteArrayInputStream("name: {{name}}".getBytes()));
-        when(extProcTemplate.getInputStream()).thenReturn(new ByteArrayInputStream("name: {{name}}".getBytes()));
+        when(envoyPolicyTemplate.getInputStream()).thenReturn(new ByteArrayInputStream("name: {{name}}".getBytes()));
 
         // Mock mustache factory
         lenient().when(mustacheFactory.compile(any(InputStreamReader.class), anyString())).thenReturn(mock(Mustache.class));
@@ -141,6 +134,15 @@ class GatewayCRManagerTest {
             throw new RuntimeException(e);
         }
 
+        // Inject the namespace field
+        try {
+            Field namespaceField = GatewayCRManager.class.getDeclaredField("namespace");
+            namespaceField.setAccessible(true);
+            namespaceField.set(gatewayCRManager, "test-namespace");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
         // Set the payloadLoggerProperties on the manager
         gatewayCRManager.setPayloadLoggerProperties(payloadLoggerProperties);
 
@@ -149,8 +151,7 @@ class GatewayCRManagerTest {
         when(resourceLoader.getResource("classpath:envoygw/templates/aibackend.yaml")).thenReturn(aibackendTemplate);
         when(resourceLoader.getResource("classpath:envoygw/templates/backend.yaml")).thenReturn(backendTemplate);
         when(resourceLoader.getResource("classpath:envoygw/templates/generic-httproute.yaml")).thenReturn(genericHttpRouteTemplate);
-        when(resourceLoader.getResource("classpath:envoygw/templates/payload-extension.yaml")).thenReturn(payloadLoggerExtProcTemplate);
-        when(resourceLoader.getResource("classpath:envoygw/templates/extproc-extension.yaml")).thenReturn(extProcTemplate);
+        when(resourceLoader.getResource("classpath:envoygw/templates/envoy-policy.yaml")).thenReturn(envoyPolicyTemplate);
 
         // Initialize the manager
         gatewayCRManager.afterPropertiesSet();
@@ -160,8 +161,7 @@ class GatewayCRManagerTest {
         setPrivateField(gatewayCRManager, "aibackendMustache", aibackendMustache);
         setPrivateField(gatewayCRManager, "backendMustache", backendMustache);
         setPrivateField(gatewayCRManager, "genericHttpRouteMustache", genericHttpRouteMustache);
-        setPrivateField(gatewayCRManager, "payloadLoggerExtProcMustache", payloadLoggerExtProcMustache);
-        setPrivateField(gatewayCRManager, "extProcMustache", extProcMustache);
+        setPrivateField(gatewayCRManager, "extPolicyMustache", envoyPolicyMustache);
     }
 
     private void setPrivateField(Object target, String fieldName, Object value) throws Exception {
@@ -187,7 +187,7 @@ class GatewayCRManagerTest {
         mockMustacheExecution(aigatewayrouteMustache, "{\"apiVersion\":\"v1alpha1\",\"kind\":\"AIGatewayRoute\"}");
         mockMustacheExecution(aibackendMustache, "{\"apiVersion\":\"v1alpha1\",\"kind\":\"AIServiceBackend\"}");
         mockMustacheExecution(backendMustache, "{\"apiVersion\":\"v1alpha1\",\"kind\":\"Backend\"}");
-
+        mockMustacheExecution(envoyPolicyMustache, "{\"apiVersion\":\"v1alpha1\",\"kind\":\"EnvoyExtensionPolicy\"}");
         // When
         List<K8sCRRunnable> runnables = gatewayCRManager.createGenAIRunnables(runtime, task, service);
 
@@ -219,7 +219,7 @@ class GatewayCRManagerTest {
 
         // Verify AIGatewayRoute CR
         K8sCRRunnable aiGatewayRoute = runnables.get(2);
-        assertEquals("test-service-aigatewayroute", aiGatewayRoute.getName());
+        assertEquals("test-service-httproute", aiGatewayRoute.getName());
         assertEquals("aigateway.envoyproxy.io", aiGatewayRoute.getApiGroup());
         assertEquals("v1alpha1", aiGatewayRoute.getApiVersion());
         assertEquals("AIGatewayRoute", aiGatewayRoute.getKind());
@@ -282,7 +282,7 @@ class GatewayCRManagerTest {
         // Given
         String runtime = "test-runtime";
         String task = "test-task";
-        GenericService service = new GenericService("test-project", "test-service", "test-function", "localhost", 8080);
+        GenericService service = new GenericService("test-project", "test-service", "test-function", "localhost", 8080, "");
 
         // Mock mustache execution
         mockMustacheExecution(genericHttpRouteMustache, "{\"apiVersion\":\"v1\",\"kind\":\"HTTPRoute\"}");
@@ -315,23 +315,23 @@ class GatewayCRManagerTest {
         // Given
         String runtime = "test-runtime";
         String task = "test-task";
-        GenericService service = new GenericService("test-project", "test-service", "test-function", "localhost", 8080);
+        GenericService service = new GenericService("test-project", "test-service", "test-function", "localhost", 8080, "");
 
         // Mock mustache execution
         mockMustacheExecution(
-            payloadLoggerExtProcMustache,
+            envoyPolicyMustache,
             "{\"apiVersion\":\"v1alpha1\",\"kind\":\"EnvoyExtensionPolicy\"}"
         );
 
         // When
-        List<K8sCRRunnable> runnables = gatewayCRManager.createServicePayloadLoggerRunnables(runtime, task, service);
+        List<K8sCRRunnable> runnables = gatewayCRManager.createExtensionPolicies(runtime, task, service, Boolean.TRUE, null);
 
         // Then
         assertNotNull(runnables);
         assertEquals(1, runnables.size());
 
         K8sCRRunnable payloadLogger = runnables.get(0);
-        assertEquals("test-service-payload-logger", payloadLogger.getName());
+        assertEquals("test-service-extension-policy", payloadLogger.getName());
         assertEquals("gateway.envoyproxy.io", payloadLogger.getApiGroup());
         assertEquals("v1alpha1", payloadLogger.getApiVersion());
         assertEquals("EnvoyExtensionPolicy", payloadLogger.getKind());
@@ -342,25 +342,27 @@ class GatewayCRManagerTest {
         // Given
         String runtime = "test-runtime";
         String task = "test-task";
-        ExtProcService service = new ExtProcService();
-        service.setProjectName("test-project");
-        service.setServiceId("ref-service");
-        service.setServiceHost("extproc-host");
-        service.setServicePort(9090);
-        service.setReferenceServiceId("test-service");
+        ExtProcService extProcService = new ExtProcService();
+        extProcService.setProjectName("test-project");
+        extProcService.setServiceId("ref-service");
+        extProcService.setServiceHost("extproc-host");
+        extProcService.setServicePort(9090);
+        extProcService.setReferenceServiceId("test-service");
+        extProcService.setPath("");
+        GenericService refService = new GenericService("test-project", "test-service", "test-function", "localhost", 8080, "");
 
         // Mock mustache execution
-        mockMustacheExecution(extProcMustache, "{\"apiVersion\":\"v1alpha1\",\"kind\":\"EnvoyExtensionPolicy\"}");
+        mockMustacheExecution(envoyPolicyMustache, "{\"apiVersion\":\"v1alpha1\",\"kind\":\"EnvoyExtensionPolicy\"}");
 
         // When
-        List<K8sCRRunnable> runnables = gatewayCRManager.createServiceExtprocRunnables(runtime, task, service);
+        List<K8sCRRunnable> runnables = gatewayCRManager.createExtensionPolicies(runtime, task, refService, false, List.of(extProcService));
 
         // Then
         assertNotNull(runnables);
         assertEquals(1, runnables.size());
 
         K8sCRRunnable extProc = runnables.get(0);
-        assertEquals("test-service-extproc", extProc.getName());
+        assertEquals("test-service-extension-policy", extProc.getName());
         assertEquals("gateway.envoyproxy.io", extProc.getApiGroup());
         assertEquals("v1alpha1", extProc.getApiVersion());
         assertEquals("EnvoyExtensionPolicy", extProc.getKind());

@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.runs.lifecycle;
 
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvents;
-import it.smartcommunitylabdhub.commons.models.run.Run;
+import it.smartcommunitylabdhub.runs.Run;
 
 public enum RunEvent implements LifecycleEvents<Run> {
     BUILD,

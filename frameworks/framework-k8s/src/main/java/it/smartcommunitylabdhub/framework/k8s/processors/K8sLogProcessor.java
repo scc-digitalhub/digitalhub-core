@@ -29,8 +29,6 @@ import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.infrastructure.Processor;
-import it.smartcommunitylabdhub.commons.models.run.Run;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
 import it.smartcommunitylabdhub.commons.models.status.Status;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sLogStatus;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLog;
@@ -39,6 +37,9 @@ import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.logs.Log;
 import it.smartcommunitylabdhub.logs.LogService;
 import it.smartcommunitylabdhub.logs.spec.LogSpec;
+import it.smartcommunitylabdhub.runs.Run;
+import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
+
 import java.io.Serializable;
 import java.time.Instant;
 import java.util.ArrayList;

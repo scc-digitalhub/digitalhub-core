@@ -29,5 +29,4 @@ public class GenAIModelService extends GenericService {
 
     private String modelName;
     private String schemaName;
-    private String schemaPrefix;
 }

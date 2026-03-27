@@ -24,11 +24,11 @@
 package it.smartcommunitylabdhub.runtimes.lifecycle;
 
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.infrastructure.Runtime;
-import it.smartcommunitylabdhub.commons.models.run.Run;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
 import it.smartcommunitylabdhub.lifecycle.BaseFsmFactory;
+import it.smartcommunitylabdhub.runs.Run;
+import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
+import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
+import it.smartcommunitylabdhub.runtimes.Runtime;
 import it.smartcommunitylabdhub.runtimes.lifecycle.states.RunStateBuilt;
 import it.smartcommunitylabdhub.runtimes.lifecycle.states.RunStateCompleted;
 import it.smartcommunitylabdhub.runtimes.lifecycle.states.RunStateCreated;

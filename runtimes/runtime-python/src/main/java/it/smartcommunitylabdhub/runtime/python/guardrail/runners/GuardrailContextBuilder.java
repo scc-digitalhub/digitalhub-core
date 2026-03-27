@@ -1,6 +1,6 @@
 package it.smartcommunitylabdhub.runtime.python.guardrail.runners;
 
-import it.smartcommunitylabdhub.commons.models.run.Run;
+import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.python.guardrail.specs.GuardrailFunctionSpec;
 import java.io.Serializable;
 import java.util.HashMap;

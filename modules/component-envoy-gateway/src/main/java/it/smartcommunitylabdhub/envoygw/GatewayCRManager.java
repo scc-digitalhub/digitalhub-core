@@ -41,9 +41,11 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 public class GatewayCRManager implements InitializingBean {
@@ -54,23 +56,9 @@ public class GatewayCRManager implements InitializingBean {
     @Autowired
     ResourceLoader resourceLoader;
 
-    // @Value("classpath:envoygw/templates/aigatewayroute.yml")
-    // private Resource aigatewayrouteTemplate;
+    @Value("${kubernetes.namespace}")
+    private String namespace;
 
-    // @Value("classpath:envoygw/templates/aibackend.yaml")
-    // private Resource aibackendTemplate;
-
-    // @Value("classpath:envoygw/templates/backend.yml")
-    // private Resource backendTemplate;
-
-    // @Value("classpath:envoygw/templates/generic-httproute.yml")
-    // private Resource genericHttpRouteTemplate;
-
-    // @Value("classpath:envoygw/templates/payload-extension.yml")
-    // private Resource payloadLoggerExtProcTemplate;
-
-    // @Value("classpath:envoygw/templates/extproc-extension.yml")
-    // private Resource extProcTemplate;
 
     private static final String AIGATEWAY_API_GROUP = "aigateway.envoyproxy.io";
     private static final String AIGATEWAY_API_VERSION = "v1alpha1";
@@ -95,17 +83,11 @@ public class GatewayCRManager implements InitializingBean {
     private static final String GENERIC_HTTPROUTE_API_GROUP = "gateway.networking.k8s.io";
     private static final String GENERIC_HTTPROUTE_API_VERSION = "v1";
 
-    private Mustache payloadLoggerExtProcMustache;
-    private static final String PAYLOADLOGGER_EXTPROC_API_KIND = "EnvoyExtensionPolicy";
-    private static final String PAYLOADLOGGER_EXTPROC_API_PLURAL = "envoyextensionpolicies";
-    private static final String PAYLOADLOGGER_EXTPROC_API_GROUP = "gateway.envoyproxy.io";
-    private static final String PAYLOADLOGGER_EXTPROC_API_VERSION = "v1alpha1";
-
-    private Mustache extProcMustache;
-    private static final String EXTPROC_API_KIND = "EnvoyExtensionPolicy";
-    private static final String EXTPROC_API_PLURAL = "envoyextensionpolicies";
-    private static final String EXTPROC_API_GROUP = "gateway.envoyproxy.io";
-    private static final String EXTPROC_API_VERSION = "v1alpha1";
+    private Mustache extPolicyMustache;
+    private static final String EXTPOLICY_API_KIND = "EnvoyExtensionPolicy";
+    private static final String EXTPOLICY_API_PLURAL = "envoyextensionpolicies";
+    private static final String EXTPOLICY_API_GROUP = "gateway.envoyproxy.io";
+    private static final String EXTPOLICY_API_VERSION = "v1alpha1";
 
     private MustacheFactory mustacheFactory = new DefaultMustacheFactory();
 
@@ -136,9 +118,8 @@ public class GatewayCRManager implements InitializingBean {
         aibackendMustache = loadTemplate("aibackend");
         aigatewayrouteMustache = loadTemplate("aigatewayroute");
         backendMustache = loadTemplate("backend");
-        extProcMustache = loadTemplate("extproc-extension");
+        extPolicyMustache = loadTemplate("envoy-policy");
         genericHttpRouteMustache = loadTemplate("generic-httproute");
-        payloadLoggerExtProcMustache = loadTemplate("payload-extension");
 
         log.debug("Templates loaded successfully");
     }
@@ -169,11 +150,11 @@ public class GatewayCRManager implements InitializingBean {
 
         String backendName = serviceId + "-backend";
         String aiBackendName = serviceId + "-aibackend";
-        String routeName = serviceId + "-aigatewayroute";
+        String routeName = serviceId + "-httproute";
 
         // Backend CR
-        Map<String, Serializable> context = new HashMap<>();
-        context.put("serviceHost", service.getServiceHost());
+        Map<String, Object> context = new HashMap<>();
+        context.put("serviceHost", namespacedHostName(service.getServiceHost()));
         context.put("servicePort", service.getServicePort());
         K8sCRRunnable backendCR = K8sCRRunnable
             .builder()
@@ -195,8 +176,8 @@ public class GatewayCRManager implements InitializingBean {
         context.clear();
         context.put("schemaName", service.getSchemaName());
         context.put("backendName", backendName);
-        if (service.getSchemaPrefix() != null) {
-            context.put("schemaPrefix", service.getSchemaPrefix());
+        if (StringUtils.hasText(service.getPath())) {
+            context.put("schemaPrefix", service.getPath());
         } else {
             context.put("schemaPrefix", "");
         }
@@ -221,8 +202,8 @@ public class GatewayCRManager implements InitializingBean {
         context.put("aiGatewayName", envoyGwProperties.getAiGateway().getName());
         context.put("modelName", service.getModelName());
         context.put("aiBackendName", aiBackendName);
-        if (service.getSchemaPrefix() != null) {
-            context.put("schemaPrefix", service.getSchemaPrefix());
+        if (StringUtils.hasText(service.getPath())) {
+            context.put("schemaPrefix", service.getPath());
         } else {
             context.put("schemaPrefix", "");
         }
@@ -271,8 +252,8 @@ public class GatewayCRManager implements InitializingBean {
         String backendName = serviceId + "-backend";
         String routeName = serviceId + "-httproute";
 
-        Map<String, Serializable> context = new HashMap<>();
-        context.put("serviceHost", service.getServiceHost());
+        Map<String, Object> context = new HashMap<>();
+        context.put("serviceHost", namespacedHostName(service.getServiceHost()));
         context.put("servicePort", service.getServicePort());
         K8sCRRunnable backendCR = K8sCRRunnable
             .builder()
@@ -295,6 +276,7 @@ public class GatewayCRManager implements InitializingBean {
         context.put("genericGatewayName", envoyGwProperties.getGenericGateway().getName());
         context.put("backendName", backendName);
         context.put("servicePath", serviceId);
+        context.put("path", service.getPath());
 
         K8sCRRunnable genericHttpRouteCR = K8sCRRunnable
             .builder()
@@ -316,8 +298,8 @@ public class GatewayCRManager implements InitializingBean {
     }
 
     /**
-     * Create K8sCRRunnables corresponding to Envoy Extension Processor Custom resources for Payload Logger.
-     * Specifically, it creates the following CRs:
+     * Create K8sCRRunnables corresponding to Envoy Extension Policy Custom resources for Services. Specifically,
+     * it creates the following CRs:
      * - EnvoyExtensionPolicy
      * @param runtime
      * @param task
@@ -325,91 +307,57 @@ public class GatewayCRManager implements InitializingBean {
      * @return
      * @throws IOException
      */
-    public List<K8sCRRunnable> createServicePayloadLoggerRunnables(String runtime, String task, GenericService service)
-        throws IOException {
+    public List<K8sCRRunnable> createExtensionPolicies(String runtime, String task, GenericService service, boolean withPayloadLogger, List<ExtProcService> extProcServices) throws IOException {
         Assert.hasText(runtime, "runtime is required");
         Assert.hasText(task, "task is required");
         Assert.notNull(service, "service is required");
-        if (payloadLoggerProperties == null || !payloadLoggerProperties.isEnabled()) {
-            log.warn("Payload Logger extension is not enabled, skipping creation of Payload Logger CRs");
+        if (!withPayloadLogger && (extProcServices == null || extProcServices.isEmpty())) {
+            log.debug("No extensions enabled for service {}, skipping creation of EnvoyExtensionPolicy", service.getServiceId());
             return List.of();
         }
-
+        // prepare context for EnvoyExtensionPolicy template
         String serviceId = service.getServiceId();
-        String payloadLoggerName = serviceId + "-payload-logger";
-        log.debug("createServicePayloadLoggerRunnables for runtime {} task {} serviceId {}", runtime, task, serviceId);
-
-        List<K8sCRRunnable> runnables = new LinkedList<>();
-
-        // Payload Logger Route CR
-        Map<String, Serializable> context = new HashMap<>();
+        Map<String, Object> context = new HashMap<>();
         context.put("routeName", serviceId + "-httproute");
         context.put("projectName", service.getProjectName());
         context.put("serviceId", serviceId);
         context.put("functionName", service.getFunctionName());
-        context.put("payloadLoggerHost", payloadLoggerProperties.getHost());
-        context.put("payloadLoggerPort", payloadLoggerProperties.getPort());
+
+        if (withPayloadLogger) {
+            context.put("payloadLoggerHost", localizeHostName(payloadLoggerProperties.getHost()));
+            context.put("payloadLoggerPort", payloadLoggerProperties.getPort());
+            context.put("payloadLoggerEnabled", true);
+        } 
+        if (extProcServices != null && !extProcServices.isEmpty()) {
+            List<Map<String, Object>> extProcs = new LinkedList<>();
+            for (ExtProcService extProcService : extProcServices) {
+                Map<String, Object> extProcContext = new HashMap<>();
+                extProcContext.put("extProcHost", localizeHostName(extProcService.getServiceHost()));
+                extProcContext.put("extProcPort", extProcService.getServicePort());
+                extProcs.add(extProcContext);
+            }
+            context.put("extProcs", extProcs);
+        } 
+
+        String payloadLoggerName = serviceId + "-extension-policy";
+        Map<String, Serializable> spec = generateSpec(extPolicyMustache, context);
+
+        List<K8sCRRunnable> runnables = new LinkedList<>();
         K8sCRRunnable payloadLoggerCR = K8sCRRunnable
             .builder()
             .runtime(runtime)
             .task(task)
             .state(State.READY.name())
             .name(payloadLoggerName)
-            .apiGroup(PAYLOADLOGGER_EXTPROC_API_GROUP)
-            .apiVersion(PAYLOADLOGGER_EXTPROC_API_VERSION)
-            .kind(PAYLOADLOGGER_EXTPROC_API_KIND)
-            .plural(PAYLOADLOGGER_EXTPROC_API_PLURAL)
-            .spec(generateSpec(payloadLoggerExtProcMustache, context))
+            .apiGroup(EXTPOLICY_API_GROUP)
+            .apiVersion(EXTPOLICY_API_VERSION)
+            .kind(EXTPOLICY_API_KIND)
+            .plural(EXTPOLICY_API_PLURAL)
+            .spec(spec)
             .build();
         payloadLoggerCR.setId(payloadLoggerName);
         payloadLoggerCR.setProject(service.getProjectName());
         runnables.add(payloadLoggerCR);
-
-        return runnables;
-    }
-
-    /**
-     * Create K8sCRRunnables corresponding to Envoy Extension Processor Custom resources for ExtProc Service.
-     * Specifically, it creates the following CRs:
-     * - EnvoyExtensionPolicy
-     * @param runtime
-     * @param task
-     * @param service
-     * @return
-     * @throws IOException
-     */
-    public List<K8sCRRunnable> createServiceExtprocRunnables(String runtime, String task, ExtProcService service)
-        throws IOException {
-        Assert.hasText(runtime, "runtime is required");
-        Assert.hasText(task, "task is required");
-        Assert.notNull(service, "service is required");
-
-        String serviceId = service.getReferenceServiceId();
-        String extprocName = serviceId + "-extproc";
-        log.debug("createServiceExtprocRunnables for runtime {} task {} serviceId {}", runtime, task, serviceId);
-
-        List<K8sCRRunnable> runnables = new LinkedList<>();
-
-        // ExtProc Route CR
-        Map<String, Serializable> context = new HashMap<>();
-        context.put("routeName", serviceId + "-httproute");
-        context.put("extProcHost", service.getServiceHost());
-        context.put("extProcPort", service.getServicePort());
-        K8sCRRunnable extProcCR = K8sCRRunnable
-            .builder()
-            .runtime(runtime)
-            .task(task)
-            .state(State.READY.name())
-            .name(extprocName)
-            .apiGroup(EXTPROC_API_GROUP)
-            .apiVersion(EXTPROC_API_VERSION)
-            .kind(EXTPROC_API_KIND)
-            .plural(EXTPROC_API_PLURAL)
-            .spec(generateSpec(extProcMustache, context))
-            .build();
-        extProcCR.setId(extprocName);
-        extProcCR.setProject(service.getProjectName());
-        runnables.add(extProcCR);
 
         return runnables;
     }
@@ -436,17 +384,38 @@ public class GatewayCRManager implements InitializingBean {
             .build();
     }
 
-    private Map<String, Serializable> generateSpec(Mustache mustache, Map<String, Serializable> context)
+    private Map<String, Serializable> generateSpec(Mustache mustache, Map<String, Object> context)
         throws IOException {
         StringWriter writer = new StringWriter();
         mustache.execute(writer, context);
         writer.flush();
-        return objectMapper.readValue(writer.toString(), typeRef);
+        String specYaml = writer.toString();
+        return objectMapper.readValue(specYaml, typeRef);
     }
 
     private Mustache loadTemplate(String templateName) throws IOException {
         String resourcePath = String.format("classpath:envoygw/templates/%s.yaml", templateName);
         Resource resource = resourceLoader.getResource(resourcePath);
         return mustacheFactory.compile(new InputStreamReader(resource.getInputStream()), templateName);
+    }
+
+    private String localizeHostName(String host) {
+        // drop trailing namespace suffix if present (e.g., service.namespace.svc.cluster.local -> service)
+        if (host != null && host.endsWith(namespace)) {
+            return host.substring(0, host.length() - namespace.length() - 1);
+        } else if (host != null && host.endsWith(namespace + ".svc.cluster.local")) {
+            // drop trailing svc.cluster.local if present (e.g., service.namespace.svc.cluster.local -> service.namespace)
+            return host.substring(0, host.length() - (namespace.length() + ".svc.cluster.local".length()) - 1);
+        } else {
+            return host;
+        }
+    }
+
+    private String namespacedHostName(String host) {
+        if (host != null && !host.endsWith(namespace) && !host.endsWith(namespace + ".svc.cluster.local")) {
+            return host + "." + namespace;
+        } else {
+            return host;
+        }
     }
 }

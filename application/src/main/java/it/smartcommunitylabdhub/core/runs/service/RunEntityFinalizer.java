@@ -17,9 +17,9 @@
 package it.smartcommunitylabdhub.core.runs.service;
 
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.core.services.EntityFinalizer;
 import it.smartcommunitylabdhub.logs.LogService;
+import it.smartcommunitylabdhub.runs.Run;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;

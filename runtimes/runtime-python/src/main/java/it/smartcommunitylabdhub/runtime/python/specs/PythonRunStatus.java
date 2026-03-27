@@ -24,7 +24,8 @@
 package it.smartcommunitylabdhub.runtime.python.specs;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
+
+import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

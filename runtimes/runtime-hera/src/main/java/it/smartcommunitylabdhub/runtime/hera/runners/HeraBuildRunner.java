@@ -24,10 +24,10 @@
 package it.smartcommunitylabdhub.runtime.hera.runners;
 
 import it.smartcommunitylabdhub.commons.models.enums.State;
-import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
+import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.hera.HeraRuntime;
 import it.smartcommunitylabdhub.runtime.hera.specs.HeraBuildRunSpec;
 import it.smartcommunitylabdhub.runtime.hera.specs.HeraBuildTaskSpec;

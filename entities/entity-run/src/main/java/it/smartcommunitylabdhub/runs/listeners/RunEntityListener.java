@@ -23,9 +23,9 @@
 
 package it.smartcommunitylabdhub.runs.listeners;
 
-import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.core.events.AbstractEntityListener;
 import it.smartcommunitylabdhub.core.events.EntityEvent;
+import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.persistence.RunEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.convert.converter.Converter;

@@ -97,7 +97,7 @@ def init_context(context: Context) -> None:
 
     context.logger.info("Context initialized.")
 
-def handler_serve(context: Context, event: Event) -> Any:
+def handler(context: Context, event: Event) -> Any:
     """
     Main function.
 
