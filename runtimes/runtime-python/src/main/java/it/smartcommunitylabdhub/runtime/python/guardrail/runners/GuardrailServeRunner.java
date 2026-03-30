@@ -26,7 +26,6 @@ package it.smartcommunitylabdhub.runtime.python.guardrail.runners;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.function.Function;
-import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
@@ -37,6 +36,7 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
 import it.smartcommunitylabdhub.functions.FunctionManager;
+import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.python.build.PythonBaseRunner;
 import it.smartcommunitylabdhub.runtime.python.config.PythonProperties;
 import it.smartcommunitylabdhub.runtime.python.guardrail.GuardrailRuntime;
@@ -57,7 +57,7 @@ import org.springframework.util.StringUtils;
 
 public class GuardrailServeRunner extends PythonBaseRunner {
 
-    public static final int HTTP_PORT = 8080;
+    public static final int HTTP_PORT = 5051;
 
     private final FunctionManager functionService;
 

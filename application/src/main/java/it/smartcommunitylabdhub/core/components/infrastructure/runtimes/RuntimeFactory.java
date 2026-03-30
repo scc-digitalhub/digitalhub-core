@@ -25,9 +25,10 @@ package it.smartcommunitylabdhub.core.components.infrastructure.runtimes;
 
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.infrastructure.Runtime;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
+import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
+import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
+import it.smartcommunitylabdhub.runtimes.Runtime;
+
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;

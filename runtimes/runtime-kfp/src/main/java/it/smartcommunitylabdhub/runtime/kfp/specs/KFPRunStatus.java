@@ -24,7 +24,8 @@
 package it.smartcommunitylabdhub.runtime.kfp.specs;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
+
+import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
 import it.smartcommunitylabdhub.runtime.kfp.dtos.NodeStatusDTO;
 import java.util.List;
 import lombok.Getter;

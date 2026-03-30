@@ -31,11 +31,11 @@ import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.function.Function;
-import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
+import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.lifecycle.RunState;
 import it.smartcommunitylabdhub.runtime.kubeai.base.KubeAIRuntime;
 import it.smartcommunitylabdhub.runtime.kubeai.base.KubeAIServeRunStatus;
@@ -203,18 +203,18 @@ public class KubeAITextRuntime extends KubeAIRuntime<KubeAITextFunctionSpec, Kub
                 .orElse(new K8sServiceInfo());
 
             //feature based urls
-            String baseUrl = kubeAiEndpoint + "/openai";
+            String baseUrl = kubeAiEndpoint + "/openai/v1";
             List<String> urls = service.getUrls() != null ? new ArrayList<>(service.getUrls()) : new ArrayList<>();
 
             List<KubeAIFeature> features = functionSpec.getFeatures() != null
                 ? functionSpec.getFeatures()
                 : Collections.emptyList();
             if (features.contains(KubeAIFeature.TextGeneration)) {
-                urls.add(baseUrl + "/v1/chat/completions");
-                urls.add(baseUrl + "/v1/completions");
+                urls.add(baseUrl + "/chat/completions");
+                urls.add(baseUrl + "/completions");
             }
             if (features.contains(KubeAIFeature.TextEmbedding)) {
-                urls.add(baseUrl + "/v1/embeddings");
+                urls.add(baseUrl + "/embeddings");
             }
 
             service.setUrls(urls);

@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.runtime.vllm.speech.specs;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
-import it.smartcommunitylabdhub.commons.models.run.Run;
+import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeRunSpec;
 import it.smartcommunitylabdhub.runtime.vllm.speech.VLLMServeSpeechRuntime;
 import java.io.Serializable;

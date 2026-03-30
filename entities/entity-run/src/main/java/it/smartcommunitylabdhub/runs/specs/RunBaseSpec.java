@@ -21,7 +21,7 @@
  * 
  */
 
-package it.smartcommunitylabdhub.commons.models.run;
+package it.smartcommunitylabdhub.runs.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import it.smartcommunitylabdhub.commons.models.base.BaseSpec;

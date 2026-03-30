@@ -24,7 +24,8 @@
 package it.smartcommunitylabdhub.runtime.dbt.specs;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
+
+import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;

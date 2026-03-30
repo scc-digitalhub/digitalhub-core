@@ -17,9 +17,9 @@
 package it.smartcommunitylabdhub.components.proxy;
 
 import it.smartcommunitylabdhub.commons.Keys;
-import it.smartcommunitylabdhub.commons.models.run.Run;
-import it.smartcommunitylabdhub.commons.services.RunManager;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceStatus;
+import it.smartcommunitylabdhub.runs.Run;
+import it.smartcommunitylabdhub.runs.RunManager;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;

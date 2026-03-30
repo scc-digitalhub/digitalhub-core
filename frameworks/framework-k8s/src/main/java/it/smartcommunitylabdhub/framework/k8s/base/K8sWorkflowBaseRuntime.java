@@ -24,12 +24,12 @@
 package it.smartcommunitylabdhub.framework.k8s.base;
 
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.models.run.Run;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
 import it.smartcommunitylabdhub.commons.models.workflow.WorkflowBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
+import it.smartcommunitylabdhub.runs.Run;
+import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
+import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
 import it.smartcommunitylabdhub.runtimes.base.AbstractWorkflowBaseRuntime;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
