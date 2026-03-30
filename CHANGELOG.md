@@ -1,4 +1,24 @@
-# [0.14.2](https://github.com/scc-digitalhub/digitalhub-core/compare/0.14.1...0.14.0) (2026-03-16)
+# [0.14.3](https://github.com/scc-digitalhub/digitalhub-core/compare/0.14.2...0.14.3) (2026-03-30)
+
+
+### Bug Fixes
+
+
+* contextRefs write to csv with null values ([5cb3d9e](https://github.com/scc-digitalhub/digitalhub-core/commit/5cb3d9efdc92815fa4cf02b78e7e9831234ecafe))
+* entity managers are *not* transactional ([604835e](https://github.com/scc-digitalhub/digitalhub-core/commit/604835e51f35a0fd40ef7cfa6e551692e22dca0a))
+* files service is *not* transactional ([e9a219f](https://github.com/scc-digitalhub/digitalhub-core/commit/e9a219f6ed90e6d0d8f8c105bb382d7c61170d75))
+* missing force param for dataitem controller ([cfc437b](https://github.com/scc-digitalhub/digitalhub-core/commit/cfc437b4cf3a60d9bd1d8e05de577fa7bb8abf71))
+* use correct destination path for context refs in runnners ([037d203](https://github.com/scc-digitalhub/digitalhub-core/commit/037d203d90f6184308bb06dca384e494077580fe))
+
+
+### Features
+
+* revisit k8s labels to expose dhcore as manager and application as component ([ba4b702](https://github.com/scc-digitalhub/digitalhub-core/commit/ba4b70274b81b110ed1371331e52a7d6cde2a98a))
+* use fixed namespace `dhcore` for k8s labels ([ba534f3](https://github.com/scc-digitalhub/digitalhub-core/commit/ba534f39e4d4a340bc649fdf94c1ad3ab8dec992))
+
+
+
+# [0.14.2](https://github.com/scc-digitalhub/digitalhub-core/compare/0.14.1...0.14.2) (2026-03-16)
 
 Maintenance release for 14.x
 
