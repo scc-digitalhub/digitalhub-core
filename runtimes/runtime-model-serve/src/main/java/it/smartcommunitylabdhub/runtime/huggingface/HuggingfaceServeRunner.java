@@ -46,6 +46,7 @@ import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipName;
 import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
 import it.smartcommunitylabdhub.runs.Run;
+import it.smartcommunitylabdhub.runtime.huggingface.specs.HuggingFaceModelSpec;
 import it.smartcommunitylabdhub.runtime.huggingface.specs.HuggingfaceServeFunctionSpec;
 import it.smartcommunitylabdhub.runtime.huggingface.specs.HuggingfaceServeRunSpec;
 import it.smartcommunitylabdhub.runtime.huggingface.specs.HuggingfaceServeTaskSpec;
