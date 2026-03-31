@@ -39,6 +39,7 @@ import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sDeploymentRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
+import it.smartcommunitylabdhub.framework.k8s.service.K8sMetricsService;
 import it.smartcommunitylabdhub.runtimes.persistence.RunnableRepository;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStoreImpl;
@@ -142,5 +143,11 @@ public class K8sFrameworkConfig {
         RunnableStore<K8sServeRunnable> store
     ) {
         return new K8sServeListener(serveFramework, store);
+    }
+
+    @Bean
+    @ConditionalOnKubernetes
+    public K8sMetricsService k8sMetricsService(ApiClient apiClient) {
+        return new K8sMetricsService(apiClient);
     }
 }

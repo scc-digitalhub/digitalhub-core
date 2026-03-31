@@ -23,6 +23,7 @@
 
 package it.smartcommunitylabdhub.core.controllers.v1.base;
 
+import io.kubernetes.client.custom.ContainerMetrics;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.smartcommunitylabdhub.authorization.model.ResourceShareEntity;
@@ -31,12 +32,14 @@ import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.config.SecurityProperties;
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.services.ProjectManager;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
+import it.smartcommunitylabdhub.framework.k8s.service.K8sMetricsService;
 import it.smartcommunitylabdhub.projects.filters.ProjectEntityFilter;
 import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipsAwareEntityService;
@@ -90,6 +93,9 @@ public class ProjectController {
 
     @Autowired
     private AuditorAware<String> auditor;
+
+    @Autowired(required = false)
+    private K8sMetricsService k8sMetricsService;
 
     @Autowired
     SecurityProperties securityProperties;
@@ -281,5 +287,17 @@ public class ProjectController {
                 }
             }
         }
+    }
+
+    @Operation(summary = "Get project metrics", description = "Get metrics for a project")
+    @GetMapping(path = "/{id}/metrics/k8s", produces = "application/json; charset=UTF-8")
+    public ContainerMetrics getMetrics(
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
+        Authentication auth
+    ) throws NoSuchEntityException, StoreException {
+        if (k8sMetricsService == null) {
+            throw new StoreException("metrics service not available");
+        }
+        return k8sMetricsService.getMetrics("project", id);
     }
 }
