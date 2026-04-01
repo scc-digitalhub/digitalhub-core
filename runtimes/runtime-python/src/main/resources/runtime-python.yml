@@ -46,7 +46,7 @@ runtime:
     command: ${RUNTIME_GUARDRAIL_COMMAND:${runtime.python.command}}
     entrypoint: ${runtime.python.entrypoint:classpath:/runtime-python/docker/entrypoint.sh}
     passwd-template: ${runtime.python.passwd-template:classpath:/runtime-python/docker/passwd.template}
-    dependencies: ${RUNTIME_GUARDRAIL_DEPENDENCIES:digitalhub[full],digitalhub-runtime-guardrail}
+    dependencies: ${RUNTIME_GUARDRAIL_DEPENDENCIES:digitalhub[full],digitalhub-runtime-python}
     use-beta-dependencies: ${RUNTIME_GUARDRAIL_USE_BETA_DEPENDENCIES:${runtime.python.use-beta-dependencies}}
     volume-size: ${RUNTIME_GUARDRAIL_VOLUME_SIZE:${runtime.python.volume-size}}
   openinference:
@@ -71,7 +71,7 @@ runtime:
     command: ${RUNTIME_OPENINFERENCE_COMMAND:${runtime.python.command}}
     entrypoint: ${runtime.python.entrypoint:classpath:/runtime-python/docker/entrypoint.sh}
     passwd-template: ${runtime.python.passwd-template:classpath:/runtime-python/docker/passwd.template}
-    dependencies: ${RUNTIME_OPENINFERENCE_DEPENDENCIES:digitalhub[full],digitalhub-runtime-openinference}
+    dependencies: ${RUNTIME_OPENINFERENCE_DEPENDENCIES:digitalhub[full],digitalhub-runtime-python}
     use-beta-dependencies: ${RUNTIME_OPENINFERENCE_USE_BETA_DEPENDENCIES:${runtime.python.use-beta-dependencies}}
     volume-size: ${RUNTIME_OPENINFERENCE_VOLUME_SIZE:${runtime.python.volume-size}}    
         
