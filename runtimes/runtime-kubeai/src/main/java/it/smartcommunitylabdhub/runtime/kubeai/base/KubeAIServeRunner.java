@@ -185,8 +185,9 @@ public class KubeAIServeRunner {
         List<String> args = new ArrayList<>();
         if (KubeAIEngine.VLLM.name().equals(engine)) {
             //inject args to reduce logging
-            args.add("--disable-log-requests");
-            args.add("--disable-log-stats");
+            // DISABLED IN VLLM
+            // args.add("--disable-log-requests");
+            // args.add("--disable-log-stats");
             args.add("--uvicorn-log-level=warning");
         }
         if (KubeAIEngine.OLlama.name().equals(engine)) {
