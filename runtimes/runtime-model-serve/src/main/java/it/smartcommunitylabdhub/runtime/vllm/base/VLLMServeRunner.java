@@ -236,6 +236,8 @@ public class VLLMServeRunner {
         List<String> args = new ArrayList<>();
 
         String defaultServedModelName = "model";
+        // necessary for vLLM when run as python module
+        args.add("--model");
         // model dir or model id
         if ("huggingface".equals(uri.getScheme()) || "hf".equals(uri.getScheme())) {
             String mdlId = uri.getHost() + uri.getPath();
