@@ -840,6 +840,20 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
             volumes.add(volume);
         }
 
+        //post-process
+        volumes.forEach(v -> {
+            //inject labels when supported
+            if (v.getEphemeral() != null && v.getEphemeral().getVolumeClaimTemplate() != null) {
+                V1ObjectMeta meta = v.getEphemeral().getVolumeClaimTemplate().getMetadata() != null
+                    ? v.getEphemeral().getVolumeClaimTemplate().getMetadata()
+                    : new V1ObjectMeta();
+
+                Map<String, String> labels = MapUtils.mergeMultipleMaps(buildLabels(runnable), meta.getLabels());
+                meta.setLabels(labels);
+                v.getEphemeral().getVolumeClaimTemplate().setMetadata(meta);
+            }
+        });
+
         return volumes;
     }
 
