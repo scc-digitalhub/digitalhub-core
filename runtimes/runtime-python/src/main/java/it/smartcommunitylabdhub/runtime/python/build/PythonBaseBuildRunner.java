@@ -73,7 +73,8 @@ public abstract class PythonBaseBuildRunner extends PythonBaseRunner {
 
         // env vars from task spec
         if (envs != null) {
-            envs.forEach(env -> dockerfileGenerator.instruction(DockerfileInstruction.Kind.ENV, env.name(), env.value()));
+            envs.forEach(env -> dockerfileGenerator.instruction(DockerfileInstruction.Kind.ARG, env.name() + "=" + env.value()));
+            envs.forEach(env -> dockerfileGenerator.instruction(DockerfileInstruction.Kind.ENV, env.name() + "=$" + env.name()));
         }
 
         //switch to root to install libs and dependencies
