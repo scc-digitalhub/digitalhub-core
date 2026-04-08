@@ -55,6 +55,8 @@ import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sBaseFramewor
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sTemplate;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreSecret;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import it.smartcommunitylabdhub.framework.kaniko.config.BuildkitProperties;
@@ -478,6 +480,15 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
                 "type=image,name=" + imageName + ",push=true"
             )
         );
+        
+        //add all user-defined secrets as build secrets from env vars
+        if (runnable.getSecrets() != null) {
+            for (CoreEnv secret : runnable.getSecrets()) {
+                argsAll.add("--secret");
+                argsAll.add("id=" + secret.name() + ",env=" + secret.name());
+            }
+        }
+
 
         V1SecurityContext securityContext = buildSecurityContext(runnable);
 
