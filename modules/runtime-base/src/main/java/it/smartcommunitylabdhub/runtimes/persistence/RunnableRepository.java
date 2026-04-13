@@ -111,6 +111,32 @@ public class RunnableRepository {
         return jdbcTemplate.query(SELECT_ALL_SQL, new Object[] { clazz }, new int[] { Types.VARCHAR }, rowMapper);
     }
 
+    public void upsert(String clazz, RunnableEntity entity) {
+        if (clazz == null || entity == null || entity.getId() == null) {
+            throw new IllegalArgumentException("invalid data");
+        }
+
+        Timestamp now = Timestamp.from(Instant.now());
+
+        // Try UPDATE first (common path: record already exists)
+        SqlLobValue lob = new SqlLobValue(entity.getData());
+        int updated = jdbcTemplate.update(
+            UPDATE_SQL,
+            new Object[] { lob, now, entity.getId(), clazz },
+            new int[] { Types.BLOB, Types.TIMESTAMP, Types.VARCHAR, Types.VARCHAR }
+        );
+
+        if (updated == 0) {
+            // Record does not exist yet — INSERT
+            SqlLobValue lobInsert = new SqlLobValue(entity.getData());
+            jdbcTemplate.update(
+                INSERT_SQL,
+                new Object[] { entity.getId(), entity.getUser(), now, now, clazz, lobInsert },
+                new int[] { Types.VARCHAR, Types.VARCHAR, Types.TIMESTAMP, Types.TIMESTAMP, Types.VARCHAR, Types.BLOB }
+            );
+        }
+    }
+
     public void delete(String clazz, String id) {
         if (clazz == null || id == null) {
             throw new IllegalArgumentException("invalid data");
