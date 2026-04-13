@@ -109,7 +109,9 @@ public abstract class AbstractLifecycleManager<D extends BaseDTO & SpecDTO & Sta
         try {
             try {
                 //acquire write lock
-                getLock(id).tryLock(timeout, TimeUnit.SECONDS);
+                if (!getLock(id).tryLock(timeout, TimeUnit.SECONDS)) {
+                    throw new SystemException("unable to acquire lock for " + id);
+                }
 
                 //perform logic
                 dto = logic.apply(dto);
