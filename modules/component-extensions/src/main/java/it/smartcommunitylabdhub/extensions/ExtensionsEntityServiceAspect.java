@@ -90,10 +90,7 @@ public class ExtensionsEntityServiceAspect {
 
     // ── create ────────────────────────────────────────────────────────────────
 
-    @AfterReturning(
-        pointcut = "execution(* *.create(..)) && target(service) && args(dto,..)",
-        returning = "result"
-    )
+    @AfterReturning(pointcut = "execution(* *.create(..)) && target(service) && args(dto,..)", returning = "result")
     public void afterCreate(EntityService<?> service, Object dto, Object result) {
         if (!isExtensible(service)) {
             return;
@@ -226,10 +223,7 @@ public class ExtensionsEntityServiceAspect {
 
     // ── get ───────────────────────────────────────────────────────────────────
 
-    @AfterReturning(
-        pointcut = "execution(* *.get(..)) && target(service)",
-        returning = "result"
-    )
+    @AfterReturning(pointcut = "execution(* *.get(..)) && target(service)", returning = "result")
     public void afterGet(EntityService<?> service, Object result) {
         if (!isExtensible(service)) {
             return;

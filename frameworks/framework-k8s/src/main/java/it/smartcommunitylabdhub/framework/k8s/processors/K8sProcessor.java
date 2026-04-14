@@ -30,7 +30,6 @@ import it.smartcommunitylabdhub.commons.models.status.Status;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sRunStatus;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runs.Run;
-
 import java.io.Serializable;
 import java.util.Map;
 import org.springframework.stereotype.Component;

@@ -25,7 +25,6 @@ package it.smartcommunitylabdhub.runtime.flower.specs;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

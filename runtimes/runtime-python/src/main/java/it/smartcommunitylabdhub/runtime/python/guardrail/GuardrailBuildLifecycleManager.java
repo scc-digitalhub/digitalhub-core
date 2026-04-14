@@ -24,7 +24,8 @@ import it.smartcommunitylabdhub.runtime.python.guardrail.specs.GuardrailRunStatu
 import it.smartcommunitylabdhub.runtimes.lifecycle.RunLifecycleManager;
 
 @RuntimeComponent(runtime = GuardrailBuildRunSpec.KIND)
-public class GuardrailBuildLifecycleManager extends RunLifecycleManager<GuardrailRunSpec, GuardrailRunStatus, K8sRunnable> {
+public class GuardrailBuildLifecycleManager
+    extends RunLifecycleManager<GuardrailRunSpec, GuardrailRunStatus, K8sRunnable> {
 
     GuardrailBuildLifecycleManager(GuardrailRuntime runtime) {
         super(runtime);

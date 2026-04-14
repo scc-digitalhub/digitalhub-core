@@ -30,7 +30,6 @@ import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.python.PythonRuntime;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonFunctionSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonRunSpec;
-
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;

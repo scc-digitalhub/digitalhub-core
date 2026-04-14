@@ -1,10 +1,9 @@
 package it.smartcommunitylabdhub.envoygw.specs;
 
-import java.util.List;
-
 import it.smartcommunitylabdhub.envoygw.model.GatewayInfo;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

@@ -38,7 +38,6 @@ import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceStatus;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreServiceType;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runs.Run;
-
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;

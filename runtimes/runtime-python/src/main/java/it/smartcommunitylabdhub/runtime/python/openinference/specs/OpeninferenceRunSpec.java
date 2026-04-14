@@ -24,9 +24,7 @@
 package it.smartcommunitylabdhub.runtime.python.openinference.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
-
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;

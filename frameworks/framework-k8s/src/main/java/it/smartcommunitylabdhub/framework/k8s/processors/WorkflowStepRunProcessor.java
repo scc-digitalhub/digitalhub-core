@@ -34,7 +34,6 @@ import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipName;
 import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
 import it.smartcommunitylabdhub.runs.Run;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;

@@ -29,7 +29,6 @@ import it.smartcommunitylabdhub.commons.infrastructure.Processor;
 import it.smartcommunitylabdhub.commons.models.status.Status;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
 import it.smartcommunitylabdhub.runs.Run;
-
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import org.springframework.stereotype.Component;

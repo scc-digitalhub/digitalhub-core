@@ -30,7 +30,6 @@ import it.smartcommunitylabdhub.core.runs.specs.RunTransitionsSpec;
 import it.smartcommunitylabdhub.core.runs.specs.RunTransitionsSpec.Transition;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
-
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;

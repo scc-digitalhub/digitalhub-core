@@ -1,24 +1,12 @@
 package it.smartcommunitylabdhub.envoygw;
 
-import java.io.Serializable;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
-import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
-
 import com.fasterxml.jackson.core.type.TypeReference;
-
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.common.ProcessorType;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.infrastructure.Processor;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
+import it.smartcommunitylabdhub.commons.models.status.Status;
 import it.smartcommunitylabdhub.envoygw.model.ExtProcService;
 import it.smartcommunitylabdhub.envoygw.model.GatewayInfo;
 import it.smartcommunitylabdhub.envoygw.model.GenAIModelService;
@@ -31,14 +19,20 @@ import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.RunManager;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
+import java.io.Serializable;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
-import it.smartcommunitylabdhub.commons.models.status.Status;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
-@ProcessorType(
-    stages = { "onRunning" },
-    type = Run.class,
-    spec = Status.class
-)@Component
+@ProcessorType(stages = { "onRunning" }, type = Run.class, spec = Status.class)
+@Component
 @Slf4j
 public class ServiceRunningProcessor implements Processor<Run, RunBaseStatus> {
 
@@ -46,22 +40,23 @@ public class ServiceRunningProcessor implements Processor<Run, RunBaseStatus> {
         Map<String, Serializable>
     >() {};
 
-
     private final RunManager runService;
     private final GatewayCRManager gatewayCRManager;
     private final K8sCRFramework k8sCRFramework;
 
-    public ServiceRunningProcessor(RunManager runService, GatewayCRManager gatewayCRManager, K8sCRFramework k8sCRFramework) {
+    public ServiceRunningProcessor(
+        RunManager runService,
+        GatewayCRManager gatewayCRManager,
+        K8sCRFramework k8sCRFramework
+    ) {
         this.runService = runService;
         this.gatewayCRManager = gatewayCRManager;
         this.k8sCRFramework = k8sCRFramework;
     }
 
-
     @SuppressWarnings("unchecked")
     @Override
     public <I> RunBaseStatus process(String stage, Run run, I input) throws CoreRuntimeException {
-
         try {
             //read event
             String id = run.getId();
@@ -73,15 +68,24 @@ public class ServiceRunningProcessor implements Processor<Run, RunBaseStatus> {
                 // Use service to retrieve the full run and check if state is changed
                 run = runService.getRun(id);
                 // - check if extensions has envoygw, otherwise ignore
-                Optional<Map<String, Serializable>> extension = run.getExtensions().stream().filter(e -> GatewayExtensionSpec.KIND.equals(e.get("kind"))).findAny();
-                
+                Optional<Map<String, Serializable>> extension = run
+                    .getExtensions()
+                    .stream()
+                    .filter(e -> GatewayExtensionSpec.KIND.equals(e.get("kind")))
+                    .findAny();
+
                 if (extension.isPresent()) {
-                    GatewayExtensionSpec   gatewayExtensionSpec = GatewayExtensionSpec.with((Map<String, Serializable>)extension.get().get("spec"));
+                    GatewayExtensionSpec gatewayExtensionSpec = GatewayExtensionSpec.with(
+                        (Map<String, Serializable>) extension.get().get("spec")
+                    );
 
                     // if already has gateway info, ignore
                     if (status.get("gatewayInfo") == null) {
                         // - if not, create gateway info and update run status
-                        K8sServiceInfo serviceInfo = JacksonMapper.CUSTOM_OBJECT_MAPPER.convertValue(status.get("service"), K8sServiceInfo.class);
+                        K8sServiceInfo serviceInfo = JacksonMapper.CUSTOM_OBJECT_MAPPER.convertValue(
+                            status.get("service"),
+                            K8sServiceInfo.class
+                        );
                         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(run.getSpec());
 
                         List<K8sCRRunnable> runnables = new LinkedList<>();
@@ -91,14 +95,16 @@ public class ServiceRunningProcessor implements Processor<Run, RunBaseStatus> {
                         // Based on openai status component
                         if (status.containsKey("openai")) {
                             Map<String, Serializable> openaiStatus = (Map<String, Serializable>) status.get("openai");
-                            String baseUrl = openaiStatus.containsKey("baseUrl") ? (String) openaiStatus.get("baseUrl") : serviceInfo.getUrl();
+                            String baseUrl = openaiStatus.containsKey("baseUrl")
+                                ? (String) openaiStatus.get("baseUrl")
+                                : serviceInfo.getUrl();
                             URL serviceUrl = getServiceUrl(baseUrl);
                             if (serviceUrl == null) {
                                 log.error("Invalid service URL: {}", baseUrl);
                                 return null;
-                            }   
+                            }
 
-                            String serviceHost =  serviceUrl.getHost();
+                            String serviceHost = serviceUrl.getHost();
                             Integer servicePort = serviceUrl.getPort();
                             String path = serviceUrl.getPath();
                             if (!StringUtils.hasText(path)) {
@@ -115,21 +121,26 @@ public class ServiceRunningProcessor implements Processor<Run, RunBaseStatus> {
                             service.setPath(path);
 
                             if (openaiStatus.containsKey("model")) {
-                                ((GenAIModelService)service).setModelName((String) openaiStatus.get("model"));
+                                ((GenAIModelService) service).setModelName((String) openaiStatus.get("model"));
                             } else {
-                                ((GenAIModelService)service).setModelName(taskAccessor.getFunction());
+                                ((GenAIModelService) service).setModelName(taskAccessor.getFunction());
                             }
-                            ((GenAIModelService)service).setSchemaName("OpenAI");
-                            runnables.addAll(gatewayCRManager.createGenAIRunnables(taskAccessor.getRuntime(), run.getKind(), (GenAIModelService)service));
-
+                            ((GenAIModelService) service).setSchemaName("OpenAI");
+                            runnables.addAll(
+                                gatewayCRManager.createGenAIRunnables(
+                                    taskAccessor.getRuntime(),
+                                    run.getKind(),
+                                    (GenAIModelService) service
+                                )
+                            );
                         } else {
                             URL serviceUrl = getServiceUrl(serviceInfo.getUrl());
                             if (serviceUrl == null) {
                                 log.error("Invalid service URL: {}", serviceInfo.getUrl());
                                 return null;
-                            }   
+                            }
 
-                            String serviceHost =  serviceUrl.getHost();
+                            String serviceHost = serviceUrl.getHost();
                             Integer servicePort = serviceUrl.getPort();
                             String path = serviceUrl.getPath();
                             if (!StringUtils.hasText(path)) {
@@ -145,12 +156,21 @@ public class ServiceRunningProcessor implements Processor<Run, RunBaseStatus> {
                             service.setServicePort(servicePort);
                             service.setPath(path);
 
-                            runnables.addAll(gatewayCRManager.createGenericServiceRunnables(taskAccessor.getRuntime(), run.getKind(), service));
+                            runnables.addAll(
+                                gatewayCRManager.createGenericServiceRunnables(
+                                    taskAccessor.getRuntime(),
+                                    run.getKind(),
+                                    service
+                                )
+                            );
                         }
 
                         List<ExtProcService> extProcServices = new LinkedList<>();
                         // if guardrails are requested
-                        if (gatewayExtensionSpec.getGuardrails() != null && !gatewayExtensionSpec.getGuardrails().isEmpty()) {
+                        if (
+                            gatewayExtensionSpec.getGuardrails() != null &&
+                            !gatewayExtensionSpec.getGuardrails().isEmpty()
+                        ) {
                             for (int i = 0; i < gatewayExtensionSpec.getGuardrails().size(); i++) {
                                 String guardrail = gatewayExtensionSpec.getGuardrails().get(i);
                                 ExtProcService extProcService = new ExtProcService();
@@ -163,7 +183,15 @@ public class ServiceRunningProcessor implements Processor<Run, RunBaseStatus> {
 
                         // TODO enable when payload logger is supported again
                         boolean enablePayloadLogging = false; //Boolean.TRUE.equals(gatewayExtensionSpec.getEnabledPayloadLogging());
-                        runnables.addAll(gatewayCRManager.createExtensionPolicies(taskAccessor.getRuntime(), run.getKind(), service, enablePayloadLogging, extProcServices));
+                        runnables.addAll(
+                            gatewayCRManager.createExtensionPolicies(
+                                taskAccessor.getRuntime(),
+                                run.getKind(),
+                                service,
+                                enablePayloadLogging,
+                                extProcServices
+                            )
+                        );
 
                         GatewayRunStatus gatewayRunStatus = new GatewayRunStatus();
                         gatewayRunStatus.setRunnables(runnables);
@@ -176,7 +204,6 @@ public class ServiceRunningProcessor implements Processor<Run, RunBaseStatus> {
                     }
                 }
             }
-
         } catch (Exception e) {
             log.error("Error handling runnable changed event: {}", e.getMessage(), e);
         }

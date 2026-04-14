@@ -1,26 +1,27 @@
 package it.smartcommunitylabdhub.envoygw.specs;
 
-import java.io.Serializable;
-import java.util.List;
-import java.util.Map;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.base.BaseSpec;
 import it.smartcommunitylabdhub.extensions.model.Extension;
+import java.io.Serializable;
+import java.util.List;
+import java.util.Map;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
 @SpecType(kind = GatewayExtensionSpec.KIND, entity = Extension.class)
-public class GatewayExtensionSpec  extends BaseSpec {
+public class GatewayExtensionSpec extends BaseSpec {
 
     public static final String KIND = "envoygw";
 
-    @Schema(title = "fields.gatewayextension.guardrails.title", description = "fields.gatewayextension.guardrails.description")
+    @Schema(
+        title = "fields.gatewayextension.guardrails.title",
+        description = "fields.gatewayextension.guardrails.description"
+    )
     private List<String> guardrails;
 
     // @JsonProperty(value="enabled_payload_logging", required = false, defaultValue = "false")

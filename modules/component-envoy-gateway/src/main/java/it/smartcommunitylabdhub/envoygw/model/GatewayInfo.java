@@ -17,5 +17,4 @@ public class GatewayInfo implements java.io.Serializable {
 
     private String gatewayName;
     private String gatewayEndpoint;
-
 }

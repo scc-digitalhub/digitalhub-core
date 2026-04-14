@@ -36,11 +36,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(
-    runtime = KubeAISpeechToTextRuntime.RUNTIME,
-    kind = KubeAISpeechToTextServeTaskSpec.KIND,
-    entity = Task.class
-)
+@SpecType(runtime = KubeAISpeechToTextRuntime.RUNTIME, kind = KubeAISpeechToTextServeTaskSpec.KIND, entity = Task.class)
 public class KubeAISpeechToTextServeTaskSpec extends KubeAIServeTaskSpec {
 
     public static final String KIND = KubeAISpeechToTextRuntime.RUNTIME + "+serve";

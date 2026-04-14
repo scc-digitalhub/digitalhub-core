@@ -1,7 +1,6 @@
 package it.smartcommunitylabdhub.runtime.python.openinference.model;
 
 public enum TensorDatatype {
-
     BOOL,
     FP16,
     FP32,
@@ -14,5 +13,5 @@ public enum TensorDatatype {
     UINT32,
     INT64,
     UINT64,
-    BYTES;
+    BYTES,
 }

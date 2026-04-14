@@ -28,7 +28,6 @@ import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.python.openinference.OpeninferenceRuntime;
-
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;

@@ -59,7 +59,6 @@ public class GatewayCRManager implements InitializingBean {
     @Value("${kubernetes.namespace}")
     private String namespace;
 
-
     private static final String AIGATEWAY_API_GROUP = "aigateway.envoyproxy.io";
     private static final String AIGATEWAY_API_VERSION = "v1alpha1";
 
@@ -223,7 +222,6 @@ public class GatewayCRManager implements InitializingBean {
         aigatewayrouteCR.setProject(service.getProjectName());
         runnables.add(aigatewayrouteCR);
 
-
         return runnables;
     }
 
@@ -307,12 +305,21 @@ public class GatewayCRManager implements InitializingBean {
      * @return
      * @throws IOException
      */
-    public List<K8sCRRunnable> createExtensionPolicies(String runtime, String task, GenericService service, boolean withPayloadLogger, List<ExtProcService> extProcServices) throws IOException {
+    public List<K8sCRRunnable> createExtensionPolicies(
+        String runtime,
+        String task,
+        GenericService service,
+        boolean withPayloadLogger,
+        List<ExtProcService> extProcServices
+    ) throws IOException {
         Assert.hasText(runtime, "runtime is required");
         Assert.hasText(task, "task is required");
         Assert.notNull(service, "service is required");
         if (!withPayloadLogger && (extProcServices == null || extProcServices.isEmpty())) {
-            log.debug("No extensions enabled for service {}, skipping creation of EnvoyExtensionPolicy", service.getServiceId());
+            log.debug(
+                "No extensions enabled for service {}, skipping creation of EnvoyExtensionPolicy",
+                service.getServiceId()
+            );
             return List.of();
         }
         // prepare context for EnvoyExtensionPolicy template
@@ -327,7 +334,7 @@ public class GatewayCRManager implements InitializingBean {
             context.put("payloadLoggerHost", localizeHostName(payloadLoggerProperties.getHost()));
             context.put("payloadLoggerPort", payloadLoggerProperties.getPort());
             context.put("payloadLoggerEnabled", true);
-        } 
+        }
         if (extProcServices != null && !extProcServices.isEmpty()) {
             List<Map<String, Object>> extProcs = new LinkedList<>();
             for (ExtProcService extProcService : extProcServices) {
@@ -337,7 +344,7 @@ public class GatewayCRManager implements InitializingBean {
                 extProcs.add(extProcContext);
             }
             context.put("extProcs", extProcs);
-        } 
+        }
 
         String payloadLoggerName = serviceId + "-extension-policy";
         Map<String, Serializable> spec = generateSpec(extPolicyMustache, context);
@@ -367,7 +374,8 @@ public class GatewayCRManager implements InitializingBean {
      * @return
      */
     public GatewayInfo getGenAIGatewayInfo() {
-        return GatewayInfo.builder()
+        return GatewayInfo
+            .builder()
             .gatewayName(envoyGwProperties.getAiGateway().getName())
             .gatewayEndpoint(envoyGwProperties.getAiGateway().getEndpoint())
             .build();
@@ -378,14 +386,14 @@ public class GatewayCRManager implements InitializingBean {
      * @return
      */
     public GatewayInfo getGenericGatewayInfo() {
-        return GatewayInfo.builder()
+        return GatewayInfo
+            .builder()
             .gatewayName(envoyGwProperties.getGenericGateway().getName())
             .gatewayEndpoint(envoyGwProperties.getGenericGateway().getEndpoint())
             .build();
     }
 
-    private Map<String, Serializable> generateSpec(Mustache mustache, Map<String, Object> context)
-        throws IOException {
+    private Map<String, Serializable> generateSpec(Mustache mustache, Map<String, Object> context) throws IOException {
         StringWriter writer = new StringWriter();
         mustache.execute(writer, context);
         writer.flush();

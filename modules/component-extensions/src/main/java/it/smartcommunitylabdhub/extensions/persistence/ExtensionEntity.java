@@ -48,7 +48,6 @@ import org.hibernate.annotations.JdbcTypeCode;
 @Table(name = "extensions")
 public class ExtensionEntity extends AbstractEntity implements SpecEntity {
 
-
     @Column(nullable = false)
     private String entity;
 

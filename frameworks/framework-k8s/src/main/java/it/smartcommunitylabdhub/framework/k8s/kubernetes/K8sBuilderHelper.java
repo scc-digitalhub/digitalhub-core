@@ -310,12 +310,7 @@ public class K8sBuilderHelper implements InitializingBean {
                 );
             case VolumeType.image:
                 //image volume
-                return volume.image(
-                    new V1ImageVolumeSource()
-                    .reference(spec.get("image"))
-                    .pullPolicy("IfNotPresent")
-                    
-                );
+                return volume.image(new V1ImageVolumeSource().reference(spec.get("image")).pullPolicy("IfNotPresent"));
             default:
                 return null;
         }

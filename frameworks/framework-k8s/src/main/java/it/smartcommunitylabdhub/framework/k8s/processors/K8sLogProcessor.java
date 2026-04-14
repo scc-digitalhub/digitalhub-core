@@ -39,7 +39,6 @@ import it.smartcommunitylabdhub.logs.LogService;
 import it.smartcommunitylabdhub.logs.spec.LogSpec;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
-
 import java.io.Serializable;
 import java.time.Instant;
 import java.util.ArrayList;

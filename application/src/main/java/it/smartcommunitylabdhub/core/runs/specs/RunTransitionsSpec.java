@@ -28,7 +28,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvent;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
-
 import java.io.Serializable;
 import java.time.OffsetDateTime;
 import java.util.List;

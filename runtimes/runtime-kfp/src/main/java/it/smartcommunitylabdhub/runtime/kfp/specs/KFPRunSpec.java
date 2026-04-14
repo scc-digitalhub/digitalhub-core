@@ -23,11 +23,10 @@
 
 package it.smartcommunitylabdhub.runtime.kfp.specs;
 
+import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
-
-import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;

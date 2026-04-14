@@ -34,7 +34,6 @@ import it.smartcommunitylabdhub.framework.k8s.jackson.KubernetesMapper;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sPodStatus;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runs.Run;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
