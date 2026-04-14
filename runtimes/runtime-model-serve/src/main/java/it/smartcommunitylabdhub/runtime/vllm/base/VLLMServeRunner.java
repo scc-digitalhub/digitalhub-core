@@ -270,8 +270,8 @@ public class VLLMServeRunner {
             List.of(functionSpec.getModelName() != null ? functionSpec.getModelName() : defaultServedModelName)
         );
 
-        //enable caching by default
-        defaultArgMap.put("--enable-prefix-caching", List.of());
+        // //enable caching by default
+        // defaultArgMap.put("--enable-prefix-caching", List.of());
 
         if (otelEndpoint != null && !otelEndpoint.isBlank() && Boolean.TRUE.equals(runSpec.getEnableTelemetry())) {
             defaultArgMap.put("--otlp-traces-endpoint", List.of(otelEndpoint));
