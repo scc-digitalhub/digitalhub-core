@@ -32,7 +32,7 @@ kubernetes:
     name: shared-dir
     mount_path: /shared
     spec:
-      sizeLimit: 10Gi
+      sizeLimit: 100Mi
   empty-dir:
     size: ${K8S_EMPTY_DIR_SIZE:128Mi}
     medium: ${K8S_EMPTY_DIR_MEDIUM:}
