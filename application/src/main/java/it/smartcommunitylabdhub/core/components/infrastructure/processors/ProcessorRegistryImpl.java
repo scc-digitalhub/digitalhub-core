@@ -34,23 +34,32 @@ import jakarta.validation.constraints.NotNull;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
-import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.core.annotation.Order;
 
 public class ProcessorRegistryImpl<D extends BaseDTO & SpecDTO & StatusDTO, Z extends Spec>
-    implements ProcessorRegistry<D, Z>, ApplicationListener<ContextRefreshedEvent> {
+    implements ProcessorRegistry<D, Z>, ApplicationListener<ApplicationReadyEvent> {
+
+    private record ProcessorEntry<D extends BaseDTO & SpecDTO & StatusDTO, Z extends Spec>(
+        String name,
+        int order,
+        Processor<D, ? extends Z> processor
+    ) {}
 
     protected final Class<D> typeClass;
     protected final Class<Z> specClass;
 
-    private final Map<String, List<Map.Entry<String, Processor<D, ? extends Z>>>> registry = new ConcurrentHashMap<>();
+    // stage -> ordered list of processors — sealed after onApplicationEvent, read by getProcessors
+    // immutable map (Map.copyOf) assigned once on ApplicationReadyEvent before any request thread can read it
+    private Map<String, List<Processor<D, ? extends Z>>> processors = Map.of();
 
     private final ApplicationContext applicationContext;
 
@@ -67,42 +76,49 @@ public class ProcessorRegistryImpl<D extends BaseDTO & SpecDTO & StatusDTO, Z ex
 
     @Override
     @SuppressWarnings("unchecked")
-    public void onApplicationEvent(@NotNull ContextRefreshedEvent event) {
+    public void onApplicationEvent(@NotNull ApplicationReadyEvent event) {
+        Map<String, List<ProcessorEntry<D, Z>>> staging = new HashMap<>();
+
         applicationContext
             .getBeansWithAnnotation(ProcessorType.class)
             .entrySet()
             .forEach(e -> {
                 String name = e.getKey();
                 Object bean = e.getValue();
-                ProcessorType annotation = bean.getClass().getAnnotation(ProcessorType.class);
+                ProcessorType annotation = AnnotationUtils.findAnnotation(bean.getClass(), ProcessorType.class);
 
-                if (bean instanceof Processor && (annotation != null)) {
-                    if (annotation.type() != typeClass || annotation.spec() != specClass) {
-                        // skip if not matching type
-                        return;
-                    }
-
+                if (
+                    bean instanceof Processor &&
+                    annotation != null &&
+                    annotation.type() == typeClass &&
+                    annotation.spec() == specClass
+                ) {
+                    Order orderAnnotation = AnnotationUtils.findAnnotation(bean.getClass(), Order.class);
+                    int order = orderAnnotation != null ? orderAnnotation.value() : Ordered.LOWEST_PRECEDENCE;
                     for (String stage : annotation.stages()) {
-                        //register if missing
-                        List<Entry<String, Processor<D, ? extends Z>>> processors = registry.computeIfAbsent(
-                            stage,
-                            k -> new ArrayList<>()
-                        );
-
-                        if (processors.stream().noneMatch(p -> name.equals(p.getKey()))) {
-                            processors.add(Map.entry(name, (Processor<D, Z>) bean));
+                        List<ProcessorEntry<D, Z>> list = staging.computeIfAbsent(stage, k -> new ArrayList<>());
+                        if (list.stream().noneMatch(p -> name.equals(p.name()))) {
+                            list.add(new ProcessorEntry<>(name, order, (Processor<D, Z>) bean));
                         }
                     }
                 }
             });
+
+        // sort by record.order then materialize into the read-only processors map
+        Map<String, List<Processor<D, ? extends Z>>> built = new HashMap<>();
+        staging.forEach((stage, list) -> {
+            list.sort(Comparator.comparingInt(ProcessorEntry::order));
+            List<Processor<D, ? extends Z>> sorted = new ArrayList<>(list.size());
+            for (ProcessorEntry<D, Z> e : list) {
+                sorted.add(e.processor());
+            }
+            built.put(stage, List.copyOf(sorted));
+        });
+        processors = Map.copyOf(built);
     }
 
     @Override
     public List<Processor<D, ? extends Z>> getProcessors(String stage) {
-        return registry
-            .getOrDefault(stage, Collections.emptyList())
-            .stream()
-            .map(Entry::getValue)
-            .collect(Collectors.toList());
+        return processors.getOrDefault(stage, List.of());
     }
 }

@@ -23,6 +23,7 @@
 
 package it.smartcommunitylabdhub.core.config;
 
+import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,6 +34,7 @@ import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.security.concurrent.DelegatingSecurityContextExecutor;
 import org.springframework.security.task.DelegatingSecurityContextAsyncTaskExecutor;
 
 @Configuration
@@ -53,6 +55,20 @@ public class AsyncConfig implements AsyncConfigurer {
 
         //use a delegating executor to propagate security context
         return new DelegatingSecurityContextAsyncTaskExecutor(executor);
+    }
+
+    @Bean(name = "processorExecutor")
+    public Executor processorExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(8);
+        executor.setQueueCapacity(0); // no queue: CallerRunsPolicy kicks in immediately when pool is full
+        executor.setThreadNamePrefix("processor-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.initialize();
+
+        // propagate security context from calling thread to processor threads
+        return new DelegatingSecurityContextExecutor(executor.getThreadPoolExecutor());
     }
 
     @Bean(name = "taskScheduler")
