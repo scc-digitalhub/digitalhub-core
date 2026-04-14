@@ -54,6 +54,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 import org.springframework.validation.BindException;
 
+/**
+ * @deprecated Replaced by {@link ExtensionsEntityServiceAspect}, which applies the same
+ *     extension lifecycle logic as a Spring AOP aspect without requiring per-entity
+ *     boilerplate. Remove usages and let the aspect handle extension management automatically.
+ */
+@Deprecated(forRemoval = true)
 @Slf4j
 @Transactional
 public class ExtensibleEntityService<D extends ExtensibleDTO & BaseDTO> implements EntityService<D>, InitializingBean {

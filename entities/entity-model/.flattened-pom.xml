@@ -20,6 +20,12 @@
     </dependency>
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
+      <artifactId>dh-extensions</artifactId>
+      <version>0.15.0-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>it.smartcommunitylabdhub</groupId>
       <artifactId>dh-metrics</artifactId>
       <version>0.15.0-SNAPSHOT</version>
       <scope>compile</scope>

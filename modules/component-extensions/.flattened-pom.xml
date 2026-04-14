@@ -3,7 +3,7 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <groupId>it.smartcommunitylabdhub</groupId>
-  <artifactId>dh-entity-run</artifactId>
+  <artifactId>dh-extensions</artifactId>
   <version>0.15.0-SNAPSHOT</version>
   <dependencies>
     <dependency>
@@ -19,15 +19,15 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-metrics</artifactId>
-      <version>0.15.0-SNAPSHOT</version>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>33.4.8-jre</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-extensions</artifactId>
-      <version>0.15.0-SNAPSHOT</version>
+      <groupId>com.networknt</groupId>
+      <artifactId>json-schema-validator</artifactId>
+      <version>1.1.0</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -46,6 +46,12 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-jpa</artifactId>
+      <version>3.5.9</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-aop</artifactId>
       <version>3.5.9</version>
       <scope>compile</scope>
     </dependency>

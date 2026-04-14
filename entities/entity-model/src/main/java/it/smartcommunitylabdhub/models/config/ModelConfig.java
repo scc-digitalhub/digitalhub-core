@@ -23,7 +23,6 @@ import it.smartcommunitylabdhub.core.services.BaseEntityServiceImpl;
 import it.smartcommunitylabdhub.core.services.BaseVersionableEntityServiceImpl;
 import it.smartcommunitylabdhub.core.services.EntityService;
 import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
-import it.smartcommunitylabdhub.extensions.ExtensibleEntityService;
 import it.smartcommunitylabdhub.files.base.BaseFilesService;
 import it.smartcommunitylabdhub.fsm.Fsm;
 import it.smartcommunitylabdhub.lifecycle.BaseLifecycleManager;
@@ -66,7 +65,7 @@ public class ModelConfig {
     EntityService<Model> modelEntityService(SearchableEntityRepository<ModelEntity, Model> repository) {
         BaseEntityServiceImpl<Model, ModelEntity> base = new BaseEntityServiceImpl<Model, ModelEntity>() {};
         base.setRepository(repository);
-        return new ExtensibleEntityService<>(base);
+        return base;
     }
 
     @Bean

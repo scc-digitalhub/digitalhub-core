@@ -27,7 +27,6 @@ import it.smartcommunitylabdhub.dataitems.DataItem;
 import it.smartcommunitylabdhub.dataitems.lifecycle.DataItemFsmFactoryBuilder;
 import it.smartcommunitylabdhub.dataitems.persistence.DataItemEntity;
 import it.smartcommunitylabdhub.dataitems.persistence.DataItemRepository;
-import it.smartcommunitylabdhub.extensions.ExtensibleEntityService;
 import it.smartcommunitylabdhub.files.base.BaseFilesService;
 import it.smartcommunitylabdhub.fsm.Fsm;
 import it.smartcommunitylabdhub.lifecycle.BaseLifecycleManager;
@@ -66,7 +65,7 @@ public class DataItemConfig {
     EntityService<DataItem> dataItemEntityService(SearchableEntityRepository<DataItemEntity, DataItem> repository) {
         BaseEntityServiceImpl<DataItem, DataItemEntity> base = new BaseEntityServiceImpl<DataItem, DataItemEntity>() {};
         base.setRepository(repository);
-        return new ExtensibleEntityService<>(base);
+        return base;
     }
 
     @Bean
