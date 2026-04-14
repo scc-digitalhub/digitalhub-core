@@ -58,7 +58,6 @@ public class HeraPipelineRunner {
 
         Map<String, Serializable> parameters = new HashMap<>();
         if (runSpec.getParameters() != null) parameters.putAll(runSpec.getParameters());
-        if (runSpec.getInputs() != null) parameters.putAll(runSpec.getInputs());
 
         String argoSpec = new String(
             Base64.getDecoder().decode(workflowSpec.getBuild().getBase64()),

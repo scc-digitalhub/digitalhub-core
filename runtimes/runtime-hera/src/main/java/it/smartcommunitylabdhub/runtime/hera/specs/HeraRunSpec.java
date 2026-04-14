@@ -23,11 +23,10 @@
 
 package it.smartcommunitylabdhub.runtime.hera.specs;
 
+import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
-
-import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -36,10 +35,6 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class HeraRunSpec extends RunBaseSpec {
-
-    private Map<String, String> inputs = new HashMap<>();
-
-    private Map<String, String> outputs = new HashMap<>();
 
     private Map<String, Serializable> parameters = new HashMap<>();
 
@@ -52,8 +47,6 @@ public class HeraRunSpec extends RunBaseSpec {
         super.configure(data);
 
         HeraRunSpec spec = mapper.convertValue(data, HeraRunSpec.class);
-        this.inputs = spec.getInputs();
-        this.outputs = spec.getOutputs();
         this.parameters = spec.getParameters();
     }
 }
