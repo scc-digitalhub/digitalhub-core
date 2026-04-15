@@ -372,20 +372,25 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         @NotNull ProcessorRegistry<D, ? extends Spec> processorRegistry
     ) {
         String stage = "on" + StringUtils.capitalize(state.toLowerCase());
-        
+
         // Iterate over all processor and store all RunBaseStatus as optional
-        List<Processor<D, ? extends Spec>> processors = processorRegistry.getProcessors(stage);
 
         List<Map<String, Serializable>> res;
-        if (processorExecutor != null && processors.size() > 1) {
+        if (processorExecutor != null) {
             // scatter: run all processors in parallel, join in @Order-sorted sequence
-            List<CompletableFuture<Map<String, Serializable>>> futures = processors
+            List<CompletableFuture<Map<String, Serializable>>> futures = processorRegistry
+                .getProcessors(stage)
                 .stream()
                 .map(p -> CompletableFuture.supplyAsync(() -> invokeProcessor(p, stage, dto, input), processorExecutor))
                 .toList();
             res = futures.stream().map(CompletableFuture::join).toList();
         } else {
-            res = processors.stream().map(p -> invokeProcessor(p, stage, dto, input)).toList();
+            res =
+                processorRegistry
+                    .getProcessors(stage)
+                    .stream()
+                    .map(p -> invokeProcessor(p, stage, dto, input))
+                    .toList();
         }
 
         return res.stream().reduce(new HashMap<>(), MapUtils::mergeMultipleMaps);
