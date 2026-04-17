@@ -98,7 +98,7 @@ public class PythonBuildRunner extends PythonBaseBuildRunner {
         }
 
         // Generate string docker file
-        String dockerfile = generateDockerfile(pythonVersion, baseImage, requirements, taskSpec.getInstructions());
+        String dockerfile = generateDockerfile(pythonVersion, baseImage, requirements, taskSpec.getInstructions(), taskSpec.getEnvs());
 
         // Parse run spec
         RunSpecAccessor runSpecAccessor = RunSpecAccessor.with(run.getSpec());

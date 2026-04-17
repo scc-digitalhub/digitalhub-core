@@ -25,7 +25,9 @@ package it.smartcommunitylabdhub.runtime.python.build;
 
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileGenerator;
+import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileInstruction;
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileGeneratorFactory;
 import it.smartcommunitylabdhub.runtime.python.config.PythonProperties;
 import jakarta.annotation.Nullable;
@@ -44,7 +46,8 @@ public abstract class PythonBaseBuildRunner extends PythonBaseRunner {
         String pythonVersion,
         @Nullable String baseImage,
         @Nullable List<String> requirements,
-        @Nullable List<String> instructions
+        @Nullable List<String> instructions,
+        @Nullable List<CoreEnv> envs
     ) {
         // Generate docker file
         DockerfileGeneratorFactory dockerfileGenerator = DockerfileGenerator.factory();
@@ -67,6 +70,12 @@ public abstract class PythonBaseBuildRunner extends PythonBaseRunner {
 
         // Add base Image
         dockerfileGenerator.from(fromImage);
+
+        // env vars from task spec
+        if (envs != null) {
+            envs.forEach(env -> dockerfileGenerator.instruction(DockerfileInstruction.Kind.ARG, env.name() + "=" + env.value()));
+            envs.forEach(env -> dockerfileGenerator.instruction(DockerfileInstruction.Kind.ENV, env.name() + "=$" + env.name()));
+        }
 
         //switch to root to install libs and dependencies
         // we will switch to final user at the end of the docker file
