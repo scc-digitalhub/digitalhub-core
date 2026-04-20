@@ -30,6 +30,7 @@ import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sCRFramework;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sDeploymentFramework;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sJobFramework;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sServeFramework;
+import it.smartcommunitylabdhub.framework.k8s.jackson.KubernetesMapper;
 import it.smartcommunitylabdhub.framework.k8s.listeners.K8sCRListener;
 import it.smartcommunitylabdhub.framework.k8s.listeners.K8sDeploymentListener;
 import it.smartcommunitylabdhub.framework.k8s.listeners.K8sJobListener;
@@ -62,7 +63,9 @@ public class K8sFrameworkConfig {
     @Bean
     @ConditionalOnKubernetes
     public RunnableStore<K8sServeRunnable> k8sServeRunnableStoreService(RunnableRepository runnableRepository) {
-        return new RunnableStoreImpl<>(K8sServeRunnable.class, runnableRepository);
+        RunnableStoreImpl<K8sServeRunnable> store = new RunnableStoreImpl<>(K8sServeRunnable.class, runnableRepository);
+        store.setObjectMapper(KubernetesMapper.CBOR_OBJECT_MAPPER);
+        return store;
     }
 
     @Bean
@@ -70,19 +73,28 @@ public class K8sFrameworkConfig {
     public RunnableStore<K8sDeploymentRunnable> k8sDeploymentRunnableStoreService(
         RunnableRepository runnableRepository
     ) {
-        return new RunnableStoreImpl<>(K8sDeploymentRunnable.class, runnableRepository);
+        RunnableStoreImpl<K8sDeploymentRunnable> store = new RunnableStoreImpl<>(
+            K8sDeploymentRunnable.class,
+            runnableRepository
+        );
+        store.setObjectMapper(KubernetesMapper.CBOR_OBJECT_MAPPER);
+        return store;
     }
 
     @Bean
     @ConditionalOnKubernetes
     public RunnableStore<K8sJobRunnable> k8sjobRunnableStoreService(RunnableRepository runnableRepository) {
-        return new RunnableStoreImpl<>(K8sJobRunnable.class, runnableRepository);
+        RunnableStoreImpl<K8sJobRunnable> store = new RunnableStoreImpl<>(K8sJobRunnable.class, runnableRepository);
+        store.setObjectMapper(KubernetesMapper.CBOR_OBJECT_MAPPER);
+        return store;
     }
 
     @Bean
     @ConditionalOnKubernetes
     public RunnableStore<K8sCRRunnable> k8sCRRunnableStoreService(RunnableRepository runnableRepository) {
-        return new RunnableStoreImpl<>(K8sCRRunnable.class, runnableRepository);
+        RunnableStoreImpl<K8sCRRunnable> store = new RunnableStoreImpl<>(K8sCRRunnable.class, runnableRepository);
+        store.setObjectMapper(KubernetesMapper.CBOR_OBJECT_MAPPER);
+        return store;
     }
 
     @Bean
