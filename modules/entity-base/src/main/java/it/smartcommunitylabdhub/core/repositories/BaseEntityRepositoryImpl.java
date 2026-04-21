@@ -46,6 +46,8 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -175,6 +177,10 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
         return l;
     }
 
+    protected String getCacheName() {
+        return clazz.getSimpleName() + ".find";
+    }
+
     /*
      * Service
      */
@@ -258,6 +264,7 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
     }
 
     @Override
+    @CacheEvict(value = "#{#this.getCacheName()}", key = "#id")
     public D update(@NotNull String id, @NotNull D dto) throws NoSuchEntityException, StoreException {
         log.debug("update with id {}", String.valueOf(dto.getId()));
         if (log.isTraceEnabled()) {
@@ -334,6 +341,7 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
     }
 
     @Override
+    @CacheEvict(value = "#{#this.getCacheName()}", key = "#id")
     public void delete(@NotNull String id) throws StoreException {
         log.debug("delete with id {}", id);
         try {
@@ -383,6 +391,7 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "#{#this.getCacheName()}", key = "#id", unless = "#result == null")
     public D find(@NotNull String id) throws StoreException {
         log.debug("find with id {}", id);
 
@@ -409,6 +418,7 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "#{#this.getCacheName()}", key = "#id", unless = "#result == null")
     public D get(@NotNull String id) throws NoSuchEntityException, StoreException {
         log.debug("get with id {}", id);
         try {
@@ -495,6 +505,7 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
     }
 
     @Transactional
+    @CacheEvict(value = "#{#this.getCacheName()}", allEntries = true)
     public long deleteAll() {
         log.debug("delete all");
 
@@ -529,6 +540,7 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
     @SuppressWarnings("unchecked")
     @Override
     @Transactional
+    @CacheEvict(value = "#{#this.getCacheName()}", allEntries = true)
     public long deleteAll(Specification<E> specification) {
         log.debug("delete all with spec {} ", specification);
 
