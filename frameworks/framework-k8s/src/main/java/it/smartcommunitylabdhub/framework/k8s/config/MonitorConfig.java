@@ -32,6 +32,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -44,6 +45,7 @@ import org.springframework.util.Assert;
 public class MonitorConfig implements InitializingBean {
 
     @Autowired
+    @Qualifier("taskScheduler")
     private ThreadPoolTaskScheduler threadPoolTaskScheduler;
 
     @Autowired

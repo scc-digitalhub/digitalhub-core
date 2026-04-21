@@ -32,10 +32,10 @@ import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sBaseFramewor
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
 import it.smartcommunitylabdhub.runtimes.events.RunnableChangedEvent;
+import it.smartcommunitylabdhub.runtimes.events.RunnableEventPublisher;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
@@ -50,7 +50,7 @@ public class K8sContainerBuilderRunnableListener {
     K8sBaseFramework<K8sContainerBuilderRunnable, V1Job> k8sFramework;
 
     @Autowired
-    ApplicationEventPublisher eventPublisher;
+    private RunnableEventPublisher eventPublisher;
 
     @Autowired
     private RunnableStore<K8sContainerBuilderRunnable> runnableStore;
