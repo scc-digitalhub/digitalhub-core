@@ -371,10 +371,15 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
 
         V1Deployment deployment = get(build(runnable));
 
-        //stop by setting replicas to 0
-        deployment.getSpec().setReplicas(0);
-        deployment = apply(deployment);
-        runnable.setMessage(String.format("deployment %s replicas set to 0", deployment.getMetadata().getName()));
+        // runnable.setMessage(String.format("deployment %s deleted", deployment.getMetadata().getName()));
+        // // //stop by setting replicas to 0
+        // // deployment.getSpec().setReplicas(0);
+        // // deployment = apply(deployment);
+        // // runnable.setMessage(String.format("deployment %s replicas set to 0", deployment.getMetadata().getName()));
+
+        //stop by deleting
+        // delete(deployment);
+        runnable = delete(runnable);
 
         //update results
         if (!"disable".equals(collectResults)) {
