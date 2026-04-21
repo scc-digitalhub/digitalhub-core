@@ -27,8 +27,8 @@ import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileGenerator;
-import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileInstruction;
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileGeneratorFactory;
+import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileInstruction;
 import it.smartcommunitylabdhub.runtime.python.config.PythonProperties;
 import jakarta.annotation.Nullable;
 import java.util.List;
@@ -73,8 +73,12 @@ public abstract class PythonBaseBuildRunner extends PythonBaseRunner {
 
         // env vars from task spec
         if (envs != null) {
-            envs.forEach(env -> dockerfileGenerator.instruction(DockerfileInstruction.Kind.ARG, env.name() + "=" + env.value()));
-            envs.forEach(env -> dockerfileGenerator.instruction(DockerfileInstruction.Kind.ENV, env.name() + "=$" + env.name()));
+            envs.forEach(env ->
+                dockerfileGenerator.instruction(DockerfileInstruction.Kind.ARG, env.name() + "=" + env.value())
+            );
+            envs.forEach(env ->
+                dockerfileGenerator.instruction(DockerfileInstruction.Kind.ENV, env.name() + "=$" + env.name())
+            );
         }
 
         //switch to root to install libs and dependencies
@@ -103,11 +107,11 @@ public abstract class PythonBaseBuildRunner extends PythonBaseRunner {
 
             // install common requirements
             dockerfileGenerator.run(
-                "/opt/nuclio/uv/uv pip install --system --no-index --find-links /opt/nuclio/pywhl " +
+                "/opt/nuclio/uv/uv pip install --system --no-index --find-links /opt/nuclio/whl " +
                 "-r /opt/nuclio/requirements/nuclio.txt"
             );
             dockerfileGenerator.run(
-                "/opt/nuclio/uv/uv pip install --system --no-index --find-links /opt/nuclio/pywhl " +
+                "/opt/nuclio/uv/uv pip install --system --no-index --find-links /opt/nuclio/whl " +
                 "-r /opt/nuclio/requirements/common.txt"
             );
         }
