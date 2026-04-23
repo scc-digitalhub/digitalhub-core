@@ -24,6 +24,7 @@
 package it.smartcommunitylabdhub.secrets.persistence;
 
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity;
+import it.smartcommunitylabdhub.core.persistence.MetadataEntity;
 import it.smartcommunitylabdhub.core.persistence.SpecEntity;
 import it.smartcommunitylabdhub.core.persistence.StatusEntity;
 import jakarta.persistence.Column;
@@ -47,12 +48,16 @@ import org.hibernate.annotations.JdbcTypeCode;
 @ToString
 @Entity
 @Table(name = "secrets", uniqueConstraints = { @UniqueConstraint(columnNames = { "project", "name" }) })
-public class SecretEntity extends AbstractEntity implements SpecEntity, StatusEntity {
+public class SecretEntity extends AbstractEntity implements MetadataEntity, SpecEntity, StatusEntity {
 
     @Column(nullable = false)
     private String name;
 
     private Boolean embedded;
+
+    @JdbcTypeCode(Types.LONGVARBINARY)
+    @ToString.Exclude
+    protected byte[] metadata;
 
     @JdbcTypeCode(Types.LONGVARBINARY)
     @ToString.Exclude

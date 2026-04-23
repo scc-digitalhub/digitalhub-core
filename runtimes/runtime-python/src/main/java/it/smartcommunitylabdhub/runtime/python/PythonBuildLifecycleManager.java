@@ -18,7 +18,7 @@ package it.smartcommunitylabdhub.runtime.python;
 
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonBuildRunSpec;
+import it.smartcommunitylabdhub.runtime.python.build.PythonBuildRunSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonRunSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonRunStatus;
 import it.smartcommunitylabdhub.runtimes.lifecycle.RunLifecycleManager;

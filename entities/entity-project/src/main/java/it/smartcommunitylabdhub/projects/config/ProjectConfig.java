@@ -20,6 +20,7 @@ package it.smartcommunitylabdhub.projects.config;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
+import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
 import it.smartcommunitylabdhub.projects.persistence.ProjectEntity;
 import it.smartcommunitylabdhub.projects.persistence.ProjectRepository;
 import org.springframework.context.annotation.Bean;
@@ -36,5 +37,10 @@ public class ProjectConfig {
         Converter<ProjectEntity, Project> dtoBuilder
     ) {
         return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
+    }
+
+    @Bean
+    SpecRegistryImpl<Project> projectSpecRegistry() {
+        return new SpecRegistryImpl<>(Project.class);
     }
 }

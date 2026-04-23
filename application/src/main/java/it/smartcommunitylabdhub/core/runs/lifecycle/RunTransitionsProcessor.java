@@ -25,11 +25,11 @@ package it.smartcommunitylabdhub.core.runs.lifecycle;
 
 import it.smartcommunitylabdhub.commons.annotations.common.ProcessorType;
 import it.smartcommunitylabdhub.commons.infrastructure.Processor;
-import it.smartcommunitylabdhub.commons.models.run.Run;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
 import it.smartcommunitylabdhub.commons.models.status.Status;
 import it.smartcommunitylabdhub.core.runs.specs.RunTransitionsSpec;
 import it.smartcommunitylabdhub.core.runs.specs.RunTransitionsSpec.Transition;
+import it.smartcommunitylabdhub.runs.Run;
+import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;

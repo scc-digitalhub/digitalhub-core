@@ -17,8 +17,8 @@
 package it.smartcommunitylabdhub.core.runs.lifecycle;
 
 import it.smartcommunitylabdhub.commons.models.metadata.Metadata;
-import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.core.components.infrastructure.processors.ProcessorRegistryImpl;
+import it.smartcommunitylabdhub.runs.Run;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;

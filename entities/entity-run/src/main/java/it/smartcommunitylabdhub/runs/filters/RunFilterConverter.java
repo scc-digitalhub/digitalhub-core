@@ -17,8 +17,8 @@
 package it.smartcommunitylabdhub.runs.filters;
 
 import it.smartcommunitylabdhub.commons.Fields;
-import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilterConverter;
+import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.persistence.RunEntity;
 import jakarta.validation.constraints.NotNull;
 import java.util.Arrays;

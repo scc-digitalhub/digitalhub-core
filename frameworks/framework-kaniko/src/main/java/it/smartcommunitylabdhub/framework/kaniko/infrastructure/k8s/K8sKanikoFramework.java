@@ -92,8 +92,6 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
     private String initImage;
     private List<String> initCommand = null;
 
-
-
     public K8sKanikoFramework(ApiClient apiClient, KanikoProperties properties) {
         super(apiClient);
         Assert.notNull(properties, "kaniko properties are required");

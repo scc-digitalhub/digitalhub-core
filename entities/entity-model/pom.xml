@@ -29,6 +29,11 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-extensions</artifactId>
+            <version>${revision}</version>
+        </dependency>        
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-metrics</artifactId>
             <version>${revision}</version>
         </dependency>

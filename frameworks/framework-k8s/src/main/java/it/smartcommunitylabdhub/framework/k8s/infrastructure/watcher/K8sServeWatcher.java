@@ -26,6 +26,8 @@ package it.smartcommunitylabdhub.framework.k8s.infrastructure.watcher;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sServeFramework;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.monitor.K8sServeMonitor;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -40,11 +42,12 @@ public class K8sServeWatcher extends K8sBaseWatcher<K8sServeRunnable> {
     @Override
     public void start() {
         //build core labels for deployment
-        String prefix = k8sLabelHelper.getCoreLabelsNamespace();
         Map<String, String> labels = Map.of(
             "app.kubernetes.io/managed-by",
-            prefix,
-            prefix + "/" + "framework",
+            K8sLabelHelper.NAME,
+            "app.kubernetes.io/part-of",
+            K8sBuilderHelper.sanitizeNames(applicationProperties.getName()),
+            K8sLabelHelper.NAMESPACE + "framework",
             K8sServeFramework.FRAMEWORK
         );
 

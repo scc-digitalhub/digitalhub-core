@@ -13,10 +13,10 @@ import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernete
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import it.smartcommunitylabdhub.runtimes.events.RunnableChangedEvent;
+import it.smartcommunitylabdhub.runtimes.events.RunnableEventPublisher;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
@@ -31,7 +31,7 @@ public class K8sArgoWorkflowRunnableListener {
     K8sArgoWorkflowFramework argoFramework;
 
     @Autowired
-    ApplicationEventPublisher eventPublisher;
+    private RunnableEventPublisher eventPublisher;
 
     @Autowired
     private RunnableStore<K8sArgoWorkflowRunnable> runnableStore;

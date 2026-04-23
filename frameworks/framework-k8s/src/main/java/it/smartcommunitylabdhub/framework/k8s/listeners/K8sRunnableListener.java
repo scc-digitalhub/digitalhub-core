@@ -31,10 +31,10 @@ import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sBaseFramewor
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import it.smartcommunitylabdhub.runtimes.events.RunnableChangedEvent;
+import it.smartcommunitylabdhub.runtimes.events.RunnableEventPublisher;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.util.Assert;
 
 @Slf4j
@@ -46,7 +46,7 @@ public abstract class K8sRunnableListener<R extends K8sRunnable> {
 
     private final RunnableStore<R> runnableStore;
 
-    private ApplicationEventPublisher eventPublisher;
+    private RunnableEventPublisher eventPublisher;
 
     @SuppressWarnings("unchecked")
     protected K8sRunnableListener(K8sBaseFramework<R, ?> k8sFramework, RunnableStore<R> runnableStore) {
@@ -162,7 +162,7 @@ public abstract class K8sRunnableListener<R extends K8sRunnable> {
     }
 
     @Autowired
-    public void setEventPublisher(ApplicationEventPublisher eventPublisher) {
+    public void setEventPublisher(RunnableEventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
     }
 }

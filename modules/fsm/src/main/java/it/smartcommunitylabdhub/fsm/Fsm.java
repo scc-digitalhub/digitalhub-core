@@ -115,13 +115,13 @@ public class Fsm<S, E, C> {
                         //check if there is an adjacent state for target
                         FsmState<S, E, C> stateDefinition = states.get(currentState);
                         if (stateDefinition == null) {
-                            throw new InvalidTransitionException(currentState.toString(), null);
+                            throw new InvalidTransitionException(currentState.toString(), targetState.toString());
                         }
 
                         Optional<Transition<S, E, C>> transition = stateDefinition.getTransitionForNext(targetState);
                         if (transition.isEmpty()) {
                             // No valid path exists; transition to the error state
-                            throw new InvalidTransitionException(currentState.toString(), null);
+                            throw new InvalidTransitionException(currentState.toString(), targetState.toString());
                         }
 
                         // Execute the transition to next state and collect result.

@@ -17,11 +17,15 @@
 
 package it.smartcommunitylabdhub.runs.config;
 
-import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
+import it.smartcommunitylabdhub.core.services.EntityService;
+import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
+import it.smartcommunitylabdhub.runs.Run;
+import it.smartcommunitylabdhub.runs.filters.RunFilterConverter;
 import it.smartcommunitylabdhub.runs.persistence.RunEntity;
 import it.smartcommunitylabdhub.runs.persistence.RunRepository;
+import it.smartcommunitylabdhub.runs.service.RunEntityServiceImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
@@ -36,5 +40,21 @@ public class RunConfig {
         Converter<RunEntity, Run> dtoBuilder
     ) {
         return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
+    }
+
+    @Bean
+    EntityService<Run> runEntityService(
+        SearchableEntityRepository<RunEntity, Run> repository,
+        RunFilterConverter filterConverter
+    ) {
+        RunEntityServiceImpl base = new RunEntityServiceImpl();
+        base.setFilterConverter(filterConverter);
+        base.setRepository(repository);
+        return base;
+    }
+
+    @Bean
+    SpecRegistryImpl<Run> runSpecRegistry() {
+        return new SpecRegistryImpl<>(Run.class);
     }
 }

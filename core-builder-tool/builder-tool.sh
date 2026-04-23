@@ -5,6 +5,7 @@ set -euo pipefail
 # Default configuration from ENV
 # --------------------------
 destination_dir="${DESTINATION_DIR:-/shared}"
+temp_dir="${TEMP_DIR:-}"
 parallelism="${PARALLELISM:-5}"  # Number of parallel jobs
 DEBUG="${DEBUG:-false}"          # If true, print detailed listing at the end
 CONTEXT_REFS="${CONTEXT_REFS:-/init-config-map/context-refs.txt}"
@@ -27,6 +28,10 @@ while [[ $# -gt 0 ]]; do
             destination_dir="$2"
             shift 2
             ;;
+        --temp-dir)
+            temp_dir="$2"
+            shift 2
+            ;;
         --debug)
             DEBUG="true"
             shift
@@ -45,12 +50,18 @@ if [ -z "$destination_dir" ]; then
     echo "Error: --destination-dir is required"
     exit 1
 fi
-mkdir -p "$destination_dir"
-
+if [ -z "$temp_dir" ]; then
+    temp_dir="${TEMP_DIR:-$destination_dir/.tmp}"    
+fi
 echo "Destination dir: $destination_dir"
+echo "Temporary dir: $temp_dir"
 echo "Context refs file: ${CONTEXT_REFS:-<skipped>}"
 echo "Context sources map: ${CONTEXT_SOURCES:-<skipped>}"
 echo "DEBUG mode: $DEBUG"
+
+mkdir -p "$destination_dir"
+mkdir -p "$temp_dir"
+
 
 # --------------------------
 # Configure tools for read-only filesystem
@@ -87,12 +98,10 @@ decode_base64_no_padding() {
 
 s3_cp() {
     local src="$1"
-    local dst="$2"
-    # workaround: skip $destination until core writes the correct one
-    local s3_dest="$destination_dir/$(basename "$dst")"  
-    # Only create directory if dst contains a path separator
-    if [[ "$(dirname "$s3_dest")" == */* ]]; then
-        mkdir -p "$(dirname "$s3_dest")"
+    local dest="$2"
+    local s3_dest="$dest"
+    if [ -d "$dest" ]; then
+        s3_dest="$dest/$(basename "$src")"   
     fi
     echo "Downloading file $src -> $s3_dest"
     if [ -n "${AWS_ENDPOINT_URL:-}" ]; then
@@ -104,32 +113,35 @@ s3_cp() {
 
 s3_cp_recursive() {
     local src="$1"
-    local dst="$2"
-    # workaround: skip $destination until core writes the correct one
-    local s3_dest="$destination_dir"    
-    # mkdir -p "$s3_dest"
-    echo "Downloading folder $src -> $s3_dest"
+    local dest="$2"
+    # recursive copy expects a folder path ending with /
+    # we'll copy the content to dest, so we don't want the folder itself to be created under dest
+    echo "Downloading folder $src -> $dest"
     if [ -n "${AWS_ENDPOINT_URL:-}" ]; then
-        aws s3 cp "$src" "$s3_dest" --recursive --endpoint-url "$AWS_ENDPOINT_URL"
+        aws s3 cp "$src" "$dest" --recursive --endpoint-url "$AWS_ENDPOINT_URL"
     else
-        aws s3 cp "$src" "$s3_dest" --recursive
+        aws s3 cp "$src" "$dest" --recursive
     fi
 }
 
 download_s3_zip() {
-    local source="$1"
-    local destination="$2"
+    local src="$1"
+    local dest="$2"
     # Remove zip+s3:// and replace with s3://
-    local s3_uri="${source/zip+s3:\/\//s3:\/\/}"
-    # workaround: skip $destination until core writes the correct one
-    local zip_dest="$destination_dir/$(basename "$destination")"
-    # # Only create directory if destination contains a path separator
-    # if [[ "$destination" == */* ]]; then
-    #     mkdir -p "$(dirname "$destination")"
-    # fi    
+    local s3_uri="${src/zip+s3:\/\//s3:\/\/}"
+    local zip_dest="$temp_dir/$(basename "$s3_uri")"
     echo "Downloading ZIP $s3_uri -> $zip_dest"
-    s3_cp "$s3_uri" "$destination"
-    unzip -o "$zip_dest" -d "$destination_dir"
+    s3_cp "$s3_uri" "$zip_dest"
+    
+    # Check if dest is a folder
+    if [ -d "$dest" ]; then
+        # Unzip INTO the existing directory
+        unzip -o "$zip_dest" -d "$dest"
+    else
+        # Create the destination as a directory and unzip into it
+        mkdir -p "$dest"
+        unzip -o "$zip_dest" -d "$dest"
+    fi
 }
 
 handle_error() {
@@ -173,8 +185,24 @@ process_context_ref() {
     destination=$(echo "$destination" | xargs)
     source=$(echo "$source" | xargs)
 
+    # by default write to base destination
+    dest="$destination_dir"
+    if [ -n "$destination" ]; then
+        # Remove leading "/" from destination to avoid double slashes
+        destination="${destination#/}"
+        
+        # Security check: reject paths with ".." to prevent escaping base folder
+        if [[ "$destination" == *"../"* ]] || [[ "$destination" == *"/.."* ]]; then
+            echo "Error: destination path contains '..' which could escape base folder: $destination"
+            exit 1
+        fi
+        
+        dest="$destination_dir/$destination"            
+        mkdir -p "$(dirname "$dest")"
+    fi
+
     if [ "$DEBUG" = "true" ]; then
-        echo "DEBUG: Processing line - protocol: $protocol, destination: $destination, source: $source"
+        echo "DEBUG: Processing line - protocol: $protocol, destination: $dest, source: $source"
     fi
 
     case "$protocol" in
@@ -207,10 +235,8 @@ process_context_ref() {
             fi
 
             gv=""
-
-
             temp_suffix=$(echo -n "$git_uri" | base64 -w 0 | tr -d '=' | tr '/+' '_-' | cut -c1-32)
-            temp_clone_dir="$destination_dir/_temp_$temp_suffix"
+            temp_clone_dir="$temp_dir/_temp_$temp_suffix"
             rm -rf "$temp_clone_dir"; mkdir -p "$temp_clone_dir"
 
             if [ "$DEBUG" = "true" ]; then
@@ -225,34 +251,51 @@ process_context_ref() {
             else
                 git clone $gv --config core.askpass='' --recurse-submodules "$clone_url" "$temp_clone_dir"
             fi
-            cp -a "$temp_clone_dir/." "$destination_dir/"
-            echo "cp -a $temp_clone_dir/. $destination_dir/"
+            
+            cp -a "$temp_clone_dir/." "$dest/"
             rm -rf "$temp_clone_dir"
         ;;
         "zip+s3")            
-            download_s3_zip "$source" "$destination_dir/$destination"
+            download_s3_zip "$source" "$dest"
         ;;
         "s3")
             # Check if source ends with / (folder) or not (file)
             if [[ "$source" == */ ]]; then
-                s3_cp_recursive "$source" "$destination_dir/$destination"
+                s3_cp_recursive "$source" "$dest"
             else
-                s3_cp "$source" "$destination_dir/$destination"
+                s3_cp "$source" "$dest"
             fi
         ;;
         "zip+http"|"zip+https")
             stripped_source="${source#zip+}"
-            # workaround: skip $destination until core writes the correct one
-            local http_dest="$(basename "$stripped_source")"            
-            # mkdir -p "$(dirname "$destination_dir/$destination")"
-            curl -L -f -o "$destination_dir/$http_dest" "$stripped_source"
-            unzip -o "$destination_dir/$http_dest" -d "$destination_dir"
+            local http_dest="$(basename "$stripped_source")"
+            
+            # Download zip to temp directory
+            curl -L -f -o "$temp_dir/$http_dest" "$stripped_source"
+            
+            # Check if dest is a folder
+            if [ -d "$dest" ]; then
+                # Unzip INTO the existing directory
+                unzip -o "$temp_dir/$http_dest" -d "$dest"
+            else
+                # Create the destination as a directory and unzip into it
+                mkdir -p "$dest"
+                unzip -o "$temp_dir/$http_dest" -d "$dest"
+            fi
         ;;
         "http"|"https")
-            # workaround: skip $destination until core writes the correct one
-            local http_dest="$(basename "$destination")"
-            # mkdir -p "$(dirname "$destination_dir/$destination")"
-            curl -L -f -o "$destination_dir/$http_dest" "$source"
+            # single source will keep filename when dest is a dir
+            local http_dest="$(basename "$source")"
+            
+            # Check if dest is a folder
+            if [ -d "$dest" ]; then
+                # Write to $dest/$http_dest if dest is a directory
+                curl -L -f -o "$dest/$http_dest" "$source"
+            else
+                # Write directly to $dest if it's not a directory
+                mkdir -p "$(dirname "$dest")"
+                curl -L -f -o "$dest" "$source"
+            fi
         ;;
         *)
             echo "Unknown protocol: $protocol"
@@ -294,7 +337,7 @@ if [ -n "$CONTEXT_REFS" ] && [ -f "$CONTEXT_REFS" ]; then
         source=$(echo "$source" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
         
         # Skip if any field is empty
-        [ -z "$protocol" ] || [ -z "$destination" ] || [ -z "$source" ] && continue
+        [ -z "$protocol" ] || [ -z "$source" ] && continue
         
         # Run in background with parallelism control
         while [ $(jobs -r | wc -l) -ge "$parallelism" ]; do
@@ -328,13 +371,13 @@ fi
 # --------------------------
 # Set permissions
 # --------------------------
-FILES="$(ls -A "$destination_dir")"
-if [ -n "$FILES" ]; then
-    for f in $FILES; do
-        [ "$f" == "lost+found" ] && continue
-        chmod u=rwxX,g=rwxX -R "$destination_dir/$f"
-    done
-fi
+# Use glob pattern to handle filenames with spaces
+shopt -s dotglob
+for f in "$destination_dir"/*; do
+    [ ! -e "$f" ] && continue
+    [ "$(basename "$f")" == "lost+found" ] && continue
+    chmod u=rwxX,g=rwxX -R "$f"
+done
 
 # --------------------------
 # Final recap

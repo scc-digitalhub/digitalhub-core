@@ -33,7 +33,6 @@ import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.function.Function;
-import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
@@ -51,6 +50,7 @@ import it.smartcommunitylabdhub.models.ModelManager;
 import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipName;
 import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
+import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.vllm.base.models.VLLMAdapter;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeFunctionSpec;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeRunSpec;
@@ -236,6 +236,8 @@ public class VLLMServeRunner {
         List<String> args = new ArrayList<>();
 
         String defaultServedModelName = "model";
+        // necessary for vLLM when run as python module
+        args.add("--model");
         // model dir or model id
         if ("huggingface".equals(uri.getScheme()) || "hf".equals(uri.getScheme())) {
             String mdlId = uri.getHost() + uri.getPath();
@@ -268,8 +270,8 @@ public class VLLMServeRunner {
             List.of(functionSpec.getModelName() != null ? functionSpec.getModelName() : defaultServedModelName)
         );
 
-        //enable caching by default
-        defaultArgMap.put("--enable-prefix-caching", List.of());
+        // //enable caching by default
+        // defaultArgMap.put("--enable-prefix-caching", List.of());
 
         if (otelEndpoint != null && !otelEndpoint.isBlank() && Boolean.TRUE.equals(runSpec.getEnableTelemetry())) {
             defaultArgMap.put("--otlp-traces-endpoint", List.of(otelEndpoint));

@@ -24,6 +24,7 @@
 package it.smartcommunitylabdhub.logs.persistence;
 
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity;
+import it.smartcommunitylabdhub.core.persistence.MetadataEntity;
 import it.smartcommunitylabdhub.core.persistence.SpecEntity;
 import it.smartcommunitylabdhub.core.persistence.StatusEntity;
 import it.smartcommunitylabdhub.logs.service.LogServiceImpl;
@@ -48,7 +49,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 @SuperBuilder
 @Entity
 @Table(name = "logs")
-public class LogEntity extends AbstractEntity implements SpecEntity, StatusEntity {
+public class LogEntity extends AbstractEntity implements MetadataEntity, SpecEntity, StatusEntity {
 
     @Column(nullable = false)
     private String run;
@@ -58,6 +59,10 @@ public class LogEntity extends AbstractEntity implements SpecEntity, StatusEntit
     @Column(length = LogServiceImpl.MAX_LENGTH)
     @ToString.Exclude
     private byte[] content;
+
+    @JdbcTypeCode(Types.LONGVARBINARY)
+    @ToString.Exclude
+    protected byte[] metadata;
 
     @JdbcTypeCode(Types.LONGVARBINARY)
     @ToString.Exclude
@@ -80,5 +85,15 @@ public class LogEntity extends AbstractEntity implements SpecEntity, StatusEntit
     @Override
     public @NotNull String getKind() {
         return "log";
+    }
+
+    @Override
+    public String getState() {
+        return null;
+    }
+
+    @Override
+    public void setState(String state) {
+        //not available
     }
 }

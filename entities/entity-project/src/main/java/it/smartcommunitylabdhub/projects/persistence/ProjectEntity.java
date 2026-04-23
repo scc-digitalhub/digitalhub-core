@@ -25,6 +25,7 @@ package it.smartcommunitylabdhub.projects.persistence;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
+import it.smartcommunitylabdhub.core.persistence.MetadataEntity;
 import it.smartcommunitylabdhub.core.persistence.SpecEntity;
 import it.smartcommunitylabdhub.core.persistence.StatusEntity;
 import jakarta.persistence.Column;
@@ -59,7 +60,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @Table(name = "projects")
 @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.WRAPPER_OBJECT)
 @EntityListeners({ AuditingEntityListener.class })
-public class ProjectEntity implements BaseEntity, SpecEntity, StatusEntity {
+public class ProjectEntity implements BaseEntity, MetadataEntity, SpecEntity, StatusEntity {
 
     @Id
     @Column(unique = true, updatable = false)

@@ -24,6 +24,7 @@ package it.smartcommunitylabdhub.lifecycle;
 
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
+import it.smartcommunitylabdhub.commons.infrastructure.Processor;
 import it.smartcommunitylabdhub.commons.infrastructure.ProcessorRegistry;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvent;
@@ -49,10 +50,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.util.StringUtils;
 
 @Slf4j
@@ -67,6 +71,8 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
     protected ProcessorRegistry<D, Status> statusProcessorRegistry;
 
     protected Fsm.Factory<String, String, D> fsmFactory;
+
+    private Executor processorExecutor;
 
     @SuppressWarnings("unchecked")
     protected BaseLifecycleManager() {
@@ -97,6 +103,11 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
     @Autowired(required = false)
     public void setStatusProcessorRegistry(ProcessorRegistry<D, Status> statusProcessorRegistry) {
         this.statusProcessorRegistry = statusProcessorRegistry;
+    }
+
+    @Autowired(required = false)
+    public void setProcessorExecutor(@Qualifier("processorExecutor") Executor processorExecutor) {
+        this.processorExecutor = processorExecutor;
     }
 
     protected Fsm<String, String, D> fsm(D dto) {
@@ -361,26 +372,43 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         @NotNull ProcessorRegistry<D, ? extends Spec> processorRegistry
     ) {
         String stage = "on" + StringUtils.capitalize(state.toLowerCase());
+
         // Iterate over all processor and store all RunBaseStatus as optional
 
-        List<Map<String, Serializable>> res = processorRegistry
-            .getProcessors(stage)
-            .stream()
-            .map(processor -> {
-                try {
-                    //deepclone dto to avoid side effects
-                    D cd = JacksonMapper.deepClone(dto, typeClass);
-                    Spec s = processor.process(stage, cd, input);
-                    return s != null ? s.toMap() : null;
-                } catch (IOException | RuntimeException e) {
-                    log.error("Error processing stage {} for {}", stage, dto.getId(), e);
-                    return null;
-                }
-            })
-            .toList();
+        List<Map<String, Serializable>> res;
+        if (processorExecutor != null) {
+            // scatter: run all processors in parallel, join in @Order-sorted sequence
+            List<CompletableFuture<Map<String, Serializable>>> futures = processorRegistry
+                .getProcessors(stage)
+                .stream()
+                .map(p -> CompletableFuture.supplyAsync(() -> invokeProcessor(p, stage, dto, input), processorExecutor))
+                .toList();
+            res = futures.stream().map(CompletableFuture::join).toList();
+        } else {
+            res =
+                processorRegistry
+                    .getProcessors(stage)
+                    .stream()
+                    .map(p -> invokeProcessor(p, stage, dto, input))
+                    .toList();
+        }
 
-        Map<String, Serializable> map = res.stream().reduce(new HashMap<>(), MapUtils::mergeMultipleMaps);
+        return res.stream().reduce(new HashMap<>(), MapUtils::mergeMultipleMaps);
+    }
 
-        return map;
+    private <I> Map<String, Serializable> invokeProcessor(
+        @NotNull Processor<D, ? extends Spec> processor,
+        @NotNull String stage,
+        @NotNull D dto,
+        @Nullable I input
+    ) {
+        try {
+            D cd = JacksonMapper.deepClone(dto, typeClass);
+            Spec s = processor.process(stage, cd, input);
+            return s != null ? s.toMap() : null;
+        } catch (IOException | CoreRuntimeException e) {
+            log.error("Error processing stage {} for {}", stage, dto.getId(), e);
+            return null;
+        }
     }
 }

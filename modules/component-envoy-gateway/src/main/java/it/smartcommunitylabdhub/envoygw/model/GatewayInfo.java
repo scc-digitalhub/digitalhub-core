@@ -13,9 +13,8 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString(callSuper = true)
-public class GatewayInfo {
+public class GatewayInfo implements java.io.Serializable {
 
     private String gatewayName;
     private String gatewayEndpoint;
-
 }

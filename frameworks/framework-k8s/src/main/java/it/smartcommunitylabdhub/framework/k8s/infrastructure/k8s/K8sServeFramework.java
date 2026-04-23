@@ -462,14 +462,19 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
 
         //stop deployment
         V1Deployment deployment = get(buildDeployment(runnable));
-        if (deployment != null) {
-            log.info("stop deployment for {}", String.valueOf(deployment.getMetadata().getName()));
-            //stop by setting replicas to 0
-            deployment.getSpec().setReplicas(0);
-            deployment = apply(deployment);
 
-            runnable.setMessage(String.format("deployment %s replicas set to 0", deployment.getMetadata().getName()));
-        }
+        // if (deployment != null) {
+        //     log.info("stop deployment for {}", String.valueOf(deployment.getMetadata().getName()));
+        //     //stop by setting replicas to 0
+        //     deployment.getSpec().setReplicas(0);
+        //     deployment = apply(deployment);
+
+        //    runnable.setMessage(String.format("deployment %s replicas set to 0", deployment.getMetadata().getName()));
+        // }
+
+        //stop by deleting
+        // delete(deployment);
+        runnable = delete(runnable);
 
         if (!"disable".equals(collectResults)) {
             //update results

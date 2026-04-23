@@ -23,7 +23,7 @@
 
 package it.smartcommunitylabdhub.runtime.kfp.specs;
 
-import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
+import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;

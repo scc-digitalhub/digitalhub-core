@@ -24,6 +24,7 @@
 package it.smartcommunitylabdhub.commons.services;
 
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -31,7 +32,9 @@ import java.io.Serializable;
 import java.util.Map;
 
 @Valid
-public interface SpecRegistry {
+public interface SpecRegistry<D> {
+    Class<D> getType();
+
     <S extends Spec> S getSpec(@NotNull String kind) throws NoSuchEntityException;
     <S extends Spec> S createSpec(@NotNull String kind, Map<String, Serializable> data) throws NoSuchEntityException;
 }

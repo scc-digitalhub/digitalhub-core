@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.framework.k8s.runnables;
 
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleState;
-import it.smartcommunitylabdhub.commons.models.run.Run;
+import it.smartcommunitylabdhub.runs.Run;
 
 public enum K8sRunnableState implements LifecycleState<Run> {
     BUILT,

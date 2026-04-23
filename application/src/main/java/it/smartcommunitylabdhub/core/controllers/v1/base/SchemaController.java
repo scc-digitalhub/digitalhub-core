@@ -25,15 +25,20 @@ package it.smartcommunitylabdhub.core.controllers.v1.base;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.schemas.Schema;
 import it.smartcommunitylabdhub.commons.services.SchemaService;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -55,8 +60,26 @@ import org.springframework.web.bind.annotation.RestController;
 @PreAuthorize("hasAuthority('ROLE_USER')")
 public class SchemaController {
 
+    private Map<String, SchemaService<?>> services;
+
     @Autowired
-    private SchemaService service;
+    public void setServices(List<SchemaService<?>> services) {
+        this.services =
+            services
+                .stream()
+                .collect(
+                    Collectors.toMap(
+                        r -> {
+                            if (BaseDTO.class.isAssignableFrom(r.getType())) {
+                                return EntityUtils.getEntityName((Class<? extends BaseDTO>) r.getType()).toLowerCase();
+                            }
+
+                            return r.getType().getSimpleName().toLowerCase();
+                        },
+                        r -> r
+                    )
+                );
+    }
 
     @Operation(
         summary = "List entity schemas",
@@ -68,11 +91,15 @@ public class SchemaController {
         @RequestParam(required = false) Optional<String> runtime,
         Pageable pageable
     ) {
+        SchemaService<?> service = services.get(entity);
+        if (service == null) {
+            return ResponseEntity.notFound().build();
+        }
         Collection<Schema> schemas;
         if (runtime.isPresent()) {
-            schemas = service.getSchemas(entity, runtime.get());
+            schemas = service.listSchemas(runtime.get());
         } else {
-            schemas = service.listSchemas(entity);
+            schemas = service.listSchemas();
         }
         PageImpl<Schema> page = new PageImpl<>(new ArrayList<>(schemas), pageable, schemas.size());
 
@@ -84,6 +111,10 @@ public class SchemaController {
         @PathVariable @Valid @NotNull String entity,
         @PathVariable @NotBlank String kind
     ) {
+        SchemaService<?> service = services.get(entity);
+        if (service == null) {
+            return ResponseEntity.notFound().build();
+        }
         Schema schema = service.getSchema(kind);
 
         return ResponseEntity.ok(schema);

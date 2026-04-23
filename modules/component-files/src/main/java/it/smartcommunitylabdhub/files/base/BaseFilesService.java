@@ -46,7 +46,6 @@ import it.smartcommunitylabdhub.files.models.UploadInfo;
 import it.smartcommunitylabdhub.files.service.EntityFilesService;
 import it.smartcommunitylabdhub.files.service.FilesInfoService;
 import it.smartcommunitylabdhub.files.service.FilesService;
-import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -61,7 +60,6 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
-@Transactional
 @Slf4j
 public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & StatusDTO>
     implements EntityFilesService<D>, InitializingBean {

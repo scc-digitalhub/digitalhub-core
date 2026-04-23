@@ -8,6 +8,8 @@ server:
     remoteip:
       remote_ip_header: ${SERVER_TOMCAT_REMOTE_IP_HEADER:x-forwarded-for}
       protocol_header: ${SERVER_TOMCAT_PROTOCOL_HEADER:x-forwarded-proto}
+    threads:
+      max: 50
   max-http-request-header-size: 32000
   error:
     include-stacktrace: never
@@ -36,6 +38,7 @@ spring:
     username: ${JDBC_USER:sa}
     url: ${JDBC_URL:jdbc:h2:file:./data/db}
     hikari:
+      maximum-pool-size: 35    
       leak-detection-threshold: 5000  # 5s max        
   quartz:
     job-store-type: jdbc

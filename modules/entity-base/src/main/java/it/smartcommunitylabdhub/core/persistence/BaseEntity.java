@@ -42,11 +42,4 @@ public interface BaseEntity extends Serializable {
     String getCreatedBy();
 
     String getUpdatedBy();
-
-    //always store metadata
-    //TODO evaluate splitting
-
-    byte[] getMetadata();
-
-    void setMetadata(byte[] metadata);
 }

@@ -15,6 +15,7 @@
         <java.version>21</java.version>
         <spring-boot.version>3.5.9</spring-boot.version>
         <spring-security.version>6.5.7</spring-security.version>
+        <spring-integration.version>6.5.7</spring-integration.version>
         <springdoc.version>2.7.0</springdoc.version>
         <jackson.version>2.18.4</jackson.version>
         <jsonschema.version>4.36.0</jsonschema.version>
@@ -42,6 +43,7 @@
         <module>modules/component-logs</module>
         <module>modules/component-files</module>
         <module>modules/component-envoy-gateway</module>
+        <module>modules/component-extensions</module>
         <module>modules/entity-base</module>
         <module>modules/runtime-base</module>
         <module>entities/entity-artifact</module>

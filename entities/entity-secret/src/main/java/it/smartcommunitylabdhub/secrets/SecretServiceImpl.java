@@ -78,7 +78,7 @@ public class SecretServiceImpl implements SecretService {
     private EntityRepository<Project> projectService;
 
     @Autowired
-    private SpecRegistry specRegistry;
+    private SpecRegistry<Secret> specRegistry;
 
     @Autowired
     private SpecValidator validator;

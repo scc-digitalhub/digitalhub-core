@@ -24,10 +24,10 @@
 package it.smartcommunitylabdhub.runtimes.lifecycle.states;
 
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.infrastructure.Runtime;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
-import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
 import it.smartcommunitylabdhub.runs.lifecycle.RunState;
+import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
+import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
+import it.smartcommunitylabdhub.runtimes.Runtime;
 import java.util.Collections;
 import lombok.extern.slf4j.Slf4j;
 

@@ -31,7 +31,6 @@ import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.function.Function;
-import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.files.models.FileInfo;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
@@ -50,6 +49,7 @@ import it.smartcommunitylabdhub.models.ModelManager;
 import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipName;
 import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
+import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.mlflow.models.MLServerSettingsParameters;
 import it.smartcommunitylabdhub.runtime.mlflow.models.MLServerSettingsSpec;
 import it.smartcommunitylabdhub.runtime.modelserve.specs.ModelServeServeTaskSpec;
@@ -173,7 +173,7 @@ public class SklearnServeRunner {
 
         //read source and build context
         List<ContextRef> contextRefs = Collections.singletonList(
-            ContextRef.builder().source(path).protocol(uri.getScheme()).destination("model").build()
+            ContextRef.builder().source(path).protocol(uri.getScheme()).destination(fileName).build()
         );
 
         List<ContextSource> contextSources = new ArrayList<>();
@@ -186,7 +186,7 @@ public class SklearnServeRunner {
             .parameters(
                 MLServerSettingsParameters
                     .builder()
-                    .uri("./model/" + fileName)
+                    .uri("./" + fileName)
                     // .contentType()
                     .build()
             )

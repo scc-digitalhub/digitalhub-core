@@ -37,10 +37,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
-@Transactional(readOnly = true)
 @Slf4j
 public class BaseIndexableEntityService<D extends BaseDTO> implements IndexableEntityService<D>, InitializingBean {
 
@@ -63,7 +61,6 @@ public class BaseIndexableEntityService<D extends BaseDTO> implements IndexableE
     }
 
     @Override
-    @Transactional(readOnly = true)
     public void indexOne(@NotNull String id) throws NoSuchEntityException, SystemException {
         if (indexer != null) {
             log.debug("index with id {}", String.valueOf(id));
@@ -79,7 +76,6 @@ public class BaseIndexableEntityService<D extends BaseDTO> implements IndexableE
 
     @Async
     @Override
-    @Transactional(readOnly = true)
     public void reindexAll() {
         if (indexer != null) {
             log.debug("reindex all");

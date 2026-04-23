@@ -1,5 +1,6 @@
 schema:
   name: {{schemaName}}
+  prefix: {{schemaPrefix}} 
 backendRef:
   name: {{backendName}}
   kind: Backend

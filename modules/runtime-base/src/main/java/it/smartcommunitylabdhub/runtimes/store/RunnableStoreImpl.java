@@ -32,7 +32,6 @@ import it.smartcommunitylabdhub.runtimes.persistence.RunnableRepository;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ResolvableType;
@@ -109,16 +108,11 @@ public class RunnableStoreImpl<T extends RunRunnable> implements RunnableStore<T
             byte[] data = objectMapper.writeValueAsBytes(e);
             RunnableEntity entity = RunnableEntity.builder().id(id).user(e.getUser()).data(data).build();
 
-            Optional
-                .ofNullable(find(id))
-                .ifPresentOrElse(
-                    r -> runnableRepository.update(clazz.getName(), r.getId(), entity),
-                    () -> runnableRepository.save(clazz.getName(), entity)
-                );
+            runnableRepository.upsert(clazz.getName(), entity);
         } catch (IOException ex) {
             // Handle serialization error
-            log.error("error deserializing runnable: {}", ex.getMessage());
-            throw new StoreException("error deserializing runnable");
+            log.error("error serializing runnable: {}", ex.getMessage());
+            throw new StoreException("error serializing runnable");
         }
     }
 

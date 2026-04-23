@@ -25,6 +25,7 @@ package it.smartcommunitylabdhub.console.controllers;
 
 import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
 import it.smartcommunitylabdhub.commons.config.SecurityProperties;
+import it.smartcommunitylabdhub.components.proxy.provider.ProxyProvider;
 import it.smartcommunitylabdhub.console.Keys;
 import it.smartcommunitylabdhub.search.service.SearchService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -58,7 +59,10 @@ public class ConsoleController {
     private SecurityProperties securityProperties;
 
     @Autowired(required = false)
-    SearchService searchService;
+    private SearchService searchService;
+
+    @Autowired(required = false)
+    private ProxyProvider proxyProvider;
 
     @Value("${jwt.client-id}")
     private String clientId;
@@ -109,6 +113,14 @@ public class ConsoleController {
             config.put("REACT_APP_ISSUER_URI", applicationUrl);
             config.put("REACT_APP_CLIENT_ID", clientId);
             config.put("REACT_APP_SCOPE", "openid profile offline_access");
+        }
+
+        if (proxyProvider != null) {
+            if (proxyProvider.getConfig().getProxy() != null) {
+                config.put("REACT_APP_PROXY_URL", proxyProvider.getConfig().getProxy());
+            } else {
+                config.put("REACT_APP_PROXY_URL", "core");
+            }
         }
 
         config.put("REACT_APP_ENABLE_SOLR", String.valueOf(searchService != null));

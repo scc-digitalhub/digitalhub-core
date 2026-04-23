@@ -27,8 +27,6 @@ import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import jakarta.validation.constraints.NotNull;
 
 public interface SpecValidator {
-
-	// TODO add MethodValidationResult exception
-	public void validateSpec(@NotNull Spec spec) throws IllegalArgumentException;
-
+    // TODO add MethodValidationResult exception
+    public void validateSpec(@NotNull Spec spec) throws IllegalArgumentException;
 }

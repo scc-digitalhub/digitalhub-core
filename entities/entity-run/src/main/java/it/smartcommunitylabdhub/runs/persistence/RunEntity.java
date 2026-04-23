@@ -24,6 +24,7 @@
 package it.smartcommunitylabdhub.runs.persistence;
 
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity;
+import it.smartcommunitylabdhub.core.persistence.MetadataEntity;
 import it.smartcommunitylabdhub.core.persistence.SpecEntity;
 import it.smartcommunitylabdhub.core.persistence.StatusEntity;
 import jakarta.persistence.Column;
@@ -47,7 +48,7 @@ import org.springframework.util.StringUtils;
 @ToString
 @Entity
 @Table(name = "runs")
-public class RunEntity extends AbstractEntity implements SpecEntity, StatusEntity {
+public class RunEntity extends AbstractEntity implements MetadataEntity, SpecEntity, StatusEntity {
 
     @Column(nullable = true)
     private String name;
@@ -60,6 +61,10 @@ public class RunEntity extends AbstractEntity implements SpecEntity, StatusEntit
 
     @Column(nullable = true)
     private String workflow;
+
+    @JdbcTypeCode(Types.LONGVARBINARY)
+    @ToString.Exclude
+    protected byte[] metadata;
 
     @JdbcTypeCode(Types.LONGVARBINARY)
     @ToString.Exclude

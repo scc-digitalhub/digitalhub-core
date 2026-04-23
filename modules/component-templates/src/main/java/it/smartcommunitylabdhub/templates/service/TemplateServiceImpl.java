@@ -47,6 +47,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -85,8 +86,7 @@ public class TemplateServiceImpl implements SearchableTemplateService, Initializ
     @Autowired
     ResourcePatternResolver resourceResolver;
 
-    @Autowired
-    private SpecRegistry specRegistry;
+    private Map<String, SpecRegistry<?>> specRegistries;
 
     @Autowired
     private SpecValidator validator;
@@ -114,6 +114,26 @@ public class TemplateServiceImpl implements SearchableTemplateService, Initializ
     @Override
     public void setApplicationContext(@NonNull ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
+    }
+
+    @Autowired
+    public void setSpecRegistries(List<SpecRegistry<?>> specRegistries) {
+        Assert.notNull(specRegistries, "spec registries can not be null");
+        this.specRegistries =
+            specRegistries
+                .stream()
+                .collect(
+                    Collectors.toMap(
+                        r -> {
+                            if (BaseDTO.class.isAssignableFrom(r.getType())) {
+                                return EntityUtils.getEntityName((Class<? extends BaseDTO>) r.getType()).toLowerCase();
+                            }
+
+                            return r.getType().getSimpleName().toLowerCase();
+                        },
+                        r -> r
+                    )
+                );
     }
 
     @PostConstruct
@@ -198,6 +218,14 @@ public class TemplateServiceImpl implements SearchableTemplateService, Initializ
         return result;
     }
 
+    private SpecRegistry<?> getSpecRegistry(String type) {
+        SpecRegistry<?> registry = specRegistries.get(type.toLowerCase());
+        if (registry == null) {
+            throw new IllegalArgumentException("no spec registry found for type " + type);
+        }
+        return registry;
+    }
+
     private void validate(Template template) {
         //minimal validation: base fields + spec
         if (!StringUtils.hasText(template.getName())) {
@@ -211,7 +239,7 @@ public class TemplateServiceImpl implements SearchableTemplateService, Initializ
         }
 
         // Parse and validate Spec
-        Spec spec = specRegistry.createSpec(template.getKind(), template.getSpec());
+        Spec spec = getSpecRegistry(template.getType()).createSpec(template.getKind(), template.getSpec());
         if (spec == null) {
             throw new IllegalArgumentException("invalid kind");
         }
@@ -234,7 +262,7 @@ public class TemplateServiceImpl implements SearchableTemplateService, Initializ
         }
 
         // Parse and export Spec
-        Spec spec = specRegistry.createSpec(template.getKind(), template.getSpec());
+        Spec spec = getSpecRegistry(template.getType()).createSpec(template.getKind(), template.getSpec());
         if (spec == null) {
             throw new IllegalArgumentException("invalid kind");
         }

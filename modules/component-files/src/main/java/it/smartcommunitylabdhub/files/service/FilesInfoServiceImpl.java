@@ -75,6 +75,7 @@ public class FilesInfoServiceImpl implements FilesInfoService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public FilesInfo getFilesInfo(@NotNull String entityName, @NotNull String entityId)
         throws StoreException, SystemException {
         log.debug("get files info for entity {} id {}", entityId, entityName);

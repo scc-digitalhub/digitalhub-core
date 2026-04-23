@@ -32,7 +32,6 @@ import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.function.Function;
-import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
@@ -45,18 +44,20 @@ import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipName;
 import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
-import it.smartcommunitylabdhub.runtime.python.runners.PythonBuildRunner;
-import it.smartcommunitylabdhub.runtime.python.runners.PythonJobRunner;
-import it.smartcommunitylabdhub.runtime.python.runners.PythonServeRunner;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonBuildRunSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonBuildTaskSpec;
+import it.smartcommunitylabdhub.runs.Run;
+import it.smartcommunitylabdhub.runtime.python.build.PythonBuildRunSpec;
+import it.smartcommunitylabdhub.runtime.python.build.PythonBuildRunner;
+import it.smartcommunitylabdhub.runtime.python.build.PythonBuildTaskSpec;
+import it.smartcommunitylabdhub.runtime.python.config.PythonProperties;
+import it.smartcommunitylabdhub.runtime.python.job.PythonJobRunSpec;
+import it.smartcommunitylabdhub.runtime.python.job.PythonJobRunner;
+import it.smartcommunitylabdhub.runtime.python.job.PythonJobTaskSpec;
+import it.smartcommunitylabdhub.runtime.python.serve.PythonServeRunSpec;
+import it.smartcommunitylabdhub.runtime.python.serve.PythonServeRunner;
+import it.smartcommunitylabdhub.runtime.python.serve.PythonServeTaskSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonFunctionSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonJobRunSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonJobTaskSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonRunSpec;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonRunStatus;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonServeRunSpec;
-import it.smartcommunitylabdhub.runtime.python.specs.PythonServeTaskSpec;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -65,17 +66,29 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.Assert;
 
 @Slf4j
 @RuntimeComponent(runtime = PythonRuntime.RUNTIME)
 public class PythonRuntime
-    extends K8sFunctionBaseRuntime<PythonFunctionSpec, PythonRunSpec, PythonRunStatus, K8sRunnable> {
+    extends K8sFunctionBaseRuntime<PythonFunctionSpec, PythonRunSpec, PythonRunStatus, K8sRunnable>
+    implements InitializingBean {
 
     public static final String RUNTIME = "python";
     public static final String[] KINDS = { PythonJobRunSpec.KIND, PythonServeRunSpec.KIND, PythonBuildRunSpec.KIND };
+
+    public static final int UID = 8877;
+    public static final int GID = 999;
+    public static final String HOME_DIR = "/shared";
+
+    private final PythonProperties properties;
+
+    private PythonBuildRunner buildRunner;
+    private PythonJobRunner jobRunner;
+    private PythonServeRunner serveRunner;
 
     @Autowired
     private SecretService secretService;
@@ -89,34 +102,17 @@ public class PythonRuntime
     @Autowired
     private ConfigurationService configurationService;
 
-    @Autowired
-    @Qualifier("pythonImages")
-    private Map<String, String> images;
+    public PythonRuntime(@Qualifier("pythonProperties") PythonProperties properties) {
+        Assert.notNull(properties, "properties are required");
+        this.properties = properties;
+    }
 
-    @Autowired
-    @Qualifier("pythonServerlessImages")
-    private Map<String, String> serverlessImages;
-
-        @Autowired
-    @Qualifier("pythonBaseImages")
-    private Map<String, String> baseImages;
-
-    @Value("${runtime.python.command}")
-    private String command;
-
-    @Value("${runtime.python.user-id}")
-    private Integer userId;
-
-    @Value("${runtime.python.group-id}")
-    private Integer groupId;
-
-    @Value("${runtime.python.dependencies}")
-    private List<String> dependencies;
-
-    @Value("${runtime.python.volume-size:1Gi}")
-    protected String volumeSizeSpec;
-
-    public PythonRuntime() {}
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        this.buildRunner = new PythonBuildRunner(properties, k8sBuilderHelper);
+        this.jobRunner = new PythonJobRunner(properties, k8sBuilderHelper);
+        this.serveRunner = new PythonServeRunner(properties, k8sBuilderHelper, functionService);
+    }
 
     @Override
     public PythonRunSpec build(@NotNull Function function, @NotNull Task task, @NotNull Run run) {
@@ -215,23 +211,9 @@ public class PythonRuntime
 
         K8sRunnable runnable =
             switch (runAccessor.getTask()) {
-                case PythonJobTaskSpec.KIND -> new PythonJobRunner(images, serverlessImages, baseImages, volumeSizeSpec, userId, groupId, command, k8sBuilderHelper, dependencies)
-                    .produce(run, secrets);
-                case PythonServeTaskSpec.KIND -> new PythonServeRunner(
-                    images,
-                    serverlessImages,
-                    baseImages,
-                    volumeSizeSpec,
-                    userId,
-                    groupId,
-                    command,
-                    k8sBuilderHelper,
-                    functionService,
-                    dependencies
-                )
-                    .produce(run, secrets);
-                case PythonBuildTaskSpec.KIND -> new PythonBuildRunner(images, serverlessImages, baseImages, command, k8sBuilderHelper, dependencies)
-                    .produce(run, secrets);
+                case PythonJobTaskSpec.KIND -> jobRunner.produce(run, secrets);
+                case PythonServeTaskSpec.KIND -> serveRunner.produce(run, secrets);
+                case PythonBuildTaskSpec.KIND -> buildRunner.produce(run, secrets);
                 default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
             };
 
@@ -239,7 +221,7 @@ public class PythonRuntime
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
         if (auth != null) {
             //get credentials from providers
-            List<Credentials> credentials = credentialsService.getCredentials((UserAuthentication<?>) auth);
+            List<Credentials> credentials = credentialsService.getCredentials(auth);
             runnable.setCredentials(credentials);
         }
 

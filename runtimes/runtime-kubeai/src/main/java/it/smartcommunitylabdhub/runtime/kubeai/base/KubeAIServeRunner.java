@@ -29,7 +29,6 @@ import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.enums.State;
-import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sSecretHelper;
@@ -41,6 +40,7 @@ import it.smartcommunitylabdhub.models.ModelManager;
 import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipName;
 import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
+import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAIEngine;
 import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAIModelSpec;
 import it.smartcommunitylabdhub.runtime.kubeai.models.KubeAiEnvFrom;
@@ -185,8 +185,9 @@ public class KubeAIServeRunner {
         List<String> args = new ArrayList<>();
         if (KubeAIEngine.VLLM.name().equals(engine)) {
             //inject args to reduce logging
-            args.add("--disable-log-requests");
-            args.add("--disable-log-stats");
+            // DISABLED IN VLLM
+            // args.add("--disable-log-requests");
+            // args.add("--disable-log-stats");
             args.add("--uvicorn-log-level=warning");
         }
         if (KubeAIEngine.OLlama.name().equals(engine)) {

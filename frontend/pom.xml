@@ -57,6 +57,11 @@
             <artifactId>dh-search</artifactId>
             <version>${revision}</version>
         </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-proxy</artifactId>
+            <version>${revision}</version>
+        </dependency>
         
         <dependency>
             <groupId>org.springdoc</groupId>

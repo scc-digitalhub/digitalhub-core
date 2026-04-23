@@ -23,17 +23,16 @@
 
 package it.smartcommunitylabdhub.runs.listeners;
 
-import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.core.events.AbstractEntityListener;
 import it.smartcommunitylabdhub.core.events.EntityEvent;
+import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.persistence.RunEntity;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 @Component
 @Slf4j
@@ -44,8 +43,7 @@ public class RunEntityListener extends AbstractEntityListener<RunEntity, Run> {
     }
 
     @Async
-    @EventListener
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void receive(EntityEvent<RunEntity> event) {
         if (event.getEntity() == null) {
             return;

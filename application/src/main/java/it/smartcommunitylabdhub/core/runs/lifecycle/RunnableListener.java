@@ -25,8 +25,8 @@ package it.smartcommunitylabdhub.core.runs.lifecycle;
 
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.models.run.Run;
-import it.smartcommunitylabdhub.commons.services.RunManager;
+import it.smartcommunitylabdhub.runs.Run;
+import it.smartcommunitylabdhub.runs.RunManager;
 import it.smartcommunitylabdhub.runtimes.events.RunnableChangedEvent;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
 import java.util.Collection;
@@ -35,8 +35,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.BiConsumer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.messaging.Message;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.concurrent.DelegatingSecurityContextRunnable;
@@ -99,8 +98,13 @@ public class RunnableListener {
         }
     }
 
-    @Async
-    @EventListener
+    public void handle(Message<RunnableChangedEvent<RunRunnable>> message) {
+        RunnableChangedEvent<RunRunnable> event = message.getPayload();
+        receive(event);
+    }
+
+    // @Async
+    // @EventListener
     public void receive(RunnableChangedEvent<RunRunnable> event) {
         if (event.getState() == null) {
             return;

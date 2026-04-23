@@ -52,9 +52,9 @@ echo "Using Python version: ${PYTHON_VERSION}"
 
 INSTALL_CMD="$(which python3) -m pip install --user"
 if [ -f "${uv_path}" ]; then
-    ${uv_path} venv /shared/.venv  --system-site-packages --allow-existing --cache-dir /shared/.uv_cache
-    source /shared/.venv/bin/activate
-    INSTALL_CMD="${uv_path} pip install --cache-dir /shared/.uv_cache"
+    ${uv_path} venv /${HOME}/.venv  --system-site-packages --allow-existing --cache-dir /${HOME}/.uv_cache
+    source /${HOME}/.venv/bin/activate
+    INSTALL_CMD="${uv_path} pip install --cache-dir /${HOME}/.uv_cache"
 fi
 echo "Using install command: ${INSTALL_CMD}"
 
@@ -90,10 +90,29 @@ if ! [ -f "${config}" ]; then
 fi
 
 # common requirements
-if  [ -f "${common_requirements}" ]; then
-    ${INSTALL_CMD}  --no-index ${WHEEL_OPTIONS} -r "${common_requirements}"
-    if ! [ $? -eq 0 ]; then
-        die "Error installing common requirements"
+if [[ -n "${common_requirements}" ]]; then
+    if [[ "${common_requirements}" == *","* ]]; then
+        # Handle comma-separated list
+        IFS=',' read -ra REQ_PATHS <<< "${common_requirements}"
+        for req_path in "${REQ_PATHS[@]}"; do
+            req_path=$(echo "$req_path" | xargs)  # trim whitespace
+            if [ -f "${req_path}" ]; then
+                echo "Installing common requirements from ${req_path}..."
+                ${INSTALL_CMD}  --no-index ${WHEEL_OPTIONS} -r "${req_path}"
+                if ! [ $? -eq 0 ]; then
+                    die "Error installing common requirements from ${req_path}"
+                fi
+            fi
+        done
+    else
+        # Handle single file
+        if [ -f "${common_requirements}" ]; then
+            echo "Installing common requirements from ${common_requirements}..."
+            ${INSTALL_CMD}  --no-index ${WHEEL_OPTIONS} -r "${common_requirements}"
+            if ! [ $? -eq 0 ]; then
+                die "Error installing common requirements"
+            fi
+        fi
     fi
 fi
 

@@ -29,7 +29,6 @@ import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.function.Function;
-import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
@@ -46,6 +45,8 @@ import it.smartcommunitylabdhub.models.ModelManager;
 import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipName;
 import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
+import it.smartcommunitylabdhub.runs.Run;
+import it.smartcommunitylabdhub.runtime.huggingface.specs.HuggingFaceModelSpec;
 import it.smartcommunitylabdhub.runtime.huggingface.specs.HuggingfaceServeFunctionSpec;
 import it.smartcommunitylabdhub.runtime.huggingface.specs.HuggingfaceServeRunSpec;
 import it.smartcommunitylabdhub.runtime.huggingface.specs.HuggingfaceServeTaskSpec;
@@ -156,7 +157,9 @@ public class HuggingfaceServeRunner {
             RelationshipsMetadata relationships = RelationshipsMetadata.from(run.getMetadata());
             relationships.getRelationships().add(rel);
             run.getMetadata().putAll(relationships.toMap());
-            path = (String) model.getSpec().get("path");
+            HuggingFaceModelSpec modelSpec = new HuggingFaceModelSpec();
+            modelSpec.configure(model.getSpec());
+            path = modelSpec.getPath();
         }
 
         UriComponents uri = UriComponentsBuilder.fromUriString(path).build();
@@ -195,7 +198,7 @@ public class HuggingfaceServeRunner {
 
             contextRefs =
                 Collections.singletonList(
-                    ContextRef.builder().source(path).protocol(uri.getScheme()).destination("model").build()
+                    ContextRef.builder().source(path).protocol(uri.getScheme()).destination("model/").build()
                 );
         }
 

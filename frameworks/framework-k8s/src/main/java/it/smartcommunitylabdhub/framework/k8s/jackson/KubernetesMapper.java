@@ -6,19 +6,19 @@
 
 /*
  * Copyright 2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package it.smartcommunitylabdhub.framework.k8s.jackson;
@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLParser;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -52,6 +53,12 @@ public class KubernetesMapper {
     public static final ObjectMapper OBJECT_MAPPER = JacksonMapper.CUSTOM_OBJECT_MAPPER
         .addMixIn(IntOrString.class, IntOrStringMixin.class)
         .addMixIn(Quantity.class, QuantityMixin.class)
+        .addMixIn(K8sRunnable.class, K8sRunnableMixin.class)
+        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+    //custom CBOR object mapper with mixIn for K8sRunnable (for RunnableStoreImpl)
+    public static final ObjectMapper CBOR_OBJECT_MAPPER = new ObjectMapper(new CBORFactory())
+        .addMixIn(K8sRunnable.class, K8sRunnableMixin.class)
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     public static final YAMLFactory YAML_FACTORY = YamlMapperFactory.yamlFactory();

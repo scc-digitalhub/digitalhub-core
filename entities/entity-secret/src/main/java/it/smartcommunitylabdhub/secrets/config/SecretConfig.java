@@ -20,6 +20,7 @@ package it.smartcommunitylabdhub.secrets.config;
 import it.smartcommunitylabdhub.commons.models.secret.Secret;
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
+import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
 import it.smartcommunitylabdhub.secrets.persistence.SecretEntity;
 import it.smartcommunitylabdhub.secrets.persistence.SecretRepository;
 import org.springframework.context.annotation.Bean;
@@ -36,5 +37,10 @@ public class SecretConfig {
         Converter<SecretEntity, Secret> dtoBuilder
     ) {
         return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
+    }
+
+    @Bean
+    SpecRegistryImpl<Secret> secretSpecRegistry() {
+        return new SpecRegistryImpl<>(Secret.class);
     }
 }
