@@ -50,6 +50,12 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
+      <groupId>it.smartcommunitylabdhub</groupId>
+      <artifactId>dh-proxy</artifactId>
+      <version>0.15.0-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
       <groupId>org.springdoc</groupId>
       <artifactId>springdoc-openapi-starter-common</artifactId>
       <version>2.7.0</version>
