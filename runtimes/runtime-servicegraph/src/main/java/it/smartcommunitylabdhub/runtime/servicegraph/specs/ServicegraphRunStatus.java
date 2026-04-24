@@ -28,7 +28,7 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
-import it.smartcommunitylabdhub.commons.models.run.RunBaseStatus;
+import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

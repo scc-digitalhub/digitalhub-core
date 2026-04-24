@@ -23,12 +23,7 @@
 
 package it.smartcommunitylabdhub.runtime.servicegraph.model;
 
-import java.io.Serializable;
-
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.models.objects.SourceCode;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

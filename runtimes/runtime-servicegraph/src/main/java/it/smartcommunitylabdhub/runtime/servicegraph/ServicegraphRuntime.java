@@ -31,7 +31,6 @@ import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeCompon
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.models.function.Function;
-import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
@@ -39,6 +38,7 @@ import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.functions.FunctionManager;
+import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.servicegraph.runners.ServicegraphServeRunner;
 import it.smartcommunitylabdhub.runtime.servicegraph.specs.ServicegraphFunctionSpec;
 import it.smartcommunitylabdhub.runtime.servicegraph.specs.ServicegraphRunSpec;
@@ -134,7 +134,7 @@ public class ServicegraphRuntime
     }
 
     @Override
-    public K8sRunnable run(@NotNull Run run) {
+    public K8sRunnable run(@NotNull it.smartcommunitylabdhub.runs.Run run) {
         //check run kind
         if (!isSupported(run)) {
             throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));

@@ -23,7 +23,7 @@
 
 package it.smartcommunitylabdhub.runtime.servicegraph.specs;
 
-import it.smartcommunitylabdhub.commons.models.run.RunBaseSpec;
+import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,7 +37,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class ServicegraphRunSpec extends RunBaseSpec {
 
-    private Map<String, Serializable> parameters = new HashMap<>();
+    private Map<String, String> parameters = new HashMap<>();
 
     public ServicegraphRunSpec(Map<String, Serializable> data) {
         configure(data);

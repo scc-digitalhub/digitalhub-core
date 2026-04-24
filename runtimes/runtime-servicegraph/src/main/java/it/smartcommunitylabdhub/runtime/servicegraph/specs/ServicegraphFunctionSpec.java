@@ -29,7 +29,6 @@ import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.function.FunctionBaseSpec;
 import it.smartcommunitylabdhub.runtime.servicegraph.ServicegraphRuntime;
-import it.smartcommunitylabdhub.runtime.servicegraph.model.Servicegraph;
 import it.smartcommunitylabdhub.runtime.servicegraph.model.ServicegraphSourceCode;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;

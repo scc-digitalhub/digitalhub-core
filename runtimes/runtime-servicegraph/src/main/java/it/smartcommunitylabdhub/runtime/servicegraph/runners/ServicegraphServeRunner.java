@@ -26,7 +26,6 @@ package it.smartcommunitylabdhub.runtime.servicegraph.runners;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.function.Function;
-import it.smartcommunitylabdhub.commons.models.run.Run;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
@@ -38,6 +37,7 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
 import it.smartcommunitylabdhub.functions.FunctionManager;
+import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.servicegraph.ServicegraphRuntime;
 import it.smartcommunitylabdhub.runtime.servicegraph.model.ServicegraphSourceCode;
 import it.smartcommunitylabdhub.runtime.servicegraph.specs.ServicegraphFunctionSpec;
@@ -148,7 +148,7 @@ public class ServicegraphServeRunner {
         if (runSpec.getParameters() != null && !runSpec.getParameters().isEmpty()) {
             //add parameters as env vars
             args = new ArrayList<>(args);
-            for (Map.Entry<String, Serializable> entry : runSpec.getParameters().entrySet()) {
+            for (Map.Entry<String, String> entry : runSpec.getParameters().entrySet()) {
                 String key = entry.getKey();
                 String value = String.valueOf(entry.getValue());
                 args.add(key + "=" + value);
