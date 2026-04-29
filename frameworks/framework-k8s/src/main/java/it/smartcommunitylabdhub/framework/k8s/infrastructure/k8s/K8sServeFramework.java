@@ -254,12 +254,15 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
 
         //check if additional names are specified
         if (runnable.getServiceNames() != null) {
+            List<V1Service> additionalServices = new ArrayList<>();
             for (String serviceName : runnable.getServiceNames()) {
                 //build service with additional name
                 V1Service additionalService = build(runnable, serviceName);
                 log.info("create additional service for {}", String.valueOf(additionalService.getMetadata().getName()));
                 additionalService = createOrUpdate(additionalService);
+                additionalServices.add(additionalService);
             }
+            results.put("services", additionalServices);
         }
 
         //update state

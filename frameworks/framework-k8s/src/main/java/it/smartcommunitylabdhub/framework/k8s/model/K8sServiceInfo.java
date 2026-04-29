@@ -54,4 +54,6 @@ public class K8sServiceInfo {
 
     private String url;
     private List<String> urls;
+
+    private List<String> aliases;
 }

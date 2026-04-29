@@ -192,6 +192,35 @@ public class K8sServeMonitor extends K8sBaseMonitor<K8sServeRunnable> {
                 }
             }
 
+            //check additional services
+            List<V1Service> additionalServices = new ArrayList<>();
+            if (runnable.getServiceNames() != null) {
+                for (String serviceName : runnable.getServiceNames()) {
+                    try {
+                        //build service with additional name
+                        V1Service additionalService = serveFramework.build(runnable, serviceName);
+                        additionalService = serveFramework.get(additionalService);
+                        if (additionalService == null || additionalService.getStatus() == null) {
+                            // something is missing, skip
+                        } else {
+                            //check labels match: if not, this was externally updated and does not belong to this runnable
+                            if (
+                                additionalService
+                                    .getMetadata()
+                                    .getLabels()
+                                    .entrySet()
+                                    .containsAll(service.getMetadata().getLabels().entrySet())
+                            ) {
+                                //keep it
+                                additionalServices.add(additionalService);
+                            }
+                        }
+                    } catch (K8sFrameworkException e1) {
+                        //skip on error
+                    }
+                }
+            }
+
             if (events != null) {
                 runnable.setEvents(new ArrayList<>(mapper.convertValue(events, arrayRef)));
             }
@@ -207,6 +236,10 @@ public class K8sServeMonitor extends K8sBaseMonitor<K8sServeRunnable> {
                                 mapper.convertValue(deployment, typeRef),
                                 "service",
                                 mapper.convertValue(service, typeRef),
+                                "services",
+                                additionalServices != null
+                                    ? mapper.convertValue(additionalServices, arrayRef)
+                                    : new ArrayList<>(),
                                 "pods",
                                 pods != null ? mapper.convertValue(pods, arrayRef) : new ArrayList<>()
                             )
