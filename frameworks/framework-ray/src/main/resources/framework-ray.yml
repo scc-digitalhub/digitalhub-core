@@ -1,0 +1,4 @@
+ray:
+  api-group: ${RAY_API_GROUP:ray.io}
+  api-version: ${RAY_API_VERSION:v1}
+  service-account: ${RAY_SERVICE_ACCOUNT:default}
