@@ -60,6 +60,7 @@
         <module>frameworks/framework-k8s</module>
         <module>frameworks/framework-argo</module>
         <module>frameworks/framework-kaniko</module>
+        <module>frameworks/framework-ray</module>
         <module>modules/trigger-base</module>
         <module>triggers/trigger-scheduler</module>
         <module>triggers/trigger-lifecycle</module>
