@@ -76,8 +76,7 @@ public class S3Properties {
             ((roleArn != null && !roleArn.isBlank()) ||
                 (policy != null && !policy.isBlank()) ||
                 (claim != null && !claim.isBlank()) ||
-                (policyTemplate != null && !policyTemplate.isBlank())
-            )
+                (policyTemplate != null && !policyTemplate.isBlank()))
         );
     }
 

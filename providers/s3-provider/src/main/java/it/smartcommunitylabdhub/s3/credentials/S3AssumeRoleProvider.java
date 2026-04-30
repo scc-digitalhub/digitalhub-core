@@ -39,7 +39,6 @@ import it.smartcommunitylabdhub.s3.base.S3BaseProvider;
 import it.smartcommunitylabdhub.s3.config.S3Properties;
 import jakarta.annotation.Nonnull;
 import jakarta.validation.constraints.NotNull;
-
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.URI;
@@ -104,7 +103,6 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
         this.projectAuthHelper = projectAuthHelper;
     }
 
-
     @Override
     public void afterPropertiesSet() throws Exception {
         //let's make sure duration is bigger than access token to avoid releasing soon to be expired credentials
@@ -118,7 +116,8 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
             duration = accessTokenDuration + MIN_DURATION;
             if (StringUtils.hasText(properties.getPolicyTemplate())) {
                 MustacheFactory mustacheFactory = new DefaultMustacheFactory();
-                policyTemplateMustache = mustacheFactory.compile(new StringReader(properties.getPolicyTemplate()), "policyTemplate");
+                policyTemplateMustache =
+                    mustacheFactory.compile(new StringReader(properties.getPolicyTemplate()), "policyTemplate");
             }
         }
 
@@ -264,12 +263,13 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
                     //try to resolve policy template
                     String resolvedPolicy = resolvePolicyTemplate(properties.getPolicyTemplate(), auth);
                     if (StringUtils.hasText(resolvedPolicy)) {
-                        copy = S3PolicyMapping
-                            .builder()
-                            .claim(policy.getClaim())
-                            .roleArn(policy.getRoleArn())
-                            .policy(resolvedPolicy)
-                            .build();
+                        copy =
+                            S3PolicyMapping
+                                .builder()
+                                .claim(policy.getClaim())
+                                .roleArn(policy.getRoleArn())
+                                .policy(resolvedPolicy)
+                                .build();
                     }
                 }
 
@@ -331,8 +331,8 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
 
         Set<String> allProjects = new HashSet<>();
         allProjects.addAll(ownProjects);
-        allProjects.addAll(sharedProjects); 
-        
+        allProjects.addAll(sharedProjects);
+
         Map<String, Object> context = new HashMap<>();
         // NOTE: bucket is required by some implementations to resolve policies, we inject it in context for convenience
         context.put("bucket", properties.getBucket());
