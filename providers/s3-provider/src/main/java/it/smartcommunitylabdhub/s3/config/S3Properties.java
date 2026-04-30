@@ -53,6 +53,8 @@ public class S3Properties {
     private String policy;
     private String roleArn;
 
+    private String policyTemplate;
+
     public boolean isStaticProviderEnabled() {
         return (
             ((enable != null && enable.booleanValue()) &&
@@ -69,11 +71,13 @@ public class S3Properties {
             (endpoint != null && !endpoint.isBlank()) &&
             (accessKey != null && !accessKey.isBlank()) &&
             (secretKey != null && !secretKey.isBlank()) &&
-            // either static roleArn or static policy or claim mapping
+            // either static roleArn or static policy or claim mapping or policy template
             // must be provided to enable assume role provider
             ((roleArn != null && !roleArn.isBlank()) ||
                 (policy != null && !policy.isBlank()) ||
-                (claim != null && !claim.isBlank()))
+                (claim != null && !claim.isBlank()) ||
+                (policyTemplate != null && !policyTemplate.isBlank())
+            )
         );
     }
 

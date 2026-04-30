@@ -22,24 +22,36 @@
 
 package it.smartcommunitylabdhub.s3.credentials;
 
+import com.github.mustachejava.DefaultMustacheFactory;
+import com.github.mustachejava.Mustache;
+import com.github.mustachejava.MustacheFactory;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
+import it.smartcommunitylabdhub.authorization.services.AuthorizableAwareEntityService;
 import it.smartcommunitylabdhub.authorization.services.CredentialsProvider;
 import it.smartcommunitylabdhub.authorization.services.JwtTokenService;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
+import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.s3.base.S3BaseProvider;
 import it.smartcommunitylabdhub.s3.config.S3Properties;
 import jakarta.annotation.Nonnull;
 import jakarta.validation.constraints.NotNull;
+
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.net.URI;
 import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -73,6 +85,9 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
     // cache credentials for up to DURATION
     LoadingCache<Pair<String, S3PolicyMapping>, S3Credentials> cache;
 
+    AuthorizableAwareEntityService<Project> projectAuthHelper;
+    Mustache policyTemplateMustache;
+
     public S3AssumeRoleProvider(S3Properties properties) {
         super(properties);
     }
@@ -83,6 +98,12 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
             this.accessTokenDuration = accessTokenDuration.intValue();
         }
     }
+
+    @Autowired(required = false)
+    public void setProjectAuthHelper(AuthorizableAwareEntityService<Project> projectAuthHelper) {
+        this.projectAuthHelper = projectAuthHelper;
+    }
+
 
     @Override
     public void afterPropertiesSet() throws Exception {
@@ -95,6 +116,10 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
                 accessTokenDuration + MIN_DURATION
             );
             duration = accessTokenDuration + MIN_DURATION;
+            if (StringUtils.hasText(properties.getPolicyTemplate())) {
+                MustacheFactory mustacheFactory = new DefaultMustacheFactory();
+                policyTemplateMustache = mustacheFactory.compile(new StringReader(properties.getPolicyTemplate()), "policyTemplate");
+            }
         }
 
         //keep cache shorter than token duration to avoid releasing soon to be expired keys
@@ -232,9 +257,25 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
 
             if (policy != null && auth.getName() != null) {
                 String username = auth.getName();
+
+                String policyValue = policy.getPolicy();
+                S3PolicyMapping copy = policy;
+                if (!StringUtils.hasText(policyValue) && StringUtils.hasText(properties.getPolicyTemplate())) {
+                    //try to resolve policy template
+                    String resolvedPolicy = resolvePolicyTemplate(properties.getPolicyTemplate(), auth);
+                    if (StringUtils.hasText(resolvedPolicy)) {
+                        copy = S3PolicyMapping
+                            .builder()
+                            .claim(policy.getClaim())
+                            .roleArn(policy.getRoleArn())
+                            .policy(resolvedPolicy)
+                            .build();
+                    }
+                }
+
                 log.debug("get credentials for user authentication {} from cache", username);
                 try {
-                    Pair<String, S3PolicyMapping> key = Pair.of(username, policy);
+                    Pair<String, S3PolicyMapping> key = Pair.of(username, copy);
                     S3Credentials credentials = cache.get(key);
                     if (credentials == null) {
                         return null;
@@ -265,6 +306,44 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
         }
 
         return null;
+    }
+
+    private String resolvePolicyTemplate(String policyTemplate, UserAuthentication<?> auth) {
+        if (projectAuthHelper == null) {
+            return null;
+        }
+        String username = auth.getName();
+        Set<String> ownProjects = new HashSet<>();
+        //inject roles from ownership of projects
+        projectAuthHelper
+            .findIdsByCreatedBy(username)
+            .forEach(p -> {
+                ownProjects.add(p);
+            });
+
+        Set<String> sharedProjects = new HashSet<>();
+        //inject roles from sharing of projects
+        projectAuthHelper
+            .findIdsBySharedTo(username)
+            .forEach(p -> {
+                sharedProjects.add(p);
+            });
+
+        Set<String> allProjects = new HashSet<>();
+        allProjects.addAll(ownProjects);
+        allProjects.addAll(sharedProjects); 
+        
+        Map<String, Object> context = new HashMap<>();
+        // NOTE: bucket is required by some implementations to resolve policies, we inject it in context for convenience
+        context.put("bucket", properties.getBucket());
+        context.put("projects", allProjects);
+        context.put("ownProjects", ownProjects);
+        context.put("sharedProjects", sharedProjects);
+
+        StringWriter writer = new StringWriter();
+        policyTemplateMustache.execute(writer, context);
+        writer.flush();
+        return writer.toString();
     }
 
     @Override
