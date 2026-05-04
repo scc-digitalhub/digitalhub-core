@@ -36,8 +36,10 @@ public class ServiceDeletedProcessor implements Processor<Run, RunBaseStatus> {
             if (status != null && status.get("service") != null && status.get("gatewayInfo") != null) {
                 GatewayRunStatus gatewayRunStatus = GatewayRunStatus.with(status);
 
-                if (gatewayRunStatus.getRunnables() != null) {
-                    for (K8sCRRunnable crRunnable : gatewayRunStatus.getRunnables()) {
+                if (gatewayRunStatus.getRunnables() != null) {                    
+                    // delete in reverse order to avoid dependencies issues
+                    for (int i = gatewayRunStatus.getRunnables().size() - 1; i >= 0; i--) {
+                        K8sCRRunnable crRunnable = gatewayRunStatus.getRunnables().get(i);
                         k8sCRFramework.delete(crRunnable);
                     }
                 }
