@@ -2,3 +2,6 @@ ray:
   api-group: ${RAY_API_GROUP:ray.io}
   api-version: ${RAY_API_VERSION:v1}
   service-account: ${RAY_SERVICE_ACCOUNT:default}
+  job:
+    active-deadline-seconds: ${RAY_JOB_ACTIVE_DEADLINE_SECONDS:259200} # 7 days
+    suspended: ${RAY_JOB_SUSPEND:false}

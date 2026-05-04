@@ -11,15 +11,26 @@ import it.smartcommunitylabdhub.commons.annotations.infrastructure.FrameworkComp
 import it.smartcommunitylabdhub.framework.ray.runnables.K8sRayJobRunnable;
 import java.io.Serializable;
 import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.Assert;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @FrameworkComponent(framework = K8sRayJobFramework.FRAMEWORK)
 public class K8sRayJobFramework extends K8sRayBaseFramework<K8sRayJobRunnable> {
 
+    public static final int DEADLINE_SECONDS = 3600 * 24 * 3; //3 days
+    public static final int DEADLINE_MIN = 120;
+
     public static final String FRAMEWORK = "rayjob";
     public static final String KIND = "RayJob";
     public static final String PLURAL = "rayjobs";
+
+    private int activeDeadlineSeconds = DEADLINE_SECONDS;
+    private boolean suspend = false;
 
     public K8sRayJobFramework(ApiClient apiClient) {
         super(apiClient);
@@ -34,6 +45,21 @@ public class K8sRayJobFramework extends K8sRayBaseFramework<K8sRayJobRunnable> {
     protected String getPlural() {
         return PLURAL;
     }
+
+    @Autowired
+    public void setActiveDeadlineSeconds(
+        @Value("${ray.job.activeDeadlineSeconds}") Integer activeDeadlineSeconds
+    ) {
+        Assert.isTrue(activeDeadlineSeconds > DEADLINE_MIN, "Minimum deadline seconds is " + DEADLINE_MIN);
+        this.activeDeadlineSeconds = activeDeadlineSeconds;
+    }
+    @Autowired
+    public void setSuspend(@Value("${ray.job.suspend}") Boolean suspend) {
+        if (suspend != null) {
+            this.suspend = suspend.booleanValue();
+        }
+    }
+
 
     @Override
     protected Map<String, Serializable> getSpec(K8sRayJobRunnable runnable) {

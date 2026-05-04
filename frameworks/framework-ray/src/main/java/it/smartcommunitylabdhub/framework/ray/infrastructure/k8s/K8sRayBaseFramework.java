@@ -13,10 +13,20 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
+import io.kubernetes.client.openapi.models.V1Container;
+import io.kubernetes.client.openapi.models.V1EnvFromSource;
+import io.kubernetes.client.openapi.models.V1EnvVar;
+import io.kubernetes.client.openapi.models.V1Job;
+import io.kubernetes.client.openapi.models.V1JobSpec;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
+import io.kubernetes.client.openapi.models.V1PodSpec;
+import io.kubernetes.client.openapi.models.V1PodTemplateSpec;
+import io.kubernetes.client.openapi.models.V1ResourceRequirements;
 import io.kubernetes.client.openapi.models.V1Secret;
+import io.kubernetes.client.openapi.models.V1Volume;
+import io.kubernetes.client.openapi.models.V1VolumeMount;
 import io.kubernetes.client.util.generic.KubernetesApiResponse;
 import io.kubernetes.client.util.generic.dynamic.DynamicKubernetesApi;
 import io.kubernetes.client.util.generic.dynamic.DynamicKubernetesObject;
@@ -26,9 +36,11 @@ import it.smartcommunitylabdhub.commons.exceptions.FrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sBaseFramework;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.model.K8sTemplate;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import it.smartcommunitylabdhub.framework.ray.exceptions.K8sRayFrameworkException;
+import it.smartcommunitylabdhub.framework.ray.model.PodModel;
 import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.io.Serializable;
@@ -37,6 +49,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -117,10 +130,6 @@ public abstract class K8sRayBaseFramework<T extends K8sRunnable>
             log.trace("runnable: {}", runnable);
         }
 
-        if (getSpec(runnable) == null) {
-            throw new K8sRayFrameworkException("Missing Ray " + getKind() + " spec");
-        }
-
         Map<String, Object> results = new HashMap<>();
 
         //secrets
@@ -130,6 +139,8 @@ public abstract class K8sRayBaseFramework<T extends K8sRunnable>
             //clear data before storing
             results.put("secret", secret.stringData(Collections.emptyMap()).data(Collections.emptyMap()));
         }
+
+        // TODO manage config map, pvcs, shared volumes
 
         DynamicKubernetesObject cr = build(runnable);
         log.info("create Ray {} for {}", getKind(), String.valueOf(cr.getMetadata().getName()));
@@ -447,4 +458,88 @@ public abstract class K8sRayBaseFramework<T extends K8sRunnable>
         }
         return in.entrySet().stream().collect(Collectors.toMap(Entry::getKey, e -> fn.apply(e.getValue())));
     }
+
+    /**
+     * Convert a {@link PodModel} (which is framework-agnostic) into a Kubernetes {@link V1PodSpec}, applying
+     * a template if specified. This is used by both RayService and RayJob to build the pod spec for the head and worker pods.
+     * @param runId used for naming and labeling the pod, should be unique for each runnable execution
+     * @param containerName the name of the container within the pod: e.g., the head container to be named "ray-head" and the worker container to be named "ray-worker"
+     * @param podModel the pod model containing the specifications for the pod
+     * @param command the command to run in the container
+     * @param args the arguments to pass to the command
+     * @return the constructed {@link V1PodSpec}
+     * @throws K8sFrameworkException if there is an error converting the pod model
+     */
+    protected V1PodSpec convertPodModel(String runId, String containerName, PodModel podModel, List<String> command, List<String> args) throws K8sFrameworkException {
+        if (podModel == null) {
+            return null;
+        }
+
+        //check template
+        K8sTemplate<T> template = null;
+        if (StringUtils.hasText(podModel.getTemplate()) && templates.containsKey(podModel.getTemplate())) {
+            //get template
+            template = templates.get(podModel.getTemplate());
+        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
+            //use default template
+            template = templates.get(DEFAULT_TEMPLATE);
+        }
+        
+        T runnable = podModel.toK8sRunnable(runId, T.builder());
+    
+        // Prepare environment variables for the Kubernetes job
+        List<V1EnvFromSource> envFrom = buildEnvFrom(runnable);
+        List<V1EnvVar> env = buildEnv(runnable);
+
+        // Volumes to attach to the pod based on the volume spec with the additional volume_type
+        List<V1Volume> volumes = buildVolumes(runnable);
+        List<V1VolumeMount> volumeMounts = buildVolumeMounts(runnable);
+
+        // resources
+        V1ResourceRequirements resources = buildResources(runnable);
+
+        //image policy
+        String imagePullPolicy = runnable.getImagePullPolicy() != null
+            ? runnable.getImagePullPolicy().name()
+            : defaultImagePullPolicy;
+
+        // Build Container
+        V1Container container = new V1Container()
+            .name(containerName)
+            .image(runnable.getImage())
+            .imagePullPolicy(imagePullPolicy)
+            .command(command)
+            .args(args)
+            .resources(resources)
+            .volumeMounts(volumeMounts)
+            .envFrom(envFrom)
+            .env(env)
+            .securityContext(buildSecurityContext(runnable));
+
+
+        V1PodSpec podSpec = Optional
+            .ofNullable(template)
+            .map(K8sTemplate::getJob)
+            .map(V1Job::getSpec)
+            .map(V1JobSpec::getTemplate)
+            .map(V1PodTemplateSpec::getSpec)
+            .orElse(new V1PodSpec());
+
+
+        // Create a PodSpec for the container, leverage template if provided
+        podSpec
+            .containers(Collections.singletonList(container))
+            .nodeSelector(buildNodeSelector(runnable))
+            .affinity(buildAffinity(runnable))
+            .tolerations(buildTolerations(runnable))
+            .runtimeClassName(buildRuntimeClassName(runnable))
+            .priorityClassName(buildPriorityClassName(runnable))
+            .volumes(volumes)
+            // .restartPolicy("Never")
+            .imagePullSecrets(buildImagePullSecrets(runnable))
+            .securityContext(buildPodSecurityContext(runnable));
+
+        return podSpec;
+    }
+
 }

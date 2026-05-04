@@ -12,6 +12,7 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreNodeSelector;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreResources;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreToleration;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -53,7 +54,27 @@ public class PodModel {
 
     private String template;
 
-    private Map<String, String> customResources;
+    private Map<String, String> rayResources;
     private Map<String, String> startParams;
 
+    @SuppressWarnings("unchecked")
+    public <T extends K8sRunnable> T toK8sRunnable(String id, K8sRunnable.K8sRunnableBuilder<?, ?> builder) {
+        return (T) builder
+        .id(id)
+        .template(template)
+        .image(image)
+        .resources(resources)
+        .volumes(volumes)
+        .nodeSelector(nodeSelector)
+        .affinity(affinity)
+        .tolerations(tolerations)
+        .runtimeClass(runtimeClass)
+        .priorityClass(priorityClass)
+        .imagePullPolicy(imagePullPolicy)
+        .runAsUser(runAsUser)
+        .runAsGroup(runAsGroup)
+        .fsGroup(fsGroup)
+        .labels(labels)
+        .build();
+    }
 }
