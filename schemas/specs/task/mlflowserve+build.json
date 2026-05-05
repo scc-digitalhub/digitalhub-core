@@ -1,0 +1,157 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "$defs" : {
+    "CoreEnv" : {
+      "type" : "object",
+      "properties" : {
+        "name" : {
+          "type" : "string",
+          "title" : "fields.name.title",
+          "description" : "fields.name.description",
+          "minLength" : 1
+        },
+        "value" : {
+          "type" : "string",
+          "title" : "fields.value.title",
+          "description" : "fields.value.description",
+          "minLength" : 1
+        }
+      },
+      "required" : [ "name", "value" ]
+    },
+    "CoreResource" : {
+      "type" : "object",
+      "properties" : {
+        "cpu" : {
+          "type" : "string",
+          "title" : "fields.cpu.title",
+          "description" : "fields.cpu.description",
+          "pattern" : "^\\d+([a-zA-Z]+)?$"
+        },
+        "disk" : {
+          "type" : "string",
+          "title" : "fields.disk.title",
+          "description" : "fields.disk.description",
+          "pattern" : "^\\d+([a-zA-Z]+)?$"
+        },
+        "gpu" : {
+          "type" : "string",
+          "title" : "fields.gpu.title",
+          "description" : "fields.gpu.description",
+          "pattern" : "^\\d+([a-zA-Z]+)?$"
+        },
+        "mem" : {
+          "type" : "string",
+          "title" : "fields.mem.title",
+          "description" : "fields.mem.description",
+          "pattern" : "^\\d+([a-zA-Z]+)?$"
+        }
+      }
+    },
+    "CoreVolume" : {
+      "type" : "object",
+      "properties" : {
+        "mount_path" : {
+          "type" : "string",
+          "title" : "fields.mountPath.title",
+          "description" : "fields.mountPath.description",
+          "minLength" : 1
+        },
+        "name" : {
+          "type" : "string",
+          "title" : "fields.name.title",
+          "description" : "fields.name.description",
+          "minLength" : 1
+        },
+        "spec" : {
+          "$ref" : "#/$defs/Map_String.String_",
+          "title" : "fields.spec.title",
+          "description" : "fields.spec.description",
+          "additionalProperties" : {
+            "type" : "string",
+            "title" : "fields.spec.item.title",
+            "description" : "fields.spec.item.description"
+          }
+        },
+        "volume_type" : {
+          "$ref" : "#/$defs/VolumeType",
+          "title" : "fields.volumeType.title",
+          "description" : "fields.volumeType.description"
+        }
+      },
+      "required" : [ "mount_path", "name", "volume_type" ]
+    },
+    "Map_String.String_" : {
+      "type" : "object",
+      "additionalProperties" : {
+        "type" : "string"
+      }
+    },
+    "VolumeType" : {
+      "type" : "string",
+      "enum" : [ "shared_volume", "persistent_volume_claim", "ephemeral", "empty_dir", "image" ]
+    }
+  },
+  "type" : "object",
+  "properties" : {
+    "envs" : {
+      "title" : "fields.envs.title",
+      "description" : "fields.envs.description",
+      "type" : "array",
+      "items" : {
+        "$ref" : "#/$defs/CoreEnv",
+        "title" : "fields.envs.item.title",
+        "description" : "fields.envs.item.description"
+      }
+    },
+    "function" : {
+      "type" : "string",
+      "title" : "fields.function.title",
+      "description" : "fields.function.description",
+      "minLength" : 1
+    },
+    "instructions" : {
+      "title" : "fields.instructions.title",
+      "description" : "fields.instructions.description",
+      "type" : "array",
+      "items" : {
+        "type" : "string",
+        "title" : "fields.instructions.item.title",
+        "description" : "fields.instructions.item.description"
+      }
+    },
+    "profile" : {
+      "type" : "string",
+      "title" : "fields.profile.title",
+      "description" : "fields.profile.description"
+    },
+    "resources" : {
+      "$ref" : "#/$defs/CoreResource",
+      "title" : "fields.resources.title",
+      "description" : "fields.resources.description"
+    },
+    "secrets" : {
+      "title" : "fields.secrets.title",
+      "description" : "fields.secrets.description",
+      "type" : "array",
+      "items" : {
+        "type" : "string",
+        "title" : "fields.secrets.item.title",
+        "description" : "fields.secrets.item.description"
+      }
+    },
+    "volumes" : {
+      "title" : "fields.volumes.title",
+      "description" : "fields.volumes.description",
+      "type" : "array",
+      "items" : {
+        "$ref" : "#/$defs/CoreVolume",
+        "title" : "fields.volumes.item.title",
+        "description" : "fields.volumes.item.description"
+      }
+    }
+  },
+  "required" : [ "function" ],
+  "title" : "specs.mlflowserve+build.title",
+  "description" : "specs.mlflowserve+build.description"
+}

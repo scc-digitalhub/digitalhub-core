@@ -1,0 +1,89 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "$defs" : {
+    "ProcessingMode" : {
+      "type" : "string",
+      "enum" : [ "preprocessor", "postprocessor", "wrapprocessor" ]
+    },
+    "PythonSourceCode" : {
+      "type" : "object",
+      "properties" : {
+        "base64" : {
+          "type" : "string",
+          "title" : "fields.sourceCode.base64.title",
+          "description" : "fields.sourceCode.base64.description"
+        },
+        "handler" : {
+          "type" : "string",
+          "title" : "fields.sourceCode.handler.title",
+          "description" : "fields.sourceCode.handler.description"
+        },
+        "init_function" : {
+          "type" : "string",
+          "title" : "fields.sourceCode.init_function.title",
+          "description" : "fields.sourceCode.init_function.description"
+        },
+        "lang" : {
+          "$ref" : "#/$defs/PythonSourceCodeLanguages",
+          "title" : "fields.sourceCode.lang.title",
+          "description" : "fields.sourceCode.lang.description",
+          "default" : "python"
+        },
+        "source" : {
+          "type" : "string",
+          "title" : "fields.sourceCode.source.title",
+          "description" : "fields.sourceCode.source.description"
+        }
+      }
+    },
+    "PythonSourceCodeLanguages" : {
+      "type" : "string",
+      "enum" : [ "python" ]
+    },
+    "PythonVersion" : {
+      "type" : "string",
+      "enum" : [ "PYTHON3_10", "PYTHON3_11", "PYTHON3_12", "PYTHON3_13" ]
+    }
+  },
+  "type" : "object",
+  "properties" : {
+    "base_image" : {
+      "type" : "string",
+      "title" : "fields.container.baseImage.title",
+      "description" : "fields.container.baseImage.description"
+    },
+    "image" : {
+      "type" : "string",
+      "title" : "fields.container.image.title",
+      "description" : "fields.container.image.description"
+    },
+    "processing_mode" : {
+      "$ref" : "#/$defs/ProcessingMode",
+      "title" : "fields.guardrail.processingMode.title",
+      "description" : "fields.guardrail.processingMode.description"
+    },
+    "python_version" : {
+      "$ref" : "#/$defs/PythonVersion",
+      "title" : "fields.python.version.title",
+      "description" : "fields.python.version.description"
+    },
+    "requirements" : {
+      "title" : "fields.python.requirements.title",
+      "description" : "fields.python.requirements.description",
+      "type" : "array",
+      "items" : {
+        "type" : "string",
+        "title" : "fields.requirements.item.title",
+        "description" : "fields.requirements.item.description"
+      }
+    },
+    "source" : {
+      "$ref" : "#/$defs/PythonSourceCode",
+      "title" : "fields.sourceCode.title",
+      "description" : "fields.sourceCode.description"
+    }
+  },
+  "required" : [ "processing_mode", "python_version", "source" ],
+  "title" : "specs.guardrail.title",
+  "description" : "specs.guardrail.description"
+}

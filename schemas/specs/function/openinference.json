@@ -1,0 +1,137 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "$defs" : {
+    "PythonSourceCode" : {
+      "type" : "object",
+      "properties" : {
+        "base64" : {
+          "type" : "string",
+          "title" : "fields.sourceCode.base64.title",
+          "description" : "fields.sourceCode.base64.description"
+        },
+        "handler" : {
+          "type" : "string",
+          "title" : "fields.sourceCode.handler.title",
+          "description" : "fields.sourceCode.handler.description"
+        },
+        "init_function" : {
+          "type" : "string",
+          "title" : "fields.sourceCode.init_function.title",
+          "description" : "fields.sourceCode.init_function.description"
+        },
+        "lang" : {
+          "$ref" : "#/$defs/PythonSourceCodeLanguages",
+          "title" : "fields.sourceCode.lang.title",
+          "description" : "fields.sourceCode.lang.description",
+          "default" : "python"
+        },
+        "source" : {
+          "type" : "string",
+          "title" : "fields.sourceCode.source.title",
+          "description" : "fields.sourceCode.source.description"
+        }
+      }
+    },
+    "PythonSourceCodeLanguages" : {
+      "type" : "string",
+      "enum" : [ "python" ]
+    },
+    "PythonVersion" : {
+      "type" : "string",
+      "enum" : [ "PYTHON3_10", "PYTHON3_11", "PYTHON3_12", "PYTHON3_13" ]
+    },
+    "TensorDatatype" : {
+      "type" : "string",
+      "enum" : [ "BOOL", "FP16", "FP32", "FP64", "INT8", "UINT8", "INT16", "UINT16", "INT32", "UINT32", "INT64", "UINT64", "BYTES" ]
+    },
+    "TensorModel" : {
+      "type" : "object",
+      "properties" : {
+        "datatype" : {
+          "$ref" : "#/$defs/TensorDatatype",
+          "title" : "fields.datatype.title",
+          "description" : "fields.datatype.description"
+        },
+        "name" : {
+          "type" : "string",
+          "title" : "fields.name.title",
+          "description" : "fields.name.description"
+        },
+        "shape" : {
+          "title" : "fields.shape.title",
+          "description" : "fields.shape.description",
+          "minItems" : 1,
+          "type" : "array",
+          "items" : {
+            "type" : "integer",
+            "title" : "fields.shape.item.title",
+            "description" : "fields.shape.item.description"
+          }
+        }
+      },
+      "required" : [ "datatype", "shape" ]
+    }
+  },
+  "type" : "object",
+  "properties" : {
+    "base_image" : {
+      "type" : "string",
+      "title" : "fields.container.baseImage.title",
+      "description" : "fields.container.baseImage.description"
+    },
+    "image" : {
+      "type" : "string",
+      "title" : "fields.container.image.title",
+      "description" : "fields.container.image.description"
+    },
+    "inputs" : {
+      "title" : "fields.openinference.inputs.title",
+      "description" : "fields.openinference.inputs.description",
+      "minItems" : 1,
+      "type" : "array",
+      "items" : {
+        "$ref" : "#/$defs/TensorModel",
+        "title" : "fields.inputs.item.title",
+        "description" : "fields.inputs.item.description"
+      }
+    },
+    "model_name" : {
+      "type" : "string",
+      "title" : "fields.openinference.modelname.title",
+      "description" : "fields.openinference.modelname.description"
+    },
+    "outputs" : {
+      "title" : "fields.openinference.outputs.title",
+      "description" : "fields.openinference.outputs.description",
+      "type" : "array",
+      "items" : {
+        "$ref" : "#/$defs/TensorModel",
+        "title" : "fields.outputs.item.title",
+        "description" : "fields.outputs.item.description"
+      }
+    },
+    "python_version" : {
+      "$ref" : "#/$defs/PythonVersion",
+      "title" : "fields.python.version.title",
+      "description" : "fields.python.version.description"
+    },
+    "requirements" : {
+      "title" : "fields.python.requirements.title",
+      "description" : "fields.python.requirements.description",
+      "type" : "array",
+      "items" : {
+        "type" : "string",
+        "title" : "fields.requirements.item.title",
+        "description" : "fields.requirements.item.description"
+      }
+    },
+    "source" : {
+      "$ref" : "#/$defs/PythonSourceCode",
+      "title" : "fields.sourceCode.title",
+      "description" : "fields.sourceCode.description"
+    }
+  },
+  "required" : [ "inputs", "model_name", "python_version", "source" ],
+  "title" : "specs.openinference.title",
+  "description" : "specs.openinference.description"
+}

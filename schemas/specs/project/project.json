@@ -11,6 +11,21 @@
     "Artifact" : {
       "type" : "object",
       "properties" : {
+        "extensions" : {
+          "title" : "fields.extensions.title",
+          "description" : "fields.extensions.description",
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/Map_String.Serializable_",
+            "title" : "fields.extensions.item.title",
+            "description" : "fields.extensions.item.description",
+            "additionalProperties" : {
+              "$ref" : "#/$defs/Serializable",
+              "title" : "fields.extensions.item.title",
+              "description" : "fields.extensions.item.description"
+            }
+          }
+        },
         "id" : {
           "type" : "string",
           "title" : "fields.id.title",
@@ -80,6 +95,21 @@
     "DataItem" : {
       "type" : "object",
       "properties" : {
+        "extensions" : {
+          "title" : "fields.extensions.title",
+          "description" : "fields.extensions.description",
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/Map_String.Serializable_",
+            "title" : "fields.extensions.item.title",
+            "description" : "fields.extensions.item.description",
+            "additionalProperties" : {
+              "$ref" : "#/$defs/Serializable",
+              "title" : "fields.extensions.item.title",
+              "description" : "fields.extensions.item.description"
+            }
+          }
+        },
         "id" : {
           "type" : "string",
           "title" : "fields.id.title",
@@ -216,6 +246,21 @@
     "Model" : {
       "type" : "object",
       "properties" : {
+        "extensions" : {
+          "title" : "fields.extensions.title",
+          "description" : "fields.extensions.description",
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/Map_String.Serializable_",
+            "title" : "fields.extensions.item.title",
+            "description" : "fields.extensions.item.description",
+            "additionalProperties" : {
+              "$ref" : "#/$defs/Serializable",
+              "title" : "fields.extensions.item.title",
+              "description" : "fields.extensions.item.description"
+            }
+          }
+        },
         "id" : {
           "type" : "string",
           "title" : "fields.id.title",
