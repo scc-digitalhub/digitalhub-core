@@ -194,6 +194,8 @@ public class KubeAIServeRunner {
             //inject args to reduce logging
             env.put("OLLAMA_DEBUG", "false");
             env.put("GIN_MODE", "release");
+            //enable CORS
+            env.put("OLLAMA_ORIGINS", "*");
         }
 
         if (runSpec.getArgs() != null) {
