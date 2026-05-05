@@ -102,7 +102,7 @@ public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
                 String namespace = status.getNamespace() != null ? status.getNamespace() : "";
                 String key = namespace + pod + container;
 
-                if (StringUtils.hasText(runId)) {
+                if (StringUtils.hasText(key)) {
                     return Map.entry(key, e);
                 } else {
                     return null;

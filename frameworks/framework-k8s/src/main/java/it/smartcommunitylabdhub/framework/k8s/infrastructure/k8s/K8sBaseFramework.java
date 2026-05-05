@@ -39,6 +39,7 @@ import io.kubernetes.client.openapi.models.V1Affinity;
 import io.kubernetes.client.openapi.models.V1Capabilities;
 import io.kubernetes.client.openapi.models.V1ConfigMap;
 import io.kubernetes.client.openapi.models.V1ConfigMapVolumeSource;
+import io.kubernetes.client.openapi.models.V1ContainerStatus;
 import io.kubernetes.client.openapi.models.V1EnvFromSource;
 import io.kubernetes.client.openapi.models.V1EnvVar;
 import io.kubernetes.client.openapi.models.V1LocalObjectReference;
@@ -80,6 +81,7 @@ import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -572,18 +574,14 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
 
                 //read init-containers first
                 if (p.getStatus().getInitContainerStatuses() != null) {
-                    List<String> containers = p
-                        .getStatus()
-                        .getInitContainerStatuses()
-                        .stream()
-                        .map(s -> s.getName())
-                        .collect(Collectors.toList());
-                    for (String c : containers) {
+                    List<V1ContainerStatus> containers = p.getStatus().getInitContainerStatuses();
+
+                    for (V1ContainerStatus c : containers) {
                         try {
                             String log = coreV1Api.readNamespacedPodLog(
                                 pod,
                                 namespace,
-                                c,
+                                c.getName(),
                                 Boolean.FALSE,
                                 null,
                                 null,
@@ -595,7 +593,11 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
                                 null
                             );
 
-                            logs.add(new CoreLog(pod, log, c, namespace));
+                            String name = c.getContainerID() != null
+                                ? c.getName() + "/" + URI.create(c.getContainerID()).getHost()
+                                : c.getName();
+
+                            logs.add(new CoreLog(pod, log, name, namespace));
                         } catch (ApiException e) {
                             //catch and skip this container's logs
                             log.error("Error with k8s: {}", e.getMessage());
@@ -608,18 +610,13 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
 
                 //read container
                 if (p.getStatus().getContainerStatuses() != null) {
-                    List<String> containers = p
-                        .getStatus()
-                        .getContainerStatuses()
-                        .stream()
-                        .map(s -> s.getName())
-                        .collect(Collectors.toList());
-                    for (String c : containers) {
+                    List<V1ContainerStatus> containers = p.getStatus().getContainerStatuses();
+                    for (V1ContainerStatus c : containers) {
                         try {
                             String log = coreV1Api.readNamespacedPodLog(
                                 pod,
                                 namespace,
-                                c,
+                                c.getName(),
                                 Boolean.FALSE,
                                 null,
                                 null,
@@ -630,8 +627,11 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
                                 null,
                                 null
                             );
+                            String name = c.getContainerID() != null
+                                ? c.getName() + "/" + URI.create(c.getContainerID()).getHost()
+                                : c.getName();
 
-                            logs.add(new CoreLog(pod, log, c, namespace));
+                            logs.add(new CoreLog(pod, log, name, namespace));
                         } catch (ApiException e) {
                             //catch and skip this container's logs
                             log.error("Error with k8s: {}", e.getMessage());
