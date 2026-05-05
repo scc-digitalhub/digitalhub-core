@@ -35,6 +35,7 @@ import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.Map;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -46,13 +47,8 @@ public class ModelEntityBuilder implements Converter<Model, ModelEntity> {
         this.converter = cborConverter;
     }
 
-    /**
-     * Build a dataItem from a dataItemDTO and store extra values as d cbor
-     * <p>
-     *
-     * @return ModelDTO
-     */
-    public ModelEntity build(Model dto) {
+    @Override
+    public ModelEntity convert(@NonNull Model dto) {
         // Extract data
         StatusFieldAccessor statusFieldAccessor = StatusFieldAccessor.with(dto.getStatus());
         BaseMetadata metadata = BaseMetadata.from(dto.getMetadata());
@@ -85,11 +81,8 @@ public class ModelEntityBuilder implements Converter<Model, ModelEntity> {
                     ? Date.from(metadata.getUpdated().atZoneSameInstant(ZoneOffset.UTC).toInstant())
                     : null
             )
+            //labels
+            .labels(metadata.getLabels() != null ? String.join(",", metadata.getLabels()) : null)
             .build();
-    }
-
-    @Override
-    public ModelEntity convert(Model source) {
-        return build(source);
     }
 }

@@ -33,6 +33,8 @@ import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilterConvert
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import jakarta.validation.constraints.NotNull;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
@@ -50,7 +52,7 @@ import org.springframework.util.Assert;
  */
 @Slf4j
 @Transactional
-public class BaseVersionableEntityServiceImpl<D extends BaseDTO, E extends BaseEntity>
+public abstract class BaseVersionableEntityServiceImpl<D extends BaseDTO, E extends BaseEntity>
     implements VersionableEntityService<D>, InitializingBean {
 
     public static final int PAGE_MAX_SIZE = 1000;
@@ -60,12 +62,20 @@ public class BaseVersionableEntityServiceImpl<D extends BaseDTO, E extends BaseE
     protected Converter<D, E> entityBuilder;
     protected Converter<E, D> dtoBuilder;
     protected EntityFinalizer<D> finalizer;
+    protected final Class<D> type;
+    protected final Class<E> clazz;
 
-    protected Converter<SearchFilter<D>, SearchFilter<E>> filterConverter = new AbstractEntityFilterConverter<>();
+    protected Converter<SearchFilter<D>, SearchFilter<E>> filterConverter;
 
-    protected BaseVersionableEntityServiceImpl() {}
+    protected BaseVersionableEntityServiceImpl() {
+        // resolve generics type via subclass trick
+        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+        this.type = (Class<D>) t;
+        Type t2 = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+        this.clazz = (Class<E>) t2;
+    }
 
-    public BaseVersionableEntityServiceImpl(
+    protected BaseVersionableEntityServiceImpl(
         SearchableEntityRepository<E, D> repository,
         Converter<D, E> entityBuilder,
         Converter<E, D> dtoBuilder
@@ -77,6 +87,12 @@ public class BaseVersionableEntityServiceImpl<D extends BaseDTO, E extends BaseE
         this.repository = repository;
         this.entityBuilder = entityBuilder;
         this.dtoBuilder = dtoBuilder;
+
+        // resolve generics type via subclass trick
+        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+        this.type = (Class<D>) t;
+        Type t2 = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+        this.clazz = (Class<E>) t2;
     }
 
     @Autowired
@@ -111,7 +127,10 @@ public class BaseVersionableEntityServiceImpl<D extends BaseDTO, E extends BaseE
         Assert.notNull(repository, "repository can not be null");
         Assert.notNull(entityBuilder, "entity builder can not be null");
         Assert.notNull(dtoBuilder, "dto builder can not be null");
-        Assert.notNull(filterConverter, "filter converter can not be null");
+
+        if (filterConverter == null) {
+            filterConverter = new AbstractEntityFilterConverter<>(type, clazz) {};
+        }
     }
 
     /*

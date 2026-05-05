@@ -24,36 +24,76 @@ import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.core.queries.filters.BaseEntityFilter.BaseEntityFilterBuilder;
 import jakarta.validation.constraints.NotNull;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.lang.NonNull;
+import org.springframework.util.Assert;
 
 @Slf4j
 public class AbstractEntityFilterConverter<D extends BaseDTO, E extends BaseEntity>
     implements Converter<SearchFilter<D>, SearchFilter<E>> {
 
-    public static final String[] FIELDS = {
-        AbstractEntity_.CREATED,
-        AbstractEntity_.CREATED_BY,
-        AbstractEntity_.ID,
-        AbstractEntity_.KIND,
-        AbstractEntity_.PROJECT,
-        AbstractEntity_.UPDATED,
-        AbstractEntity_.UPDATED_BY,
-        "name",
-        "state",
-    };
+    private final List<String> fields;
 
-    private static final List<String> fields;
+    protected AbstractEntityFilterConverter() {
+        // resolve generics type via subclass trick
+        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+        Class<D> type = (Class<D>) t;
+        Type t2 = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+        Class<E> clazz = (Class<E>) t2;
+        //enumerate all commond fields to enable 1-1 mapping by default
+        List<String> typeFields = enumerateFields(type);
+        List<String> clazzFields = enumerateFields(clazz);
 
-    static {
-        fields = Arrays.asList(FIELDS);
+        //pick only common fields to avoid mapping issues
+        List<String> common = new ArrayList<>();
+        if (typeFields != null && clazzFields != null) {
+            clazzFields.forEach(f -> {
+                if (typeFields.contains(f)) {
+                    common.add(f);
+                }
+            });
+        }
+
+        this.fields = Collections.unmodifiableList(common);
+    }
+
+    public AbstractEntityFilterConverter(Class<D> type, Class<E> clazz) {
+        Assert.notNull(type, "type is required");
+        Assert.notNull(clazz, "clazz is required");
+
+        //enumerate all commond fields to enable 1-1 mapping by default
+        List<String> typeFields = enumerateFields(type);
+        List<String> clazzFields = enumerateFields(clazz);
+
+        //pick only common fields to avoid mapping issues
+        List<String> common = new ArrayList<>();
+        if (typeFields != null && clazzFields != null) {
+            clazzFields.forEach(f -> {
+                if (typeFields.contains(f)) {
+                    common.add(f);
+                }
+            });
+        }
+
+        this.fields = Collections.unmodifiableList(common);
+    }
+
+    public AbstractEntityFilterConverter(List<String> fields) {
+        this.fields = fields != null ? Collections.unmodifiableList(fields) : Collections.emptyList();
     }
 
     @Override
-    public SearchFilter<E> convert(SearchFilter<D> filter) {
+    public SearchFilter<E> convert(@NonNull SearchFilter<D> filter) {
         //map fields and then convert to spec
         BaseEntityFilterBuilder<E> builder = BaseEntityFilter.<E>builder();
         builder.condition(filter.getCondition() != null ? filter.getCondition() : Condition.and);
@@ -110,4 +150,47 @@ public class AbstractEntityFilterConverter<D extends BaseDTO, E extends BaseEnti
         //to be overriden by descendant for specific fields
         throw new IllegalArgumentException();
     }
+
+    private List<String> enumerateFields(Class<?> clazz) {
+        if (clazz == null || clazz.equals(Object.class)) {
+            return null;
+        }
+        // All fields including inherited (walk the hierarchy)
+        List<String> names = new ArrayList<>();
+        Class<?> current = clazz;
+        while (current != null && current != Object.class) {
+            names.addAll(
+                Arrays
+                    .stream(current.getDeclaredFields())
+                    .filter(f -> !Modifier.isStatic(f.getModifiers()) && !f.isSynthetic())
+                    .filter(f -> COMPARABLE_TYPES.contains(f.getType()))
+                    .map(Field::getName)
+                    .toList()
+            );
+
+            current = current.getSuperclass();
+        }
+
+        return names;
+    }
+
+    private static final Set<Class<?>> COMPARABLE_TYPES = Set.of(
+        boolean.class,
+        Boolean.class,
+        byte.class,
+        Byte.class,
+        short.class,
+        Short.class,
+        int.class,
+        Integer.class,
+        long.class,
+        Long.class,
+        float.class,
+        Float.class,
+        double.class,
+        Double.class,
+        char.class,
+        Character.class,
+        String.class
+    );
 }

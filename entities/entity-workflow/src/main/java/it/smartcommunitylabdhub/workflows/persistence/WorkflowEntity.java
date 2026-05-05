@@ -67,4 +67,6 @@ public class WorkflowEntity extends AbstractEntity implements MetadataEntity, Sp
     protected byte[] status;
 
     private String state;
+
+    private String labels;
 }
