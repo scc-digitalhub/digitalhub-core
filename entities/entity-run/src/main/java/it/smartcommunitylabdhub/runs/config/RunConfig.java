@@ -22,7 +22,6 @@ import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.core.services.EntityService;
 import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
 import it.smartcommunitylabdhub.runs.Run;
-import it.smartcommunitylabdhub.runs.filters.RunFilterConverter;
 import it.smartcommunitylabdhub.runs.persistence.RunEntity;
 import it.smartcommunitylabdhub.runs.persistence.RunRepository;
 import it.smartcommunitylabdhub.runs.service.RunEntityServiceImpl;
@@ -43,12 +42,8 @@ public class RunConfig {
     }
 
     @Bean
-    EntityService<Run> runEntityService(
-        SearchableEntityRepository<RunEntity, Run> repository,
-        RunFilterConverter filterConverter
-    ) {
+    EntityService<Run> runEntityService(SearchableEntityRepository<RunEntity, Run> repository) {
         RunEntityServiceImpl base = new RunEntityServiceImpl();
-        base.setFilterConverter(filterConverter);
         base.setRepository(repository);
         return base;
     }

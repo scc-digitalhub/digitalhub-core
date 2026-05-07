@@ -31,7 +31,9 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.convert.converter.Converter;
@@ -42,7 +44,7 @@ import org.springframework.util.Assert;
 public class AbstractEntityFilterConverter<D extends BaseDTO, E extends BaseEntity>
     implements Converter<SearchFilter<D>, SearchFilter<E>> {
 
-    private final List<String> fields;
+    private final Map<String, String> mapping;
 
     protected AbstractEntityFilterConverter() {
         // resolve generics type via subclass trick
@@ -50,46 +52,19 @@ public class AbstractEntityFilterConverter<D extends BaseDTO, E extends BaseEnti
         Class<D> type = (Class<D>) t;
         Type t2 = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
         Class<E> clazz = (Class<E>) t2;
-        //enumerate all commond fields to enable 1-1 mapping by default
-        List<String> typeFields = enumerateFields(type);
-        List<String> clazzFields = enumerateFields(clazz);
 
-        //pick only common fields to avoid mapping issues
-        List<String> common = new ArrayList<>();
-        if (typeFields != null && clazzFields != null) {
-            clazzFields.forEach(f -> {
-                if (typeFields.contains(f)) {
-                    common.add(f);
-                }
-            });
-        }
-
-        this.fields = Collections.unmodifiableList(common);
+        this.mapping = initialize(type, clazz);
     }
 
     public AbstractEntityFilterConverter(Class<D> type, Class<E> clazz) {
         Assert.notNull(type, "type is required");
         Assert.notNull(clazz, "clazz is required");
 
-        //enumerate all commond fields to enable 1-1 mapping by default
-        List<String> typeFields = enumerateFields(type);
-        List<String> clazzFields = enumerateFields(clazz);
-
-        //pick only common fields to avoid mapping issues
-        List<String> common = new ArrayList<>();
-        if (typeFields != null && clazzFields != null) {
-            clazzFields.forEach(f -> {
-                if (typeFields.contains(f)) {
-                    common.add(f);
-                }
-            });
-        }
-
-        this.fields = Collections.unmodifiableList(common);
+        this.mapping = initialize(type, clazz);
     }
 
-    public AbstractEntityFilterConverter(List<String> fields) {
-        this.fields = fields != null ? Collections.unmodifiableList(fields) : Collections.emptyList();
+    public AbstractEntityFilterConverter(Map<String, String> mapping) {
+        this.mapping = mapping != null ? Collections.unmodifiableMap(mapping) : Collections.emptyMap();
     }
 
     @Override
@@ -133,27 +108,49 @@ public class AbstractEntityFilterConverter<D extends BaseDTO, E extends BaseEnti
 
     protected String map(@NotNull String source) {
         //map 1-1 for basic between entity and dto
-        if (fields.contains(source)) {
-            return source;
-        }
-
-        //user means creator
-        if ("user".equals(source)) {
-            return AbstractEntity_.CREATED_BY;
-        }
-
-        //status.state is top level
-        if ("status.state".equals(source)) {
-            return "state";
+        if (mapping.containsKey(source)) {
+            return mapping.get(source);
         }
 
         //to be overriden by descendant for specific fields
         throw new IllegalArgumentException();
     }
 
+    private Map<String, String> initialize(Class<D> type, Class<E> clazz) {
+        //enumerate all commond fields to enable 1-1 mapping by default
+        List<String> typeFields = enumerateFields(type);
+        List<String> clazzFields = enumerateFields(clazz);
+
+        Map<String, String> map = new HashMap<>();
+        //user means creator
+
+        //pick only common fields to avoid mapping issues
+        List<String> common = new ArrayList<>();
+        clazzFields.forEach(f -> {
+            if (typeFields.contains(f)) {
+                common.add(f);
+            }
+        });
+
+        //common fields are mapped 1-1 by default, specific mapping can be implemented in map method
+        common.forEach(f -> map.put(f, f));
+
+        //retro-compatibility: all entity fields are searchable
+        clazzFields.forEach(f -> map.putIfAbsent(f, f));
+
+        //base dto fields have standard mapping
+        map.putIfAbsent("user", AbstractEntity_.CREATED_BY);
+        if (clazzFields.contains("state")) {
+            map.putIfAbsent("status.state", "state");
+            map.putIfAbsent("state", "state");
+        }
+
+        return Collections.unmodifiableMap(map);
+    }
+
     private List<String> enumerateFields(Class<?> clazz) {
         if (clazz == null || clazz.equals(Object.class)) {
-            return null;
+            return Collections.emptyList();
         }
         // All fields including inherited (walk the hierarchy)
         List<String> names = new ArrayList<>();
