@@ -141,10 +141,10 @@ public class KubeAIServeRunner {
         Map<String, String> env = new HashMap<>();
 
         // environment variables from run spec
-        if (runSpec.getEnv() != null) {
+        if (runSpec.getEnvs() != null) {
             //TODO evaluate enforcing uppercase
             env.putAll(
-                runSpec.getEnv().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+                runSpec.getEnvs().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
             );
         }
 

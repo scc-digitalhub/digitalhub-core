@@ -61,7 +61,7 @@ public class KubeAIServeRunSpec extends RunBaseSpec {
     private List<String> args;
 
     @Schema(title = "fields.kubeai.env.title", description = "fields.kubeai.env.description")
-    private Map<String, String> env;
+    private Map<String, String> envs;
 
     @Schema(title = "fields.kubeai.files.title", description = "fields.kubeai.files.description")
     private List<KubeAIFile> files;
@@ -86,7 +86,7 @@ public class KubeAIServeRunSpec extends RunBaseSpec {
         KubeAIServeRunSpec spec = mapper.convertValue(data, KubeAIServeRunSpec.class);
         this.url = spec.getUrl();
         this.args = spec.getArgs();
-        this.env = spec.getEnv();
+        this.envs = spec.getEnvs();
         this.files = spec.getFiles();
         this.secrets = spec.getSecrets();
         this.cacheProfile = spec.getCacheProfile();
