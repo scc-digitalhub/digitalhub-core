@@ -121,8 +121,8 @@ public class KubeAIServeRunner {
             }
             RelationshipDetail rel = new RelationshipDetail();
             rel.setType(RelationshipName.CONSUMES);
-            rel.setDest(run.getKey());
-            rel.setSource(model.getKey());
+            rel.setSource(run.getKey());
+            rel.setDest(model.getKey());
             RelationshipsMetadata relationships = RelationshipsMetadata.from(run.getMetadata());
             relationships.getRelationships().add(rel);
             run.getMetadata().putAll(relationships.toMap());
