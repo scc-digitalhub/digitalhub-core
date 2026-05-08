@@ -387,19 +387,21 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
             log.error("Error with k8s: {}", re.getMessage());
         }
 
-        V1Service service;
+        V1Service service = null;
         try {
             // Retrieve the service
             service = get(build(runnable));
         } catch (K8sFrameworkException | IllegalArgumentException e) {
-            runnable.setState(K8sRunnableState.DELETED.name());
-            return runnable;
+            //skip
+            log.debug("error deleting  services k8s results: {}", e.getMessage());
         }
 
-        //Delete the service
-        log.info("delete service for {}", String.valueOf(service.getMetadata().getName()));
-        delete(service);
-        messages.add(String.format("service %s deleted", service.getMetadata().getName()));
+        if (service != null) {
+            //Delete the service
+            log.info("delete service for {}", String.valueOf(service.getMetadata().getName()));
+            delete(service);
+            messages.add(String.format("service %s deleted", service.getMetadata().getName()));
+        }
 
         //check if additional names are specified
         if (runnable.getServiceNames() != null) {
