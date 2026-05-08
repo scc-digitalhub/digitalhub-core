@@ -12,9 +12,9 @@ import io.kubernetes.client.util.generic.dynamic.DynamicKubernetesObject;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.monitor.K8sBaseMonitor;
-import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import it.smartcommunitylabdhub.framework.ray.infrastructure.k8s.K8sRayBaseFramework;
+import it.smartcommunitylabdhub.framework.ray.runnables.K8sRayRunnable;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -31,7 +31,7 @@ import org.springframework.util.Assert;
  * Subclasses translate the CR-specific phase string into a {@link K8sRunnableState}.
  */
 @Slf4j
-public abstract class K8sRayBaseMonitor<T extends K8sRunnable> extends K8sBaseMonitor<T> {
+public abstract class K8sRayBaseMonitor<T extends K8sRayRunnable> extends K8sBaseMonitor<T> {
 
     protected final K8sRayBaseFramework<T> framework;
 

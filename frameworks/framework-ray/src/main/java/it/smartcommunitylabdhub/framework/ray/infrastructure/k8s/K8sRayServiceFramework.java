@@ -8,6 +8,7 @@ package it.smartcommunitylabdhub.framework.ray.infrastructure.k8s;
 
 import io.kubernetes.client.openapi.ApiClient;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.FrameworkComponent;
+import it.smartcommunitylabdhub.framework.ray.model.ray.RayClusterSpec;
 import it.smartcommunitylabdhub.framework.ray.runnables.K8sRayServiceRunnable;
 import java.io.Serializable;
 import java.util.Map;
@@ -39,14 +40,9 @@ public class K8sRayServiceFramework extends K8sRayBaseFramework<K8sRayServiceRun
     }
 
     @Override
-    protected Map<String, Serializable> getSpec(K8sRayServiceRunnable runnable) {
+    protected Map<String, Serializable> getSpec(K8sRayServiceRunnable runnable, RayClusterSpec clusterSpec) {
         // return runnable.getSpec();
         throw new NotImplementedException("getSpec is not supported for RayService");
-    }
-
-    @Override
-    protected boolean isRequiresSecret(K8sRayServiceRunnable runnable) {
-        return Boolean.TRUE.equals(runnable.getRequiresSecret());
     }
 
     @Override

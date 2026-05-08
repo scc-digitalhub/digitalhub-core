@@ -23,7 +23,7 @@ public class K8sRayJobListener extends K8sRunnableListener<K8sRayJobRunnable> {
     @EventListener
     public void listen(K8sRayJobRunnable runnable) {
         if (runnable != null) {
-            process(runnable.toBuilder().build());
+            process(runnable);
         }
     }
 }

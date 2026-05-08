@@ -29,6 +29,7 @@ import lombok.ToString;
 public class PodModel {
 
     private String image;
+
     private CoreResources resources;
     private List<CoreVolume> volumes;
 
@@ -57,11 +58,38 @@ public class PodModel {
     private Map<String, String> rayResources;
     private Map<String, String> startParams;
 
+    private String[] command;
+
+    private String[] args;
+
+
+    /**
+     * Convert this PodModel to a K8sRunnable using the provided builder and parent runnable.
+      * The name parameter is used to differentiate between different pods (e.g., head, worker) when constructing the runnable.
+      * From the parent runnable, it will inherit common properties such as project, runtime, user, secrets, envs, task, configurationMap, credentialsMap.
+     * @param <T>
+     * @param parent
+     * @param name
+     * @param builder
+     * @param withContext whether to include contextRefs and contextSources from the parent runnable; should be false for worker runnables as they won't have access to the same contexts as the head
+     * @return
+     */
     @SuppressWarnings("unchecked")
-    public <T extends K8sRunnable> T toK8sRunnable(String id, K8sRunnable.K8sRunnableBuilder<?, ?> builder) {
+    public <T extends K8sRunnable> T toK8sRunnable(T parent, String name, K8sRunnable.K8sRunnableBuilder<?, ?> builder, boolean withContext) {
+        
         return (T) builder
-        .id(id)
+        .id(parent.getId() + "-" + name)
+        .configurationMap(parent.getConfigurationMap())
+        .credentialsMap(parent.getCredentialsMap())
+        .project(parent.getProject())
+        .runtime(parent.getRuntime())
+        .user(parent.getUser())
+        .secrets(parent.getSecrets())
+        .envs(parent.getEnvs())
+        .task(parent.getTask())
         .template(template)
+        .command(command)
+        .args(args)
         .image(image)
         .resources(resources)
         .volumes(volumes)
@@ -75,6 +103,8 @@ public class PodModel {
         .runAsGroup(runAsGroup)
         .fsGroup(fsGroup)
         .labels(labels)
+        .contextRefs(withContext ? parent.getContextRefs() : null)
+        .contextSources(withContext ? parent.getContextSources() : null)
         .build();
     }
 }

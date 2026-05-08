@@ -7,27 +7,28 @@
 package it.smartcommunitylabdhub.framework.ray.runnables;
 
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RunnableComponent;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.ray.infrastructure.k8s.K8sRayJobFramework;
 import it.smartcommunitylabdhub.framework.ray.model.RayJobModel;
+import it.smartcommunitylabdhub.framework.ray.model.RayModel;
+
+import java.io.Serializable;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-@RunnableComponent(framework = K8sRayJobFramework.FRAMEWORK)
 @Getter
 @Setter
+@NoArgsConstructor
 @AllArgsConstructor
 @ToString(callSuper = true)
-public class K8sRayJobRunnable extends K8sRayRunnable<RayJobModel> {
+public abstract class K8sRayRunnable<T extends RayModel> extends K8sRunnable {
 
-    @Override
-    public String getFramework() {
-        return K8sRayJobFramework.FRAMEWORK;
-    }
+    private T spec;
+    private Map<String, Serializable> status;
 
-    @Override
-    public boolean initAllPods() {
-        return false;
-    }
+    public abstract boolean initAllPods();
 }
