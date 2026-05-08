@@ -96,7 +96,7 @@ public class ModelEntityListener extends AbstractEntityListener<ModelEntity, Mod
         }
 
         //notify user event if either: prev == null (for create/delete), prev != null and state has changed (update)
-        if (prev == null || (prev != null && prev.getState() != entity.getState())) {
+        if (prev == null || (prev != null && !entity.getState().equals(prev.getState()))) {
             //always broadcast updates
             super.broadcast(event);
 

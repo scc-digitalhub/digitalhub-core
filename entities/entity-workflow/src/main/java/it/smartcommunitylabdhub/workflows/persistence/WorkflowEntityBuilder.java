@@ -33,8 +33,8 @@ import java.io.Serializable;
 import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -42,18 +42,12 @@ public class WorkflowEntityBuilder implements Converter<Workflow, WorkflowEntity
 
     private final AttributeConverter<Map<String, Serializable>, byte[]> converter;
 
-    public WorkflowEntityBuilder(
-        @Qualifier("cborMapConverter") AttributeConverter<Map<String, Serializable>, byte[]> cborConverter
-    ) {
+    public WorkflowEntityBuilder(AttributeConverter<Map<String, Serializable>, byte[]> cborConverter) {
         this.converter = cborConverter;
     }
 
-    /**
-     * Build w workflow from w workflowDTO and store extra values as w cbor
-     *
-     * @return Workflow
-     */
-    public WorkflowEntity build(Workflow dto) {
+    @Override
+    public WorkflowEntity convert(@NonNull Workflow dto) {
         // Extract data
         StatusFieldAccessor statusFieldAccessor = StatusFieldAccessor.with(dto.getStatus());
         BaseMetadata metadata = BaseMetadata.from(dto.getMetadata());
@@ -86,11 +80,8 @@ public class WorkflowEntityBuilder implements Converter<Workflow, WorkflowEntity
                     ? Date.from(metadata.getUpdated().atZoneSameInstant(ZoneOffset.UTC).toInstant())
                     : null
             )
+            //labels
+            .labels(metadata.getLabels() != null ? String.join(",", metadata.getLabels()) : null)
             .build();
-    }
-
-    @Override
-    public WorkflowEntity convert(Workflow source) {
-        return build(source);
     }
 }

@@ -90,7 +90,7 @@ public abstract class BaseEntityServiceImpl<
     protected SpecRegistry<D> specRegistry;
     protected SpecValidator validator;
     protected LifecycleManager<D> lifecycleManager;
-    protected Converter<SearchFilter<D>, SearchFilter<E>> filterConverter = new AbstractEntityFilterConverter<>();
+    protected Converter<SearchFilter<D>, SearchFilter<E>> filterConverter;
 
     protected StringKeyGenerator nameGenerator = () -> UUID.randomUUID().toString().replace("-", "");
 
@@ -156,7 +156,9 @@ public abstract class BaseEntityServiceImpl<
     @Override
     public void afterPropertiesSet() throws Exception {
         Assert.notNull(repository, "repository can not be null");
-        Assert.notNull(filterConverter, "filter converter can not be null");
+        if (filterConverter == null) {
+            filterConverter = new AbstractEntityFilterConverter<>(type, clazz) {};
+        }
     }
 
     @Override

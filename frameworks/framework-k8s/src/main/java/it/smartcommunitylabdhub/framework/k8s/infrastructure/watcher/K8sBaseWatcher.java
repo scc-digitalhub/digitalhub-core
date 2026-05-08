@@ -33,9 +33,11 @@ import it.smartcommunitylabdhub.framework.k8s.infrastructure.monitor.K8sBaseMoni
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
@@ -54,10 +56,16 @@ public abstract class K8sBaseWatcher<T extends K8sRunnable> implements Initializ
     protected K8sLabelHelper k8sLabelHelper;
     protected ApplicationProperties applicationProperties;
 
-    // Debounce map and interval
+    // Debounce: rate-limit refreshes to at most once per DEBOUNCE_INTERVAL_MS per runnableId,
+    // regardless of whether a task is actively running.
     // TODO add cleanup for expired entries
     private final Map<String, Long> debounceMap = new ConcurrentHashMap<>();
     private static final long DEBOUNCE_INTERVAL_MS = 1000;
+
+    // In-flight guard: if a monitor task is already queued/running for a runnableId, drop the event.
+    // monitor() reads current resource state, so the in-flight task captures any intermediate changes.
+    // This prevents executor thread pile-up under high event rates.
+    private final Set<String> inFlightSet = ConcurrentHashMap.newKeySet();
 
     protected K8sBaseWatcher(KubernetesClient client, K8sBaseMonitor<T> k8sMonitor) {
         Assert.notNull(k8sMonitor, "k8s monitor is required");
@@ -158,21 +166,43 @@ public abstract class K8sBaseWatcher<T extends K8sRunnable> implements Initializ
         };
     }
 
-    //TODO replace simple debounce with debounce+comparison logic to avoid ignoring final states
+    //TODO replace simple coalescing with debounce+comparison logic to avoid ignoring final states
     protected void debounceAndRefresh(String runnableId, Runnable refreshAction) {
         long now = System.currentTimeMillis();
+
+        // Gate 1 – time-based debounce: drop events arriving faster than DEBOUNCE_INTERVAL_MS,
+        // even when no task is currently running for this runnableId.
+        AtomicReference<Long> scheduled = new AtomicReference<>();
         debounceMap.compute(
             runnableId,
-            (key, lastExecutionTime) -> {
-                if (lastExecutionTime == null || (now - lastExecutionTime) > DEBOUNCE_INTERVAL_MS) {
-                    refreshAction.run();
-                    // Update the last execution time
+            (key, lastTime) -> {
+                if (lastTime == null || (now - lastTime) > DEBOUNCE_INTERVAL_MS) {
+                    scheduled.set(now);
                     return now;
                 }
-
-                return lastExecutionTime;
+                return lastTime;
             }
         );
+
+        if (scheduled.get() == null) {
+            log.trace("Dropping event for runnable {}: debounce interval not elapsed", runnableId);
+            return;
+        }
+
+        // Gate 2 – in-flight guard: drop if a task is already queued/running.
+        // monitor() reads current state so the active task captures any intermediate changes.
+        if (!inFlightSet.add(runnableId)) {
+            log.trace("Dropping event for runnable {}: monitor task already in flight", runnableId);
+            return;
+        }
+
+        executor.submit(() -> {
+            try {
+                refreshAction.run();
+            } finally {
+                inFlightSet.remove(runnableId);
+            }
+        });
     }
 
     @PreDestroy

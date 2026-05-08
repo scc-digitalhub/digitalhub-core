@@ -35,6 +35,7 @@ import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.Map;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -46,13 +47,8 @@ public class ArtifactEntityBuilder implements Converter<Artifact, ArtifactEntity
         this.converter = cborConverter;
     }
 
-    /**
-     * Build an artifact from an artifactDTO and store extra values as a cbor
-     *
-     * @param dto the artifact DTO
-     * @return Artifact
-     */
-    public ArtifactEntity build(Artifact dto) {
+    @Override
+    public ArtifactEntity convert(@NonNull Artifact dto) {
         // Extract data
         StatusFieldAccessor statusFieldAccessor = StatusFieldAccessor.with(dto.getStatus());
         BaseMetadata metadata = BaseMetadata.from(dto.getMetadata());
@@ -85,11 +81,8 @@ public class ArtifactEntityBuilder implements Converter<Artifact, ArtifactEntity
                     ? Date.from(metadata.getUpdated().atZoneSameInstant(ZoneOffset.UTC).toInstant())
                     : null
             )
+            //labels
+            .labels(metadata.getLabels() != null ? String.join(",", metadata.getLabels()) : null)
             .build();
-    }
-
-    @Override
-    public ArtifactEntity convert(Artifact source) {
-        return build(source);
     }
 }

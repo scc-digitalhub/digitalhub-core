@@ -158,8 +158,8 @@ public class SklearnServeRunner {
             }
             RelationshipDetail rel = new RelationshipDetail();
             rel.setType(RelationshipName.CONSUMES);
-            rel.setDest(run.getKey());
-            rel.setSource(model.getKey());
+            rel.setSource(run.getKey());
+            rel.setDest(model.getKey());
             RelationshipsMetadata relationships = RelationshipsMetadata.from(run.getMetadata());
             relationships.getRelationships().add(rel);
             run.getMetadata().putAll(relationships.toMap());
@@ -170,23 +170,24 @@ public class SklearnServeRunner {
         //read source and build context
         UriComponents uri = UriComponentsBuilder.fromUriString(path).build();
         String fileName = uri.getPathSegments().getLast();
+        String mlName = StringUtils.hasText(functionSpec.getModelName()) ? functionSpec.getModelName() : "model";
 
         //read source and build context
         List<ContextRef> contextRefs = Collections.singletonList(
-            ContextRef.builder().source(path).protocol(uri.getScheme()).destination(fileName).build()
+            ContextRef.builder().source(path).protocol(uri.getScheme()).destination(mlName + "/" + fileName).build()
         );
 
         List<ContextSource> contextSources = new ArrayList<>();
 
         MLServerSettingsSpec mlServerSettingsSpec = MLServerSettingsSpec
             .builder()
-            .name(StringUtils.hasText(functionSpec.getModelName()) ? functionSpec.getModelName() : "model")
+            .name(mlName)
             .implementation("mlserver_sklearn.SKLearnModel")
             // .platform()
             .parameters(
                 MLServerSettingsParameters
                     .builder()
-                    .uri("./" + fileName)
+                    .uri("./" + mlName + "/" + fileName)
                     // .contentType()
                     .build()
             )

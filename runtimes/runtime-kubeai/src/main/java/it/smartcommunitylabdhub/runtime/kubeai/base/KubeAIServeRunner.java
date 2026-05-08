@@ -121,8 +121,8 @@ public class KubeAIServeRunner {
             }
             RelationshipDetail rel = new RelationshipDetail();
             rel.setType(RelationshipName.CONSUMES);
-            rel.setDest(run.getKey());
-            rel.setSource(model.getKey());
+            rel.setSource(run.getKey());
+            rel.setDest(model.getKey());
             RelationshipsMetadata relationships = RelationshipsMetadata.from(run.getMetadata());
             relationships.getRelationships().add(rel);
             run.getMetadata().putAll(relationships.toMap());
@@ -141,10 +141,10 @@ public class KubeAIServeRunner {
         Map<String, String> env = new HashMap<>();
 
         // environment variables from run spec
-        if (runSpec.getEnv() != null) {
+        if (runSpec.getEnvs() != null) {
             //TODO evaluate enforcing uppercase
             env.putAll(
-                runSpec.getEnv().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+                runSpec.getEnvs().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
             );
         }
 
@@ -194,6 +194,8 @@ public class KubeAIServeRunner {
             //inject args to reduce logging
             env.put("OLLAMA_DEBUG", "false");
             env.put("GIN_MODE", "release");
+            //enable CORS
+            env.put("OLLAMA_ORIGINS", "*");
         }
 
         if (runSpec.getArgs() != null) {

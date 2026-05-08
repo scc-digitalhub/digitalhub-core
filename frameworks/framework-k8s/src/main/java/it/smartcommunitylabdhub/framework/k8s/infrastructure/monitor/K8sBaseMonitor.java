@@ -144,6 +144,13 @@ public abstract class K8sBaseMonitor<T extends K8sRunnable> implements Runnable 
                 log.debug("runnable {} not found", id);
                 return;
             }
+
+            //skip refresh for transient states, we don't wanna override an operation in progress
+            if (runnable.getState() != null && !Arrays.asList(STATES).contains(runnable.getState())) {
+                log.debug("runnable {} in transient state {}, skipping refresh", id, runnable.getState());
+                return;
+            }
+
             runnable = refresh(runnable);
             if (log.isTraceEnabled()) {
                 log.trace("refreshed: {}", runnable);

@@ -33,8 +33,8 @@ import java.io.Serializable;
 import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -42,20 +42,12 @@ public class FunctionEntityBuilder implements Converter<Function, FunctionEntity
 
     private final AttributeConverter<Map<String, Serializable>, byte[]> converter;
 
-    public FunctionEntityBuilder(
-        @Qualifier("cborMapConverter") AttributeConverter<Map<String, Serializable>, byte[]> cborConverter
-    ) {
+    public FunctionEntityBuilder(AttributeConverter<Map<String, Serializable>, byte[]> cborConverter) {
         this.converter = cborConverter;
     }
 
-    /**
-     * Build a function from a functionDTO and store extra values as f cbor
-     * <p>
-     *
-     * @param dto the functionDTO that need to be stored
-     * @return Function
-     */
-    public FunctionEntity build(Function dto) {
+    @Override
+    public FunctionEntity convert(@NonNull Function dto) {
         // Extract data
         StatusFieldAccessor statusFieldAccessor = StatusFieldAccessor.with(dto.getStatus());
         BaseMetadata metadata = BaseMetadata.from(dto.getMetadata());
@@ -88,11 +80,8 @@ public class FunctionEntityBuilder implements Converter<Function, FunctionEntity
                     ? Date.from(metadata.getUpdated().atZoneSameInstant(ZoneOffset.UTC).toInstant())
                     : null
             )
+            //labels
+            .labels(metadata.getLabels() != null ? String.join(",", metadata.getLabels()) : null)
             .build();
-    }
-
-    @Override
-    public FunctionEntity convert(Function source) {
-        return build(source);
     }
 }

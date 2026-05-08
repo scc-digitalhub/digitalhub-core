@@ -31,6 +31,8 @@ import it.smartcommunitylabdhub.core.events.EntityEvent;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.events.EntityAction;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.validation.constraints.NotNull;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -40,7 +42,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -80,6 +81,9 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
     private StringKeyGenerator keyGenerator = () -> UUID.randomUUID().toString().replace("-", "");
     private ApplicationEventPublisher eventPublisher;
     private TransactionTemplate transactionTemplate;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     private Map<String, Pair<ReentrantLock, Instant>> locks = new ConcurrentHashMap<>();
     private int timeout = DEFAULT_TIMEOUT;
@@ -223,28 +227,30 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
             }
 
             try {
-                E saved = transactionTemplate.execute(status -> repository.saveAndFlush(toSave));
+                E saved = transactionTemplate.execute(status -> {
+                    E s = repository.saveAndFlush(toSave);
+
+                    //publish inside transaction so @TransactionalEventListener fires after commit
+                    //regardless of whether an outer transaction exists
+                    if (eventPublisher != null) {
+                        log.debug("publish event: create for {}", s.getId());
+
+                        //detach to prevent accidental dirty writes while keeping all fields
+                        //(including JPA audit fields set by AuditingEntityListener)
+                        entityManager.detach(s);
+                        EntityEvent<E> event = new EntityEvent<>(s, EntityAction.CREATE);
+                        if (log.isTraceEnabled()) {
+                            log.trace("event: {}", String.valueOf(event));
+                        }
+
+                        eventPublisher.publishEvent(event);
+                    }
+
+                    return s;
+                });
 
                 if (log.isTraceEnabled()) {
                     log.trace("entity: {}", saved);
-                }
-
-                //publish outside transaction so the connection has already been released
-                if (eventPublisher != null) {
-                    log.debug("publish event: create for {}", saved.getId());
-
-                    //NOTE: to avoid issues with entity manager owned objs
-                    //we clone entities to detach and keep the version
-                    //sent as event payload immutable
-                    EntityEvent<E> event = new EntityEvent<>(
-                        entityBuilder.convert(dtoBuilder.convert(saved)),
-                        EntityAction.CREATE
-                    );
-                    if (log.isTraceEnabled()) {
-                        log.trace("event: {}", String.valueOf(event));
-                    }
-
-                    eventPublisher.publishEvent(event);
                 }
 
                 D res = dtoBuilder.convert(saved);
@@ -277,53 +283,51 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
                 throw new StoreException("unable to acquire lock for update " + id);
             }
 
-            // capture prev entity so we can publish outside the transaction
-            AtomicReference<E> prevRef = new AtomicReference<>();
-
             try {
                 E updated = transactionTemplate.execute(status -> {
                     E entity = repository.findById(id).orElseThrow(() -> new NoSuchEntityException(type));
-                    prevRef.set(entity);
+
+                    //detach prev snapshot before overwriting — keeps all fields including audit fields
+                    entityManager.detach(entity);
+                    E prev = entity;
 
                     //build entity
                     E e = entityBuilder.convert(dto);
 
-                    if (e instanceof AbstractEntity) {
-                        AbstractEntity ae = (AbstractEntity) e;
+                    if (e instanceof AbstractEntity ae && prev instanceof AbstractEntity prevAe) {
                         //enforce non-modifiable fields
-                        ae.setId(entity.getId());
-                        ae.setKind(entity.getKind());
-                        ae.setProject(entity.getProject());
-                        ae.setName(entity.getName());
+                        ae.setId(prevAe.getId());
+                        ae.setKind(prevAe.getKind());
+                        ae.setProject(prevAe.getProject());
+                        ae.setName(prevAe.getName());
 
-                        ae.setCreated(entity.getCreated());
-                        ae.setCreatedBy(entity.getCreatedBy());
+                        ae.setCreated(prevAe.getCreated());
+                        ae.setCreatedBy(prevAe.getCreatedBy());
                     }
 
-                    return repository.saveAndFlush(e);
+                    E saved = repository.saveAndFlush(e);
+
+                    //publish inside transaction so @TransactionalEventListener fires after commit
+                    //regardless of whether an outer transaction exists
+                    if (eventPublisher != null) {
+                        log.debug("publish event: update for {}", id);
+
+                        //detach to prevent accidental dirty writes while keeping all fields
+                        //(including JPA audit fields set by AuditingEntityListener)
+                        entityManager.detach(saved);
+                        EntityEvent<E> event = new EntityEvent<>(saved, prev, EntityAction.UPDATE);
+                        if (log.isTraceEnabled()) {
+                            log.trace("event: {}", String.valueOf(event));
+                        }
+
+                        eventPublisher.publishEvent(event);
+                    }
+
+                    return saved;
                 });
 
                 if (log.isTraceEnabled()) {
                     log.trace("entity: {}", updated);
-                }
-
-                //publish outside transaction so the connection has already been released
-                if (eventPublisher != null) {
-                    log.debug("publish event: update for {}", id);
-
-                    //NOTE: to avoid issues with entity manager owned objs
-                    //we clone entities to detach and keep the version
-                    //sent as event payload immutable
-                    EntityEvent<E> event = new EntityEvent<>(
-                        entityBuilder.convert(dtoBuilder.convert(updated)),
-                        prevRef.get() != null ? entityBuilder.convert(dtoBuilder.convert(prevRef.get())) : null,
-                        EntityAction.UPDATE
-                    );
-                    if (log.isTraceEnabled()) {
-                        log.trace("event: {}", String.valueOf(event));
-                    }
-
-                    eventPublisher.publishEvent(event);
                 }
 
                 D res = dtoBuilder.convert(updated);
@@ -350,8 +354,6 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
                 throw new StoreException("unable to acquire lock for delete " + id);
             }
 
-            AtomicReference<E> deletedRef = new AtomicReference<>();
-
             try {
                 transactionTemplate.executeWithoutResult(status ->
                     repository
@@ -361,26 +363,26 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
                                 log.trace("entity: {}", entity);
                             }
 
-                            //NOTE: to avoid issues with entity manager owned objs
-                            //we clone entities to detach and keep the version
-                            //sent as event payload immutable
-                            deletedRef.set(entityBuilder.convert(dtoBuilder.convert(entity)));
+                            //detach to get a snapshot with all fields (including audit fields)
+                            //then delete by id so JPA uses a fresh managed instance
+                            entityManager.detach(entity);
+                            E prev = entity;
 
-                            repository.delete(entity);
+                            repository.deleteById(id);
+
+                            //publish inside transaction so @TransactionalEventListener fires after commit
+                            //regardless of whether an outer transaction exists
+                            if (eventPublisher != null) {
+                                log.debug("publish event: delete for {}", id);
+                                EntityEvent<E> event = new EntityEvent<>(prev, EntityAction.DELETE);
+                                if (log.isTraceEnabled()) {
+                                    log.trace("event: {}", String.valueOf(event));
+                                }
+
+                                eventPublisher.publishEvent(event);
+                            }
                         })
                 );
-
-                //publish outside transaction so the connection has already been released
-                E prev = deletedRef.get();
-                if (prev != null && eventPublisher != null) {
-                    log.debug("publish event: delete for {}", id);
-                    EntityEvent<E> event = new EntityEvent<>(prev, EntityAction.DELETE);
-                    if (log.isTraceEnabled()) {
-                        log.trace("event: {}", String.valueOf(event));
-                    }
-
-                    eventPublisher.publishEvent(event);
-                }
             } finally {
                 getLock(id).unlock();
             }

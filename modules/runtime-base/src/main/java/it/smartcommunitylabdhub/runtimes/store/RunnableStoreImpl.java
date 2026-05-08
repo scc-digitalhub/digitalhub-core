@@ -34,6 +34,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.ResolvableType;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,8 +62,13 @@ public class RunnableStoreImpl<T extends RunRunnable> implements RunnableStore<T
         this.objectMapper = objectMapper;
     }
 
+    protected String getCacheName() {
+        return clazz.getSimpleName() + ".find";
+    }
+
     @Override
     @Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
+    @Cacheable(value = "#{#this.getCacheName()}", key = "#id", unless = "#result == null")
     public T find(String id) throws StoreException {
         log.debug("find runnable {} with id {}", clazz.getName(), id);
 
@@ -101,6 +108,7 @@ public class RunnableStoreImpl<T extends RunRunnable> implements RunnableStore<T
     }
 
     @Override
+    @CacheEvict(value = "#{#this.getCacheName()}", key = "#id")
     @Transactional(propagation = Propagation.REQUIRED, readOnly = false)
     public void store(String id, T e) throws StoreException {
         log.debug("store runnable {} with id {}", clazz.getName(), id);
@@ -117,6 +125,7 @@ public class RunnableStoreImpl<T extends RunRunnable> implements RunnableStore<T
     }
 
     @Override
+    @CacheEvict(value = "#{#this.getCacheName()}", key = "#id")
     @Transactional(propagation = Propagation.REQUIRED, readOnly = false)
     public void remove(String id) throws StoreException {
         log.debug("remove runnable {} with id {}", clazz.getName(), id);
