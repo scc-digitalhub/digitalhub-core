@@ -46,6 +46,7 @@ public class K8sLogStatus extends BaseSpec implements Status {
     private String namespace;
     private String pod;
     private String container;
+    private String containerId;
 
     private List<Serializable> metrics;
 
@@ -56,6 +57,7 @@ public class K8sLogStatus extends BaseSpec implements Status {
         this.namespace = spec.getNamespace();
         this.pod = spec.getPod();
         this.container = spec.getContainer();
+        this.containerId = spec.getContainerId();
 
         this.metrics = spec.getMetrics();
     }

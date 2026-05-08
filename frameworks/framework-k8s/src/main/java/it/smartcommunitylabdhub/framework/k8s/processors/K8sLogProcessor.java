@@ -100,7 +100,8 @@ public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
                 String pod = status.getPod() != null ? status.getPod() : "";
                 String container = status.getContainer() != null ? status.getContainer() : "";
                 String namespace = status.getNamespace() != null ? status.getNamespace() : "";
-                String key = namespace + pod + container;
+                String containerId = status.getContainerId() != null ? status.getContainerId() : "";
+                String key = namespace + pod + container + containerId;
 
                 if (StringUtils.hasText(key)) {
                     return Map.entry(key, e);
@@ -148,16 +149,20 @@ public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
 
         logs.forEach(l -> {
             try {
-                String key = l.namespace() + l.pod() + l.container();
+                String baseKey = l.namespace() + l.pod() + l.container();
+                String key = baseKey + (l.containerId() != null ? l.containerId() : "");
 
                 if (entries.get(key) != null) {
                     //update
                     Log log = entries.get(key);
                     log.setContent(l.value());
 
-                    //check if metric is available
-                    if (mmetrics.containsKey(key)) {
-                        HashMap<String, Serializable> metric = mmetrics.get(key);
+                    // check if metric is available
+                    // note: we match on baseKey because metrics are per container,
+                    // while logs can be per container or per container+id
+                    // currently fetched logs are per active containers, so current metrics belong here
+                    if (mmetrics.containsKey(baseKey)) {
+                        HashMap<String, Serializable> metric = mmetrics.get(baseKey);
 
                         //append to status
                         K8sLogStatus logStatus = new K8sLogStatus();
@@ -193,10 +198,14 @@ public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
                     logStatus.setPod(l.pod());
                     logStatus.setContainer(l.container());
                     logStatus.setNamespace(l.namespace());
+                    logStatus.setContainerId(l.containerId());
 
-                    //check if metric is available
-                    if (mmetrics.containsKey(key)) {
-                        HashMap<String, Serializable> metric = mmetrics.get(key);
+                    // check if metric is available
+                    // note: we match on baseKey because metrics are per container,
+                    // while logs can be per container or per container+id
+                    // currently fetched logs are per active containers, so current metrics belong here
+                    if (mmetrics.containsKey(baseKey)) {
+                        HashMap<String, Serializable> metric = mmetrics.get(baseKey);
 
                         //append to status
                         List<Serializable> list = logStatus.getMetrics() != null

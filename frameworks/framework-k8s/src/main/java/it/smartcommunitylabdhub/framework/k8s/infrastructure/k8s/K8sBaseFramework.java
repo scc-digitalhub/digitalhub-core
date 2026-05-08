@@ -593,11 +593,9 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
                                 null
                             );
 
-                            String name = c.getContainerID() != null
-                                ? c.getName() + "/" + URI.create(c.getContainerID()).getHost()
-                                : c.getName();
+                            String id = c.getContainerID() != null ? URI.create(c.getContainerID()).getHost() : null;
 
-                            logs.add(new CoreLog(pod, log, name, namespace));
+                            logs.add(new CoreLog(pod, log, c.getName(), namespace, id));
                         } catch (ApiException e) {
                             //catch and skip this container's logs
                             log.error("Error with k8s: {}", e.getMessage());
@@ -627,11 +625,10 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
                                 null,
                                 null
                             );
-                            String name = c.getContainerID() != null
-                                ? c.getName() + "/" + URI.create(c.getContainerID()).getHost()
-                                : c.getName();
 
-                            logs.add(new CoreLog(pod, log, name, namespace));
+                            String id = c.getContainerID() != null ? URI.create(c.getContainerID()).getHost() : null;
+
+                            logs.add(new CoreLog(pod, log, c.getName(), namespace, id));
                         } catch (ApiException e) {
                             //catch and skip this container's logs
                             log.error("Error with k8s: {}", e.getMessage());
