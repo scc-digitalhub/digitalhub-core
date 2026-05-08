@@ -26,7 +26,7 @@ public class K8sRayServiceListener extends K8sRunnableListener<K8sRayServiceRunn
     @EventListener
     public void listen(K8sRayServiceRunnable runnable) {
         if (runnable != null) {
-            process(runnable.toBuilder().build());
+            process(runnable);
         }
     }
 }

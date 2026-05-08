@@ -6,25 +6,35 @@
 
 package it.smartcommunitylabdhub.framework.ray.infrastructure.k8s;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+
+import io.kubernetes.client.custom.IntOrString;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
+import io.kubernetes.client.openapi.models.V1ConfigMap;
 import io.kubernetes.client.openapi.models.V1Container;
+import io.kubernetes.client.openapi.models.V1ContainerPort;
 import io.kubernetes.client.openapi.models.V1EnvFromSource;
 import io.kubernetes.client.openapi.models.V1EnvVar;
 import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1JobSpec;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
+import io.kubernetes.client.openapi.models.V1PersistentVolumeClaim;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
 import io.kubernetes.client.openapi.models.V1PodSpec;
 import io.kubernetes.client.openapi.models.V1PodTemplateSpec;
 import io.kubernetes.client.openapi.models.V1ResourceRequirements;
 import io.kubernetes.client.openapi.models.V1Secret;
+import io.kubernetes.client.openapi.models.V1Service;
+import io.kubernetes.client.openapi.models.V1ServicePort;
+import io.kubernetes.client.openapi.models.V1ServiceSpec;
 import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;
 import io.kubernetes.client.util.generic.KubernetesApiResponse;
@@ -33,20 +43,32 @@ import io.kubernetes.client.util.generic.dynamic.DynamicKubernetesObject;
 import io.kubernetes.client.util.generic.options.CreateOptions;
 import io.kubernetes.client.util.generic.options.DeleteOptions;
 import it.smartcommunitylabdhub.commons.exceptions.FrameworkException;
+import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sBaseFramework;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sTemplate;
-import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
+import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreServiceType;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
-import it.smartcommunitylabdhub.framework.ray.exceptions.K8sRayFrameworkException;
+import it.smartcommunitylabdhub.framework.ray.model.ClusterModel;
 import it.smartcommunitylabdhub.framework.ray.model.PodModel;
+import it.smartcommunitylabdhub.framework.ray.model.WorkerGroupModel;
+import it.smartcommunitylabdhub.framework.ray.model.ray.HeadGroupSpec;
+import it.smartcommunitylabdhub.framework.ray.model.ray.RayClusterSpec;
+import it.smartcommunitylabdhub.framework.ray.model.ray.WorkerGroupSpec;
+import it.smartcommunitylabdhub.framework.ray.runnables.K8sRayRunnable;
 import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -67,7 +89,7 @@ import org.springframework.util.StringUtils;
  * Ray spec; this framework injects only metadata (name, labels, namespace).
  */
 @Slf4j
-public abstract class K8sRayBaseFramework<T extends K8sRunnable>
+public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
     extends K8sBaseFramework<T, DynamicKubernetesObject> {
 
     protected static final TypeReference<HashMap<String, Serializable>> typeRef = new TypeReference<
@@ -78,6 +100,14 @@ public abstract class K8sRayBaseFramework<T extends K8sRunnable>
 
     protected String apiGroup = "ray.io";
     protected String apiVersion = "v1";
+
+    private boolean suspend = false;
+    private CoreServiceType serviceType = CoreServiceType.ClusterIP;
+
+    protected String initImage;
+    protected List<String> initCommand = null;
+
+    protected static final ObjectMapper mapper = JacksonMapper.CUSTOM_OBJECT_MAPPER;
 
     protected K8sRayBaseFramework(ApiClient apiClient) {
         super(apiClient);
@@ -98,6 +128,38 @@ public abstract class K8sRayBaseFramework<T extends K8sRunnable>
         }
     }
 
+    @Autowired
+    public void setSuspend(@Value("${ray.job.suspend}") Boolean suspend) {
+        if (suspend != null) {
+            this.suspend = suspend.booleanValue();
+        }
+    }
+
+    @Autowired
+    public void setServiceType(@Value("${ray.head.service-type}") String serviceType) {
+        if (StringUtils.hasText(serviceType)) {
+            try {
+                this.serviceType = CoreServiceType.valueOf(serviceType);
+            } catch (IllegalArgumentException e) {
+                log.error("Invalid service type: {}", serviceType);
+                throw new IllegalArgumentException("Invalid service type: " + serviceType, e);
+            }
+        }
+    }
+
+    @Autowired
+    public void setInitImage(@Value("${kubernetes.init.image}") String initImage) {
+        this.initImage = initImage;
+    }
+
+    @Autowired
+    public void setInitCommand(@Value("${kubernetes.init.command}") String initCommand) {
+        if (StringUtils.hasText(initCommand)) {
+            this.initCommand =
+                new LinkedList<>(Arrays.asList(StringUtils.commaDelimitedListToStringArray(initCommand)));
+        }
+    }
+
     /**
      * @return CR kind, e.g. {@code RayCluster}
      */
@@ -111,17 +173,27 @@ public abstract class K8sRayBaseFramework<T extends K8sRunnable>
     /**
      * Extract the Ray spec from the runnable.
      */
-    protected abstract Map<String, Serializable> getSpec(T runnable);
-
-    /**
-     * Whether the runnable wants a backing secret to be materialized.
-     */
-    protected abstract boolean isRequiresSecret(T runnable);
+    protected abstract Map<String, Serializable> getSpec(T runnable, RayClusterSpec clusterSpec);
 
     /**
      * Persist the observed CR status onto the runnable.
      */
     protected abstract void setStatus(T runnable, Map<String, Serializable> status);
+
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        super.afterPropertiesSet();
+
+        Assert.hasText(initImage, "init image should be set to a valid builder-tool image");
+
+        //build default shared volume definition for context building
+        if (k8sProperties.getSharedVolume() == null) {
+            k8sProperties.setSharedVolume(
+                new CoreVolume(CoreVolume.VolumeType.empty_dir, "/shared", "shared-dir", Map.of("sizeLimit", "100Mi"))
+            );
+        }
+    }
 
     @Override
     public T run(T runnable) throws FrameworkException {
@@ -132,6 +204,9 @@ public abstract class K8sRayBaseFramework<T extends K8sRunnable>
 
         Map<String, Object> results = new HashMap<>();
 
+        // create Ray CR from runnable spec
+        DynamicKubernetesObject cr = build(runnable);
+
         //secrets
         V1Secret secret = buildRunSecret(runnable);
         if (secret != null) {
@@ -140,11 +215,55 @@ public abstract class K8sRayBaseFramework<T extends K8sRunnable>
             results.put("secret", secret.stringData(Collections.emptyMap()).data(Collections.emptyMap()));
         }
 
-        // TODO manage config map, pvcs, shared volumes
+        //configmap: needed for RayJob to setup entrypoint and workdir
+        try {
+            V1ConfigMap initConfigMap = buildInitConfigMap(runnable);
+            if (initConfigMap != null) {
+                log.info("create initConfigMap for {}", String.valueOf(initConfigMap.getMetadata().getName()));
+                coreV1Api.createNamespacedConfigMap(namespace, initConfigMap, null, null, null, null);
+                //clear data before storing
+                results.put("configMap", initConfigMap.data(Collections.emptyMap()));
+            }
+        } catch (ApiException e) {
+            log.error("Error with k8s: {}", e.getMessage());
+            if (log.isTraceEnabled()) {
+                log.trace("k8s api response: {}", e.getResponseBody());
+            }
 
-        DynamicKubernetesObject cr = build(runnable);
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+        }
+
+        //pvcs only for head for now, as workers are managed by the operator and can't be guaranteed to be created at runnable start time; if needed in the future we can add support for operator-managed volumes and let the operator create them based on a spec in the CR
+        List<V1PersistentVolumeClaim> pvcs = buildPersistentVolumeClaims(runnable);
+        if (pvcs != null) {
+            List<V1PersistentVolumeClaim> pvcsFinal = new ArrayList<>();
+            for (V1PersistentVolumeClaim pvc : pvcs) {
+                log.info("create pvc for {}", String.valueOf(pvc.getMetadata().getName()));
+                try {
+                    V1PersistentVolumeClaim v = coreV1Api.createNamespacedPersistentVolumeClaim(
+                        namespace,
+                        pvc,
+                        null,
+                        null,
+                        null,
+                        null
+                    );
+                    pvcsFinal.add(v);
+                } catch (ApiException e) {
+                    log.error("Error with k8s: {}", e.getMessage());
+                    if (log.isTraceEnabled()) {
+                        log.trace("k8s api response: {}", e.getResponseBody());
+                    }
+
+                    throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+                }
+            }
+
+            //store
+            results.put("pvcs", pvcs);
+        }
+
         log.info("create Ray {} for {}", getKind(), String.valueOf(cr.getMetadata().getName()));
-
         DynamicKubernetesApi dynamicApi = getDynamicKubernetesApi();
         cr = create(cr, dynamicApi);
 
@@ -216,8 +335,18 @@ public abstract class K8sRayBaseFramework<T extends K8sRunnable>
         }
 
         //secrets
-        if (isRequiresSecret(runnable)) {
-            cleanRunSecret(runnable);
+        cleanRunSecret(runnable);
+
+        //init config map
+        try {
+            String configMapName = "init-config-map-" + runnable.getId();
+            V1ConfigMap initConfigMap = coreV1Api.readNamespacedConfigMap(configMapName, namespace, null);
+            if (initConfigMap != null) {
+                coreV1Api.deleteNamespacedConfigMap(configMapName, namespace, null, null, null, null, null, null, null);
+                messages.add(String.format("configMap %s deleted", configMapName));
+            }
+        } catch (ApiException | NullPointerException e) {
+            //ignore, not existing or error
         }
 
         try {
@@ -226,26 +355,52 @@ public abstract class K8sRayBaseFramework<T extends K8sRunnable>
             log.error("error reading k8s results: {}", e.getMessage());
         }
 
+        List<V1PersistentVolumeClaim> pvcs = buildPersistentVolumeClaims(runnable);
+        if (pvcs != null) {
+            for (V1PersistentVolumeClaim pvc : pvcs) {
+                String pvcName = pvc.getMetadata().getName();
+                try {
+                    V1PersistentVolumeClaim v = coreV1Api.readNamespacedPersistentVolumeClaim(pvcName, namespace, null);
+                    if (v != null) {
+                        log.info("delete pvc for {}", String.valueOf(pvcName));
+
+                        coreV1Api.deleteNamespacedPersistentVolumeClaim(
+                            pvcName,
+                            namespace,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            "Background",
+                            null
+                        );
+                        messages.add(String.format("pvc %s deleted", pvcName));
+                    }
+                } catch (ApiException e) {
+                    log.error("Error with k8s: {}", e.getMessage());
+                    if (log.isTraceEnabled()) {
+                        log.trace("k8s api response: {}", e.getResponseBody());
+                    }
+                    //don't propagate
+                    // throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+                }
+            }
+        }
+
         runnable.setState(K8sRunnableState.DELETED.name());
         runnable.setMessage(String.join(", ", messages));
 
         return runnable;
     }
 
-    @Override
-    protected V1Secret buildRunSecret(T runnable) {
-        if (isRequiresSecret(runnable)) {
-            return super.buildRunSecret(runnable);
-        }
-        return null;
-    }
-
     /**
      * Build a {@link DynamicKubernetesObject} representation of the CR for this runnable.
      * Only metadata (name, labels, namespace) and spec are populated; status is left to the
      * Ray operator.
+     * @throws K8sFrameworkException 
      */
-    public DynamicKubernetesObject build(T runnable) {
+    public DynamicKubernetesObject build(T runnable) throws K8sFrameworkException {
         DynamicKubernetesObject obj = new DynamicKubernetesObject();
 
         String crName = StringUtils.hasText(runnable.getId())
@@ -255,17 +410,101 @@ public abstract class K8sRayBaseFramework<T extends K8sRunnable>
         obj.setApiVersion(apiGroup + "/" + apiVersion);
         obj.setKind(getKind());
 
+        // build labels
         Map<String, String> labels = buildLabels(runnable);
 
+        // metadata
         V1ObjectMeta metadata = new V1ObjectMeta().name(crName).labels(labels).namespace(namespace);
         obj.setMetadata(metadata);
 
-        Map<String, Serializable> spec = getSpec(runnable);
+        ClusterModel cluster = runnable.getSpec().getCluster();
+        RayClusterSpec.RayClusterSpecBuilder clusterSpec = RayClusterSpec.builder();
+        //opt-int for suspend==true
+        if (suspend) {
+            clusterSpec.suspend(suspend);
+        }
+        clusterSpec.rayVersion(cluster.getVersion());
+        
+        V1Service service = null;
+        //head group
+        V1PodSpec head = convertPodModel(runnable, "head", cluster.getHeadSpec(), true);
+        if (cluster.getHeadServicePorts() != null && !cluster.getHeadServicePorts().isEmpty()) { 
+            List<V1ContainerPort> ports = new ArrayList<>();
+            List<V1ServicePort> servicePorts = new ArrayList<>();
+            for (int i = 0; i < cluster.getHeadServicePorts().size(); i++) {
+                CorePort port = cluster.getHeadServicePorts().get(i);
+                if (port.port() != null && port.targetPort() != null) {
+                    V1ContainerPort containerPortPort = new V1ContainerPort()
+                        .containerPort(port.port())
+                        .name(cluster.getHeadServiceNames() != null && cluster.getHeadServiceNames().size() > i
+                            ? cluster.getHeadServiceNames().get(i)
+                            : "port" + port.port());
+                    ports.add(containerPortPort);
+
+                    V1ServicePort servicePort = new V1ServicePort()
+                        .port(port.port())
+                        .targetPort(new IntOrString(port.targetPort()))
+                        .name(cluster.getHeadServiceNames() != null && cluster.getHeadServiceNames().size() > i
+                            ? cluster.getHeadServiceNames().get(i)
+                            : "port" + port.port());
+                    servicePorts.add(servicePort);
+                }
+            }
+            head.getContainers().get(0).setPorts(ports);
+            service = new V1Service()
+                .metadata(new V1ObjectMeta().name("ray-"+ runnable.getId() + "-head-service").labels(labels)) 
+                .spec(new V1ServiceSpec()
+                    .type(serviceType.name())
+                    .ports(servicePorts)
+                );
+        }
+
+
+        HeadGroupSpec headSpec = HeadGroupSpec
+            .builder()
+            .template(head)
+            .rayStartParams(cluster.getHeadSpec().getStartParams())
+            .resources(cluster.getHeadSpec().getRayResources())
+            .headService(service)
+            .serviceType(serviceType.name())
+            .labels(convertLabels(cluster.getHeadSpec().getLabels()))
+            .build();    
+        clusterSpec.headGroupSpec(headSpec);
+        
+        //worker groups
+        List<WorkerGroupSpec> workerGroupSpecs = new LinkedList<>();
+        for (WorkerGroupModel worker : cluster.getWorkerGroups()) {
+            V1PodSpec workerPod = convertPodModel(runnable, "worker", worker.getWorkerSpec(), runnable.initAllPods());
+
+            WorkerGroupSpec workerGroupSpec = WorkerGroupSpec
+                .builder()
+                .template(workerPod)
+                .groupName(worker.getName())
+                .replicas(worker.getReplicas())
+                .maxReplicas(worker.getMaxReplicas())
+                .minReplicas(worker.getMinReplicas())
+                .rayStartParams(worker.getWorkerSpec().getStartParams())
+                .resources(worker.getWorkerSpec().getRayResources())
+                .labels(convertLabels(worker.getWorkerSpec().getLabels()))
+                .build();
+            workerGroupSpecs.add(workerGroupSpec);
+        }
+        clusterSpec.workerGroupSpecs(workerGroupSpecs);        
+
+
+        Map<String, Serializable> spec = getSpec(runnable, clusterSpec.build());
         if (spec != null) {
             obj.getRaw().add("spec", mapToJsonElement(spec));
         }
 
         return obj;
+    }
+
+    private Map<String, String> convertLabels(List<CoreLabel> labels) {
+        if (labels == null) {
+            return Collections.emptyMap();
+        }
+        return labels.stream().collect(Collectors.toMap(CoreLabel::name, CoreLabel::value));
     }
 
     public DynamicKubernetesObject get(@NotNull DynamicKubernetesObject cr, DynamicKubernetesApi dynamicApi)
@@ -465,12 +704,11 @@ public abstract class K8sRayBaseFramework<T extends K8sRunnable>
      * @param runId used for naming and labeling the pod, should be unique for each runnable execution
      * @param containerName the name of the container within the pod: e.g., the head container to be named "ray-head" and the worker container to be named "ray-worker"
      * @param podModel the pod model containing the specifications for the pod
-     * @param command the command to run in the container
-     * @param args the arguments to pass to the command
+     * @param withContext whether to include context information in the pod spec (e.g., for mounting config maps or secrets with context data); this is needed for RayJob to setup entrypoint and workdir, but not for RayService
      * @return the constructed {@link V1PodSpec}
      * @throws K8sFrameworkException if there is an error converting the pod model
      */
-    protected V1PodSpec convertPodModel(String runId, String containerName, PodModel podModel, List<String> command, List<String> args) throws K8sFrameworkException {
+    protected V1PodSpec convertPodModel(T parent, String name, PodModel podModel, boolean withContext) throws K8sFrameworkException {
         if (podModel == null) {
             return null;
         }
@@ -485,7 +723,7 @@ public abstract class K8sRayBaseFramework<T extends K8sRunnable>
             template = templates.get(DEFAULT_TEMPLATE);
         }
         
-        T runnable = podModel.toK8sRunnable(runId, T.builder());
+        T runnable = podModel.toK8sRunnable(parent, name, T.builder(), withContext);
     
         // Prepare environment variables for the Kubernetes job
         List<V1EnvFromSource> envFrom = buildEnvFrom(runnable);
@@ -505,11 +743,11 @@ public abstract class K8sRayBaseFramework<T extends K8sRunnable>
 
         // Build Container
         V1Container container = new V1Container()
-            .name(containerName)
+            .name("ray-" + runnable.getId())
             .image(runnable.getImage())
             .imagePullPolicy(imagePullPolicy)
-            .command(command)
-            .args(args)
+            .command(podModel.getCommand() != null ? List.of(podModel.getCommand()) : null)
+            .args(podModel.getArgs() != null ? List.of(podModel.getArgs()) : null)
             .resources(resources)
             .volumeMounts(volumeMounts)
             .envFrom(envFrom)
@@ -538,6 +776,34 @@ public abstract class K8sRayBaseFramework<T extends K8sRunnable>
             // .restartPolicy("Never")
             .imagePullSecrets(buildImagePullSecrets(runnable))
             .securityContext(buildPodSecurityContext(runnable));
+
+        //check if context build is required
+        if (
+            (runnable.getContextRefs() != null && !runnable.getContextRefs().isEmpty()) ||
+            (runnable.getContextSources() != null && !runnable.getContextSources().isEmpty())
+        ) {
+            // Add Init container to the PodTemplateSpec
+            // Build the Init Container
+            V1Container initContainer = new V1Container()
+                .name("init-container-" + runnable.getId())
+                .image(initImage)
+                .volumeMounts(
+                    volumeMounts
+                        .stream()
+                        .filter(v ->
+                            k8sProperties.getSharedVolume().getMountPath().equals(v.getMountPath()) ||
+                            "/init-config-map".equals(v.getMountPath())
+                        )
+                        .collect(Collectors.toList())
+                )
+                .resources(resources)
+                .env(env)
+                .envFrom(envFrom)
+                .securityContext(buildSecurityContext(runnable))
+                .command(initCommand);
+
+            podSpec.setInitContainers(Collections.singletonList(initContainer));
+        }
 
         return podSpec;
     }

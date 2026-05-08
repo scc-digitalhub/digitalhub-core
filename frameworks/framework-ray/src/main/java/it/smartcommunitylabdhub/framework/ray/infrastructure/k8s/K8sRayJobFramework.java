@@ -8,9 +8,13 @@ package it.smartcommunitylabdhub.framework.ray.infrastructure.k8s;
 
 import io.kubernetes.client.openapi.ApiClient;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.FrameworkComponent;
+import it.smartcommunitylabdhub.framework.ray.model.ray.JobSubmissionMode;
+import it.smartcommunitylabdhub.framework.ray.model.ray.RayClusterSpec;
+import it.smartcommunitylabdhub.framework.ray.model.ray.RayJobSpec;
 import it.smartcommunitylabdhub.framework.ray.runnables.K8sRayJobRunnable;
 import java.io.Serializable;
 import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,18 +26,35 @@ import lombok.extern.slf4j.Slf4j;
 @FrameworkComponent(framework = K8sRayJobFramework.FRAMEWORK)
 public class K8sRayJobFramework extends K8sRayBaseFramework<K8sRayJobRunnable> {
 
-    public static final int DEADLINE_SECONDS = 3600 * 24 * 3; //3 days
-    public static final int DEADLINE_MIN = 120;
-
     public static final String FRAMEWORK = "rayjob";
     public static final String KIND = "RayJob";
     public static final String PLURAL = "rayjobs";
 
+    public static final int DEADLINE_SECONDS = 3600 * 24 * 3; //3 days
+    public static final int DEADLINE_MIN = 120;
+
+    public static final int DEFAULT_BACKOFF_LIMIT = 0;
+
     private int activeDeadlineSeconds = DEADLINE_SECONDS;
-    private boolean suspend = false;
+
 
     public K8sRayJobFramework(ApiClient apiClient) {
         super(apiClient);
+    }
+
+    @Autowired
+    public void setActiveDeadlineSeconds(
+        @Value("${ray.job.activeDeadlineSeconds}") Integer activeDeadlineSeconds
+    ) {
+        Assert.isTrue(activeDeadlineSeconds > DEADLINE_MIN, "Minimum deadline seconds is " + DEADLINE_MIN);
+        this.activeDeadlineSeconds = activeDeadlineSeconds;
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        super.afterPropertiesSet();
+        //load templates
+        this.templates = loadTemplates(K8sRayJobRunnable.class);
     }
 
     @Override
@@ -46,33 +67,36 @@ public class K8sRayJobFramework extends K8sRayBaseFramework<K8sRayJobRunnable> {
         return PLURAL;
     }
 
-    @Autowired
-    public void setActiveDeadlineSeconds(
-        @Value("${ray.job.activeDeadlineSeconds}") Integer activeDeadlineSeconds
-    ) {
-        Assert.isTrue(activeDeadlineSeconds > DEADLINE_MIN, "Minimum deadline seconds is " + DEADLINE_MIN);
-        this.activeDeadlineSeconds = activeDeadlineSeconds;
-    }
-    @Autowired
-    public void setSuspend(@Value("${ray.job.suspend}") Boolean suspend) {
-        if (suspend != null) {
-            this.suspend = suspend.booleanValue();
-        }
-    }
-
-
     @Override
-    protected Map<String, Serializable> getSpec(K8sRayJobRunnable runnable) {
-        return runnable.getSpec();
-    }
+    protected Map<String, Serializable> getSpec(K8sRayJobRunnable runnable, RayClusterSpec clusterSpec) {
 
-    @Override
-    protected boolean isRequiresSecret(K8sRayJobRunnable runnable) {
-        return Boolean.TRUE.equals(runnable.getRequiresSecret());
+        int backoffLimit = Optional.ofNullable(runnable.getSpec().getBackoffLimit()).orElse(DEFAULT_BACKOFF_LIMIT).intValue();
+
+        RayJobSpec spec = RayJobSpec.builder()
+            .jobId(runnable.getId())
+            .activeDeadlineSeconds(activeDeadlineSeconds)
+            .backoffLimit(backoffLimit)
+            .rayClusterSpec(clusterSpec)
+            .clusterSelector(runnable.getSpec().getClusterSelector())
+            .entrypoint(runnable.getSpec().getEntrypoint())
+            .runtimeEnvYAML(buildEnvYAML(runnable))
+            .shutdownAfterJobFinishes(runnable.getSpec().getShutdownAfterJobFinishes())
+            .ttlSecondsAfterFinished(runnable.getSpec().getTtlSecondsAfterFinished())
+            .preRunningDeadlineSeconds(runnable.getSpec().getPreRunningDeadlineSeconds())
+            .submissionMode(JobSubmissionMode.SidecarMode)
+            .build();
+        return mapper.convertValue(spec, typeRef);
     }
 
     @Override
     protected void setStatus(K8sRayJobRunnable runnable, Map<String, Serializable> status) {
         runnable.setStatus(status);
+    }
+
+    private String buildEnvYAML(K8sRayJobRunnable runnable) {
+        // working dir
+        // env vars ? only if cluster ref is used. from envs, no secrets.
+        // dependencies ? uv run | ./requirements.txt | conda env 
+        return "";
     }
 }
