@@ -50,6 +50,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.ResolvableType;
+import org.springframework.core.ResolvableTypeProvider;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -67,7 +69,7 @@ import org.springframework.util.Assert;
 
 @Slf4j
 public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends BaseDTO>
-    implements SearchableEntityRepository<E, D>, InitializingBean {
+    implements SearchableEntityRepository<E, D>, InitializingBean, ResolvableTypeProvider {
 
     public static final int PAGE_MAX_SIZE = 1000;
     public static final int DEFAULT_TIMEOUT = 30;
@@ -157,6 +159,13 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
         Assert.notNull(repository, "repository can not be null");
         Assert.notNull(entityBuilder, "entity builder can not be null");
         Assert.notNull(dtoBuilder, "dto builder can not be null");
+
+        log.debug("Initialized repository for {}", clazz.getSimpleName());
+    }
+
+    @Override
+    public ResolvableType getResolvableType() {
+        return ResolvableType.forClass(clazz);
     }
 
     @Override
@@ -179,10 +188,6 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
         locks.put(id, Pair.of(l, Instant.now()));
 
         return l;
-    }
-
-    protected String getCacheName() {
-        return clazz.getSimpleName() + ".find";
     }
 
     /*
@@ -270,7 +275,7 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
     }
 
     @Override
-    @CacheEvict(value = "#{#this.getCacheName()}", key = "#id")
+    @CacheEvict(cacheResolver = "resolvableTypeCacheResolver", value = "repository.find", key = "#id")
     public D update(@NotNull String id, @NotNull D dto) throws NoSuchEntityException, StoreException {
         log.debug("update with id {}", String.valueOf(dto.getId()));
         if (log.isTraceEnabled()) {
@@ -345,7 +350,7 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
     }
 
     @Override
-    @CacheEvict(value = "#{#this.getCacheName()}", key = "#id")
+    @CacheEvict(cacheResolver = "resolvableTypeCacheResolver", value = "repository.find", key = "#id")
     public void delete(@NotNull String id) throws StoreException {
         log.debug("delete with id {}", id);
         try {
@@ -393,7 +398,12 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "#{#this.getCacheName()}", key = "#id", unless = "#result == null")
+    @Cacheable(
+        cacheResolver = "resolvableTypeCacheResolver",
+        value = "repository.find",
+        key = "#id",
+        unless = "#result == null"
+    )
     public D find(@NotNull String id) throws StoreException {
         log.debug("find with id {}", id);
 
@@ -420,7 +430,12 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "#{#this.getCacheName()}", key = "#id", unless = "#result == null")
+    @Cacheable(
+        cacheResolver = "resolvableTypeCacheResolver",
+        value = "repository.find",
+        key = "#id",
+        unless = "#result == null"
+    )
     public D get(@NotNull String id) throws NoSuchEntityException, StoreException {
         log.debug("get with id {}", id);
         try {
@@ -507,7 +522,7 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
     }
 
     @Transactional
-    @CacheEvict(value = "#{#this.getCacheName()}", allEntries = true)
+    @CacheEvict(cacheResolver = "resolvableTypeCacheResolver", value = "repository.find", allEntries = true)
     public long deleteAll() {
         log.debug("delete all");
 
@@ -542,7 +557,7 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
     @SuppressWarnings("unchecked")
     @Override
     @Transactional
-    @CacheEvict(value = "#{#this.getCacheName()}", allEntries = true)
+    @CacheEvict(cacheResolver = "resolvableTypeCacheResolver", value = "repository.find", allEntries = true)
     public long deleteAll(Specification<E> specification) {
         log.debug("delete all with spec {} ", specification);
 

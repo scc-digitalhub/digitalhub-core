@@ -55,6 +55,8 @@ public class RunnableStoreImpl<T extends RunRunnable> implements RunnableStore<T
 
         //use CBOR mapper as default
         this.objectMapper = JacksonMapper.CBOR_OBJECT_MAPPER;
+
+        log.debug("Initialized store for {}", clazz.getSimpleName());
     }
 
     public void setObjectMapper(ObjectMapper objectMapper) {
@@ -62,13 +64,14 @@ public class RunnableStoreImpl<T extends RunRunnable> implements RunnableStore<T
         this.objectMapper = objectMapper;
     }
 
-    protected String getCacheName() {
-        return clazz.getSimpleName() + ".find";
-    }
-
     @Override
     @Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-    @Cacheable(value = "#{#this.getCacheName()}", key = "#id", unless = "#result == null")
+    @Cacheable(
+        cacheResolver = "resolvableTypeCacheResolver",
+        value = "store.find",
+        key = "#id",
+        unless = "#result == null"
+    )
     public T find(String id) throws StoreException {
         log.debug("find runnable {} with id {}", clazz.getName(), id);
 
@@ -108,7 +111,7 @@ public class RunnableStoreImpl<T extends RunRunnable> implements RunnableStore<T
     }
 
     @Override
-    @CacheEvict(value = "#{#this.getCacheName()}", key = "#id")
+    @CacheEvict(cacheResolver = "resolvableTypeCacheResolver", value = "store.find", key = "#id")
     @Transactional(propagation = Propagation.REQUIRED, readOnly = false)
     public void store(String id, T e) throws StoreException {
         log.debug("store runnable {} with id {}", clazz.getName(), id);
@@ -125,7 +128,7 @@ public class RunnableStoreImpl<T extends RunRunnable> implements RunnableStore<T
     }
 
     @Override
-    @CacheEvict(value = "#{#this.getCacheName()}", key = "#id")
+    @CacheEvict(cacheResolver = "resolvableTypeCacheResolver", value = "store.find", key = "#id")
     @Transactional(propagation = Propagation.REQUIRED, readOnly = false)
     public void remove(String id) throws StoreException {
         log.debug("remove runnable {} with id {}", clazz.getName(), id);
