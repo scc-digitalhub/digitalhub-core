@@ -382,6 +382,22 @@
             <artifactId>dh-runtime-kubeai</artifactId>
             <version>${revision}</version>
         </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-runtime-guardrail</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-runtime-openinference</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-runtime-servicegraph</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
 
         <!-- PROVIDERS  -->
         <dependency>
