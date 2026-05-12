@@ -8,6 +8,7 @@ package it.smartcommunitylabdhub.framework.ray.infrastructure.k8s;
 
 import io.kubernetes.client.openapi.ApiClient;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.FrameworkComponent;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.ray.model.ray.RayClusterSpec;
 import it.smartcommunitylabdhub.framework.ray.runnables.K8sRayServiceRunnable;
 import java.io.Serializable;
@@ -48,5 +49,10 @@ public class K8sRayServiceFramework extends K8sRayBaseFramework<K8sRayServiceRun
     @Override
     protected void setStatus(K8sRayServiceRunnable runnable, Map<String, Serializable> status) {
         runnable.setStatus(status);
+    }
+
+    @Override
+    protected K8sRunnable.K8sRunnableBuilder<?, ?> newRunnableBuilder() {
+        return K8sRayServiceRunnable.builder();
     }
 }

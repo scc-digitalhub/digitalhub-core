@@ -10,9 +10,9 @@
         <relativePath>../../</relativePath>
     </parent>
     <groupId>it.smartcommunitylabdhub</groupId>
-    <artifactId>dh-framework-ray</artifactId>
-    <name>framework-ray</name>
-    <description>DHCore framework-ray</description>
+    <artifactId>dh-runtime-ray</artifactId>
+    <name>runtime-ray</name>
+    <description>DHCore runtime-ray</description>
 
     <dependencies>
         <dependency>
@@ -20,17 +20,26 @@
             <artifactId>dh-commons</artifactId>
             <version>${revision}</version>
         </dependency>
-
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-framework-k8s</artifactId>
             <version>${revision}</version>
         </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-framework-ray</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-framework-kaniko</artifactId>
+            <version>${revision}</version>
+        </dependency>
 
         <dependency>
-            <groupId>io.kubernetes</groupId>
-            <artifactId>client-java</artifactId>
-            <version>${kubernetes.version}</version>
+            <groupId>com.github.spullara.mustache.java</groupId>
+            <artifactId>compiler</artifactId>
+            <version>0.9.10</version>
         </dependency>
 
         <dependency>
@@ -39,13 +48,6 @@
             <version>${lombok.version}</version>
             <scope>compile</scope>
             <optional>true</optional>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <version>${spring-boot.version}</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -58,8 +60,8 @@
             <version>${jackson.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.fasterxml.jackson.datatype</groupId>
-            <artifactId>jackson-datatype-jsr310</artifactId>
+            <groupId>com.fasterxml.jackson.module</groupId>
+            <artifactId>jackson-module-jsonSchema</artifactId>
             <version>${jackson.version}</version>
         </dependency>
         <dependency>
@@ -69,13 +71,4 @@
         </dependency>
     </dependencies>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.2.5</version>
-            </plugin>
-        </plugins>
-    </build>
 </project>

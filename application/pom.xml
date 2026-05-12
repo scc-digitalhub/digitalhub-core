@@ -387,6 +387,11 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-runtime-ray</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-runtime-flower</artifactId>
             <version>${revision}</version>
         </dependency>

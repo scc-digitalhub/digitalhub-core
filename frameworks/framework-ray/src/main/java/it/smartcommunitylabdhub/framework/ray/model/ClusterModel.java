@@ -21,8 +21,6 @@ public class ClusterModel {
 
     private String version;
 
-    private List<String> headServiceNames;
-    private List<CorePort> headServicePorts;
     private CoreServiceType headServiceType;
 
     private PodModel headSpec;

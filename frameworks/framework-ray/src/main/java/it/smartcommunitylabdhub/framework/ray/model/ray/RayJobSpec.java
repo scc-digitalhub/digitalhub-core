@@ -5,6 +5,7 @@ import java.io.Serializable;
 import java.util.Map;
 
 import io.kubernetes.client.openapi.models.V1PodSpec;
+import io.kubernetes.client.openapi.models.V1PodTemplateSpec;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -24,7 +25,7 @@ public class RayJobSpec {
     private Map<String, String> clusterSelector;
     // submitter ?
 
-    private V1PodSpec submitterTemplate;
+    private V1PodTemplateSpec submitterPodTemplate;
 
     private Boolean shutdownAfterJobFinishes;
     private Integer ttlSecondsAfterFinished;
