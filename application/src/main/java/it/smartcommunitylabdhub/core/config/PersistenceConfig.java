@@ -23,9 +23,19 @@
 
 package it.smartcommunitylabdhub.core.config;
 
+import it.smartcommunitylabdhub.core.repositories.ResolvableTypeCacheResolver;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.interceptor.CacheResolver;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 
 @Configuration
 @Order(2)
-public class PersistenceConfig {}
+public class PersistenceConfig {
+
+    @Bean(name = "resolvableTypeCacheResolver")
+    CacheResolver resolvableTypeCacheResolver(CacheManager cacheManager) {
+        return new ResolvableTypeCacheResolver(cacheManager);
+    }
+}
