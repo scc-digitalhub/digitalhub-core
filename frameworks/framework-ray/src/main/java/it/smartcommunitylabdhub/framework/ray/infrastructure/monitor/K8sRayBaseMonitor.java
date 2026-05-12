@@ -31,7 +31,7 @@ import org.springframework.util.Assert;
  * Subclasses translate the CR-specific phase string into a {@link K8sRunnableState}.
  */
 @Slf4j
-public abstract class K8sRayBaseMonitor<T extends K8sRayRunnable> extends K8sBaseMonitor<T> {
+public abstract class K8sRayBaseMonitor<T extends K8sRayRunnable<?>> extends K8sBaseMonitor<T> {
 
     protected final K8sRayBaseFramework<T> framework;
 

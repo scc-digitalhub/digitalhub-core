@@ -2,8 +2,7 @@ package it.smartcommunitylabdhub.framework.ray.model.ray;
 
 import java.util.Map;
 
-import io.kubernetes.client.openapi.models.V1PodSpec;
-
+import io.kubernetes.client.openapi.models.V1PodTemplateSpec;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -23,7 +22,7 @@ public class WorkerGroupSpec {
     private Integer minReplicas;
     private Integer maxReplicas;
 
-    private V1PodSpec template;
+    private V1PodTemplateSpec template;
 
     private Map<String, String> resources;
     private Map<String, String> labels;

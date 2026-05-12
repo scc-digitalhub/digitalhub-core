@@ -6,4 +6,15 @@ ray:
     service-type: ${RAY_HEAD_SERVICE_TYPE:ClusterIP}
   job:
     active-deadline-seconds: ${RAY_JOB_ACTIVE_DEADLINE_SECONDS:259200} # 7 days
-    suspended: ${RAY_JOB_SUSPEND:false}
+    suspend: ${RAY_JOB_SUSPEND:false}
+    resources:
+      cpu:
+        requests: ${RAY_JOB_RESOURCES_CPU_REQUESTS:1}
+        limits: ${RAY_JOB_RESOURCES_CPU_LIMIT:2}
+      mem:
+        requests: ${RAY_JOB_RESOURCES_MEM_REQUESTS:2Gi}
+        limits: ${RAY_JOB_RESOURCES_MEM_LIMIT:2Gi}
+        toleration: ${RAY_JOB_RESOURCES_MEM_TOLERATION:1.1}
+      ephemeral:
+        requests: ${RAY_JOB_RESOURCES_EPHEMERAL_REQUESTS:2Gi}
+        limits: ${RAY_JOB_RESOURCES_EPHEMERAL_LIMIT:}

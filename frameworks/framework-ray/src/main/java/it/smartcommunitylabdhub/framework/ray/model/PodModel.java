@@ -78,7 +78,8 @@ public class PodModel {
     public <T extends K8sRunnable> T toK8sRunnable(T parent, String name, K8sRunnable.K8sRunnableBuilder<?, ?> builder, boolean withContext) {
         
         return (T) builder
-        .id(parent.getId() + "-" + name)
+        // .id(parent.getId() + "-" + name)
+        .id(parent.getId())
         .configurationMap(parent.getConfigurationMap())
         .credentialsMap(parent.getCredentialsMap())
         .project(parent.getProject())

@@ -3,6 +3,8 @@ package it.smartcommunitylabdhub.framework.ray.model;
 import java.io.Serializable;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,9 +21,13 @@ public class RayJobModel extends RayModel {
     private Map<String, String> clusterSelector;
 
     private String entrypoint;
-    // TODO: expand?
-    private Map<String, Serializable> runtimeEnv;
 
+    @JsonProperty("dependency_format")
+    private String dependencyFormat;
+
+    @JsonProperty("dependency_spec")
+    private Serializable dependencySpec;
+    
     private Integer backoffLimit;
     
     private Boolean shutdownAfterJobFinishes;
