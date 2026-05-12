@@ -40,6 +40,9 @@ spring:
     hikari:
       maximum-pool-size: 35    
       leak-detection-threshold: 5000  # 5s max        
+  cache:
+    caffeine:
+      spec: ${CACHE_CAFFEINE_SPEC:maximumSize=10000,expireAfterWrite=600s}
   quartz:
     job-store-type: jdbc
     jdbc:

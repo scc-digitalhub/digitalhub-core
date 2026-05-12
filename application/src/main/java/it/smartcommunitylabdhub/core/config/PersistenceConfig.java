@@ -23,8 +23,12 @@
 
 package it.smartcommunitylabdhub.core.config;
 
+import com.github.benmanes.caffeine.cache.Caffeine;
 import it.smartcommunitylabdhub.core.repositories.ResolvableTypeCacheResolver;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.caffeine.CaffeineCacheManager;
+import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.cache.interceptor.CacheResolver;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,8 +38,23 @@ import org.springframework.core.annotation.Order;
 @Order(2)
 public class PersistenceConfig {
 
+    @Value("${spring.cache.caffeine.spec}")
+    private String caffeineSpec;
+
     @Bean(name = "resolvableTypeCacheResolver")
     CacheResolver resolvableTypeCacheResolver(CacheManager cacheManager) {
         return new ResolvableTypeCacheResolver(cacheManager);
+    }
+
+    @Bean
+    CacheManager cacheManager() {
+
+        if (caffeineSpec == null || caffeineSpec.isBlank()) {
+            return new ConcurrentMapCacheManager();
+        }
+
+        CaffeineCacheManager manager = new CaffeineCacheManager();
+        manager.setCaffeine(Caffeine.from(caffeineSpec));
+        return manager;
     }
 }
