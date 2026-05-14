@@ -31,7 +31,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.ResolvableTypeProvider;
 import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
@@ -50,24 +54,33 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class EntityOperationsDispatcher {
 
-    private final Map<Class<?>, AbstractEntityOperationsListener<?>> listeners = new HashMap<>();
+    private final Map<Class<?>, EntityOperationsListener<?>> listeners = new HashMap<>();
+    protected MessageChannel entityOperationsChannel;
 
-    public EntityOperationsDispatcher(List<AbstractEntityOperationsListener<?>> allListeners) {
-        for (AbstractEntityOperationsListener<?> listener : allListeners) {
-            Class<?> entityClass = listener.getResolvableType().resolve();
-            if (
-                entityClass != null &&
-                BaseDTO.class.isAssignableFrom(entityClass) &&
-                StatusDTO.class.isAssignableFrom(entityClass)
-            ) {
-                log.debug(
-                    "registering entity operations listener {} for entity class {}",
-                    listener.getClass().getSimpleName(),
-                    entityClass.getSimpleName()
-                );
-                listeners.put(entityClass, listener);
+    public EntityOperationsDispatcher(List<EntityOperationsListener<?>> allListeners) {
+        for (EntityOperationsListener<?> listener : allListeners) {
+            if (listener instanceof ResolvableTypeProvider resolvableProvider) {
+                Class<?> entityClass = resolvableProvider.getResolvableType().resolve();
+                if (
+                    entityClass != null &&
+                    BaseDTO.class.isAssignableFrom(entityClass) &&
+                    StatusDTO.class.isAssignableFrom(entityClass)
+                ) {
+                    log.debug(
+                        "registering entity operations listener {} for entity class {}",
+                        listener.getClass().getSimpleName(),
+                        entityClass.getSimpleName()
+                    );
+                    listeners.put(entityClass, listener);
+                }
             }
         }
+    }
+
+    @Autowired(required = false)
+    @Qualifier("entityOperationsQueueChannel")
+    public void setEntityOperationsChannel(MessageChannel entityOperationsChannel) {
+        this.entityOperationsChannel = entityOperationsChannel;
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -82,7 +95,7 @@ public class EntityOperationsDispatcher {
             return;
         }
 
-        AbstractEntityOperationsListener listener = listeners.get(clazz);
+        EntityOperationsListener<BaseDTO> listener = (EntityOperationsListener<BaseDTO>) listeners.get(clazz);
         if (listener == null) {
             log.warn("no listener registered for entity class {}", clazz.getName());
             return;
@@ -101,7 +114,7 @@ public class EntityOperationsDispatcher {
             SecurityContextHolder.setContext(ctx);
         }
         try {
-            listener.handle(message);
+            listener.receive((EntityOperation<BaseDTO>) message.getPayload());
         } finally {
             SecurityContextHolder.clearContext();
         }

@@ -38,12 +38,16 @@ import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.services.SpecValidator;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
+import it.smartcommunitylabdhub.core.events.EntityOperationsListener;
+import it.smartcommunitylabdhub.core.events.EntityOperationsPublisher;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.core.persistence.SpecEntity;
 import it.smartcommunitylabdhub.core.persistence.StatusEntity;
 import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilterConverter;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
+import it.smartcommunitylabdhub.events.EntityAction;
+import it.smartcommunitylabdhub.events.EntityOperation;
 import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
@@ -56,6 +60,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.ResolvableType;
+import org.springframework.core.ResolvableTypeProvider;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -75,9 +81,9 @@ import org.springframework.validation.BindException;
 @Slf4j
 @Transactional
 public abstract class BaseEntityServiceImpl<
-    D extends BaseDTO & SpecDTO & StatusDTO, E extends BaseEntity & SpecEntity & StatusEntity
->
-    implements EntityService<D>, InitializingBean {
+    D extends BaseDTO & SpecDTO & StatusDTO,
+    E extends BaseEntity & SpecEntity & StatusEntity
+> implements EntityService<D>, EntityOperationsListener<D>, ResolvableTypeProvider, InitializingBean {
 
     public static final int PAGE_MAX_SIZE = 1000;
     public static final int DEFAULT_TIMEOUT = 30;
@@ -93,6 +99,8 @@ public abstract class BaseEntityServiceImpl<
     protected Converter<SearchFilter<D>, SearchFilter<E>> filterConverter;
 
     protected StringKeyGenerator nameGenerator = () -> UUID.randomUUID().toString().replace("-", "");
+
+    protected EntityOperationsPublisher operationsPublisher;
 
     @SuppressWarnings("unchecked")
     protected BaseEntityServiceImpl() {
@@ -153,6 +161,11 @@ public abstract class BaseEntityServiceImpl<
         this.nameGenerator = nameGenerator;
     }
 
+    @Autowired(required = false)
+    public void setOperationsPublisher(EntityOperationsPublisher operationsPublisher) {
+        this.operationsPublisher = operationsPublisher;
+    }
+
     @Override
     public void afterPropertiesSet() throws Exception {
         Assert.notNull(repository, "repository can not be null");
@@ -184,6 +197,60 @@ public abstract class BaseEntityServiceImpl<
 
     protected Converter<SearchFilter<D>, SearchFilter<E>> getFilterConverter() {
         return filterConverter;
+    }
+
+    public ResolvableType getResolvableType() {
+        return ResolvableType.forClass(type);
+    }
+
+    /*
+     * Operations
+     */
+    public void receive(EntityOperation<D> operation) {
+        log.debug("receive event for {}", operation.getAction());
+
+        D dto = operation.getDto();
+        if (log.isTraceEnabled()) {
+            log.trace("{}: {}", clazz.getSimpleName(), String.valueOf(dto));
+        }
+
+        if (dto == null) {
+            return;
+        }
+
+        // handle action locally
+        EntityAction action = operation.getAction();
+        try {
+            log.debug("perform action {} on id {}", action, dto.getId());
+            switch (operation.getAction()) {
+                case EntityAction.UPDATE:
+                    //TODO evaluate, disabled for now
+                    // update(dto.getId(), dto);
+                    break;
+                case EntityAction.DELETE:
+                    //delete
+                    delete(dto.getId(), true);
+                    break;
+                case EntityAction.FINALIZE:
+                    //finalize if available
+                    if (finalizer != null) {
+                        finalizer.finalize(dto);
+                    } else {
+                        log.warn(
+                            "no finalizer available for {}, skipping finalize action for id {}",
+                            clazz.getSimpleName(),
+                            dto.getId()
+                        );
+                    }
+
+                    break;
+                default:
+                    //no-op
+                    break;
+            }
+        } catch (StoreException | IllegalArgumentException e) {
+            log.error("error handling event for {} {}: {}", clazz.getSimpleName(), action, e.getMessage());
+        }
     }
 
     /*
@@ -372,29 +439,34 @@ public abstract class BaseEntityServiceImpl<
             if (getLifecycleManager() != null && !"DELETED".equals(curState)) {
                 //delegate to lifecycle manager, will perform cascade effect on success
                 log.debug("handle delete via lifecycle manager for {}", id);
-                lifecycleManager.perform(
-                    e,
-                    "DELETE",
-                    cascade,
-                    (dto, r) -> {
-                        try {
-                            if (Boolean.TRUE.equals(cascade) && getFinalizer() != null) {
+                lifecycleManager.perform(e, "DELETE", cascade, (dto, r) -> {
+                    try {
+                        if (Boolean.TRUE.equals(cascade) && getFinalizer() != null) {
+                            if (operationsPublisher != null) {
+                                //dispatch finalize op to trigger gc via finalizer
+                                operationsPublisher.publish(new EntityOperation<>(dto, EntityAction.FINALIZE));
+                            } else {
                                 //perform gc
                                 getFinalizer().finalize(dto);
                             }
-                            //entity delete is delegated to lm
-                        } catch (StoreException e1) {
-                            log.error("error deleting side effect: {}", e1.getMessage());
                         }
+                        //entity delete is delegated to lm
+                    } catch (StoreException e1) {
+                        log.error("error deleting side effect: {}", e1.getMessage());
                     }
-                );
+                });
             } else {
                 //no lifecycle manager or already completed, just delete
                 log.debug("no lifecycle manager, delete directly");
 
                 if (Boolean.TRUE.equals(cascade) && getFinalizer() != null) {
-                    //perform gc
-                    getFinalizer().finalize(e);
+                    if (operationsPublisher != null) {
+                        //dispatch finalize op to trigger gc via finalizer
+                        operationsPublisher.publish(new EntityOperation<>(e, EntityAction.FINALIZE));
+                    } else {
+                        //perform gc
+                        getFinalizer().finalize(e);
+                    }
                 }
 
                 //entity delete
@@ -461,7 +533,12 @@ public abstract class BaseEntityServiceImpl<
                 .listAll()
                 .forEach(e -> {
                     try {
-                        delete(e.getId(), cascade);
+                        //dispatch op if operationsPublisher is available, otherwise delete directly
+                        if (operationsPublisher != null) {
+                            operationsPublisher.publish(new EntityOperation<>(e, EntityAction.DELETE));
+                        } else {
+                            delete(e.getId(), cascade);
+                        }
                     } catch (StoreException ex) {
                         log.error("Error deleting {}: {}", e.getId(), ex.getMessage());
                     }
@@ -482,7 +559,12 @@ public abstract class BaseEntityServiceImpl<
                 .searchAll(CommonSpecification.createdByEquals(user))
                 .forEach(e -> {
                     try {
-                        delete(e.getId(), cascade);
+                        //dispatch op if operationsPublisher is available, otherwise delete directly
+                        if (operationsPublisher != null) {
+                            operationsPublisher.publish(new EntityOperation<>(e, EntityAction.DELETE));
+                        } else {
+                            delete(e.getId(), cascade);
+                        }
                     } catch (StoreException ex) {
                         log.error("Error deleting {}: {}", e.getId(), ex.getMessage());
                     }
@@ -503,7 +585,12 @@ public abstract class BaseEntityServiceImpl<
                 .searchAll(CommonSpecification.projectEquals(project))
                 .forEach(e -> {
                     try {
-                        delete(e.getId(), cascade);
+                        //dispatch op if operationsPublisher is available, otherwise delete directly
+                        if (operationsPublisher != null) {
+                            operationsPublisher.publish(new EntityOperation<>(e, EntityAction.DELETE));
+                        } else {
+                            delete(e.getId(), cascade);
+                        }
                     } catch (StoreException ex) {
                         log.error("Error deleting {}: {}", e.getId(), ex.getMessage());
                     }
@@ -524,7 +611,12 @@ public abstract class BaseEntityServiceImpl<
                 .searchAll(CommonSpecification.kindEquals(kind))
                 .forEach(e -> {
                     try {
-                        delete(e.getId(), cascade);
+                        //dispatch op if operationsPublisher is available, otherwise delete directly
+                        if (operationsPublisher != null) {
+                            operationsPublisher.publish(new EntityOperation<>(e, EntityAction.DELETE));
+                        } else {
+                            delete(e.getId(), cascade);
+                        }
                     } catch (StoreException ex) {
                         log.error("Error deleting {}: {}", e.getId(), ex.getMessage());
                     }
