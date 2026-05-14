@@ -21,46 +21,25 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.runs.listeners;
+package it.smartcommunitylabdhub.runs.listeners;
 
-import it.smartcommunitylabdhub.core.runs.lifecycle.KindAwareRunLifecycleManager;
-import it.smartcommunitylabdhub.events.EntityAction;
+import it.smartcommunitylabdhub.core.events.AbstractEntityOperationsListener;
 import it.smartcommunitylabdhub.events.EntityOperation;
 import it.smartcommunitylabdhub.runs.Run;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 @Component
 @Slf4j
-public class RunOperationsListener {
+public class RunOperationsListener extends AbstractEntityOperationsListener<Run> {
 
-    private KindAwareRunLifecycleManager runManager;
-
-    @Autowired
-    public void setRunManager(KindAwareRunLifecycleManager runManager) {
-        this.runManager = runManager;
-    }
-
-    @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void receive(EntityOperation<Run> event) {
-        log.debug("receive operation for {}", event.getAction());
-
-        Run dto = event.getDto();
-        if (log.isTraceEnabled()) {
-            log.trace("run: {}", String.valueOf(dto));
+        if (event.getDto() == null) {
+            return;
         }
-
-        if (EntityAction.DELETE == event.getAction()) {
-            //handle delete via manager
-            if (runManager != null) {
-                //delete via manager
-                runManager.perform(dto, "DELETE");
-            }
-        }
+        super.dispatch(event);
     }
 }

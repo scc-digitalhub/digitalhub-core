@@ -23,6 +23,8 @@
 
 package it.smartcommunitylabdhub.core.config;
 
+import it.smartcommunitylabdhub.core.events.EntityEventDispatcher;
+import it.smartcommunitylabdhub.core.events.EntityOperationsDispatcher;
 import it.smartcommunitylabdhub.core.runs.lifecycle.RunnableListener;
 import it.smartcommunitylabdhub.runtimes.events.RunnableEventPublisher;
 import java.util.concurrent.Executor;
@@ -60,25 +62,30 @@ public class AsyncConfig implements AsyncConfigurer {
         return multicaster;
     }
 
+    // -----------------------------------------------------------------
+    // Runnable saga channels: single queue for all Runnable events, dispatched
+    // by RunnableEventPublisher to the correct listener.
+    // Runs on a dedicated pool - no CallerRunsPolicy risk because the caller
+    // here is never a committing transaction thread.
+    // -----------------------------------------------------------------
     @Bean(name = "runnableQueueChannel")
-    public MessageChannel runnableQueueChannel() {
+    MessageChannel runnableQueueChannel() {
         // bounded buffer = backpressure + ordering buffer
         return new QueueChannel(1000);
     }
 
     @Bean(name = "runnableExecutorChannel")
-    public MessageChannel runnableExecutorChannel(@Qualifier("runnableExecutor") Executor runnableExecutor) {
+    MessageChannel runnableExecutorChannel(@Qualifier("runnableExecutor") Executor runnableExecutor) {
         return new ExecutorChannel(runnableExecutor);
     }
 
     @Bean
-    public IntegrationFlow runnableMessageFlow(
+    IntegrationFlow runnableMessageFlow(
         @Qualifier("runnableQueueChannel") MessageChannel runnableQueueChannel,
         @Qualifier("runnableExecutorChannel") MessageChannel runnableExecutorChannel,
         RunnableListener handler
     ) {
-        return IntegrationFlow
-            .from(runnableQueueChannel)
+        return IntegrationFlow.from(runnableQueueChannel)
             .channel(runnableExecutorChannel)
             .handle(handler, "handle")
             .get();
@@ -101,10 +108,82 @@ public class AsyncConfig implements AsyncConfigurer {
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.initialize();
 
-        //use a delegating executor to propagate security context
+        // use a delegating executor to propagate security context
         return new DelegatingSecurityContextAsyncTaskExecutor(executor);
     }
 
+    // -----------------------------------------------------------------
+    // Entity saga channels: single queue for all EntityEvent sagas,
+    // dispatched by EntityEventDispatcher to the correct listener.
+    // Runs on a dedicated pool - no CallerRunsPolicy risk because the
+    // caller here is never a committing transaction thread.
+    // -----------------------------------------------------------------
+
+    @Bean(name = "entityEventQueueChannel")
+    MessageChannel entityEventQueueChannel() {
+        return new QueueChannel(1000);
+    }
+
+    @Bean(name = "entityEventsExecutor")
+    AsyncTaskExecutor entityEventsExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(10);
+        executor.setQueueCapacity(500);
+        executor.setThreadNamePrefix("eev-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.initialize();
+
+        // use a delegating executor to propagate security context
+        return new DelegatingSecurityContextAsyncTaskExecutor(executor);
+    }
+
+    @Bean(name = "entityEventExecutorChannel")
+    MessageChannel entityEventExecutorChannel(@Qualifier("entityEventsExecutor") Executor entityEventsExecutor) {
+        return new ExecutorChannel(entityEventsExecutor);
+    }
+
+    @Bean
+    IntegrationFlow entityEventFlow(
+        @Qualifier("entityEventQueueChannel") MessageChannel entityEventQueueChannel,
+        @Qualifier("entityEventExecutorChannel") MessageChannel entityEventExecutorChannel,
+        EntityEventDispatcher dispatcher
+    ) {
+        return IntegrationFlow.from(entityEventQueueChannel)
+            .channel(entityEventExecutorChannel)
+            .handle(dispatcher, "handle")
+            .get();
+    }
+
+    // -----------------------------------------------------------------
+    // RunOperations saga channel (EntityOperation<Run> events)
+    // -----------------------------------------------------------------
+
+    @Bean(name = "entityOperationsQueueChannel")
+    MessageChannel entityOperationsQueueChannel() {
+        return new QueueChannel(500);
+    }
+
+    @Bean(name = "entityOperationsExecutorChannel")
+    MessageChannel entityOperationsExecutorChannel(@Qualifier("entityEventsExecutor") Executor entityEventsExecutor) {
+        return new ExecutorChannel(entityEventsExecutor);
+    }
+
+    @Bean
+    IntegrationFlow entityOperationsFlow(
+        @Qualifier("entityOperationsQueueChannel") MessageChannel entityOperationsQueueChannel,
+        @Qualifier("entityOperationsExecutorChannel") MessageChannel entityOperationsExecutorChannel,
+        EntityOperationsDispatcher handler
+    ) {
+        return IntegrationFlow.from(entityOperationsQueueChannel)
+            .channel(entityOperationsExecutorChannel)
+            .handle(handler, "handle")
+            .get();
+    }
+
+    /*
+     * Async executions
+     */
     @Bean
     @Primary
     AsyncTaskExecutor taskExecutor() {
@@ -116,12 +195,12 @@ public class AsyncConfig implements AsyncConfigurer {
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.initialize();
 
-        //use a delegating executor to propagate security context
+        // use a delegating executor to propagate security context
         return new DelegatingSecurityContextAsyncTaskExecutor(executor);
     }
 
     @Bean(name = "processorExecutor")
-    public Executor processorExecutor() {
+    Executor processorExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(2);
         executor.setMaxPoolSize(10);
@@ -135,41 +214,10 @@ public class AsyncConfig implements AsyncConfigurer {
     }
 
     @Bean(name = "taskScheduler")
-    public ThreadPoolTaskScheduler threadPoolTaskScheduler() {
+    ThreadPoolTaskScheduler threadPoolTaskScheduler() {
         ThreadPoolTaskScheduler threadPoolTaskScheduler = new ThreadPoolTaskScheduler();
         threadPoolTaskScheduler.setPoolSize(10);
         threadPoolTaskScheduler.setThreadNamePrefix("scheduler-");
         return threadPoolTaskScheduler;
     }
-    // @Bean
-    // PollingService pollingService(@Qualifier("taskExecutor") TaskExecutor executor) {
-    //     // Create new Polling service instance
-    //     PollingService pollingService = new PollingService(executor);
-
-    //     // CREATE POLLERS EXAMPLE
-    //     //
-    //     // List<Workflow> test = new ArrayList<>();
-    //     // Function<Integer, Integer> doubleFunction = num -> {
-    //     // Random randomno = new Random();
-    //     // long randomDelay = (long) (randomno.nextDouble() * 40 + 20); // Random delay
-    //     // between 3 and 10
-    //     // // seconds
-    //     // System.out.println("RANDOM DELAY TEST WORKFLOW " + randomDelay);
-    //     // try {
-    //     // Thread.sleep(randomDelay * 1000);
-    //     // } catch (InterruptedException e) {
-    //     // // Handle interrupted exception if necessary
-    //     // }
-
-    //     // return 9;
-    //     // };
-    //     // test.add(WorkflowFactory
-    //     // .builder().step(doubleFunction, 5).build());
-    //     // pollingService.createPoller("TEST-POLLER", test, 3, true);
-
-    //     // Start polling
-    //     pollingService.startPolling();
-
-    //     return pollingService;
-    // }
 }
