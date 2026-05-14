@@ -21,12 +21,13 @@
  *
  */
 
-package it.smartcommunitylabdhub.events;
+package it.smartcommunitylabdhub.core.events;
 
-public enum EntityAction {
-    CREATE,
-    READ,
-    UPDATE,
-    DELETE,
-    FINALIZE,
+import it.smartcommunitylabdhub.events.EntityOperation;
+
+public interface EntityOperationsPublisher {
+    /*
+     * Publishes an entity operation event to be handled asynchronously.
+     */
+    public void publish(EntityOperation<?> operation);
 }

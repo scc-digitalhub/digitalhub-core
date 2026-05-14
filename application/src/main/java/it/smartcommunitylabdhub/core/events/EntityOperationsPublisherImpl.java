@@ -21,22 +21,26 @@
  *
  */
 
-package it.smartcommunitylabdhub.runs.listeners;
+package it.smartcommunitylabdhub.core.events;
 
 import it.smartcommunitylabdhub.events.EntityOperation;
-import it.smartcommunitylabdhub.runs.Run;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.MessageChannel;
-import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
+/**
+ * Single consumer for the entityEventQueueChannel.
+ * Routes each EntityEvent to the correct AbstractEntityOperationsListener by
+ * matching
+ * the concrete entity class carried in the event payload to the entity class
+ * each listener was registered for.
+ */
 @Component
 @Slf4j
-public class RunOperationsListener {
+public class EntityOperationsPublisherImpl implements EntityOperationsPublisher {
 
     protected MessageChannel entityOperationsChannel;
 
@@ -46,16 +50,12 @@ public class RunOperationsListener {
         this.entityOperationsChannel = entityOperationsChannel;
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void receive(EntityOperation<Run> event) {
-        if (event.getDto() == null) {
-            return;
-        }
-        log.debug("dispatch event for {}", event.getAction());
+    @Override
+    public void publish(EntityOperation<?> operation) {
         if (entityOperationsChannel != null) {
-            entityOperationsChannel.send(MessageBuilder.withPayload(event).build());
+            entityOperationsChannel.send(MessageBuilder.withPayload(operation).build());
         } else {
-            log.warn("entityEventChannel not wired");
+            throw new UnsupportedOperationException("Entity operations channel is not configured");
         }
     }
 }

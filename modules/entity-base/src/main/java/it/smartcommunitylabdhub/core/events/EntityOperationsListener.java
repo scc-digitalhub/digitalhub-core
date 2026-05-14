@@ -21,12 +21,11 @@
  *
  */
 
-package it.smartcommunitylabdhub.events;
+package it.smartcommunitylabdhub.core.events;
 
-public enum EntityAction {
-    CREATE,
-    READ,
-    UPDATE,
-    DELETE,
-    FINALIZE,
+import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
+import it.smartcommunitylabdhub.events.EntityOperation;
+
+public interface EntityOperationsListener<D extends BaseDTO> {
+    public void receive(EntityOperation<D> event);
 }
