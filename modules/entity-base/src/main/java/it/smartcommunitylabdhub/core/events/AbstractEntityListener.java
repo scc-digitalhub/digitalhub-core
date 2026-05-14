@@ -34,25 +34,44 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.ResolvableType;
+import org.springframework.core.ResolvableTypeProvider;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.support.MessageBuilder;
 
 @Slf4j
-public abstract class AbstractEntityListener<E extends BaseEntity, D extends BaseDTO> {
+public abstract class AbstractEntityListener<
+    E extends BaseEntity,
+    D extends BaseDTO
+> implements ResolvableTypeProvider {
 
     protected final Converter<E, D> converter;
-    protected ApplicationEventPublisher eventPublisher;
-    protected final Class<D> clazz;
+    protected final Class<E> clazz;
+    protected final Class<D> dtoClazz;
 
     protected EntityIndexer<D> indexer;
     protected EntityRelationshipsManager<D> relationshipsManager;
 
+    protected MessageChannel entityEventChannel;
+    protected ApplicationEventPublisher eventPublisher;
+
     protected AbstractEntityListener(Converter<E, D> converter) {
         this.converter = converter;
-        clazz = extractClass();
+        this.clazz = extractEntityClass();
+        this.dtoClazz = extractDtoClass();
     }
 
-    @Autowired
+    @Autowired(required = false)
+    @Qualifier("entityEventQueueChannel")
+    public void setEntityEventChannel(MessageChannel entityEventChannel) {
+        this.entityEventChannel = entityEventChannel;
+    }
+
+    @Autowired(required = false)
     public void setEventPublisher(ApplicationEventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
     }
@@ -65,6 +84,25 @@ public abstract class AbstractEntityListener<E extends BaseEntity, D extends Bas
     @Autowired(required = false)
     public void setRelationshipsManager(EntityRelationshipsManager<D> manager) {
         this.relationshipsManager = manager;
+    }
+
+    protected void dispatch(EntityEvent<E> event) {
+        log.debug("dispatch event for {} {}", clazz.getSimpleName(), event.getAction());
+        if (entityEventChannel != null) {
+            entityEventChannel.send(MessageBuilder.withPayload(event).build());
+        } else {
+            log.warn("entityEventChannel not wired, handling event inline for {}", clazz.getSimpleName());
+            handle(event);
+        }
+    }
+
+    public void handle(Message<EntityEvent<E>> message) {
+        if (message == null) {
+            return;
+        }
+
+        EntityEvent<E> event = message.getPayload();
+        handle(event);
     }
 
     protected void handle(EntityEvent<E> event) {
@@ -81,21 +119,18 @@ public abstract class AbstractEntityListener<E extends BaseEntity, D extends Bas
 
         D dto = converter.convert(entity);
         switch (event.getAction()) {
-            case CREATE:
-                {
-                    onCreate(entity, dto);
-                    break;
-                }
-            case UPDATE:
-                {
-                    onUpdate(entity, dto);
-                    break;
-                }
-            case DELETE:
-                {
-                    onDelete(entity, dto);
-                    break;
-                }
+            case CREATE: {
+                onCreate(entity, dto);
+                break;
+            }
+            case UPDATE: {
+                onUpdate(entity, dto);
+                break;
+            }
+            case DELETE: {
+                onDelete(entity, dto);
+                break;
+            }
             default:
                 break;
         }
@@ -103,7 +138,7 @@ public abstract class AbstractEntityListener<E extends BaseEntity, D extends Bas
 
     protected void broadcast(EntityEvent<E> event) {
         log.debug("broadcast event for {} {}", clazz.getSimpleName(), event.getAction());
-        //publish external event
+        // publish external event
         if (eventPublisher != null) {
             E entity = event.getEntity();
             if (log.isTraceEnabled()) {
@@ -117,7 +152,7 @@ public abstract class AbstractEntityListener<E extends BaseEntity, D extends Bas
             D dto = converter.convert(entity);
 
             log.debug("publish cloud event: {} for {} {}", event.getAction(), clazz.getSimpleName(), dto.getId());
-            CloudEntityEvent<D> cloud = new CloudEntityEvent<>(dto, clazz, event.getAction());
+            CloudEntityEvent<D> cloud = new CloudEntityEvent<>(dto, dtoClazz, event.getAction());
             if (log.isTraceEnabled()) {
                 log.trace("cloud event: {}", String.valueOf(cloud));
             }
@@ -128,7 +163,7 @@ public abstract class AbstractEntityListener<E extends BaseEntity, D extends Bas
 
     protected void notify(String user, EntityEvent<E> event) {
         log.debug("notify event for {} {}", clazz.getSimpleName(), event.getAction());
-        //publish external event
+        // publish external event
         if (eventPublisher != null) {
             E entity = event.getEntity();
             if (log.isTraceEnabled()) {
@@ -141,11 +176,11 @@ public abstract class AbstractEntityListener<E extends BaseEntity, D extends Bas
 
             D dto = converter.convert(entity);
 
-            log.debug("publish notify event: {} for {} {}", event.getAction(), clazz.getSimpleName(), dto.getId());
+            log.debug("publish notify event: {} for {} {}", event.getAction(), dtoClazz.getSimpleName(), dto.getId());
             UserNotificationEntityEvent<D> cloud = new UserNotificationEntityEvent<>(
                 user,
                 dto,
-                clazz,
+                dtoClazz,
                 event.getAction()
             );
             if (log.isTraceEnabled()) {
@@ -158,7 +193,7 @@ public abstract class AbstractEntityListener<E extends BaseEntity, D extends Bas
 
     protected void onCreate(E entity, D dto) {
         log.debug("onCreate for {}", entity.getId());
-        //index
+        // index
         if (indexer != null) {
             try {
                 log.debug("index document with id {}", dto.getId());
@@ -168,7 +203,7 @@ public abstract class AbstractEntityListener<E extends BaseEntity, D extends Bas
             }
         }
 
-        //relationships
+        // relationships
         if (relationshipsManager != null) {
             try {
                 log.debug("set relationship for entity with id {}", dto.getId());
@@ -181,7 +216,7 @@ public abstract class AbstractEntityListener<E extends BaseEntity, D extends Bas
 
     protected void onUpdate(E entity, D dto) {
         log.debug("onUpdate for {}", entity.getId());
-        //index
+        // index
         if (indexer != null) {
             try {
                 log.debug("index document with id {}", dto.getId());
@@ -191,7 +226,7 @@ public abstract class AbstractEntityListener<E extends BaseEntity, D extends Bas
             }
         }
 
-        //relationships
+        // relationships
         if (relationshipsManager != null) {
             try {
                 log.debug("set relationship for entity with id {}", dto.getId());
@@ -214,7 +249,7 @@ public abstract class AbstractEntityListener<E extends BaseEntity, D extends Bas
             }
         }
 
-        //relationships
+        // relationships
         if (relationshipsManager != null) {
             try {
                 log.debug("clear relationship for entity with id {}", dto.getId());
@@ -225,8 +260,19 @@ public abstract class AbstractEntityListener<E extends BaseEntity, D extends Bas
         }
     }
 
+    public ResolvableType getResolvableType() {
+        return ResolvableType.forClass(clazz);
+    }
+
     @SuppressWarnings("unchecked")
-    protected Class<D> extractClass() {
+    protected Class<E> extractEntityClass() {
+        // resolve generics type via subclass trick
+        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+        return (Class<E>) t;
+    }
+
+    @SuppressWarnings("unchecked")
+    protected Class<D> extractDtoClass() {
         // resolve generics type via subclass trick
         Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
         return (Class<D>) t;

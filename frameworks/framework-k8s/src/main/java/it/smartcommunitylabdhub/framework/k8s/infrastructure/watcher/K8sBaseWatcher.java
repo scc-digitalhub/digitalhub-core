@@ -36,7 +36,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -48,7 +50,14 @@ import org.springframework.util.Assert;
 @Slf4j
 public abstract class K8sBaseWatcher<T extends K8sRunnable> implements InitializingBean {
 
-    protected final ExecutorService executor = Executors.newCachedThreadPool();
+    protected final ExecutorService executor = new ThreadPoolExecutor(
+        1,
+        1,
+        0L,
+        TimeUnit.MILLISECONDS,
+        new LinkedBlockingQueue<>(100),
+        (r, ex) -> log.debug("Executor queue full, dropping monitor task")
+    );
     protected final KubernetesClient client;
     protected final K8sBaseMonitor<T> k8sMonitor;
 
@@ -145,17 +154,14 @@ public abstract class K8sBaseWatcher<T extends K8sRunnable> implements Initializ
                     }
 
                     //trigger refresh
-                    debounceAndRefresh(
-                        runnableId,
-                        () -> {
-                            try {
-                                // Call the specific refresh method
-                                k8sMonitor.monitor(runnableId);
-                            } catch (StoreException e) {
-                                log.error("Error refreshing: {}", e.getMessage(), e);
-                            }
+                    debounceAndRefresh(runnableId, () -> {
+                        try {
+                            // Call the specific refresh method
+                            k8sMonitor.monitor(runnableId);
+                        } catch (StoreException e) {
+                            log.error("Error refreshing: {}", e.getMessage(), e);
                         }
-                    );
+                    });
                 }
             }
 
@@ -173,16 +179,13 @@ public abstract class K8sBaseWatcher<T extends K8sRunnable> implements Initializ
         // Gate 1 – time-based debounce: drop events arriving faster than DEBOUNCE_INTERVAL_MS,
         // even when no task is currently running for this runnableId.
         AtomicReference<Long> scheduled = new AtomicReference<>();
-        debounceMap.compute(
-            runnableId,
-            (key, lastTime) -> {
-                if (lastTime == null || (now - lastTime) > DEBOUNCE_INTERVAL_MS) {
-                    scheduled.set(now);
-                    return now;
-                }
-                return lastTime;
+        debounceMap.compute(runnableId, (key, lastTime) -> {
+            if (lastTime == null || (now - lastTime) > DEBOUNCE_INTERVAL_MS) {
+                scheduled.set(now);
+                return now;
             }
-        );
+            return lastTime;
+        });
 
         if (scheduled.get() == null) {
             log.trace("Dropping event for runnable {}: debounce interval not elapsed", runnableId);

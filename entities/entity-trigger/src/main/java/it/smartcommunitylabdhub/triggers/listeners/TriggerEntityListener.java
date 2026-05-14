@@ -29,7 +29,7 @@ import it.smartcommunitylabdhub.triggers.Trigger;
 import it.smartcommunitylabdhub.triggers.persistence.TriggerEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.convert.converter.Converter;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.messaging.Message;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -42,23 +42,25 @@ public class TriggerEntityListener extends AbstractEntityListener<TriggerEntity,
         super(converter);
     }
 
-    @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void receive(EntityEvent<TriggerEntity> event) {
         if (event.getEntity() == null) {
             return;
         }
+        super.dispatch(event);
+    }
 
-        log.debug("receive event for {} {}", clazz.getSimpleName(), event.getAction());
+    @Override
+    public void handle(Message<EntityEvent<TriggerEntity>> message) {
+        // index + relationships
+        super.handle(message);
 
+        EntityEvent<TriggerEntity> event = message.getPayload();
         TriggerEntity entity = event.getEntity();
         TriggerEntity prev = event.getPrev();
         if (log.isTraceEnabled()) {
             log.trace("{}: {}", clazz.getSimpleName(), String.valueOf(entity));
         }
-
-        //handle
-        super.handle(event);
 
         //always broadcast updates
         super.broadcast(event);
