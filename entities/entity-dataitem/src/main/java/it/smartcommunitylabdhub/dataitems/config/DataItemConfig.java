@@ -17,39 +17,17 @@
 
 package it.smartcommunitylabdhub.dataitems.config;
 
-import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
-import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
-import it.smartcommunitylabdhub.core.services.BaseEntityServiceImpl;
-import it.smartcommunitylabdhub.core.services.BaseVersionableEntityServiceImpl;
-import it.smartcommunitylabdhub.core.services.EntityService;
 import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
 import it.smartcommunitylabdhub.dataitems.DataItem;
 import it.smartcommunitylabdhub.dataitems.lifecycle.DataItemFsmFactoryBuilder;
-import it.smartcommunitylabdhub.dataitems.persistence.DataItemEntity;
-import it.smartcommunitylabdhub.dataitems.persistence.DataItemRepository;
-import it.smartcommunitylabdhub.files.base.BaseFilesService;
 import it.smartcommunitylabdhub.fsm.Fsm;
-import it.smartcommunitylabdhub.lifecycle.BaseLifecycleManager;
-import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
-import it.smartcommunitylabdhub.relationships.BaseRelationshipsAwareEntityService;
-import it.smartcommunitylabdhub.search.base.BaseIndexableEntityService;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
 import java.util.Optional;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.convert.converter.Converter;
 
 @Configuration
 public class DataItemConfig {
-
-    @Bean
-    public SearchableEntityRepository<DataItemEntity, DataItem> dataItemSearchableEntityRepository(
-        DataItemRepository repository,
-        Converter<DataItem, DataItemEntity> entityBuilder,
-        Converter<DataItemEntity, DataItem> dtoBuilder
-    ) {
-        return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
-    }
 
     @Bean
     Fsm.Factory<String, String, DataItem> dataItemFsmFactory(DataItemFsmFactoryBuilder builder) {
@@ -57,30 +35,8 @@ public class DataItemConfig {
     }
 
     @Bean
-    LifecycleManager<DataItem> dataItemLifecycleManager() {
-        return new BaseLifecycleManager<DataItem>(DataItem.class) {};
-    }
-
-    @Bean
-    EntityService<DataItem> dataItemEntityService(SearchableEntityRepository<DataItemEntity, DataItem> repository) {
-        BaseEntityServiceImpl<DataItem, DataItemEntity> base = new BaseEntityServiceImpl<DataItem, DataItemEntity>() {};
-        base.setRepository(repository);
-        return base;
-    }
-
-    @Bean
     SpecRegistryImpl<DataItem> dataItemSpecRegistry() {
         return new SpecRegistryImpl<>(DataItem.class);
-    }
-
-    @Bean
-    BaseFilesService<DataItem> dataItemFilesService() {
-        return new BaseFilesService<DataItem>() {};
-    }
-
-    @Bean
-    BaseIndexableEntityService<DataItem> dataItemIndexableEntityService() {
-        return new BaseIndexableEntityService<>() {};
     }
 
     // build indexer only if a provider is available
@@ -89,15 +45,5 @@ public class DataItemConfig {
     @Bean
     EntityIndexer<DataItem> dataItemEntityIndexer(Optional<EntityIndexer.Factory> entityIndexerFactory) {
         return entityIndexerFactory.map(factory -> factory.build(DataItem.class)).orElse(null);
-    }
-
-    @Bean
-    BaseRelationshipsAwareEntityService<DataItem> dataItemRelationshipsAwareEntityService() {
-        return new BaseRelationshipsAwareEntityService<>() {};
-    }
-
-    @Bean
-    BaseVersionableEntityServiceImpl<DataItem, DataItemEntity> dataItemVersionableEntityService() {
-        return new BaseVersionableEntityServiceImpl<>() {};
     }
 }

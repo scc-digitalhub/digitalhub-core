@@ -27,11 +27,14 @@ import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
+import it.smartcommunitylabdhub.core.events.EntityOperationsPublisher;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilterConverter;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
+import it.smartcommunitylabdhub.events.EntityAction;
+import it.smartcommunitylabdhub.events.EntityOperation;
 import jakarta.validation.constraints.NotNull;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -52,8 +55,10 @@ import org.springframework.util.Assert;
  */
 @Slf4j
 @Transactional
-public abstract class BaseVersionableEntityServiceImpl<D extends BaseDTO, E extends BaseEntity>
-    implements VersionableEntityService<D>, InitializingBean {
+public abstract class BaseVersionableEntityServiceImpl<
+    D extends BaseDTO,
+    E extends BaseEntity
+> implements VersionableEntityService<D>, InitializingBean {
 
     public static final int PAGE_MAX_SIZE = 1000;
     public static final int DEFAULT_TIMEOUT = 30;
@@ -66,6 +71,8 @@ public abstract class BaseVersionableEntityServiceImpl<D extends BaseDTO, E exte
     protected final Class<E> clazz;
 
     protected Converter<SearchFilter<D>, SearchFilter<E>> filterConverter;
+
+    protected EntityOperationsPublisher operationsPublisher;
 
     protected BaseVersionableEntityServiceImpl() {
         // resolve generics type via subclass trick
@@ -122,6 +129,11 @@ public abstract class BaseVersionableEntityServiceImpl<D extends BaseDTO, E exte
         }
     }
 
+    @Autowired(required = false)
+    public void setOperationsPublisher(EntityOperationsPublisher operationsPublisher) {
+        this.operationsPublisher = operationsPublisher;
+    }
+
     @Override
     public void afterPropertiesSet() throws Exception {
         Assert.notNull(repository, "repository can not be null");
@@ -147,22 +159,21 @@ public abstract class BaseVersionableEntityServiceImpl<D extends BaseDTO, E exte
         );
 
         if (Boolean.TRUE.equals(cascade)) {
-            if (finalizer == null) {
-                //no cascade available!
-                log.warn("Cascade delete not supported");
-                throw new IllegalArgumentException();
-            }
-
             //delete one by one with cascade
             repository
                 .searchAll(spec)
                 .forEach(e -> {
                     try {
-                        //first perform gc
-                        finalizer.finalize(e);
+                        if (operationsPublisher != null) {
+                            //dispatch delete op
+                            operationsPublisher.publish(new EntityOperation<>(e, EntityAction.DELETE));
+                        } else {
+                            //first perform gc via finalizer
+                            finalizer.finalize(e);
 
-                        //then remove from repo
-                        repository.delete(e.getId());
+                            //then remove from repo
+                            repository.delete(e.getId());
+                        }
                     } catch (StoreException ex) {
                         log.error("Error deleting {}: {}", e.getId(), ex.getMessage());
                     }

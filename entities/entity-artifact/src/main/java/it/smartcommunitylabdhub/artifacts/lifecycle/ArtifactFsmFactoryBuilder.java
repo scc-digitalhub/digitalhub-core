@@ -23,9 +23,10 @@
 package it.smartcommunitylabdhub.artifacts.lifecycle;
 
 import it.smartcommunitylabdhub.artifacts.Artifact;
+import it.smartcommunitylabdhub.core.lifecycle.BaseEntityStateBuilder;
+import it.smartcommunitylabdhub.core.lifecycle.BaseFsmFactory;
+import it.smartcommunitylabdhub.core.lifecycle.BaseFsmFactoryBuilder;
 import it.smartcommunitylabdhub.fsm.FsmState;
-import it.smartcommunitylabdhub.lifecycle.BaseEntityStateBuilder;
-import it.smartcommunitylabdhub.lifecycle.BaseFsmFactoryBuilder;
 import java.util.List;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,11 +34,14 @@ import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ArtifactFsmFactoryBuilder extends BaseFsmFactoryBuilder<Artifact> {
+public class ArtifactFsmFactoryBuilder {
+
+    private final BaseFsmFactoryBuilder<Artifact> builder;
 
     public ArtifactFsmFactoryBuilder() {
+        builder = new BaseFsmFactoryBuilder<>();
         // Define the base FSM states and transitions
-        builders(
+        builder.builders(
             new BaseEntityStateBuilder<>(
                 ArtifactState.CREATED.name(),
                 Set.of(
@@ -79,6 +83,10 @@ public class ArtifactFsmFactoryBuilder extends BaseFsmFactoryBuilder<Artifact> {
     @Autowired(required = false)
     public void setBuilders(List<FsmState.Builder<String, String, Artifact>> builders) {
         //append any additional builders to the existing ones, the factory builder will merge states with the same name
-        builders(builders);
+        builder.builders(builders);
+    }
+
+    public BaseFsmFactory<Artifact> build() {
+        return builder.build();
     }
 }

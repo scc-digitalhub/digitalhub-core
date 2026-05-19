@@ -25,7 +25,7 @@ package it.smartcommunitylabdhub.runtimes.lifecycle;
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
-import it.smartcommunitylabdhub.lifecycle.BaseLifecycleManager;
+import it.smartcommunitylabdhub.core.lifecycle.BaseLifecycleManager;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.lifecycle.RunEvent;
 import it.smartcommunitylabdhub.runs.lifecycle.RunState;
@@ -41,8 +41,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 @Slf4j
-public class RunLifecycleManager<S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable>
-    extends BaseLifecycleManager<Run> {
+public class RunLifecycleManager<
+    S extends RunBaseSpec,
+    Z extends RunBaseStatus,
+    R extends RunRunnable
+> extends BaseLifecycleManager<Run> {
 
     public RunLifecycleManager(Runtime<S, Z, R> runtime) {
         this(new RunFsmFactory<>(runtime));
@@ -58,53 +61,57 @@ public class RunLifecycleManager<S extends RunBaseSpec, Z extends RunBaseStatus,
 
     @Override
     public <I, RT> Run handle(@NotNull Run dto, String nextStateValue, I input, BiConsumer<Run, RT> effect) {
-        if (effect == null) {
-            //by default we expect a runnable as optional output from runtimes
-            effect =
-                (run, runnable) -> {
-                    //support multiple returns from runtimes, we will publish all runnables returned by the runtime
-                    if (runnable instanceof Collection) {
-                        ((Collection<?>) runnable).stream()
-                            .filter(RunRunnable.class::isInstance)
-                            .map(r -> (RunRunnable) r)
-                            .forEach(this::dispatch);
-                    } else if (runnable instanceof RunRunnable runRunnable) {
-                        dispatch(runRunnable);
-                    }
-                };
-        }
+        //by default we expect a runnable as optional output from runtimes
+        BiConsumer<Run, RT> callback = (run, runnable) -> {
+            //support multiple returns from runtimes, we will publish all runnables returned by the runtime
+            if (runnable instanceof Collection) {
+                ((Collection<?>) runnable).stream()
+                    .filter(RunRunnable.class::isInstance)
+                    .map(r -> (RunRunnable) r)
+                    .forEach(this::dispatch);
+            } else if (runnable instanceof RunRunnable runRunnable) {
+                dispatch(runRunnable);
+            }
 
-        return super.handle(dto, nextStateValue, input, effect);
+            //if provided, execute the effect
+            if (effect != null) {
+                effect.accept(run, runnable);
+            }
+        };
+
+        return super.handle(dto, nextStateValue, input, callback);
     }
 
     @Override
     public <I, RT> Run perform(@NotNull Run dto, @NotNull String event, I input, BiConsumer<Run, RT> effect) {
-        if (effect == null) {
-            //by default we expect a runnable as optional output from runtimes
-            effect =
-                (run, runnable) -> {
-                    if (runnable != null) {
-                        if (runnable instanceof Collection) {
-                            ((Collection<?>) runnable).stream()
-                                .filter(RunRunnable.class::isInstance)
-                                .map(r -> (RunRunnable) r)
-                                .forEach(this::dispatch);
-                        } else if (runnable instanceof RunRunnable runRunnable) {
-                            dispatch(runRunnable);
-                        }
-                    } else if (runnable == null && RunEvent.DELETE.name().equals(event)) {
-                        StatusFieldAccessor status = StatusFieldAccessor.with(run.getStatus());
-                        if (RunState.DELETING.name().equals(status.getState())) {
-                            //short circuit DELETING for no-ops to DELETED
-                            //this will let manager DELETE the entity
-                            Map<String, Serializable> baseStatus = Map.of("state", RunState.DELETED.name());
-                            run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), baseStatus));
-                        }
-                    }
-                };
-        }
+        //by default we expect a runnable as optional output from runtimes
+        BiConsumer<Run, RT> callback = (run, runnable) -> {
+            if (runnable != null) {
+                if (runnable instanceof Collection) {
+                    ((Collection<?>) runnable).stream()
+                        .filter(RunRunnable.class::isInstance)
+                        .map(r -> (RunRunnable) r)
+                        .forEach(this::dispatch);
+                } else if (runnable instanceof RunRunnable runRunnable) {
+                    dispatch(runRunnable);
+                }
+            } else if (runnable == null && RunEvent.DELETE.name().equals(event)) {
+                StatusFieldAccessor status = StatusFieldAccessor.with(run.getStatus());
+                if (RunState.DELETING.name().equals(status.getState())) {
+                    //short circuit DELETING for no-ops to DELETED
+                    //this will let manager DELETE the entity
+                    Map<String, Serializable> baseStatus = Map.of("state", RunState.DELETED.name());
+                    run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), baseStatus));
+                }
+            }
 
-        return super.perform(dto, event, input, effect);
+            //if provided, execute the effect
+            if (effect != null) {
+                effect.accept(run, runnable);
+            }
+        };
+
+        return super.perform(dto, event, input, callback);
     }
 
     private void dispatch(RunRunnable runnable) {

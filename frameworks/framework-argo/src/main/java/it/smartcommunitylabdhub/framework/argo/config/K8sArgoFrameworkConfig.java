@@ -17,6 +17,7 @@ import it.smartcommunitylabdhub.runtimes.store.RunnableStoreImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
 @PropertySource(value = "classpath:/framework-argo.yml", factory = YamlPropertySourceFactory.class)
@@ -24,8 +25,11 @@ public class K8sArgoFrameworkConfig {
 
     @Bean
     @ConditionalOnKubernetes
-    public RunnableStore<K8sArgoWorkflowRunnable> k8sArgoRunnableStoreService(RunnableRepository runnableRepository) {
-        return new RunnableStoreImpl<>(K8sArgoWorkflowRunnable.class, runnableRepository);
+    public RunnableStore<K8sArgoWorkflowRunnable> k8sArgoRunnableStoreService(
+        RunnableRepository runnableRepository,
+        PlatformTransactionManager transactionManager
+    ) {
+        return new RunnableStoreImpl<>(K8sArgoWorkflowRunnable.class, runnableRepository, transactionManager);
     }
 
     @Bean

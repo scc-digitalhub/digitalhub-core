@@ -67,6 +67,9 @@ public class ConsoleController {
     @Value("${jwt.client-id}")
     private String clientId;
 
+    @Value("${frontend.clarity.key}")
+    private String clarityKey;
+
     public static final String CONSOLE_CONTEXT = Keys.CONSOLE_CONTEXT;
 
     @GetMapping(value = { "/", CONSOLE_CONTEXT })
@@ -75,25 +78,23 @@ public class ConsoleController {
     }
 
     // @GetMapping(value = { CONSOLE_CONTEXT, CONSOLE_CONTEXT + "/**" })
-    @GetMapping(
-        value = {
+    @GetMapping(value = {
             CONSOLE_CONTEXT + "/",
             CONSOLE_CONTEXT + "/{path:^(?!\\S+(?:\\.[a-z0-9]{2,}))\\S+$}",
             CONSOLE_CONTEXT + "/-/**",
-        }
-    )
+    })
     public String console(Model model, HttpServletRequest request) {
         String requestUrl = ServletUriComponentsBuilder
-            .fromRequestUri(request)
-            .replacePath(request.getContextPath())
-            .build()
-            .toUriString();
+                .fromRequestUri(request)
+                .replacePath(request.getContextPath())
+                .build()
+                .toUriString();
 
         String applicationUrl = StringUtils.hasText(applicationProperties.getEndpoint())
-            ? applicationProperties.getEndpoint()
-            : requestUrl;
+                ? applicationProperties.getEndpoint()
+                : requestUrl;
 
-        //build config
+        // build config
         Map<String, String> config = new HashMap<>();
         config.put("REACT_APP_APPLICATION_URL", applicationUrl);
         config.put("REACT_APP_API_URL", "/api/v1");
@@ -124,6 +125,10 @@ public class ConsoleController {
         }
 
         config.put("REACT_APP_ENABLE_SOLR", String.valueOf(searchService != null));
+
+        if (StringUtils.hasText(clarityKey)) {
+            config.put("REACT_APP_CLARITY_KEY", clarityKey);
+        }
 
         model.addAttribute("config", config);
         return "console.html";

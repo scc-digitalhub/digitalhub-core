@@ -236,7 +236,7 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
         results.put("job", job);
 
         //update state
-        runnable.setState(K8sRunnableState.RUNNING.name());
+        runnable.setState(K8sRunnableState.PENDING.name());
 
         //update results
         if (!"disable".equals(collectResults)) {

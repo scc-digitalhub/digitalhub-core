@@ -36,7 +36,7 @@ import it.smartcommunitylabdhub.models.persistence.ModelEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.convert.converter.Converter;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.messaging.Message;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -62,27 +62,29 @@ public class ModelEntityListener extends AbstractEntityListener<ModelEntity, Mod
         this.filesInfoService = filesInfoService;
     }
 
-    @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void receive(EntityEvent<ModelEntity> event) {
         if (event.getEntity() == null) {
             return;
         }
+        super.dispatch(event);
+    }
 
-        log.debug("receive event for {} {}", clazz.getSimpleName(), event.getAction());
+    @Override
+    public void handle(Message<EntityEvent<ModelEntity>> message) {
+        // index + relationships
+        super.handle(message);
 
+        EntityEvent<ModelEntity> event = message.getPayload();
         ModelEntity entity = event.getEntity();
         ModelEntity prev = event.getPrev();
         if (log.isTraceEnabled()) {
             log.trace("{}: {}", clazz.getSimpleName(), String.valueOf(entity));
         }
 
-        //handle
-        super.handle(event);
-
         //update project date
         if (projectService != null) {
-            String projectId = event.getEntity().getProject();
+            String projectId = entity.getProject();
             log.debug("touch update project {}", projectId);
             try {
                 Project project = projectService.find(projectId);

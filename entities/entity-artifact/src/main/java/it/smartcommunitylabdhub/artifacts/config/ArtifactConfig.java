@@ -19,37 +19,15 @@ package it.smartcommunitylabdhub.artifacts.config;
 
 import it.smartcommunitylabdhub.artifacts.Artifact;
 import it.smartcommunitylabdhub.artifacts.lifecycle.ArtifactFsmFactoryBuilder;
-import it.smartcommunitylabdhub.artifacts.persistence.ArtifactEntity;
-import it.smartcommunitylabdhub.artifacts.persistence.ArtifactRepository;
-import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
-import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
-import it.smartcommunitylabdhub.core.services.BaseEntityServiceImpl;
-import it.smartcommunitylabdhub.core.services.BaseVersionableEntityServiceImpl;
-import it.smartcommunitylabdhub.core.services.EntityService;
 import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
-import it.smartcommunitylabdhub.files.base.BaseFilesService;
 import it.smartcommunitylabdhub.fsm.Fsm;
-import it.smartcommunitylabdhub.lifecycle.BaseLifecycleManager;
-import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
-import it.smartcommunitylabdhub.relationships.BaseRelationshipsAwareEntityService;
-import it.smartcommunitylabdhub.search.base.BaseIndexableEntityService;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
 import java.util.Optional;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.convert.converter.Converter;
 
 @Configuration
 public class ArtifactConfig {
-
-    @Bean
-    SearchableEntityRepository<ArtifactEntity, Artifact> artifactSearchableEntityRepository(
-        ArtifactRepository repository,
-        Converter<Artifact, ArtifactEntity> entityBuilder,
-        Converter<ArtifactEntity, Artifact> dtoBuilder
-    ) {
-        return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
-    }
 
     @Bean
     Fsm.Factory<String, String, Artifact> artifactFsmFactory(ArtifactFsmFactoryBuilder builder) {
@@ -57,30 +35,8 @@ public class ArtifactConfig {
     }
 
     @Bean
-    LifecycleManager<Artifact> artifactLifecycleManager() {
-        return new BaseLifecycleManager<Artifact>(Artifact.class) {};
-    }
-
-    @Bean
-    EntityService<Artifact> artifactEntityService(SearchableEntityRepository<ArtifactEntity, Artifact> repository) {
-        BaseEntityServiceImpl<Artifact, ArtifactEntity> base = new BaseEntityServiceImpl<Artifact, ArtifactEntity>() {};
-        base.setRepository(repository);
-        return base;
-    }
-
-    @Bean
     SpecRegistryImpl<Artifact> artifactSpecRegistry() {
         return new SpecRegistryImpl<>(Artifact.class);
-    }
-
-    @Bean
-    BaseFilesService<Artifact> artifactFilesService() {
-        return new BaseFilesService<Artifact>() {};
-    }
-
-    @Bean
-    BaseIndexableEntityService<Artifact> artifactIndexableEntityService() {
-        return new BaseIndexableEntityService<>() {};
     }
 
     // build indexer only if a provider is available
@@ -89,15 +45,5 @@ public class ArtifactConfig {
     @Bean
     EntityIndexer<Artifact> artifactEntityIndexer(Optional<EntityIndexer.Factory> entityIndexerFactory) {
         return entityIndexerFactory.map(factory -> factory.build(Artifact.class)).orElse(null);
-    }
-
-    @Bean
-    BaseRelationshipsAwareEntityService<Artifact> artifactRelationshipsAwareEntityService() {
-        return new BaseRelationshipsAwareEntityService<>() {};
-    }
-
-    @Bean
-    BaseVersionableEntityServiceImpl<Artifact, ArtifactEntity> artifactVersionableEntityService() {
-        return new BaseVersionableEntityServiceImpl<>() {};
     }
 }

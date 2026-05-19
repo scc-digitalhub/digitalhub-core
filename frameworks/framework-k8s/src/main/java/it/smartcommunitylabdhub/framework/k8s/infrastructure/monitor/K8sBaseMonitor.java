@@ -54,11 +54,7 @@ public abstract class K8sBaseMonitor<T extends K8sRunnable> implements Runnable 
         ArrayList<HashMap<String, Serializable>>
     >() {};
 
-    protected static String[] STATES = {
-        K8sRunnableState.PENDING.name(),
-        K8sRunnableState.RUNNING.name(),
-        K8sRunnableState.DELETING.name(),
-    };
+    protected static String[] STATES = { K8sRunnableState.PENDING.name(), K8sRunnableState.RUNNING.name() };
 
     protected final RunnableStore<T> store;
     private RunnableEventPublisher eventPublisher;

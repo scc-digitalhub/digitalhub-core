@@ -22,9 +22,10 @@
 
 package it.smartcommunitylabdhub.models.lifecycle;
 
+import it.smartcommunitylabdhub.core.lifecycle.BaseEntityStateBuilder;
+import it.smartcommunitylabdhub.core.lifecycle.BaseFsmFactory;
+import it.smartcommunitylabdhub.core.lifecycle.BaseFsmFactoryBuilder;
 import it.smartcommunitylabdhub.fsm.FsmState;
-import it.smartcommunitylabdhub.lifecycle.BaseEntityStateBuilder;
-import it.smartcommunitylabdhub.lifecycle.BaseFsmFactoryBuilder;
 import it.smartcommunitylabdhub.models.Model;
 import java.util.List;
 import java.util.Set;
@@ -33,11 +34,14 @@ import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ModelFsmFactoryBuilder extends BaseFsmFactoryBuilder<Model> {
+public class ModelFsmFactoryBuilder {
+
+    private final BaseFsmFactoryBuilder<Model> builder;
 
     public ModelFsmFactoryBuilder() {
+        builder = new BaseFsmFactoryBuilder<>();
         // Define the base FSM states and transitions
-        builders(
+        builder.builders(
             new BaseEntityStateBuilder<>(
                 ModelState.CREATED.name(),
                 Set.of(
@@ -79,6 +83,10 @@ public class ModelFsmFactoryBuilder extends BaseFsmFactoryBuilder<Model> {
     @Autowired(required = false)
     public void setBuilders(List<FsmState.Builder<String, String, Model>> builders) {
         //append any additional builders to the existing ones, the factory builder will merge states with the same name
-        builders(builders);
+        builder.builders(builders);
+    }
+
+    public BaseFsmFactory<Model> build() {
+        return builder.build();
     }
 }

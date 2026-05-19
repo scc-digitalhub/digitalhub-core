@@ -68,12 +68,15 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.Assert;
 
 @Slf4j
-public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends BaseDTO>
-    implements SearchableEntityRepository<E, D>, InitializingBean, ResolvableTypeProvider {
+public abstract class BaseEntityRepositoryImpl<
+    E extends BaseEntity,
+    D extends BaseDTO
+> implements SearchableEntityRepository<E, D>, InitializingBean, ResolvableTypeProvider {
 
     public static final int PAGE_MAX_SIZE = 1000;
     public static final int DEFAULT_TIMEOUT = 30;
-    protected final JpaRepository<E, String> repository;
+    protected JpaRepository<E, String> repository;
+
     protected final Class<D> type;
     protected final Class<E> clazz;
 
@@ -89,6 +92,20 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
 
     private Map<String, Pair<ReentrantLock, Instant>> locks = new ConcurrentHashMap<>();
     private int timeout = DEFAULT_TIMEOUT;
+
+    @SuppressWarnings("unchecked")
+    protected BaseEntityRepositoryImpl() {
+        // resolve generics type via subclass trick
+        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+        this.type = (Class<D>) t;
+        Type t2 = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+        this.clazz = (Class<E>) t2;
+
+        //build generic converters, can be overridden by autowired specific ones
+        MapToCborAttributeConverter converter = new MapToCborAttributeConverter();
+        this.entityBuilder = new BaseEntityBuilder<>(clazz, converter);
+        this.dtoBuilder = new BaseDTOBuilder<>(type, converter);
+    }
 
     @SuppressWarnings("unchecked")
     protected BaseEntityRepositoryImpl(JpaRepository<E, String> repository) {
@@ -128,6 +145,11 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
         this.clazz = (Class<E>) t2;
     }
 
+    @Autowired
+    public void setRepository(JpaRepository<E, String> repository) {
+        this.repository = repository;
+    }
+
     @Autowired(required = false)
     public void setEntityBuilder(Converter<D, E> entityBuilder) {
         this.entityBuilder = entityBuilder;
@@ -151,6 +173,10 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
 
     @Autowired
     public void setTransactionManager(PlatformTransactionManager transactionManager) {
+        if (transactionManager == null) {
+            throw new IllegalArgumentException("transaction manager can not be null");
+        }
+
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
@@ -414,7 +440,10 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
             }
 
             try {
-                D res = repository.findById(id).map(e -> dtoBuilder.convert(e)).orElse(null);
+                D res = repository
+                    .findById(id)
+                    .map(e -> dtoBuilder.convert(e))
+                    .orElse(null);
                 if (log.isTraceEnabled()) {
                     log.trace("res: {}", res);
                 }
@@ -472,7 +501,10 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
         }
 
         Page<E> page = repository.findAll(pageable);
-        List<D> content = page.stream().map(e -> dtoBuilder.convert(e)).collect(Collectors.toList());
+        List<D> content = page
+            .stream()
+            .map(e -> dtoBuilder.convert(e))
+            .collect(Collectors.toList());
 
         return new PageImpl<>(content, pageable, page.getTotalElements());
     }
@@ -482,7 +514,11 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
     public List<D> listAll() {
         log.debug("list all");
 
-        return repository.findAll().stream().map(e -> dtoBuilder.convert(e)).collect(Collectors.toList());
+        return repository
+            .findAll()
+            .stream()
+            .map(e -> dtoBuilder.convert(e))
+            .collect(Collectors.toList());
     }
 
     @Override
@@ -497,7 +533,10 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
         if (repository instanceof JpaSpecificationExecutor) {
             @SuppressWarnings("unchecked")
             Page<E> page = ((JpaSpecificationExecutor<E>) repository).findAll(specification, pageable);
-            List<D> content = page.stream().map(e -> dtoBuilder.convert(e)).collect(Collectors.toList());
+            List<D> content = page
+                .stream()
+                .map(e -> dtoBuilder.convert(e))
+                .collect(Collectors.toList());
 
             return new PageImpl<>(content, pageable, page.getTotalElements());
         }
@@ -532,7 +571,10 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
         //NOTE: to avoid issues with entity manager owned objs
         //we clone entities to detach and keep the version
         //sent as event payload immutable
-        List<E> prevs = entities.stream().map(entity -> entityBuilder.convert(dtoBuilder.convert(entity))).toList();
+        List<E> prevs = entities
+            .stream()
+            .map(entity -> entityBuilder.convert(dtoBuilder.convert(entity)))
+            .toList();
 
         //remove in batch
         repository.deleteAllInBatch(entities);
@@ -568,7 +610,10 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
             //NOTE: to avoid issues with entity manager owned objs
             //we clone entities to detach and keep the version
             //sent as event payload immutable
-            List<E> prevs = entities.stream().map(entity -> entityBuilder.convert(dtoBuilder.convert(entity))).toList();
+            List<E> prevs = entities
+                .stream()
+                .map(entity -> entityBuilder.convert(dtoBuilder.convert(entity)))
+                .toList();
 
             //remove in batch
             repository.deleteAllInBatch(entities);

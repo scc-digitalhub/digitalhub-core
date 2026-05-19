@@ -32,28 +32,33 @@ import it.smartcommunitylabdhub.runtimes.persistence.RunnableRepository;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.ResolvableType;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.Assert;
 
 @Slf4j
-@Transactional
 public class RunnableStoreImpl<T extends RunRunnable> implements RunnableStore<T> {
 
     private final Class<T> clazz;
     private final RunnableRepository runnableRepository;
+    private final TransactionTemplate transactionTemplate;
     private ObjectMapper objectMapper;
 
-    public RunnableStoreImpl(Class<T> clazz, RunnableRepository runnableRepository) {
+    public RunnableStoreImpl(
+            Class<T> clazz,
+            RunnableRepository runnableRepository,
+            PlatformTransactionManager transactionManager) {
         this.clazz = clazz;
         this.runnableRepository = runnableRepository;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
 
-        //use CBOR mapper as default
+        // use CBOR mapper as default
         this.objectMapper = JacksonMapper.CBOR_OBJECT_MAPPER;
 
         log.debug("Initialized store for {}", clazz.getSimpleName());
@@ -65,13 +70,7 @@ public class RunnableStoreImpl<T extends RunRunnable> implements RunnableStore<T
     }
 
     @Override
-    @Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-    @Cacheable(
-        cacheResolver = "resolvableTypeCacheResolver",
-        value = "store.find",
-        key = "#id",
-        unless = "#result == null"
-    )
+    @Cacheable(cacheResolver = "resolvableTypeCacheResolver", value = "store.find", key = "#id", unless = "#result == null")
     public T find(String id) throws StoreException {
         log.debug("find runnable {} with id {}", clazz.getName(), id);
 
@@ -90,36 +89,34 @@ public class RunnableStoreImpl<T extends RunRunnable> implements RunnableStore<T
     }
 
     @Override
-    @Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
     public List<T> findAll() {
         log.debug("find all runnable {}", clazz.getName());
 
         List<RunnableEntity> entities = runnableRepository.findAll(clazz.getName());
         return entities
-            .stream()
-            .map(entity -> {
-                try {
-                    return objectMapper.readValue(entity.getData(), clazz);
-                } catch (IOException e) {
-                    // Handle deserialization error
-                    log.error("error deserializing runnable: {}", e.getMessage());
-                    return null;
-                }
-            })
-            .filter(Objects::nonNull)
-            .collect(Collectors.toList());
+                .stream()
+                .map(entity -> {
+                    try {
+                        return objectMapper.readValue(entity.getData(), clazz);
+                    } catch (IOException e) {
+                        // Handle deserialization error
+                        log.error("error deserializing runnable: {}", e.getMessage());
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     @Override
     @CacheEvict(cacheResolver = "resolvableTypeCacheResolver", value = "store.find", key = "#id")
-    @Transactional(propagation = Propagation.REQUIRED, readOnly = false)
     public void store(String id, T e) throws StoreException {
         log.debug("store runnable {} with id {}", clazz.getName(), id);
         try {
             byte[] data = objectMapper.writeValueAsBytes(e);
             RunnableEntity entity = RunnableEntity.builder().id(id).user(e.getUser()).data(data).build();
 
-            runnableRepository.upsert(clazz.getName(), entity);
+            transactionTemplate.executeWithoutResult(status -> runnableRepository.upsert(clazz.getName(), entity));
         } catch (IOException ex) {
             // Handle serialization error
             log.error("error serializing runnable: {}", ex.getMessage());
@@ -129,11 +126,10 @@ public class RunnableStoreImpl<T extends RunRunnable> implements RunnableStore<T
 
     @Override
     @CacheEvict(cacheResolver = "resolvableTypeCacheResolver", value = "store.find", key = "#id")
-    @Transactional(propagation = Propagation.REQUIRED, readOnly = false)
     public void remove(String id) throws StoreException {
         log.debug("remove runnable {} with id {}", clazz.getName(), id);
 
-        runnableRepository.delete(clazz.getName(), id);
+        transactionTemplate.executeWithoutResult(status -> runnableRepository.delete(clazz.getName(), id));
     }
 
     @Override

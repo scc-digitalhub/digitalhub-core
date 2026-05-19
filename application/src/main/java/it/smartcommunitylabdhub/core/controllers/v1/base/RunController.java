@@ -30,6 +30,7 @@ import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
+import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.core.runs.lifecycle.KindAwareRunLifecycleManager;
@@ -37,11 +38,13 @@ import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.RunManager;
 import it.smartcommunitylabdhub.runs.filters.RunEntityFilter;
 import it.smartcommunitylabdhub.runs.lifecycle.RunEvent;
+import it.smartcommunitylabdhub.runs.lifecycle.RunState;
 import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -144,7 +147,11 @@ public class RunController {
         Run run = runManager.getRun(id);
 
         //delete via manager
-        return lifecycleManager.perform(run, RunEvent.DELETE.name());
+        runManager.deleteRun(id, true);
+
+        //mock status to DELETING for response, as manager will delete the entity asynchronously
+        run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), Map.of("state", RunState.DELETING.name())));
+        return run;
     }
 
     @Operation(summary = "Perform action on a specific run")

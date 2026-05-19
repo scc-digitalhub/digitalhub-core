@@ -21,15 +21,15 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.runs.listeners;
+package it.smartcommunitylabdhub.runs.listeners;
 
-import it.smartcommunitylabdhub.core.runs.lifecycle.KindAwareRunLifecycleManager;
-import it.smartcommunitylabdhub.events.EntityAction;
 import it.smartcommunitylabdhub.events.EntityOperation;
 import it.smartcommunitylabdhub.runs.Run;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -38,29 +38,24 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Slf4j
 public class RunOperationsListener {
 
-    private KindAwareRunLifecycleManager runManager;
+    protected MessageChannel entityOperationsChannel;
 
-    @Autowired
-    public void setRunManager(KindAwareRunLifecycleManager runManager) {
-        this.runManager = runManager;
+    @Autowired(required = false)
+    @Qualifier("entityOperationsQueueChannel")
+    public void setEntityOperationsChannel(MessageChannel entityOperationsChannel) {
+        this.entityOperationsChannel = entityOperationsChannel;
     }
 
-    @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void receive(EntityOperation<Run> event) {
-        log.debug("receive operation for {}", event.getAction());
-
-        Run dto = event.getDto();
-        if (log.isTraceEnabled()) {
-            log.trace("run: {}", String.valueOf(dto));
+    public void dispatch(EntityOperation<Run> event) {
+        if (event.getDto() == null) {
+            return;
         }
-
-        if (EntityAction.DELETE == event.getAction()) {
-            //handle delete via manager
-            if (runManager != null) {
-                //delete via manager
-                runManager.perform(dto, "DELETE");
-            }
+        log.debug("dispatch event for {}", event.getAction());
+        if (entityOperationsChannel != null) {
+            entityOperationsChannel.send(MessageBuilder.withPayload(event).build());
+        } else {
+            log.warn("entityOperationsChannel not wired");
         }
     }
 }
