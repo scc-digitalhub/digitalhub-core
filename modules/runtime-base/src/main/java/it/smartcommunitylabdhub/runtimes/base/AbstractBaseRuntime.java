@@ -27,6 +27,9 @@ import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
+import it.smartcommunitylabdhub.core.events.EntityOperationsPublisher;
+import it.smartcommunitylabdhub.events.EntityAction;
+import it.smartcommunitylabdhub.events.EntityOperation;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.lifecycle.RunState;
 import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
@@ -45,35 +48,43 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.StringUtils;
 
 @Slf4j
-public abstract class AbstractBaseRuntime<S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable>
-    implements Runtime<S, Z, R> {
+public abstract class AbstractBaseRuntime<
+    S extends RunBaseSpec,
+    Z extends RunBaseStatus,
+    R extends RunRunnable
+> implements Runtime<S, Z, R> {
 
     protected Collection<RunnableStore<R>> stores = Collections.emptyList();
+    protected EntityOperationsPublisher operationsPublisher;
+
+    @Autowired(required = false)
+    public void setOperationsPublisher(EntityOperationsPublisher operationsPublisher) {
+        this.operationsPublisher = operationsPublisher;
+    }
 
     @Autowired(required = false)
     public void setStores(Collection<RunnableStore<? extends RunRunnable>> stores) {
-        this.stores =
-            stores
-                .stream()
-                .filter(s -> {
-                    try {
-                        R r = (R) s.getResolvableType().resolve().getDeclaredConstructor().newInstance();
-                        return r != null;
-                    } catch (
-                        NullPointerException
-                        | ClassCastException
-                        | InstantiationException
-                        | IllegalAccessException
-                        | IllegalArgumentException
-                        | InvocationTargetException
-                        | NoSuchMethodException
-                        | SecurityException e
-                    ) {
-                        return false;
-                    }
-                })
-                .map(s -> (RunnableStore<R>) s)
-                .collect(Collectors.toList());
+        this.stores = stores
+            .stream()
+            .filter(s -> {
+                try {
+                    R r = (R) s.getResolvableType().resolve().getDeclaredConstructor().newInstance();
+                    return r != null;
+                } catch (
+                    NullPointerException
+                    | ClassCastException
+                    | InstantiationException
+                    | IllegalAccessException
+                    | IllegalArgumentException
+                    | InvocationTargetException
+                    | NoSuchMethodException
+                    | SecurityException e
+                ) {
+                    return false;
+                }
+            })
+            .map(s -> (RunnableStore<R>) s)
+            .collect(Collectors.toList());
 
         log.debug("registered stores for {}: {}", getClass().getName(), this.stores);
     }
@@ -201,6 +212,12 @@ public abstract class AbstractBaseRuntime<S extends RunBaseSpec, Z extends RunBa
             runRunnable.setState(RunState.DELETING.name());
             runRunnable.setMessage("deleting runnable " + runRunnable.getId());
             return runRunnable;
+        } else {
+            //short circuit deleting for no-ops to DELETED
+            //this will let manager DELETE the entity
+            if (operationsPublisher != null) {
+                operationsPublisher.publish(new EntityOperation<>(run, EntityAction.DELETE));
+            }
         }
 
         //nothing to do
