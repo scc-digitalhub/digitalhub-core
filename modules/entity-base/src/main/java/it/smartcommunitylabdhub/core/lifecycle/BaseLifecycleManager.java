@@ -290,7 +290,7 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
             .dto(res)
             .build();
 
-        log.debug("publish event on state {} for {}", nextState, res.getId());
+        log.debug("publish event on state {} for {}", status.getState(), res.getId());
         if (log.isTraceEnabled()) {
             log.trace("event: {}", e);
         }

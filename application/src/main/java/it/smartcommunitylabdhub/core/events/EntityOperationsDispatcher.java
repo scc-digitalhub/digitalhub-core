@@ -89,9 +89,9 @@ public class EntityOperationsDispatcher {
             return;
         }
 
-        EntityOperation<?> event = message.getPayload();
-        Class<?> clazz = event.getResolvableType().getGeneric(0).resolve();
-        if (event.getDto() == null) {
+        EntityOperation<?> op = message.getPayload();
+        Class<?> clazz = op.getResolvableType().getGeneric(0).resolve();
+        if (op.getDto() == null) {
             return;
         }
 
@@ -101,8 +101,8 @@ public class EntityOperationsDispatcher {
             return;
         }
 
-        log.debug("dispatch entity event {} for {}", event.getAction(), clazz.getSimpleName());
-        String user = event.getDto().getUser();
+        log.debug("dispatch entity operation {} for {}:{}", op.getAction(), clazz.getSimpleName(), op.getDto().getId());
+        String user = op.getDto().getUser();
         if (user != null) {
             // TODO restore user roles/context?
             UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
