@@ -46,15 +46,18 @@ public class K8sRayJobMonitor extends K8sRayBaseMonitor<K8sRayJobRunnable> {
         String deploy = deployObj != null ? deployObj.toString() : null;
         String job = jobObj != null ? jobObj.toString() : null;
 
-        Object message = status.get("message");
+        Object messageObj = status.get("message");
+        String message = messageObj != null ? messageObj.toString() : null;
         if (message != null) {
-            runnable.setMessage(message.toString());
+            // truncate
+            message = message.length() > 500 ? message.substring(0, 500) + "..." : message; 
+            runnable.setMessage(message);
         }
 
         //terminal states first
         if ("Failed".equalsIgnoreCase(deploy) || "FAILED".equalsIgnoreCase(job)) {
             runnable.setState(K8sRunnableState.ERROR.name());
-            runnable.setError("RayJob failed: " + (message != null ? message.toString() : "unknown"));
+            runnable.setError("RayJob failed: " + (message != null ? message : "unknown"));
             return;
         }
         if ("Complete".equalsIgnoreCase(deploy) || "SUCCEEDED".equalsIgnoreCase(job)) {
