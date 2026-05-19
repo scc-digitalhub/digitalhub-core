@@ -76,9 +76,14 @@ public class K8sJobMonitor extends K8sBaseMonitor<K8sJobRunnable> {
 
             //TODO evaluate target for succeded/failed
             if (job.getStatus().getSucceeded() != null && job.getStatus().getSucceeded().intValue() > 0) {
-                // Job has succeeded
-                log.debug("Job status succeeded for {}", runnable.getId());
-                runnable.setState(K8sRunnableState.COMPLETED.name());
+                //sanity check: if PENDING move to RUNNING before ending
+                if (K8sRunnableState.PENDING.name().equals(runnable.getState())) {
+                    runnable.setState(K8sRunnableState.RUNNING.name());
+                } else {
+                    // Job has succeeded
+                    log.debug("Job status succeeded for {}", runnable.getId());
+                    runnable.setState(K8sRunnableState.COMPLETED.name());
+                }
             } else if (job.getStatus().getFailed() != null && job.getStatus().getFailed().intValue() > 0) {
                 // Job has failed delete job and pod
                 log.debug("Job status failed for {}", runnable.getId());
