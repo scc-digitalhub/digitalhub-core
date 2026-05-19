@@ -92,6 +92,32 @@ public class RayProperties {
     private Map<String, String> workerRayResources;
 
     /**
+     * Default pod template/profile for head pods. Worker pods inherit the same
+     * profile by default but can be overridden at the task level.
+     */
+    private String headProfile;
+
+    /**
+     * Default resource requests/limits for head pods, expressed in the same format
+     */
+    private String headMemory;
+    /**
+     * Default resource requests/limits for head pods, expressed in the same format
+     */
+    private String headCpu;
+
+    /**
+     * Default resource requests/limits for head pods, expressed in the same format
+     */    
+    private String headDiskSize;
+
+    /**
+     * Default pod template/profile for worker pods. Falls back to {@link #headProfile}
+     * when not set.
+     */    
+    private String workerProfile;
+
+    /**
      * Default worker group name.
      */
     private String workerGroupName;

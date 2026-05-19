@@ -6,7 +6,6 @@
 
 package it.smartcommunitylabdhub.runtime.ray.specs;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
 import java.io.Serializable;
 import java.util.HashMap;
@@ -28,9 +27,6 @@ public class RayRunSpec extends RunBaseSpec {
 
     private Map<String, Serializable> parameters = new HashMap<>();
 
-    @JsonProperty("init_parameters")
-    private Map<String, Serializable> initParameters = new HashMap<>();
-
     public RayRunSpec(Map<String, Serializable> data) {
         configure(data);
     }
@@ -43,6 +39,5 @@ public class RayRunSpec extends RunBaseSpec {
 
         this.inputs = spec.getInputs();
         this.parameters = spec.getParameters();
-        this.initParameters = spec.getInitParameters();
     }
 }

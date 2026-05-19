@@ -8,12 +8,14 @@ package it.smartcommunitylabdhub.framework.ray.infrastructure.k8s;
 
 import io.kubernetes.client.custom.Quantity;
 import io.kubernetes.client.openapi.ApiClient;
+import io.kubernetes.client.openapi.models.V1ObjectMeta;
+import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodSpec;
 import io.kubernetes.client.openapi.models.V1PodTemplateSpec;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.FrameworkComponent;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
-import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreLog;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.ray.model.ray.JobSubmissionMode;
@@ -23,6 +25,7 @@ import it.smartcommunitylabdhub.framework.ray.runnables.K8sRayJobRunnable;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -165,6 +168,10 @@ public class K8sRayJobFramework extends K8sRayBaseFramework<K8sRayJobRunnable> {
         V1PodSpec submitter = convertPodModel(runnable, "submitter", runnable.getSpec().getCluster().getHeadSpec(), true, false);
         submitter.setRestartPolicy("Never"); // important for job mode, to avoid unintended restarts from ray operator
 
+        Map<String, String> podLabels = new HashMap<>();
+        podLabels.putAll(clusterSpec.getHeadGroupSpec().getTemplate().getMetadata().getLabels());
+        podLabels.put("ray.io/node-type", "submitter");
+
         RayJobSpec spec = RayJobSpec.builder()
             .jobId(runnable.getId())
             .activeDeadlineSeconds(activeDeadlineSeconds)
@@ -177,7 +184,9 @@ public class K8sRayJobFramework extends K8sRayBaseFramework<K8sRayJobRunnable> {
             .ttlSecondsAfterFinished(runnable.getSpec().getTtlSecondsAfterFinished())
             .preRunningDeadlineSeconds(runnable.getSpec().getPreRunningDeadlineSeconds())
             .submissionMode(JobSubmissionMode.K8sJobMode)
-            .submitterPodTemplate(new V1PodTemplateSpec().spec(submitter))
+            .submitterPodTemplate(new V1PodTemplateSpec()
+                .metadata(new V1ObjectMeta().labels(podLabels))
+                .spec(submitter))
             .build();
         return mapper.convertValue(spec, typeRef);
     }
@@ -208,4 +217,26 @@ public class K8sRayJobFramework extends K8sRayBaseFramework<K8sRayJobRunnable> {
             return null;
         }
     }
+
+    /**
+     * Return a singleton list with the submitter pod only. It contains the relevant logs. The metrics will be associated to the submitter container.
+     */
+    @Override
+    public List<V1Pod> statusPods(List<V1Pod> pods, K8sRayJobRunnable runnable) throws K8sFrameworkException {
+        return pods.stream()
+        .filter(p -> p.getMetadata() != null && p.getMetadata().getLabels() != null && "submitter".equals(p.getMetadata().getLabels().get("ray.io/node-type")))
+        .toList();
+    }
+
+    /**
+     * Return the logs from the submitter pod only. By default, all the logs pass to the head and are collected by submitter.
+      * @param pods the list of pods to filter
+      * @param runnable the runnable context
+      * @return the logs from the submitter pod only
+     */
+    public List<CoreLog> logs(List<V1Pod> pods, K8sRayJobRunnable runnable) throws K8sFrameworkException {
+        // for job mode, we consider only logs from the submitter pod, which is the one responsible to run the job and report status
+        return super.logs(statusPods(pods, runnable), runnable);
+    }
+
 }

@@ -17,11 +17,14 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import io.kubernetes.client.custom.ContainerMetrics;
+import io.kubernetes.client.custom.PodMetrics;
 import io.kubernetes.client.custom.Quantity;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.models.V1ConfigMap;
 import io.kubernetes.client.openapi.models.V1Container;
+import io.kubernetes.client.openapi.models.V1ContainerStatus;
 import io.kubernetes.client.openapi.models.V1EnvFromSource;
 import io.kubernetes.client.openapi.models.V1EnvVar;
 import io.kubernetes.client.openapi.models.V1Job;
@@ -44,15 +47,19 @@ import io.kubernetes.client.util.generic.options.CreateOptions;
 import io.kubernetes.client.util.generic.options.DeleteOptions;
 import it.smartcommunitylabdhub.commons.exceptions.FrameworkException;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
+import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sBaseFramework;
+import it.smartcommunitylabdhub.framework.k8s.jackson.KubernetesMapper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sTemplate;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreLog;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreMetric;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreServiceType;
-import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
+import it.smartcommunitylabdhub.framework.k8s.service.K8sMetricsService;
 import it.smartcommunitylabdhub.framework.ray.model.ClusterModel;
 import it.smartcommunitylabdhub.framework.ray.model.PodModel;
 import it.smartcommunitylabdhub.framework.ray.model.WorkerGroupModel;
@@ -63,6 +70,7 @@ import it.smartcommunitylabdhub.framework.ray.runnables.K8sRayRunnable;
 import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.io.Serializable;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -71,6 +79,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -115,7 +124,7 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
      * The KubeRay operator does not accept the structured object form for
      * resource quantities.
      */
-    protected static final ObjectMapper mapper = JacksonMapper.CUSTOM_OBJECT_MAPPER.copy()
+    protected static final ObjectMapper mapper = KubernetesMapper.OBJECT_MAPPER.copy()
         .registerModule(
             new SimpleModule().addSerializer(
                 Quantity.class,
@@ -306,7 +315,7 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
                     results
                         .entrySet()
                         .stream()
-                        .collect(Collectors.toMap(Entry::getKey, e -> mapper.convertValue(e.getValue(), typeRef)))
+                        .collect(Collectors.toMap(Entry::getKey, e ->  mapper.convertValue(e, typeRef)))
                 );
             } catch (IllegalArgumentException e) {
                 log.error("error reading k8s results: {}", e.getMessage());
@@ -446,6 +455,10 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
         }
         clusterSpec.rayVersion(cluster.getVersion());
         
+
+        Map<String, String> podLabels = Collections.singletonMap("ray.io/originated-from-cr-name", crName);
+        podLabels = MapUtils.mergeMultipleMaps(podLabels, labels); //merge with runnable labels, which may contain useful info for selection and are not mutually exclusive with ray operator labels
+
         V1Service service = null;
         //head group: no context, but service and ports 
         V1PodSpec head = convertPodModel(runnable, "head", cluster.getHeadSpec(), false, true);
@@ -454,11 +467,13 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
         }   
         HeadGroupSpec headSpec = HeadGroupSpec
             .builder()
-            .template(new V1PodTemplateSpec().spec(head))
+            .template(new V1PodTemplateSpec()
+                .metadata(new V1ObjectMeta().labels(podLabels))
+                .spec(head))
             .rayStartParams(cluster.getHeadSpec().getStartParams())
             .resources(cluster.getHeadSpec().getRayResources())
             .headService(service)
-            // .serviceType(serviceType.name())
+            .serviceType(serviceType.name())
             .labels(convertLabels(cluster.getHeadSpec().getLabels()))
             .build();    
         clusterSpec.headGroupSpec(headSpec);
@@ -470,7 +485,9 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
 
             WorkerGroupSpec workerGroupSpec = WorkerGroupSpec
                 .builder()
-                .template(new V1PodTemplateSpec().spec(workerPod))
+                .template(new V1PodTemplateSpec()
+                    .metadata(new V1ObjectMeta().labels(podLabels))
+                    .spec(workerPod))
                 .groupName(worker.getName())
                 .replicas(worker.getReplicas())
                 .maxReplicas(worker.getMaxReplicas())
@@ -537,8 +554,6 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
             String crName = cr.getMetadata().getName();
             log.debug("create Ray {} for {}", getKind(), crName);
 
-            log.info("JSON for creation: {}", cr.getRaw().toString());
-
             KubernetesApiResponse<DynamicKubernetesObject> result = dynamicApi.create(
                 namespace,
                 cr,
@@ -582,7 +597,7 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
             return null;
         }
         String name = object.getMetadata().getName();
-        return "ray.io/cluster=" + name + ",ray.io/originated-from-cr-name=" + name;
+        return "ray.io/originated-from-cr-name=" + name;
     }
 
     @Override
@@ -623,24 +638,7 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
             if (pods.getItems() != null && !pods.getItems().isEmpty()) {
                 return pods.getItems();
             }
-
-            //fallback: match by ray.io/cluster only (RayJob may rename underlying cluster)
-            String fallback = "ray.io/originated-from-cr-name=" + object.getMetadata().getName();
-            V1PodList retry = coreV1Api.listNamespacedPod(
-                namespace,
-                null,
-                null,
-                null,
-                null,
-                fallback,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            );
-            return retry.getItems();
+            return Collections.emptyList();
         } catch (ApiException e) {
             log.error("Error with k8s: {}", e.getMessage());
             if (log.isTraceEnabled()) {
@@ -809,4 +807,201 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
         return podSpec;
     }
 
+    /**
+     * Extract logs for the given pods and runnable. By default, logs are extracted for all containers (including init containers) in the pod. 
+     * Subclasses may override to filter specific containers or apply other custom logic.
+     * @param pods
+     * @param runnable
+     * @return
+     * @throws K8sFrameworkException
+     */
+    public List<CoreLog> logs(List<V1Pod> pods, T runnable) throws K8sFrameworkException {
+        if (pods == null || pods.isEmpty()) {
+            return null;
+        }
+
+        if (Boolean.TRUE != collectLogs) {
+            return Collections.emptyList();
+        }
+
+        List<CoreLog> logs = new ArrayList<>();
+
+        for (V1Pod p : pods) {
+            if (p.getMetadata() != null && p.getStatus() != null) {
+                String pod = p.getMetadata().getName();
+
+                //read init-containers first
+                if (p.getStatus().getInitContainerStatuses() != null) {
+                    List<V1ContainerStatus> containers = p.getStatus().getInitContainerStatuses();
+
+                    for (V1ContainerStatus c : containers) {
+                        try {
+                            String log = coreV1Api.readNamespacedPodLog(
+                                pod,
+                                namespace,
+                                c.getName(),
+                                Boolean.FALSE,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null
+                            );
+
+                            String id = c.getContainerID() != null ? URI.create(c.getContainerID()).getHost() : null;
+
+                            logs.add(new CoreLog(pod, log, c.getName(), namespace, id));
+                        } catch (ApiException e) {
+                            //catch and skip this container's logs
+                            log.error("Error with k8s: {}", e.getMessage());
+                            if (log.isTraceEnabled()) {
+                                log.trace("k8s api response: {}", e.getResponseBody());
+                            }
+                        }
+                    }
+                }
+
+                //read container
+                if (p.getStatus().getContainerStatuses() != null) {
+                    List<V1ContainerStatus> containers = p.getStatus().getContainerStatuses();
+                    for (V1ContainerStatus c : containers) {
+                        try {
+                            String log = coreV1Api.readNamespacedPodLog(
+                                pod,
+                                namespace,
+                                c.getName(),
+                                Boolean.FALSE,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null
+                            );
+
+                            String id = c.getContainerID() != null ? URI.create(c.getContainerID()).getHost() : null;
+
+                            logs.add(new CoreLog(pod, log, c.getName(), namespace, id));
+                        } catch (ApiException e) {
+                            //catch and skip this container's logs
+                            log.error("Error with k8s: {}", e.getMessage());
+                            if (log.isTraceEnabled()) {
+                                log.trace("k8s api response: {}", e.getResponseBody());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return logs;
+    }
+
+    /**
+     * Extract metrics for the given pods and runnable. By default, metrics are aggregated at the pod level across all containers, mirroring the convention used in K8sMetricsService.
+     * The first pod/container in the status pods is used to give the name of the metric
+     * @param pods the list of pods to extract metrics from
+     * @param runnable the runnable context
+     * @return the list of extracted metrics
+     * @throws K8sFrameworkException if an error occurs while extracting metrics
+     */
+    public List<CoreMetric> metrics(List<V1Pod> pods, T runnable) throws K8sFrameworkException {
+        if (pods == null || pods.isEmpty()) {
+            return null;
+        }
+
+        if (Boolean.TRUE != collectMetrics) {
+            return Collections.emptyList();
+        }
+
+        List<V1Pod> statusPods = statusPods(pods, runnable);
+        if (statusPods == null || statusPods.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        String name = null, containerName = null;
+        V1Pod firstStatusPod = statusPods.get(0);
+        if (firstStatusPod.getMetadata() != null && firstStatusPod.getMetadata().getName() != null) {
+            name = firstStatusPod.getMetadata().getName();
+            containerName = firstStatusPod.getSpec() != null && firstStatusPod.getSpec().getContainers() != null && !firstStatusPod.getSpec().getContainers().isEmpty()
+                ? firstStatusPod.getSpec().getContainers().get(0).getName()
+                : null;
+        }
+
+        try {
+            List<PodMetrics> filtered = new ArrayList<>();
+            String latestTimestamp = null;
+            String latestWindow = null;
+
+            // pod names
+            Set<String> podNames = pods.stream()
+                .filter(p -> p.getMetadata() != null && p.getMetadata().getName() != null)
+                .map(p -> p.getMetadata().getName()).collect(Collectors.toSet());
+
+            // pod metrics for the identified pods    
+            List<PodMetrics> podMetrics = metricsApi
+                .getPodMetrics(namespace)
+                .getItems().stream()
+                .filter(m -> m.getMetadata() != null && podNames.contains(m.getMetadata().getName()))
+                .collect(Collectors.toList());
+
+            // aggregate usage across all identified pods/containers
+            ContainerMetrics aggregated = new ContainerMetrics();
+            aggregated.setUsage(new HashMap<>());
+            aggregated.setName(containerName != null ? containerName : "aggregate");
+            for (PodMetrics m : podMetrics) {
+                // skip empty
+                if (m.getContainers() == null) {
+                    continue;
+                }
+                // pick first container
+                if (podNames.contains(m.getMetadata().getName())) {
+                    filtered.add(m);
+                    podNames.remove(m.getMetadata().getName());
+                }
+            
+                // latest timestamp and window across all pods, mirroring the convention used in K8sMetricsService
+                if (m.getTimestamp() != null) {
+                    if (latestTimestamp == null || m.getTimestamp().compareTo(latestTimestamp) > 0 && m.getWindow() != null) {
+                        latestTimestamp = m.getTimestamp();
+                        latestWindow = m.getWindow();
+                    }
+                }
+            }
+            K8sMetricsService.mergePodMetrics(aggregated, filtered);
+            //track number of pods aggregated, mirroring the convention used in K8sMetricsService
+            return Collections.singletonList(
+                new CoreMetric(
+                    name != null ? name : "aggregate",
+                    Collections.singletonList(aggregated),
+                    latestTimestamp,
+                    latestWindow,
+                    namespace
+                )
+            );
+        } catch (ApiException e) {
+            log.error("Error with k8s: {}", e.getMessage());
+            if (log.isTraceEnabled()) {
+                log.trace("k8s api response: {}", e.getResponseBody());
+            }
+
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+        }
+    }
+
+    /**
+     * Should return V1Pod list  with objects used as log and metrics containers
+     * @param pods the list of pods to filter
+     * @param runnable the runnable context
+     * @return the filtered list of pods
+     * @throws K8sFrameworkException
+     */
+    public List<V1Pod> statusPods(List<V1Pod> pods, T runnable) throws K8sFrameworkException {
+        return pods;
+    }
 }

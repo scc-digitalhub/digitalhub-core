@@ -11,11 +11,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
-import it.smartcommunitylabdhub.framework.k8s.objects.CoreResource;
-import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.runtime.ray.RayRuntime;
 import java.io.Serializable;
-import java.util.List;
 import java.util.Map;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -47,86 +44,47 @@ public class RayJobTaskSpec extends K8sFunctionTaskBaseSpec {
      * When omitted, the runtime derives it from the function source code
      * (e.g. {@code python /shared/main.py}).
      */
-    @Schema(title = "fields.ray.entrypoint.title", description = "fields.ray.entrypoint.description")
-    private String entrypoint;
+    // @Schema(title = "fields.ray.entrypoint.title", description = "fields.ray.entrypoint.description")
+    // private String entrypoint;
 
     /**
      * Optional selector to attach the job to an existing RayCluster instead of
      * spawning a new one. When set, the cluster spec is ignored by the operator.
      */
-    @JsonProperty("cluster_selector")
-    @Schema(title = "fields.ray.clusterSelector.title", description = "fields.ray.clusterSelector.description")
-    private Map<String, String> clusterSelector;
-
-    /**
-     * Optional override for the ray version reported in the cluster spec.
-     */
-    @JsonProperty("ray_version")
-    @Schema(title = "fields.ray.version.title", description = "fields.ray.version.description")
-    private String rayVersion;
-
-    /**
-     * Optional override for the head pod image. Falls back to the function image,
-     * then to the runtime default.
-     */
-    @JsonProperty("head_image")
-    @Schema(title = "fields.ray.headImage.title", description = "fields.ray.headImage.description")
-    private String headImage;
-
-    /**
-     * Optional override for the worker pod image. Falls back to the function
-     * image, then to the runtime worker default, then to {@link #headImage}.
-     */
-    @JsonProperty("worker_image")
-    @Schema(title = "fields.ray.workerImage.title", description = "fields.ray.workerImage.description")
-    private String workerImage;
+    // @JsonProperty("cluster_selector")
+    // @Schema(title = "fields.ray.clusterSelector.title", description = "fields.ray.clusterSelector.description")
+    // private Map<String, String> clusterSelector;
 
     /**
      * Number of worker pod replicas. Defaults to {@code 1} when not provided.
      */
-    @JsonProperty("worker_replicas")
-    @Schema(title = "fields.ray.workerReplicas.title", description = "fields.ray.workerReplicas.description")
-    private Integer workerReplicas;
+    @JsonProperty("replicas")
+    @Schema(title = "fields.ray.replicas.title", description = "fields.ray.replicas.description")
+    private Integer replicas;
 
     /**
      * Optional minimum number of worker replicas. Defaults to {@code 1} when not
      * provided.
      */
-    @JsonProperty("min_worker_replicas")
-    @Schema(title = "fields.ray.minWorkerReplicas.title", description = "fields.ray.minWorkerReplicas.description")
-    private Integer minWorkerReplicas;
+    @JsonProperty("min_replicas")
+    @Schema(title = "fields.ray.minReplicas.title", description = "fields.ray.minReplicas.description")
+    private Integer minReplicas;
 
     /**
      * Optional maximum number of worker replicas. Defaults to {@code 1} when not
      * provided.
      */
-    @JsonProperty("max_worker_replicas")
-    @Schema(title = "fields.ray.maxWorkerReplicas.title", description = "fields.ray.maxWorkerReplicas.description")
-    private Integer maxWorkerReplicas;
+    @JsonProperty("max_replicas")
+    @Schema(title = "fields.ray.maxReplicas.title", description = "fields.ray.maxReplicas.description")
+    private Integer maxReplicas;
 
     /**
-     * Optional resource requests/limits for worker pods. The inherited
+     * Optional resource requests/limits for head pods. The inherited
      * {@code resources} field applies to the head pod.
      */
-    @JsonProperty("worker_resources")
-    @Schema(title = "fields.ray.workerResources.title", description = "fields.ray.workerResources.description")
-    private CoreResource workerResources;
-
-    /**
-     * Optional volumes mounted on worker pods. The inherited {@code volumes}
-     * field applies to the head pod.
-     */
-    @JsonProperty("worker_volumes")
-    @Schema(title = "fields.ray.workerVolumes.title", description = "fields.ray.workerVolumes.description")
-    private List<CoreVolume> workerVolumes;
-
-    /**
-     * Optional pod template/profile for worker pods. The inherited
-     * {@code profile} field applies to the head pod.
-     */
-    @JsonProperty("worker_profile")
-    @Schema(title = "fields.ray.workerProfile.title", description = "fields.ray.workerProfile.description")
-    private String workerProfile;
+    // @JsonProperty("head_resources")
+    // @Schema(title = "fields.ray.headResources.title", description = "fields.ray.headResources.description")
+    // private CoreResource headResources;
 
     public RayJobTaskSpec(Map<String, Serializable> data) {
         configure(data);
@@ -138,14 +96,11 @@ public class RayJobTaskSpec extends K8sFunctionTaskBaseSpec {
 
         RayJobTaskSpec spec = mapper.convertValue(data, RayJobTaskSpec.class);
 
-        this.workerProfile = spec.getWorkerProfile();
-        this.entrypoint = spec.getEntrypoint();
-        this.clusterSelector = spec.getClusterSelector();
-        this.rayVersion = spec.getRayVersion();
-        this.headImage = spec.getHeadImage();
-        this.workerImage = spec.getWorkerImage();
-        this.workerReplicas = spec.getWorkerReplicas();
-        this.workerResources = spec.getWorkerResources();
-        this.workerVolumes = spec.getWorkerVolumes();
+        // this.entrypoint = spec.getEntrypoint();
+        // this.clusterSelector = spec.getClusterSelector();
+        this.replicas = spec.getReplicas();
+        this.minReplicas = spec.getMinReplicas();
+        this.maxReplicas = spec.getMaxReplicas();
+        // this.headResources = spec.getHeadResources();
     }
 }

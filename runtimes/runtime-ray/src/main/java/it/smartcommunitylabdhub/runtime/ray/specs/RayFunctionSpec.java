@@ -59,13 +59,20 @@ public class RayFunctionSpec extends FunctionBaseSpec {
     @Schema(title = "fields.python.requirements.title", description = "fields.python.requirements.description")
     private List<String> requirements;
 
-    @JsonProperty("dependency_format")
-    @Schema(title = "fields.ray.dependencyFormat.title", description = "fields.ray.dependencyFormat.description")
-    private RayDependencyFormat dependencyFormat;
+    /**
+     * Optional override for the ray version reported in the cluster spec.
+     */
+    @JsonProperty("ray_version")
+    @Schema(title = "fields.ray.version.title", description = "fields.ray.version.description")
+    private String rayVersion;
 
-    @JsonProperty("dependency_spec")
-    @Schema(title = "fields.ray.dependencySpec.title", description = "fields.ray.dependencySpec.description")
-    private Serializable dependencySpec;
+    // @JsonProperty("dependency_format")
+    // @Schema(title = "fields.ray.dependencyFormat.title", description = "fields.ray.dependencyFormat.description")
+    // private RayDependencyFormat dependencyFormat;
+
+    // @JsonProperty("dependency_spec")
+    // @Schema(title = "fields.ray.dependencySpec.title", description = "fields.ray.dependencySpec.description")
+    // private Serializable dependencySpec;
 
     public RayFunctionSpec(Map<String, Serializable> data) {
         configure(data);
@@ -81,8 +88,9 @@ public class RayFunctionSpec extends FunctionBaseSpec {
         this.image = spec.getImage();
         this.baseImage = spec.getBaseImage();
         this.requirements = spec.getRequirements();
-        this.dependencyFormat = spec.getDependencyFormat();
-        this.dependencySpec = spec.getDependencySpec();
+        this.rayVersion = spec.getRayVersion();
+        // this.dependencyFormat = spec.getDependencyFormat();
+        // this.dependencySpec = spec.getDependencySpec();
     }
 
     public static RayFunctionSpec with(Map<String, Serializable> data) {

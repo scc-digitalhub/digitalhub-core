@@ -88,58 +88,35 @@ public abstract class K8sRayBaseMonitor<T extends K8sRayRunnable<?>> extends K8s
                 log.error("error collecting events for {}: {}", runnable.getId(), e.getMessage());
             }
 
-            //pods
-            List<V1Pod> pods = null;
-            try {
-                pods = framework.pods(cr);
-                if (pods != null) {
-                    if (events == null) {
-                        events = new ArrayList<>();
-                    }
-                    for (V1Pod pod : pods) {
-                        try {
-                            List<EventsV1Event> podEvents = framework.events(pod);
-                            if (podEvents != null && !podEvents.isEmpty()) {
-                                events.addAll(podEvents);
-                            }
-                        } catch (K8sFrameworkException e1) {
-                            log.error(
-                                "error collecting events for pod {}: {}",
-                                pod.getMetadata() != null ? pod.getMetadata().getName() : "?",
-                                e1.getMessage()
-                            );
-                        }
-                    }
-                }
-            } catch (K8sFrameworkException e1) {
-                log.error("error collecting pods for Ray CR {}: {}", runnable.getId(), e1.getMessage());
-            }
-
             if (events != null) {
                 runnable.setEvents(new ArrayList<>(mapper.convertValue(events, arrayRef)));
             }
 
+            // all pods related to the CR
+            List<V1Pod> pods = framework.pods(cr);
+            // only the pods relevant for status, logs and metrics
+            List<V1Pod> statusPods = framework.statusPods(pods, runnable);
+            // need to include log pods in results for compatibility of the representation
             try {
                 runnable.setResults(
                     MapUtils.mergeMultipleMaps(
                         runnable.getResults(),
-                        Map.of("pods", pods != null ? mapper.convertValue(pods, arrayRef) : new ArrayList<>())
+                        Map.of("pods", statusPods != null ? mapper.convertValue(statusPods, arrayRef) : new ArrayList<>())
                     )
                 );
             } catch (IllegalArgumentException e) {
                 log.error("error reading k8s results: {}", e.getMessage());
             }
-
             //logs
             try {
-                runnable.setLogs(framework.logs(cr));
+                runnable.setLogs(framework.logs(pods, runnable));
             } catch (K8sFrameworkException e1) {
                 log.error("error collecting logs for {}: {}", runnable.getId(), e1.getMessage());
             }
 
             //metrics
             try {
-                runnable.setMetrics(framework.metrics(cr));
+                runnable.setMetrics(framework.metrics(pods, runnable));
             } catch (K8sFrameworkException e1) {
                 log.error("error collecting metrics for {}: {}", runnable.getId(), e1.getMessage());
             }
