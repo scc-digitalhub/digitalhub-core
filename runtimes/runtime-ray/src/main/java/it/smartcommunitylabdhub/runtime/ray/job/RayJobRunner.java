@@ -7,12 +7,15 @@
 package it.smartcommunitylabdhub.runtime.ray.job;
 
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
+import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
+import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreResource;
 import it.smartcommunitylabdhub.framework.ray.model.ClusterModel;
 import it.smartcommunitylabdhub.framework.ray.model.PodModel;
 import it.smartcommunitylabdhub.framework.ray.model.RayJobModel;
@@ -25,7 +28,12 @@ import it.smartcommunitylabdhub.runtime.ray.model.RayDependencyFormat;
 import it.smartcommunitylabdhub.runtime.ray.model.RaySourceCode;
 import it.smartcommunitylabdhub.runtime.ray.specs.RayFunctionSpec;
 import jakarta.annotation.Nullable;
+
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.Serializable;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -36,9 +44,17 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import com.github.mustachejava.DefaultMustacheFactory;
+import com.github.mustachejava.Mustache;
+import com.github.mustachejava.MustacheException;
+import com.github.mustachejava.MustacheFactory;
 
 /**
  * Builds a {@link K8sRayJobRunnable} for the {@code ray+job} task.
@@ -67,12 +83,30 @@ public class RayJobRunner {
 
     private final RayProperties properties;
     private final K8sBuilderHelper k8sBuilderHelper;
+    private Mustache handlerTemplate;
+
+    private CoreResource defaultCoreResource;
 
     public RayJobRunner(RayProperties properties, @Nullable K8sBuilderHelper k8sBuilderHelper) {
         this.properties = properties;
         this.k8sBuilderHelper = k8sBuilderHelper;
+        setHandlerTemplate(new ClassPathResource("runtime-ray/docker/_job_handler.py"));
+        defaultCoreResource = new CoreResource();
+        defaultCoreResource.setCpu(properties.getHeadCpu() != null ? properties.getHeadCpu() : "1");
+        defaultCoreResource.setMem(properties.getHeadMemory() != null ? properties.getHeadMemory() : "2Gi");
+        defaultCoreResource.setDisk(properties.getHeadDiskSize() != null ? properties.getHeadDiskSize() : "2Gi");
     }
 
+
+    public void setHandlerTemplate(Resource resource) {
+        try {
+            log.debug("Loading template handler from {}", resource.getURI().toURL());
+            MustacheFactory mustacheFactory = new NoEncodingMustacheFactory();
+            this.handlerTemplate = mustacheFactory.compile(new InputStreamReader(resource.getInputStream()), "handler");
+        } catch (IOException ioe) {
+            throw new CoreRuntimeException("error with reading handler template for runtime");
+        }
+    }
     public K8sRayJobRunnable produce(Run run, Map<String, String> secretData) {
         RayJobRunSpec runSpec = new RayJobRunSpec(run.getSpec());
         RayJobTaskSpec taskSpec = runSpec.getTaskJobSpec();
@@ -80,13 +114,8 @@ public class RayJobRunner {
         RayFunctionSpec functionSpec = runSpec.getFunctionSpec();
 
         //resolve images: head/worker overrides on task, then function image, then properties defaults
-        String headImage = firstNonBlank(taskSpec.getHeadImage(), functionSpec.getImage(), properties.getImage());
-        String workerImage = firstNonBlank(
-            taskSpec.getWorkerImage(),
-            functionSpec.getImage(),
-            properties.getWorkerImage(),
-            headImage
-        );
+        String headImage = firstNonBlank(/*taskSpec.getHeadImage(),*/ functionSpec.getImage(), properties.getImage());
+        String workerImage = firstNonBlank(/*taskSpec.getWorkerImage(),*/ functionSpec.getImage(), properties.getWorkerImage(), headImage);
         if (!StringUtils.hasText(headImage)) {
             throw new IllegalArgumentException("No ray image configured: set runtime.ray.image or function.image");
         }
@@ -100,21 +129,37 @@ public class RayJobRunner {
         List<ContextSource> contextSources = buildContextSources(functionSpec);
 
         //resolve entrypoint: explicit override wins, otherwise derive from source code
-        String entrypoint = StringUtils.hasText(taskSpec.getEntrypoint())
-            ? taskSpec.getEntrypoint()
-            : deriveEntrypoint(functionSpec.getSource());
+        // String entrypoint = StringUtils.hasText(taskSpec.getEntrypoint())
+        //     ? taskSpec.getEntrypoint()
+        //     : deriveEntrypoint(functionSpec.getSource());
+        String entrypoint = deriveEntrypoint(functionSpec.getSource());
+
+        String handlerMethod = deriveHandlerMethod(functionSpec.getSource());
+        if (handlerMethod != null) {
+            // and use wrapper python as entrypoint instead of the raw source to inject core references
+            String handlerFile = buildHandler(functionSpec.getSource());
+
+            contextSources.add(
+                ContextSource
+                .builder()
+                .name("handler.py")
+                .base64(Base64.getEncoder().encodeToString(handlerFile.getBytes(StandardCharsets.UTF_8)))
+                .build()
+            );
+            entrypoint = "python handler.py";
+        }
 
         //resolve dependencies → ray runtime env
         Dependencies deps = resolveDependencies(functionSpec);
 
         //assemble cluster: one head + one worker group
-        ClusterModel cluster = buildCluster(taskSpec, headImage, workerImage);
+        ClusterModel cluster = buildCluster(taskSpec, headImage, workerImage, functionSpec.getRayVersion());
 
         //assemble ray spec
         RayJobModel raySpec = new RayJobModel();
         raySpec.setCluster(cluster);
         raySpec.setEntrypoint(entrypoint);
-        raySpec.setClusterSelector(taskSpec.getClusterSelector());
+        // raySpec.setClusterSelector(taskSpec.getClusterSelector());
         raySpec.setDependencyFormat(deps.format);
         raySpec.setDependencySpec(deps.spec);
         raySpec.setBackoffLimit(properties.getBackoffLimit());
@@ -149,16 +194,14 @@ public class RayJobRunner {
 
     // ---------- cluster ----------
 
-    private ClusterModel buildCluster(RayJobTaskSpec taskSpec, String headImage, String workerImage) {
+    private ClusterModel buildCluster(RayJobTaskSpec taskSpec, String headImage, String workerImage, String version) {
         //head pod: inherited k8s properties (resources, volumes) apply here
         PodModel head = PodModel
             .builder()
             .image(headImage)
-            .resources(taskSpec.getResources() != null && k8sBuilderHelper != null
-                ? k8sBuilderHelper.convertResources(taskSpec.getResources())
-                : null)
+            .resources(k8sBuilderHelper.convertResources(defaultCoreResource))
             .volumes(taskSpec.getVolumes())
-            .template(taskSpec.getProfile())
+            .template(properties.getHeadProfile() != null ? properties.getHeadProfile() : null)
             .startParams(properties.getHeadStartParams())
             .rayResources(properties.getHeadRayResources())
             .build();
@@ -167,18 +210,18 @@ public class RayJobRunner {
         PodModel worker = PodModel
             .builder()
             .image(workerImage)
-            .resources(taskSpec.getWorkerResources() != null && k8sBuilderHelper != null
-                ? k8sBuilderHelper.convertResources(taskSpec.getWorkerResources())
+            .resources(taskSpec.getResources() != null && k8sBuilderHelper != null
+                ? k8sBuilderHelper.convertResources(taskSpec.getResources())
                 : null)
-            .volumes(taskSpec.getWorkerVolumes())
-            .template(taskSpec.getWorkerProfile())
+            .volumes(taskSpec.getVolumes())
+            .template(taskSpec.getProfile() != null ? taskSpec.getProfile() : properties.getWorkerProfile())
             .startParams(properties.getWorkerStartParams())
             .rayResources(properties.getWorkerRayResources())
             .build();
 
-        int replicas = Optional.ofNullable(taskSpec.getWorkerReplicas()).orElse(DEFAULT_WORKER_REPLICAS);
-        int minReplicas = Optional.ofNullable(taskSpec.getMinWorkerReplicas()).orElse(replicas);
-        int maxReplicas = Optional.ofNullable(taskSpec.getMaxWorkerReplicas()).orElse(replicas);
+        int replicas = Optional.ofNullable(taskSpec.getReplicas()).orElse(DEFAULT_WORKER_REPLICAS);
+        int minReplicas = Optional.ofNullable(taskSpec.getMinReplicas()).orElse(replicas);
+        int maxReplicas = Optional.ofNullable(taskSpec.getMaxReplicas()).orElse(replicas);
 
         WorkerGroupModel workerGroup = WorkerGroupModel
             .builder()
@@ -189,13 +232,13 @@ public class RayJobRunner {
             .workerSpec(worker)
             .build();
 
-        String version = StringUtils.hasText(taskSpec.getRayVersion())
-            ? taskSpec.getRayVersion()
+        String finalVersion = StringUtils.hasText(version)
+            ? version
             : properties.getVersion();
 
         return ClusterModel
             .builder()
-            .version(version)
+            .version(finalVersion)
             .headSpec(head)
             .workerGroups(new ArrayList<>(List.of(workerGroup)))
             .build();
@@ -234,6 +277,7 @@ public class RayJobRunner {
         }
         try {
             UriComponents uri = UriComponentsBuilder.fromUriString(source.getSource()).build();
+            // when the source is a simple local path, use it as-is; otherwise fallback to default
             if (uri.getScheme() == null && uri.getPath() != null) {
                 String p = uri.getPath();
                 if (p.startsWith(".")) {
@@ -242,6 +286,18 @@ public class RayJobRunner {
                 if (StringUtils.hasText(p)) {
                     return p.startsWith("/") ? p.substring(1) : p;
                 }
+            // look at handler
+            } else if (StringUtils.hasText(source.getHandler())) {
+                // handler may be in the form path/to/file.py or module.submodule:func; in both cases we take the file/module part and convert to a path
+                String file = source.getHandler();
+                if (file.endsWith(".py")) {
+                    return file;
+                }
+                if (file.contains(":")) {
+                    file = file.split(":")[0];
+                }
+                file = file.replaceAll("\\.", "/");
+                return file + ".py";
             }
         } catch (IllegalArgumentException e) {
             //fallthrough to default
@@ -255,6 +311,19 @@ public class RayJobRunner {
         return "python "  + file;
     }
 
+
+    private String deriveHandlerMethod(@Nullable RaySourceCode source) {
+        if (source != null && StringUtils.hasText(source.getHandler())) {
+            // handler may be in the form path/to/file.py or module.submodule:func; in both cases we take the func part if present
+            String handler = source.getHandler();
+            if (handler.endsWith(".py")) {
+                return null;
+            }
+            return handler;
+        }
+        return null;
+    }
+
     private List<ContextSource> buildContextSources(RayFunctionSpec functionSpec) {
         List<ContextSource> sources = new ArrayList<>();
 
@@ -264,19 +333,19 @@ public class RayJobRunner {
         }
 
         //emit a requirements.txt only when no explicit dependency_spec is provided
-        if (functionSpec.getDependencyFormat() == null || functionSpec.getDependencySpec() == null) {
-            List<String> reqs = mergedRequirements(functionSpec);
-            if (!reqs.isEmpty()) {
-                String content = String.join("\n", reqs);
-                sources.add(
-                    ContextSource
-                        .builder()
-                        .name(REQUIREMENTS_FILE)
-                        .base64(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)))
-                        .build()
-                );
-            }
+        // if (functionSpec.getDependencyFormat() == null || functionSpec.getDependencySpec() == null)
+        List<String> reqs = mergedRequirements(functionSpec);
+        if (!reqs.isEmpty()) {
+            String content = String.join("\n", reqs);
+            sources.add(
+                ContextSource
+                    .builder()
+                    .name(REQUIREMENTS_FILE)
+                    .base64(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)))
+                    .build()
+            );
         }
+        
 
         return sources;
     }
@@ -296,12 +365,33 @@ public class RayJobRunner {
         return List.of();
     }
 
+    protected String buildHandler(RaySourceCode source) {
+        if (this.handlerTemplate == null) {
+            throw new CoreRuntimeException("handler template not set");
+        }
+
+        try {
+            StringWriter writer = new StringWriter();
+            Mustache handlerMustache = this.handlerTemplate;
+            handlerMustache.execute(
+                writer,
+                Collections.singletonMap("source", JacksonMapper.CUSTOM_OBJECT_MAPPER.writeValueAsString(source))
+            );
+            writer.flush();
+
+            return writer.toString();
+        } catch (IOException ioe) {
+            throw new CoreRuntimeException("error with building handler template", ioe);
+        }
+    }
+
+    
     // ---------- dependencies ----------
 
     private Dependencies resolveDependencies(RayFunctionSpec functionSpec) {
-        if (functionSpec.getDependencyFormat() != null && functionSpec.getDependencySpec() != null) {
-            return new Dependencies(functionSpec.getDependencyFormat().value(), functionSpec.getDependencySpec());
-        }
+        // if (functionSpec.getDependencyFormat() != null && functionSpec.getDependencySpec() != null) {
+        //     return new Dependencies(functionSpec.getDependencyFormat().value(), functionSpec.getDependencySpec());
+        // }
 
         List<String> reqs = mergedRequirements(functionSpec);
         if (reqs.isEmpty()) {
@@ -347,6 +437,19 @@ public class RayJobRunner {
         Dependencies(String format, Serializable spec) {
             this.format = format;
             this.spec = spec;
+        }
+    }
+
+    public class NoEncodingMustacheFactory extends DefaultMustacheFactory {
+        @Override
+        public void encode(String value, Writer writer) {
+            try {
+                //write string as is, no encoding
+                //this is needed to avoid encoding of json strings
+                writer.write(value);
+            } catch (IOException e) {
+                throw new MustacheException(e);
+            }
         }
     }
 }

@@ -22,14 +22,12 @@ import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRu
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.ray.RayRuntime;
 import it.smartcommunitylabdhub.runtime.ray.config.RayProperties;
-import it.smartcommunitylabdhub.runtime.ray.model.RayDependencyFormat;
 import it.smartcommunitylabdhub.runtime.ray.model.RaySourceCode;
 import it.smartcommunitylabdhub.runtime.ray.specs.RayFunctionSpec;
 import jakarta.annotation.Nullable;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.Serializable;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -236,6 +234,7 @@ public class RayBuildRunner {
     }
 
     private void appendDependencies(DockerfileGeneratorFactory df, RayFunctionSpec functionSpec, String home) {
+        /** TODO disabled for simplicity
         //explicit dependency spec wins
         if (functionSpec.getDependencyFormat() != null && functionSpec.getDependencySpec() != null) {
             RayDependencyFormat fmt = functionSpec.getDependencyFormat();
@@ -270,6 +269,7 @@ public class RayBuildRunner {
             }
             return;
         }
+        */
 
         //otherwise merge runtime defaults + function requirements into a single
         //pip install pulled from the staged requirements.txt
@@ -279,7 +279,7 @@ public class RayBuildRunner {
         }
     }
 
-    private static String joinPackages(List<?> list) {
+    protected String joinPackages(List<?> list) {
         StringBuilder sb = new StringBuilder();
         for (Object o : list) {
             if (o == null) {
@@ -343,18 +343,17 @@ public class RayBuildRunner {
         }
 
         //emit requirements.txt only when no explicit dependency_spec is provided
-        if (functionSpec.getDependencyFormat() == null || functionSpec.getDependencySpec() == null) {
-            List<String> reqs = mergedRequirements(functionSpec);
-            if (!reqs.isEmpty()) {
-                String content = String.join("\n", reqs);
-                sources.add(
-                    ContextSource
-                        .builder()
-                        .name(REQUIREMENTS_FILE)
-                        .base64(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)))
-                        .build()
-                );
-            }
+        // if (functionSpec.getDependencyFormat() == null || functionSpec.getDependencySpec() == null) 
+        List<String> reqs = mergedRequirements(functionSpec);
+        if (!reqs.isEmpty()) {
+            String content = String.join("\n", reqs);
+            sources.add(
+                ContextSource
+                    .builder()
+                    .name(REQUIREMENTS_FILE)
+                    .base64(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)))
+                    .build()
+            );
         }
 
         return sources;

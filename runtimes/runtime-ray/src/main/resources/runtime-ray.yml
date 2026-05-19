@@ -7,12 +7,17 @@ runtime:
     user-id: ${RUNTIME_RAY_USER_ID:${kubernetes.security.user}}
     group-id: ${RUNTIME_RAY_GROUP_ID:${kubernetes.security.group}}
     passwd-template: classpath:/runtime-ray/docker/passwd.template
-    dependencies: ${RUNTIME_RAY_DEPENDENCIES:digitalhub[full]}
+    dependencies: ${RUNTIME_RAY_DEPENDENCIES:digitalhub[full],digitalhub-runtime-python}
     dependency-format: ${RUNTIME_RAY_DEPENDENCY_FORMAT:pip}
-    head-start-params: {}
+    head-start-params: {num-cpus: "0"}
     head-ray-resources: {}
     worker-start-params: {}
     worker-ray-resources: {}
+    head-profile: ${RUNTIME_RAY_HEAD_PROFILE:}
+    head-memory: ${RUNTIME_RAY_HEAD_MEMORY:8Gi}
+    head-cpu: ${RUNTIME_RAY_HEAD_CPU:2}
+    head-disk-size: ${RUNTIME_RAY_HEAD_DISK_SIZE:2Gi}
+    worker-profile: ${RUNTIME_RAY_WORKER_PROFILE:}
     worker-group-name: ${RUNTIME_RAY_WORKER_GROUP_NAME:workers}
     backoff-limit: ${RUNTIME_RAY_BACKOFF_LIMIT:0}
     shutdown-after-job-finishes: ${RUNTIME_RAY_SHUTDOWN_AFTER_JOB_FINISHES:true}
