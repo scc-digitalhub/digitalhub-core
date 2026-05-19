@@ -20,7 +20,7 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.lifecycle;
+package it.smartcommunitylabdhub.core.lifecycle;
 
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
@@ -53,13 +53,12 @@ public class BaseEntityStateBuilder<D extends BaseDTO & StatusDTO> implements Fs
     public BaseEntityStateBuilder(@NotNull String state, @NotNull List<Transition<String, String, D>> txs) {
         this.state = state;
         this.txs = txs;
-        this.nextStates =
-            txs
-                .stream()
-                .map(t -> Pair.of(t.getEvent(), t.getNextState()))
-                .toList()
-                .stream()
-                .collect(Collectors.toSet());
+        this.nextStates = txs
+            .stream()
+            .map(t -> Pair.of(t.getEvent(), t.getNextState()))
+            .toList()
+            .stream()
+            .collect(Collectors.toSet());
     }
 
     @Override
@@ -74,8 +73,8 @@ public class BaseEntityStateBuilder<D extends BaseDTO & StatusDTO> implements Fs
                 if (
                     txs
                         .stream()
-                        .noneMatch(t ->
-                            t.getEvent().equals(pair.getFirst()) && t.getNextState().equals(pair.getSecond())
+                        .noneMatch(
+                            t -> t.getEvent().equals(pair.getFirst()) && t.getNextState().equals(pair.getSecond())
                         )
                 ) {
                     txs.add(

@@ -47,7 +47,7 @@ public class RunOperationsListener {
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void receive(EntityOperation<Run> event) {
+    public void dispatch(EntityOperation<Run> event) {
         if (event.getDto() == null) {
             return;
         }
@@ -55,7 +55,7 @@ public class RunOperationsListener {
         if (entityOperationsChannel != null) {
             entityOperationsChannel.send(MessageBuilder.withPayload(event).build());
         } else {
-            log.warn("entityEventChannel not wired");
+            log.warn("entityOperationsChannel not wired");
         }
     }
 }

@@ -439,7 +439,7 @@ public abstract class BaseEntityServiceImpl<
             if (getLifecycleManager() != null && !"DELETED".equals(curState)) {
                 //delegate to lifecycle manager, will perform cascade effect on success
                 log.debug("handle delete via lifecycle manager for {}", id);
-                lifecycleManager.perform(e, "DELETE", cascade, (dto, r) -> {
+                lifecycleManager.perform(e, "DELETE", null, (dto, r) -> {
                     try {
                         if (Boolean.TRUE.equals(cascade) && getFinalizer() != null) {
                             if (operationsPublisher != null) {

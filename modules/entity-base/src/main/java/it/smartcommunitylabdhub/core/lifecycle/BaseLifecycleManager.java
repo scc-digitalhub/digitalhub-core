@@ -20,7 +20,7 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.lifecycle;
+package it.smartcommunitylabdhub.core.lifecycle;
 
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
@@ -36,10 +36,13 @@ import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.status.Status;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
+import it.smartcommunitylabdhub.core.events.EntityOperationsPublisher;
 import it.smartcommunitylabdhub.events.EntityAction;
 import it.smartcommunitylabdhub.events.EntityOperation;
 import it.smartcommunitylabdhub.fsm.Fsm;
 import it.smartcommunitylabdhub.fsm.exceptions.InvalidTransitionException;
+import it.smartcommunitylabdhub.lifecycle.AbstractLifecycleManager;
+import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
@@ -62,7 +65,8 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusDTO & MetadataDTO>
     extends AbstractLifecycleManager<D>
-    implements LifecycleManager<D> {
+    implements LifecycleManager<D>
+{
 
     protected final Class<D> typeClass;
 
@@ -71,6 +75,7 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
     protected ProcessorRegistry<D, Status> statusProcessorRegistry;
 
     protected Fsm.Factory<String, String, D> fsmFactory;
+    protected EntityOperationsPublisher operationsPublisher;
 
     private Executor processorExecutor;
 
@@ -88,6 +93,11 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
     @Autowired(required = false)
     public void setFsmFactory(Fsm.Factory<String, String, D> fsmFactory) {
         this.fsmFactory = fsmFactory;
+    }
+
+    @Autowired(required = false)
+    public void setOperationsPublisher(EntityOperationsPublisher operationsPublisher) {
+        this.operationsPublisher = operationsPublisher;
     }
 
     @Autowired(required = false)
@@ -209,8 +219,7 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         }
 
         //publish new event
-        LifecycleEvent<D> e = LifecycleEvent
-            .<D>builder()
+        LifecycleEvent<D> e = LifecycleEvent.<D>builder()
             .id(res.getId())
             .kind(res.getKind())
             .user(res.getUser())
@@ -271,8 +280,7 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         }
 
         //publish new event
-        LifecycleEvent<D> e = LifecycleEvent
-            .<D>builder()
+        LifecycleEvent<D> e = LifecycleEvent.<D>builder()
             .id(res.getId())
             .kind(res.getKind())
             .user(res.getUser())
@@ -298,71 +306,68 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         @Nullable BiConsumer<D, R> effect
     ) {
         //execute update op with locking
-        return exec(
-            new EntityOperation<>(dto, EntityAction.UPDATE),
-            d -> {
-                try {
-                    //build state machine on current context
-                    //this will isolate the DTO from external modifications
-                    Fsm<String, String, D> fsm = fsm(d);
+        return exec(new EntityOperation<>(dto, EntityAction.UPDATE), d -> {
+            try {
+                //build state machine on current context
+                //this will isolate the DTO from external modifications
+                Fsm<String, String, D> fsm = fsm(d);
 
-                    //perform via FSM
-                    Optional<R> output = logic.apply(fsm);
-                    String state = fsm.getCurrentState();
-                    D context = fsm.getContext();
+                //perform via FSM
+                Optional<R> output = logic.apply(fsm);
+                String state = fsm.getCurrentState();
+                D context = fsm.getContext();
 
-                    //update status from fsm output
-                    Map<String, Serializable> baseStatus = Map.of("state", state);
-                    //merge action context into spec
-                    //NOTE: we let transition fully modify metadata
-                    d.setMetadata(context.getMetadata());
+                //update status from fsm output
+                Map<String, Serializable> baseStatus = Map.of("state", state);
+                //merge action context into spec
+                //NOTE: we let transition fully modify metadata
+                d.setMetadata(context.getMetadata());
 
-                    //merge action context into spec
-                    //NOTE: we let transition fully modify spec
-                    //TODO evaluate enforcing spec compliance and merging with old values
-                    d.setSpec(context.getSpec());
+                //merge action context into spec
+                //NOTE: we let transition fully modify spec
+                //TODO evaluate enforcing spec compliance and merging with old values
+                d.setSpec(context.getSpec());
 
-                    //merge action context into status
-                    //NOTE: we let transition fully modify status
-                    d.setStatus(MapUtils.mergeMultipleMaps(context.getStatus(), baseStatus));
+                //merge action context into status
+                //NOTE: we let transition fully modify status
+                d.setStatus(MapUtils.mergeMultipleMaps(context.getStatus(), baseStatus));
 
-                    //let processors parse the result
-                    if (metadataProcessorRegistry != null) {
-                        Map<String, Serializable> psm = postProcess(d, state, input, metadataProcessorRegistry);
+                //let processors parse the result
+                if (metadataProcessorRegistry != null) {
+                    Map<String, Serializable> psm = postProcess(d, state, input, metadataProcessorRegistry);
 
-                        //merge metadata
-                        d.setMetadata(MapUtils.mergeMultipleMaps(context.getMetadata(), psm));
-                    }
-                    if (specProcessorRegistry != null) {
-                        Map<String, Serializable> psm = postProcess(d, state, input, specProcessorRegistry);
-
-                        //merge spec
-                        //TODO evaluate enforcing spec compliance and merging with old values
-                        d.setSpec(MapUtils.mergeMultipleMaps(context.getSpec(), psm));
-                    }
-                    if (statusProcessorRegistry != null) {
-                        Map<String, Serializable> psm = postProcess(d, state, input, statusProcessorRegistry);
-
-                        //merge and enforce correct status
-                        d.setStatus(MapUtils.mergeMultipleMaps(context.getStatus(), psm, baseStatus));
-                    }
-
-                    //side effect consumes output if available
-                    if (effect != null) {
-                        effect.accept(d, output.orElse(null));
-                    }
-
-                    return d;
-                } catch (InvalidTransitionException e) {
-                    log.debug("Invalid transition {} -> {}", e.getFromState(), e.getToState());
-                    //TODO evaluate if we want to throw an exception here to avoid UPDATE on db
-                    return d;
-                } catch (RuntimeException ex) {
-                    log.debug("Error performing transition on {}: {}", d.getId(), ex.getMessage());
-                    throw new CoreRuntimeException(ex.getMessage());
+                    //merge metadata
+                    d.setMetadata(MapUtils.mergeMultipleMaps(context.getMetadata(), psm));
                 }
+                if (specProcessorRegistry != null) {
+                    Map<String, Serializable> psm = postProcess(d, state, input, specProcessorRegistry);
+
+                    //merge spec
+                    //TODO evaluate enforcing spec compliance and merging with old values
+                    d.setSpec(MapUtils.mergeMultipleMaps(context.getSpec(), psm));
+                }
+                if (statusProcessorRegistry != null) {
+                    Map<String, Serializable> psm = postProcess(d, state, input, statusProcessorRegistry);
+
+                    //merge and enforce correct status
+                    d.setStatus(MapUtils.mergeMultipleMaps(context.getStatus(), psm, baseStatus));
+                }
+
+                //side effect consumes output if available
+                if (effect != null) {
+                    effect.accept(d, output.orElse(null));
+                }
+
+                return d;
+            } catch (InvalidTransitionException e) {
+                log.debug("Invalid transition {} -> {}", e.getFromState(), e.getToState());
+                //TODO evaluate if we want to throw an exception here to avoid UPDATE on db
+                return d;
+            } catch (RuntimeException ex) {
+                log.debug("Error performing transition on {}: {}", d.getId(), ex.getMessage());
+                throw new CoreRuntimeException(ex.getMessage());
             }
-        );
+        });
     }
 
     protected <I> Map<String, Serializable> postProcess(
@@ -385,12 +390,11 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
                 .toList();
             res = futures.stream().map(CompletableFuture::join).toList();
         } else {
-            res =
-                processorRegistry
-                    .getProcessors(stage)
-                    .stream()
-                    .map(p -> invokeProcessor(p, stage, dto, input))
-                    .toList();
+            res = processorRegistry
+                .getProcessors(stage)
+                .stream()
+                .map(p -> invokeProcessor(p, stage, dto, input))
+                .toList();
         }
 
         return res.stream().reduce(new HashMap<>(), MapUtils::mergeMultipleMaps);
