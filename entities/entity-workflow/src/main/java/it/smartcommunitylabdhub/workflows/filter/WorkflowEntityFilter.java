@@ -23,11 +23,59 @@
 
 package it.smartcommunitylabdhub.workflows.filter;
 
+import it.smartcommunitylabdhub.commons.models.queries.SearchCriteria;
+import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
+import it.smartcommunitylabdhub.commons.models.queries.SearchFilter.Condition;
 import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilter;
+import it.smartcommunitylabdhub.core.queries.filters.BaseEntityFilter;
+import it.smartcommunitylabdhub.core.queries.filters.BaseEntitySearchCriteria;
+import jakarta.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
-public class WorkflowEntityFilter extends AbstractEntityFilter<Workflow> {}
+public class WorkflowEntityFilter extends AbstractEntityFilter<Workflow> {
+
+    @Nullable
+    private List<String> labels;
+
+    @Override
+    public SearchFilter<Workflow> toSearchFilter() {
+        List<SearchCriteria<Workflow>> criteria = new ArrayList<>();
+        List<SearchFilter<Workflow>> filters = new ArrayList<>();
+
+        //base criteria
+        SearchFilter<Workflow> sf = super.toSearchFilter();
+        criteria.addAll(sf.getCriteria());
+        filters.addAll(sf.getFilters());
+
+        //labels in AND
+        Optional
+            .ofNullable(labels)
+            .ifPresent(value -> {
+                List<SearchCriteria<Workflow>> lcr = new ArrayList<>();
+                value.forEach(label ->
+                    lcr.add(new BaseEntitySearchCriteria<>("labels", label, SearchCriteria.Operation.like))
+                );
+
+                BaseEntityFilter<Workflow> qf = BaseEntityFilter
+                    .<Workflow>builder()
+                    .condition(Condition.and)
+                    .criteria(lcr)
+                    .build();
+                filters.add(qf);
+            });
+
+        return BaseEntityFilter
+            .<Workflow>builder()
+            .criteria(criteria)
+            .filters(filters)
+            .condition(SearchFilter.Condition.and)
+            .build();
+    }
+}

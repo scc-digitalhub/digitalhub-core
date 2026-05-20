@@ -34,7 +34,7 @@ import it.smartcommunitylabdhub.workflows.persistence.WorkflowEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.convert.converter.Converter;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.messaging.Message;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -54,15 +54,20 @@ public class WorkflowEntityListener extends AbstractEntityListener<WorkflowEntit
         this.projectService = projectService;
     }
 
-    @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void receive(EntityEvent<WorkflowEntity> event) {
         if (event.getEntity() == null) {
             return;
         }
+        super.dispatch(event);
+    }
 
-        //handle
-        super.handle(event);
+    @Override
+    public void handle(Message<EntityEvent<WorkflowEntity>> message) {
+        // index + relationships
+        super.handle(message);
+
+        EntityEvent<WorkflowEntity> event = message.getPayload();
 
         //update project date
         if (projectService != null) {

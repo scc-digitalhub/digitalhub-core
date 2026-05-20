@@ -31,6 +31,8 @@ import it.smartcommunitylabdhub.core.events.EntityEvent;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.events.EntityAction;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.validation.constraints.NotNull;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -40,7 +42,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +50,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.ResolvableType;
+import org.springframework.core.ResolvableTypeProvider;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -65,12 +68,15 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.Assert;
 
 @Slf4j
-public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends BaseDTO>
-    implements SearchableEntityRepository<E, D>, InitializingBean {
+public abstract class BaseEntityRepositoryImpl<
+    E extends BaseEntity,
+    D extends BaseDTO
+> implements SearchableEntityRepository<E, D>, InitializingBean, ResolvableTypeProvider {
 
     public static final int PAGE_MAX_SIZE = 1000;
     public static final int DEFAULT_TIMEOUT = 30;
-    protected final JpaRepository<E, String> repository;
+    protected JpaRepository<E, String> repository;
+
     protected final Class<D> type;
     protected final Class<E> clazz;
 
@@ -81,8 +87,25 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
     private ApplicationEventPublisher eventPublisher;
     private TransactionTemplate transactionTemplate;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     private Map<String, Pair<ReentrantLock, Instant>> locks = new ConcurrentHashMap<>();
     private int timeout = DEFAULT_TIMEOUT;
+
+    @SuppressWarnings("unchecked")
+    protected BaseEntityRepositoryImpl() {
+        // resolve generics type via subclass trick
+        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+        this.type = (Class<D>) t;
+        Type t2 = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+        this.clazz = (Class<E>) t2;
+
+        //build generic converters, can be overridden by autowired specific ones
+        MapToCborAttributeConverter converter = new MapToCborAttributeConverter();
+        this.entityBuilder = new BaseEntityBuilder<>(clazz, converter);
+        this.dtoBuilder = new BaseDTOBuilder<>(type, converter);
+    }
 
     @SuppressWarnings("unchecked")
     protected BaseEntityRepositoryImpl(JpaRepository<E, String> repository) {
@@ -122,6 +145,11 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
         this.clazz = (Class<E>) t2;
     }
 
+    @Autowired
+    public void setRepository(JpaRepository<E, String> repository) {
+        this.repository = repository;
+    }
+
     @Autowired(required = false)
     public void setEntityBuilder(Converter<D, E> entityBuilder) {
         this.entityBuilder = entityBuilder;
@@ -145,6 +173,10 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
 
     @Autowired
     public void setTransactionManager(PlatformTransactionManager transactionManager) {
+        if (transactionManager == null) {
+            throw new IllegalArgumentException("transaction manager can not be null");
+        }
+
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
@@ -153,6 +185,13 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
         Assert.notNull(repository, "repository can not be null");
         Assert.notNull(entityBuilder, "entity builder can not be null");
         Assert.notNull(dtoBuilder, "dto builder can not be null");
+
+        log.debug("Initialized repository for {}", clazz.getSimpleName());
+    }
+
+    @Override
+    public ResolvableType getResolvableType() {
+        return ResolvableType.forClass(clazz);
     }
 
     @Override
@@ -175,10 +214,6 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
         locks.put(id, Pair.of(l, Instant.now()));
 
         return l;
-    }
-
-    protected String getCacheName() {
-        return clazz.getSimpleName() + ".find";
     }
 
     /*
@@ -223,28 +258,30 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
             }
 
             try {
-                E saved = transactionTemplate.execute(status -> repository.saveAndFlush(toSave));
+                E saved = transactionTemplate.execute(status -> {
+                    E s = repository.saveAndFlush(toSave);
+
+                    //publish inside transaction so @TransactionalEventListener fires after commit
+                    //regardless of whether an outer transaction exists
+                    if (eventPublisher != null) {
+                        log.debug("publish event: create for {}", s.getId());
+
+                        //detach to prevent accidental dirty writes while keeping all fields
+                        //(including JPA audit fields set by AuditingEntityListener)
+                        entityManager.detach(s);
+                        EntityEvent<E> event = new EntityEvent<>(s, EntityAction.CREATE);
+                        if (log.isTraceEnabled()) {
+                            log.trace("event: {}", String.valueOf(event));
+                        }
+
+                        eventPublisher.publishEvent(event);
+                    }
+
+                    return s;
+                });
 
                 if (log.isTraceEnabled()) {
                     log.trace("entity: {}", saved);
-                }
-
-                //publish outside transaction so the connection has already been released
-                if (eventPublisher != null) {
-                    log.debug("publish event: create for {}", saved.getId());
-
-                    //NOTE: to avoid issues with entity manager owned objs
-                    //we clone entities to detach and keep the version
-                    //sent as event payload immutable
-                    EntityEvent<E> event = new EntityEvent<>(
-                        entityBuilder.convert(dtoBuilder.convert(saved)),
-                        EntityAction.CREATE
-                    );
-                    if (log.isTraceEnabled()) {
-                        log.trace("event: {}", String.valueOf(event));
-                    }
-
-                    eventPublisher.publishEvent(event);
                 }
 
                 D res = dtoBuilder.convert(saved);
@@ -264,7 +301,7 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
     }
 
     @Override
-    @CacheEvict(value = "#{#this.getCacheName()}", key = "#id")
+    @CacheEvict(cacheResolver = "resolvableTypeCacheResolver", value = "repository.find", key = "#id")
     public D update(@NotNull String id, @NotNull D dto) throws NoSuchEntityException, StoreException {
         log.debug("update with id {}", String.valueOf(dto.getId()));
         if (log.isTraceEnabled()) {
@@ -277,53 +314,51 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
                 throw new StoreException("unable to acquire lock for update " + id);
             }
 
-            // capture prev entity so we can publish outside the transaction
-            AtomicReference<E> prevRef = new AtomicReference<>();
-
             try {
                 E updated = transactionTemplate.execute(status -> {
                     E entity = repository.findById(id).orElseThrow(() -> new NoSuchEntityException(type));
-                    prevRef.set(entity);
+
+                    //detach prev snapshot before overwriting — keeps all fields including audit fields
+                    entityManager.detach(entity);
+                    E prev = entity;
 
                     //build entity
                     E e = entityBuilder.convert(dto);
 
-                    if (e instanceof AbstractEntity) {
-                        AbstractEntity ae = (AbstractEntity) e;
+                    if (e instanceof AbstractEntity ae && prev instanceof AbstractEntity prevAe) {
                         //enforce non-modifiable fields
-                        ae.setId(entity.getId());
-                        ae.setKind(entity.getKind());
-                        ae.setProject(entity.getProject());
-                        ae.setName(entity.getName());
+                        ae.setId(prevAe.getId());
+                        ae.setKind(prevAe.getKind());
+                        ae.setProject(prevAe.getProject());
+                        ae.setName(prevAe.getName());
 
-                        ae.setCreated(entity.getCreated());
-                        ae.setCreatedBy(entity.getCreatedBy());
+                        ae.setCreated(prevAe.getCreated());
+                        ae.setCreatedBy(prevAe.getCreatedBy());
                     }
 
-                    return repository.saveAndFlush(e);
+                    E saved = repository.saveAndFlush(e);
+
+                    //publish inside transaction so @TransactionalEventListener fires after commit
+                    //regardless of whether an outer transaction exists
+                    if (eventPublisher != null) {
+                        log.debug("publish event: update for {}", id);
+
+                        //detach to prevent accidental dirty writes while keeping all fields
+                        //(including JPA audit fields set by AuditingEntityListener)
+                        entityManager.detach(saved);
+                        EntityEvent<E> event = new EntityEvent<>(saved, prev, EntityAction.UPDATE);
+                        if (log.isTraceEnabled()) {
+                            log.trace("event: {}", String.valueOf(event));
+                        }
+
+                        eventPublisher.publishEvent(event);
+                    }
+
+                    return saved;
                 });
 
                 if (log.isTraceEnabled()) {
                     log.trace("entity: {}", updated);
-                }
-
-                //publish outside transaction so the connection has already been released
-                if (eventPublisher != null) {
-                    log.debug("publish event: update for {}", id);
-
-                    //NOTE: to avoid issues with entity manager owned objs
-                    //we clone entities to detach and keep the version
-                    //sent as event payload immutable
-                    EntityEvent<E> event = new EntityEvent<>(
-                        entityBuilder.convert(dtoBuilder.convert(updated)),
-                        prevRef.get() != null ? entityBuilder.convert(dtoBuilder.convert(prevRef.get())) : null,
-                        EntityAction.UPDATE
-                    );
-                    if (log.isTraceEnabled()) {
-                        log.trace("event: {}", String.valueOf(event));
-                    }
-
-                    eventPublisher.publishEvent(event);
                 }
 
                 D res = dtoBuilder.convert(updated);
@@ -341,7 +376,7 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
     }
 
     @Override
-    @CacheEvict(value = "#{#this.getCacheName()}", key = "#id")
+    @CacheEvict(cacheResolver = "resolvableTypeCacheResolver", value = "repository.find", key = "#id")
     public void delete(@NotNull String id) throws StoreException {
         log.debug("delete with id {}", id);
         try {
@@ -349,8 +384,6 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
             if (!getLock(id).tryLock(timeout, TimeUnit.SECONDS)) {
                 throw new StoreException("unable to acquire lock for delete " + id);
             }
-
-            AtomicReference<E> deletedRef = new AtomicReference<>();
 
             try {
                 transactionTemplate.executeWithoutResult(status ->
@@ -361,26 +394,26 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
                                 log.trace("entity: {}", entity);
                             }
 
-                            //NOTE: to avoid issues with entity manager owned objs
-                            //we clone entities to detach and keep the version
-                            //sent as event payload immutable
-                            deletedRef.set(entityBuilder.convert(dtoBuilder.convert(entity)));
+                            //detach to get a snapshot with all fields (including audit fields)
+                            //then delete by id so JPA uses a fresh managed instance
+                            entityManager.detach(entity);
+                            E prev = entity;
 
-                            repository.delete(entity);
+                            repository.deleteById(id);
+
+                            //publish inside transaction so @TransactionalEventListener fires after commit
+                            //regardless of whether an outer transaction exists
+                            if (eventPublisher != null) {
+                                log.debug("publish event: delete for {}", id);
+                                EntityEvent<E> event = new EntityEvent<>(prev, EntityAction.DELETE);
+                                if (log.isTraceEnabled()) {
+                                    log.trace("event: {}", String.valueOf(event));
+                                }
+
+                                eventPublisher.publishEvent(event);
+                            }
                         })
                 );
-
-                //publish outside transaction so the connection has already been released
-                E prev = deletedRef.get();
-                if (prev != null && eventPublisher != null) {
-                    log.debug("publish event: delete for {}", id);
-                    EntityEvent<E> event = new EntityEvent<>(prev, EntityAction.DELETE);
-                    if (log.isTraceEnabled()) {
-                        log.trace("event: {}", String.valueOf(event));
-                    }
-
-                    eventPublisher.publishEvent(event);
-                }
             } finally {
                 getLock(id).unlock();
             }
@@ -391,7 +424,12 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "#{#this.getCacheName()}", key = "#id", unless = "#result == null")
+    @Cacheable(
+        cacheResolver = "resolvableTypeCacheResolver",
+        value = "repository.find",
+        key = "#id",
+        unless = "#result == null"
+    )
     public D find(@NotNull String id) throws StoreException {
         log.debug("find with id {}", id);
 
@@ -402,7 +440,10 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
             }
 
             try {
-                D res = repository.findById(id).map(e -> dtoBuilder.convert(e)).orElse(null);
+                D res = repository
+                    .findById(id)
+                    .map(e -> dtoBuilder.convert(e))
+                    .orElse(null);
                 if (log.isTraceEnabled()) {
                     log.trace("res: {}", res);
                 }
@@ -418,7 +459,12 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "#{#this.getCacheName()}", key = "#id", unless = "#result == null")
+    @Cacheable(
+        cacheResolver = "resolvableTypeCacheResolver",
+        value = "repository.find",
+        key = "#id",
+        unless = "#result == null"
+    )
     public D get(@NotNull String id) throws NoSuchEntityException, StoreException {
         log.debug("get with id {}", id);
         try {
@@ -455,7 +501,10 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
         }
 
         Page<E> page = repository.findAll(pageable);
-        List<D> content = page.stream().map(e -> dtoBuilder.convert(e)).collect(Collectors.toList());
+        List<D> content = page
+            .stream()
+            .map(e -> dtoBuilder.convert(e))
+            .collect(Collectors.toList());
 
         return new PageImpl<>(content, pageable, page.getTotalElements());
     }
@@ -465,7 +514,11 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
     public List<D> listAll() {
         log.debug("list all");
 
-        return repository.findAll().stream().map(e -> dtoBuilder.convert(e)).collect(Collectors.toList());
+        return repository
+            .findAll()
+            .stream()
+            .map(e -> dtoBuilder.convert(e))
+            .collect(Collectors.toList());
     }
 
     @Override
@@ -480,7 +533,10 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
         if (repository instanceof JpaSpecificationExecutor) {
             @SuppressWarnings("unchecked")
             Page<E> page = ((JpaSpecificationExecutor<E>) repository).findAll(specification, pageable);
-            List<D> content = page.stream().map(e -> dtoBuilder.convert(e)).collect(Collectors.toList());
+            List<D> content = page
+                .stream()
+                .map(e -> dtoBuilder.convert(e))
+                .collect(Collectors.toList());
 
             return new PageImpl<>(content, pageable, page.getTotalElements());
         }
@@ -505,7 +561,7 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
     }
 
     @Transactional
-    @CacheEvict(value = "#{#this.getCacheName()}", allEntries = true)
+    @CacheEvict(cacheResolver = "resolvableTypeCacheResolver", value = "repository.find", allEntries = true)
     public long deleteAll() {
         log.debug("delete all");
 
@@ -515,7 +571,10 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
         //NOTE: to avoid issues with entity manager owned objs
         //we clone entities to detach and keep the version
         //sent as event payload immutable
-        List<E> prevs = entities.stream().map(entity -> entityBuilder.convert(dtoBuilder.convert(entity))).toList();
+        List<E> prevs = entities
+            .stream()
+            .map(entity -> entityBuilder.convert(dtoBuilder.convert(entity)))
+            .toList();
 
         //remove in batch
         repository.deleteAllInBatch(entities);
@@ -540,7 +599,7 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
     @SuppressWarnings("unchecked")
     @Override
     @Transactional
-    @CacheEvict(value = "#{#this.getCacheName()}", allEntries = true)
+    @CacheEvict(cacheResolver = "resolvableTypeCacheResolver", value = "repository.find", allEntries = true)
     public long deleteAll(Specification<E> specification) {
         log.debug("delete all with spec {} ", specification);
 
@@ -551,7 +610,10 @@ public abstract class BaseEntityRepositoryImpl<E extends BaseEntity, D extends B
             //NOTE: to avoid issues with entity manager owned objs
             //we clone entities to detach and keep the version
             //sent as event payload immutable
-            List<E> prevs = entities.stream().map(entity -> entityBuilder.convert(dtoBuilder.convert(entity))).toList();
+            List<E> prevs = entities
+                .stream()
+                .map(entity -> entityBuilder.convert(dtoBuilder.convert(entity)))
+                .toList();
 
             //remove in batch
             repository.deleteAllInBatch(entities);

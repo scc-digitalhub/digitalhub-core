@@ -54,11 +54,7 @@ public abstract class K8sBaseMonitor<T extends K8sRunnable> implements Runnable 
         ArrayList<HashMap<String, Serializable>>
     >() {};
 
-    protected static String[] STATES = {
-        K8sRunnableState.PENDING.name(),
-        K8sRunnableState.RUNNING.name(),
-        K8sRunnableState.DELETING.name(),
-    };
+    protected static String[] STATES = { K8sRunnableState.PENDING.name(), K8sRunnableState.RUNNING.name() };
 
     protected final RunnableStore<T> store;
     private RunnableEventPublisher eventPublisher;
@@ -144,6 +140,13 @@ public abstract class K8sBaseMonitor<T extends K8sRunnable> implements Runnable 
                 log.debug("runnable {} not found", id);
                 return;
             }
+
+            //skip refresh for transient states, we don't wanna override an operation in progress
+            if (runnable.getState() != null && !Arrays.asList(STATES).contains(runnable.getState())) {
+                log.debug("runnable {} in transient state {}, skipping refresh", id, runnable.getState());
+                return;
+            }
+
             runnable = refresh(runnable);
             if (log.isTraceEnabled()) {
                 log.trace("refreshed: {}", runnable);

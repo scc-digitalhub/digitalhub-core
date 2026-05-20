@@ -20,34 +20,23 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.lifecycle;
+package it.smartcommunitylabdhub.core.lifecycle;
 
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.fsm.AbstractFsmFactory;
 import it.smartcommunitylabdhub.fsm.FsmState;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public abstract class BaseFsmFactoryBuilder<D extends BaseDTO & StatusDTO> {
+public class BaseFsmFactory<D extends BaseDTO & StatusDTO> extends AbstractFsmFactory<String, String, D> {
 
-    List<FsmState.Builder<String, String, D>> builders = new ArrayList<>();
-
-    protected BaseFsmFactoryBuilder() {}
-
-    protected BaseFsmFactoryBuilder<D> builders(List<FsmState.Builder<String, String, D>> builders) {
-        this.builders.addAll(builders);
-        return this;
+    protected BaseFsmFactory(List<FsmState.Builder<String, String, D>> builders) {
+        super(builders);
     }
 
     @SafeVarargs
-    protected final BaseFsmFactoryBuilder<D> builders(FsmState.Builder<String, String, D>... builders) {
-        this.builders.addAll(Arrays.asList(builders));
-        return this;
-    }
-
-    public AbstractFsmFactory<String, String, D> build() {
-        return new AbstractFsmFactory<>(builders) {};
+    protected BaseFsmFactory(FsmState.Builder<String, String, D>... builders) {
+        super(Arrays.asList(builders));
     }
 }

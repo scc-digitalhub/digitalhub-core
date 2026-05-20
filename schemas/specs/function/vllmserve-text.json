@@ -1,0 +1,55 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "$defs" : {
+    "VLLMAdapter" : {
+      "type" : "object",
+      "properties" : {
+        "name" : {
+          "type" : "string",
+          "title" : "fields.modelserve.modelname.title",
+          "description" : "fields.modelserve.modelname.description",
+          "default" : "model"
+        },
+        "url" : {
+          "type" : "string",
+          "title" : "fields.vllm.url.title",
+          "description" : "fields.vllm.url.description"
+        }
+      }
+    }
+  },
+  "type" : "object",
+  "properties" : {
+    "adapters" : {
+      "title" : "fields.vllm.adapters.title",
+      "description" : "fields.vllm.adapters.description",
+      "type" : "array",
+      "items" : {
+        "$ref" : "#/$defs/VLLMAdapter",
+        "title" : "fields.adapters.item.title",
+        "description" : "fields.adapters.item.description"
+      }
+    },
+    "image" : {
+      "type" : "string",
+      "title" : "fields.container.image.title",
+      "description" : "fields.container.image.description",
+      "pattern" : "^vllm\\/vllm-openai(:.*)?$"
+    },
+    "model_name" : {
+      "type" : "string",
+      "title" : "fields.modelserve.modelname.title",
+      "description" : "fields.modelserve.modelname.description",
+      "default" : "model"
+    },
+    "url" : {
+      "type" : "string",
+      "title" : "fields.vllm.url.title",
+      "description" : "fields.vllm.url.description",
+      "pattern" : "^(store://([^/]+)/model/huggingface/.*)|.*/$|.*\\.zip$|^huggingface?://.*$|^hf?://.*$"
+    }
+  },
+  "required" : [ "url" ],
+  "title" : "specs.vllmserve-text.title",
+  "description" : "specs.vllmserve-text.description"
+}

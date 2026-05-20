@@ -56,7 +56,6 @@ import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sTemplate;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
-import it.smartcommunitylabdhub.framework.k8s.objects.CoreSecret;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import it.smartcommunitylabdhub.framework.kaniko.config.BuildkitProperties;
@@ -243,7 +242,7 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
         results.put("job", job);
 
         //update state
-        runnable.setState(K8sRunnableState.RUNNING.name());
+        runnable.setState(K8sRunnableState.PENDING.name());
 
         //update results
         if (!"disable".equals(collectResults)) {

@@ -170,6 +170,12 @@
       "title" : "fields.task.title",
       "description" : "fields.task.description",
       "minLength" : 1
+    },
+    "url" : {
+      "type" : "string",
+      "title" : "fields.kubeai.url.title",
+      "description" : "fields.kubeai.url.description",
+      "pattern" : "^(store://([^/]+)/model/huggingface/.*)|^pvc?://.*$|^s3?://.*$|^ollama?://.*$|^hf?://.*$"
     }
   },
   "required" : [ "task" ],

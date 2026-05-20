@@ -79,32 +79,31 @@ public abstract class K8sRunnableListener<R extends K8sRunnable> {
         String state = runnable.getState();
 
         try {
-            runnable =
-                switch (K8sRunnableState.valueOf(state)) {
-                    case K8sRunnableState.READY -> {
-                        //sanity check: reset left-over messages
-                        runnable.setMessage(null);
-                        yield k8sFramework.run(runnable);
-                    }
-                    case K8sRunnableState.STOP -> {
-                        //sanity check: reset left-over messages
-                        runnable.setMessage(null);
-                        yield k8sFramework.stop(runnable);
-                    }
-                    case K8sRunnableState.RESUME -> {
-                        //sanity check: reset left-over messages
-                        runnable.setMessage(null);
-                        yield k8sFramework.resume(runnable);
-                    }
-                    case K8sRunnableState.DELETING -> {
-                        //sanity check: reset left-over messages
-                        runnable.setMessage(null);
-                        yield k8sFramework.delete(runnable);
-                    }
-                    default -> {
-                        yield null;
-                    }
-                };
+            runnable = switch (K8sRunnableState.valueOf(state)) {
+                case K8sRunnableState.READY -> {
+                    //sanity check: reset left-over messages
+                    runnable.setMessage(null);
+                    yield k8sFramework.run(runnable);
+                }
+                case K8sRunnableState.STOP -> {
+                    //sanity check: reset left-over messages
+                    runnable.setMessage(null);
+                    yield k8sFramework.stop(runnable);
+                }
+                case K8sRunnableState.RESUME -> {
+                    //sanity check: reset left-over messages
+                    runnable.setMessage(null);
+                    yield k8sFramework.resume(runnable);
+                }
+                case K8sRunnableState.DELETING -> {
+                    //sanity check: reset left-over messages
+                    runnable.setMessage(null);
+                    yield k8sFramework.delete(runnable);
+                }
+                default -> {
+                    yield null;
+                }
+            };
 
             if (runnable != null) {
                 //sanity check: id+framework can not change
@@ -138,7 +137,12 @@ public abstract class K8sRunnableListener<R extends K8sRunnable> {
             if (runnable != null) {
                 try {
                     log.debug("update runnable {} {} in store", clazz.getSimpleName(), id);
-                    runnableStore.store(id, runnable);
+                    //if runnable is DELETED, remove from store, otherwise update
+                    if (K8sRunnableState.DELETED.name().equals(runnable.getState())) {
+                        runnableStore.remove(id);
+                    } else {
+                        runnableStore.store(id, runnable);
+                    }
                 } catch (StoreException se) {
                     log.error("Error with store: {}", se.getMessage());
                 }

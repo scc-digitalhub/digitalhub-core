@@ -12,26 +12,6 @@
       "type" : "boolean",
       "title" : "boolean"
     },
-    "CoreAffinity" : {
-      "type" : "object",
-      "properties" : {
-        "nodeAffinity" : {
-          "$ref" : "#/$defs/V1NodeAffinity",
-          "title" : "fields.nodeAffinity.title",
-          "description" : "fields.nodeAffinity.description"
-        },
-        "podAffinity" : {
-          "$ref" : "#/$defs/V1PodAffinity",
-          "title" : "fields.podAffinity.title",
-          "description" : "fields.podAffinity.description"
-        },
-        "podAntiAffinity" : {
-          "$ref" : "#/$defs/V1PodAntiAffinity",
-          "title" : "fields.podAntiAffinity.title",
-          "description" : "fields.podAntiAffinity.description"
-        }
-      }
-    },
     "CoreEnv" : {
       "type" : "object",
       "properties" : {
@@ -50,21 +30,6 @@
       },
       "required" : [ "name", "value" ]
     },
-    "CoreNodeSelector" : {
-      "type" : "object",
-      "properties" : {
-        "key" : {
-          "type" : "string",
-          "title" : "fields.key.title",
-          "description" : "fields.key.description"
-        },
-        "value" : {
-          "type" : "string",
-          "title" : "fields.value.title",
-          "description" : "fields.value.description"
-        }
-      }
-    },
     "CoreResource" : {
       "type" : "object",
       "properties" : {
@@ -72,55 +37,31 @@
           "type" : "string",
           "title" : "fields.cpu.title",
           "description" : "fields.cpu.description",
-          "pattern" : "[\\d]+|^([0-9])+([a-zA-Z])+$"
+          "pattern" : "^\\d+([a-zA-Z]+)?$"
+        },
+        "disk" : {
+          "type" : "string",
+          "title" : "fields.disk.title",
+          "description" : "fields.disk.description",
+          "pattern" : "^\\d+([a-zA-Z]+)?$"
         },
         "gpu" : {
           "type" : "string",
           "title" : "fields.gpu.title",
           "description" : "fields.gpu.description",
-          "pattern" : "[\\d]+|^([0-9])+([a-zA-Z])+$"
+          "pattern" : "^\\d+([a-zA-Z]+)?$"
         },
         "mem" : {
           "type" : "string",
           "title" : "fields.mem.title",
           "description" : "fields.mem.description",
-          "pattern" : "[\\d]+|^([0-9])+([a-zA-Z])+$"
+          "pattern" : "^\\d+([a-zA-Z]+)?$"
         }
       }
     },
     "CoreServiceType" : {
       "type" : "string",
       "enum" : [ "ExternalName", "ClusterIP", "NodePort", "LoadBalancer" ]
-    },
-    "CoreToleration" : {
-      "type" : "object",
-      "properties" : {
-        "effect" : {
-          "type" : "string",
-          "title" : "fields.effect.title",
-          "description" : "fields.effect.description"
-        },
-        "key" : {
-          "type" : "string",
-          "title" : "fields.key.title",
-          "description" : "fields.key.description"
-        },
-        "operator" : {
-          "type" : "string",
-          "title" : "fields.operator.title",
-          "description" : "fields.operator.description"
-        },
-        "tolerationSeconds" : {
-          "type" : "integer",
-          "title" : "fields.tolerationSeconds.title",
-          "description" : "fields.tolerationSeconds.description"
-        },
-        "value" : {
-          "type" : "string",
-          "title" : "fields.value.title",
-          "description" : "fields.value.description"
-        }
-      }
     },
     "CoreVolume" : {
       "type" : "object",
@@ -193,274 +134,9 @@
       "type" : "string",
       "title" : "string"
     },
-    "V1LabelSelector" : {
-      "type" : "object",
-      "properties" : {
-        "matchExpressions" : {
-          "title" : "fields.matchExpressions.title",
-          "description" : "fields.matchExpressions.description",
-          "type" : "array",
-          "items" : {
-            "$ref" : "#/$defs/V1LabelSelectorRequirement",
-            "title" : "fields.matchExpressions.item.title",
-            "description" : "fields.matchExpressions.item.description"
-          }
-        },
-        "matchLabels" : {
-          "$ref" : "#/$defs/Map_String.String_",
-          "title" : "fields.matchLabels.title",
-          "description" : "fields.matchLabels.description",
-          "additionalProperties" : {
-            "type" : "string",
-            "title" : "fields.matchLabels.item.title",
-            "description" : "fields.matchLabels.item.description"
-          }
-        }
-      }
-    },
-    "V1LabelSelectorRequirement" : {
-      "type" : "object",
-      "properties" : {
-        "key" : {
-          "type" : "string",
-          "title" : "fields.key.title",
-          "description" : "fields.key.description"
-        },
-        "operator" : {
-          "type" : "string",
-          "title" : "fields.operator.title",
-          "description" : "fields.operator.description"
-        },
-        "values" : {
-          "title" : "fields.values.title",
-          "description" : "fields.values.description",
-          "type" : "array",
-          "items" : {
-            "type" : "string",
-            "title" : "fields.values.item.title",
-            "description" : "fields.values.item.description"
-          }
-        }
-      }
-    },
-    "V1NodeAffinity" : {
-      "type" : "object",
-      "properties" : {
-        "preferredDuringSchedulingIgnoredDuringExecution" : {
-          "title" : "fields.preferredDuringSchedulingIgnoredDuringExecution.title",
-          "description" : "fields.preferredDuringSchedulingIgnoredDuringExecution.description",
-          "type" : "array",
-          "items" : {
-            "$ref" : "#/$defs/V1PreferredSchedulingTerm",
-            "title" : "fields.preferredDuringSchedulingIgnoredDuringExecution.item.title",
-            "description" : "fields.preferredDuringSchedulingIgnoredDuringExecution.item.description"
-          }
-        },
-        "requiredDuringSchedulingIgnoredDuringExecution" : {
-          "$ref" : "#/$defs/V1NodeSelector",
-          "title" : "fields.requiredDuringSchedulingIgnoredDuringExecution.title",
-          "description" : "fields.requiredDuringSchedulingIgnoredDuringExecution.description"
-        }
-      }
-    },
-    "V1NodeSelector" : {
-      "type" : "object",
-      "properties" : {
-        "nodeSelectorTerms" : {
-          "title" : "fields.nodeSelectorTerms.title",
-          "description" : "fields.nodeSelectorTerms.description",
-          "type" : "array",
-          "items" : {
-            "$ref" : "#/$defs/V1NodeSelectorTerm",
-            "title" : "fields.nodeSelectorTerms.item.title",
-            "description" : "fields.nodeSelectorTerms.item.description"
-          }
-        }
-      }
-    },
-    "V1NodeSelectorRequirement" : {
-      "type" : "object",
-      "properties" : {
-        "key" : {
-          "type" : "string",
-          "title" : "fields.key.title",
-          "description" : "fields.key.description"
-        },
-        "operator" : {
-          "type" : "string",
-          "title" : "fields.operator.title",
-          "description" : "fields.operator.description"
-        },
-        "values" : {
-          "title" : "fields.values.title",
-          "description" : "fields.values.description",
-          "type" : "array",
-          "items" : {
-            "type" : "string",
-            "title" : "fields.values.item.title",
-            "description" : "fields.values.item.description"
-          }
-        }
-      }
-    },
-    "V1NodeSelectorTerm" : {
-      "type" : "object",
-      "properties" : {
-        "matchExpressions" : {
-          "title" : "fields.matchExpressions.title",
-          "description" : "fields.matchExpressions.description",
-          "type" : "array",
-          "items" : {
-            "$ref" : "#/$defs/V1NodeSelectorRequirement",
-            "title" : "fields.matchExpressions.item.title",
-            "description" : "fields.matchExpressions.item.description"
-          }
-        },
-        "matchFields" : {
-          "title" : "fields.matchFields.title",
-          "description" : "fields.matchFields.description",
-          "type" : "array",
-          "items" : {
-            "$ref" : "#/$defs/V1NodeSelectorRequirement",
-            "title" : "fields.matchFields.item.title",
-            "description" : "fields.matchFields.item.description"
-          }
-        }
-      }
-    },
-    "V1PodAffinity" : {
-      "type" : "object",
-      "properties" : {
-        "preferredDuringSchedulingIgnoredDuringExecution" : {
-          "title" : "fields.preferredDuringSchedulingIgnoredDuringExecution.title",
-          "description" : "fields.preferredDuringSchedulingIgnoredDuringExecution.description",
-          "type" : "array",
-          "items" : {
-            "$ref" : "#/$defs/V1WeightedPodAffinityTerm",
-            "title" : "fields.preferredDuringSchedulingIgnoredDuringExecution.item.title",
-            "description" : "fields.preferredDuringSchedulingIgnoredDuringExecution.item.description"
-          }
-        },
-        "requiredDuringSchedulingIgnoredDuringExecution" : {
-          "title" : "fields.requiredDuringSchedulingIgnoredDuringExecution.title",
-          "description" : "fields.requiredDuringSchedulingIgnoredDuringExecution.description",
-          "type" : "array",
-          "items" : {
-            "$ref" : "#/$defs/V1PodAffinityTerm",
-            "title" : "fields.requiredDuringSchedulingIgnoredDuringExecution.item.title",
-            "description" : "fields.requiredDuringSchedulingIgnoredDuringExecution.item.description"
-          }
-        }
-      }
-    },
-    "V1PodAffinityTerm" : {
-      "type" : "object",
-      "properties" : {
-        "labelSelector" : {
-          "$ref" : "#/$defs/V1LabelSelector",
-          "title" : "fields.labelSelector.title",
-          "description" : "fields.labelSelector.description"
-        },
-        "matchLabelKeys" : {
-          "title" : "fields.matchLabelKeys.title",
-          "description" : "fields.matchLabelKeys.description",
-          "type" : "array",
-          "items" : {
-            "type" : "string",
-            "title" : "fields.matchLabelKeys.item.title",
-            "description" : "fields.matchLabelKeys.item.description"
-          }
-        },
-        "mismatchLabelKeys" : {
-          "title" : "fields.mismatchLabelKeys.title",
-          "description" : "fields.mismatchLabelKeys.description",
-          "type" : "array",
-          "items" : {
-            "type" : "string",
-            "title" : "fields.mismatchLabelKeys.item.title",
-            "description" : "fields.mismatchLabelKeys.item.description"
-          }
-        },
-        "namespaceSelector" : {
-          "$ref" : "#/$defs/V1LabelSelector",
-          "title" : "fields.namespaceSelector.title",
-          "description" : "fields.namespaceSelector.description"
-        },
-        "namespaces" : {
-          "title" : "fields.namespaces.title",
-          "description" : "fields.namespaces.description",
-          "type" : "array",
-          "items" : {
-            "type" : "string",
-            "title" : "fields.namespaces.item.title",
-            "description" : "fields.namespaces.item.description"
-          }
-        },
-        "topologyKey" : {
-          "type" : "string",
-          "title" : "fields.topologyKey.title",
-          "description" : "fields.topologyKey.description"
-        }
-      }
-    },
-    "V1PodAntiAffinity" : {
-      "type" : "object",
-      "properties" : {
-        "preferredDuringSchedulingIgnoredDuringExecution" : {
-          "title" : "fields.preferredDuringSchedulingIgnoredDuringExecution.title",
-          "description" : "fields.preferredDuringSchedulingIgnoredDuringExecution.description",
-          "type" : "array",
-          "items" : {
-            "$ref" : "#/$defs/V1WeightedPodAffinityTerm",
-            "title" : "fields.preferredDuringSchedulingIgnoredDuringExecution.item.title",
-            "description" : "fields.preferredDuringSchedulingIgnoredDuringExecution.item.description"
-          }
-        },
-        "requiredDuringSchedulingIgnoredDuringExecution" : {
-          "title" : "fields.requiredDuringSchedulingIgnoredDuringExecution.title",
-          "description" : "fields.requiredDuringSchedulingIgnoredDuringExecution.description",
-          "type" : "array",
-          "items" : {
-            "$ref" : "#/$defs/V1PodAffinityTerm",
-            "title" : "fields.requiredDuringSchedulingIgnoredDuringExecution.item.title",
-            "description" : "fields.requiredDuringSchedulingIgnoredDuringExecution.item.description"
-          }
-        }
-      }
-    },
-    "V1PreferredSchedulingTerm" : {
-      "type" : "object",
-      "properties" : {
-        "preference" : {
-          "$ref" : "#/$defs/V1NodeSelectorTerm",
-          "title" : "fields.preference.title",
-          "description" : "fields.preference.description"
-        },
-        "weight" : {
-          "type" : "integer",
-          "title" : "fields.weight.title",
-          "description" : "fields.weight.description"
-        }
-      }
-    },
-    "V1WeightedPodAffinityTerm" : {
-      "type" : "object",
-      "properties" : {
-        "podAffinityTerm" : {
-          "$ref" : "#/$defs/V1PodAffinityTerm",
-          "title" : "fields.podAffinityTerm.title",
-          "description" : "fields.podAffinityTerm.description"
-        },
-        "weight" : {
-          "type" : "integer",
-          "title" : "fields.weight.title",
-          "description" : "fields.weight.description"
-        }
-      }
-    },
     "VolumeType" : {
       "type" : "string",
-      "enum" : [ "shared_volume", "persistent_volume_claim", "ephemeral", "empty_dir" ]
+      "enum" : [ "shared_volume", "persistent_volume_claim", "ephemeral", "empty_dir", "image" ]
     }
   },
   "type" : "object",
@@ -513,11 +189,6 @@
   "allOf" : [ {
     "type" : "object",
     "properties" : {
-      "affinity" : {
-        "$ref" : "#/$defs/CoreAffinity",
-        "title" : "fields.affinity.title",
-        "description" : "fields.affinity.description"
-      },
       "envs" : {
         "title" : "fields.envs.title",
         "description" : "fields.envs.description",
@@ -534,21 +205,6 @@
         "description" : "fields.function.description",
         "minLength" : 1
       },
-      "node_selector" : {
-        "title" : "fields.nodeSelector.title",
-        "description" : "fields.nodeSelector.description",
-        "type" : "array",
-        "items" : {
-          "$ref" : "#/$defs/CoreNodeSelector",
-          "title" : "fields.nodeSelector.item.title",
-          "description" : "fields.nodeSelector.item.description"
-        }
-      },
-      "priority_class" : {
-        "type" : "string",
-        "title" : "fields.priorityClass.title",
-        "description" : "fields.priorityClass.description"
-      },
       "profile" : {
         "type" : "string",
         "title" : "fields.profile.title",
@@ -564,11 +220,6 @@
         "$ref" : "#/$defs/CoreResource",
         "title" : "fields.resources.title",
         "description" : "fields.resources.description"
-      },
-      "runtime_class" : {
-        "type" : "string",
-        "title" : "fields.runtimeClass.title",
-        "description" : "fields.runtimeClass.description"
       },
       "secrets" : {
         "title" : "fields.secrets.title",
@@ -590,16 +241,6 @@
         "title" : "fields.serviceType.title",
         "description" : "fields.serviceType.description",
         "default" : "ClusterIP"
-      },
-      "tolerations" : {
-        "title" : "fields.tolerations.title",
-        "description" : "fields.tolerations.description",
-        "type" : "array",
-        "items" : {
-          "$ref" : "#/$defs/CoreToleration",
-          "title" : "fields.tolerations.item.title",
-          "description" : "fields.tolerations.item.description"
-        }
       },
       "volumes" : {
         "title" : "fields.volumes.title",

@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.runtimes.lifecycle;
 
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.lifecycle.BaseFsmFactory;
+import it.smartcommunitylabdhub.core.lifecycle.BaseFsmFactory;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
@@ -46,8 +46,11 @@ import lombok.extern.slf4j.Slf4j;
  * State machine factory for runs
  */
 @Slf4j
-public class RunFsmFactory<S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable>
-    extends BaseFsmFactory<Run> {
+public class RunFsmFactory<
+    S extends RunBaseSpec,
+    Z extends RunBaseStatus,
+    R extends RunRunnable
+> extends BaseFsmFactory<Run> {
 
     public RunFsmFactory(Runtime<S, Z, R> runtime) {
         //build default states, runs are not resumable by default

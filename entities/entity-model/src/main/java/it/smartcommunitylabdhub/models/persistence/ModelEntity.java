@@ -67,4 +67,6 @@ public class ModelEntity extends AbstractEntity implements MetadataEntity, SpecE
     protected byte[] status;
 
     private String state;
+
+    private String labels;
 }

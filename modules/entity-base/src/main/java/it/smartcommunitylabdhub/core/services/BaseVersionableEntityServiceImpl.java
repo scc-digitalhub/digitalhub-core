@@ -27,12 +27,17 @@ import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
+import it.smartcommunitylabdhub.core.events.EntityOperationsPublisher;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilterConverter;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
+import it.smartcommunitylabdhub.events.EntityAction;
+import it.smartcommunitylabdhub.events.EntityOperation;
 import jakarta.validation.constraints.NotNull;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
@@ -50,8 +55,10 @@ import org.springframework.util.Assert;
  */
 @Slf4j
 @Transactional
-public class BaseVersionableEntityServiceImpl<D extends BaseDTO, E extends BaseEntity>
-    implements VersionableEntityService<D>, InitializingBean {
+public abstract class BaseVersionableEntityServiceImpl<
+    D extends BaseDTO,
+    E extends BaseEntity
+> implements VersionableEntityService<D>, InitializingBean {
 
     public static final int PAGE_MAX_SIZE = 1000;
     public static final int DEFAULT_TIMEOUT = 30;
@@ -60,12 +67,22 @@ public class BaseVersionableEntityServiceImpl<D extends BaseDTO, E extends BaseE
     protected Converter<D, E> entityBuilder;
     protected Converter<E, D> dtoBuilder;
     protected EntityFinalizer<D> finalizer;
+    protected final Class<D> type;
+    protected final Class<E> clazz;
 
-    protected Converter<SearchFilter<D>, SearchFilter<E>> filterConverter = new AbstractEntityFilterConverter<>();
+    protected Converter<SearchFilter<D>, SearchFilter<E>> filterConverter;
 
-    protected BaseVersionableEntityServiceImpl() {}
+    protected EntityOperationsPublisher operationsPublisher;
 
-    public BaseVersionableEntityServiceImpl(
+    protected BaseVersionableEntityServiceImpl() {
+        // resolve generics type via subclass trick
+        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+        this.type = (Class<D>) t;
+        Type t2 = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+        this.clazz = (Class<E>) t2;
+    }
+
+    protected BaseVersionableEntityServiceImpl(
         SearchableEntityRepository<E, D> repository,
         Converter<D, E> entityBuilder,
         Converter<E, D> dtoBuilder
@@ -77,6 +94,12 @@ public class BaseVersionableEntityServiceImpl<D extends BaseDTO, E extends BaseE
         this.repository = repository;
         this.entityBuilder = entityBuilder;
         this.dtoBuilder = dtoBuilder;
+
+        // resolve generics type via subclass trick
+        Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+        this.type = (Class<D>) t;
+        Type t2 = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+        this.clazz = (Class<E>) t2;
     }
 
     @Autowired
@@ -106,12 +129,20 @@ public class BaseVersionableEntityServiceImpl<D extends BaseDTO, E extends BaseE
         }
     }
 
+    @Autowired(required = false)
+    public void setOperationsPublisher(EntityOperationsPublisher operationsPublisher) {
+        this.operationsPublisher = operationsPublisher;
+    }
+
     @Override
     public void afterPropertiesSet() throws Exception {
         Assert.notNull(repository, "repository can not be null");
         Assert.notNull(entityBuilder, "entity builder can not be null");
         Assert.notNull(dtoBuilder, "dto builder can not be null");
-        Assert.notNull(filterConverter, "filter converter can not be null");
+
+        if (filterConverter == null) {
+            filterConverter = new AbstractEntityFilterConverter<>(type, clazz) {};
+        }
     }
 
     /*
@@ -128,22 +159,21 @@ public class BaseVersionableEntityServiceImpl<D extends BaseDTO, E extends BaseE
         );
 
         if (Boolean.TRUE.equals(cascade)) {
-            if (finalizer == null) {
-                //no cascade available!
-                log.warn("Cascade delete not supported");
-                throw new IllegalArgumentException();
-            }
-
             //delete one by one with cascade
             repository
                 .searchAll(spec)
                 .forEach(e -> {
                     try {
-                        //first perform gc
-                        finalizer.finalize(e);
+                        if (operationsPublisher != null) {
+                            //dispatch delete op
+                            operationsPublisher.publish(new EntityOperation<>(e, EntityAction.DELETE));
+                        } else {
+                            //first perform gc via finalizer
+                            finalizer.finalize(e);
 
-                        //then remove from repo
-                        repository.delete(e.getId());
+                            //then remove from repo
+                            repository.delete(e.getId());
+                        }
                     } catch (StoreException ex) {
                         log.error("Error deleting {}: {}", e.getId(), ex.getMessage());
                     }

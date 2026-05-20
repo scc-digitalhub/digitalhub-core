@@ -28,4 +28,5 @@ public enum EntityAction {
     READ,
     UPDATE,
     DELETE,
+    FINALIZE,
 }

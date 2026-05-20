@@ -29,7 +29,7 @@ import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.persistence.RunEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.convert.converter.Converter;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.messaging.Message;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -42,23 +42,25 @@ public class RunEntityListener extends AbstractEntityListener<RunEntity, Run> {
         super(converter);
     }
 
-    @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void receive(EntityEvent<RunEntity> event) {
         if (event.getEntity() == null) {
             return;
         }
+        super.dispatch(event);
+    }
 
-        log.debug("receive event for {} {}", clazz.getSimpleName(), event.getAction());
+    @Override
+    public void handle(Message<EntityEvent<RunEntity>> message) {
+        // index + relationships
+        super.handle(message);
 
+        EntityEvent<RunEntity> event = message.getPayload();
         RunEntity entity = event.getEntity();
         RunEntity prev = event.getPrev();
         if (log.isTraceEnabled()) {
             log.trace("{}: {}", clazz.getSimpleName(), String.valueOf(entity));
         }
-
-        //handle
-        super.handle(event);
 
         //always broadcast updates
         super.broadcast(event);
@@ -67,7 +69,7 @@ public class RunEntityListener extends AbstractEntityListener<RunEntity, Run> {
 
         if (entity.getUpdatedBy() != null) {
             //notify user event if either: prev == null (for create/delete), prev != null and state has changed (update)
-            if (prev == null || (prev != null && prev.getState() != entity.getState())) {
+            if (prev == null || (prev != null && !entity.getState().equals(prev.getState()))) {
                 //notify user
                 super.notify(entity.getUpdatedBy(), event);
 

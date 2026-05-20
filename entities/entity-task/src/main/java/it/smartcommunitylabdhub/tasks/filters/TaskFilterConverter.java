@@ -27,16 +27,6 @@ public class TaskFilterConverter extends AbstractEntityFilterConverter<Task, Tas
 
     @Override
     protected String map(@NotNull String source) {
-        //function is top level
-        if ("function".equals(source)) {
-            return "function";
-        }
-
-        //workflow is top level
-        if ("workflow".equals(source)) {
-            return "workflow";
-        }
-
         //no name
         if ("name".equals(source)) {
             return "id";

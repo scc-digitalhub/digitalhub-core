@@ -1,0 +1,18 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "type" : "object",
+  "properties" : {
+    "guardrails" : {
+      "title" : "fields.gatewayextension.guardrails.title",
+      "description" : "fields.gatewayextension.guardrails.description",
+      "type" : "array",
+      "items" : {
+        "type" : "string",
+        "title" : "fields.guardrails.item.title",
+        "description" : "fields.guardrails.item.description"
+      }
+    }
+  },
+  "title" : "specs.envoygw.title",
+  "description" : "specs.envoygw.description"
+}

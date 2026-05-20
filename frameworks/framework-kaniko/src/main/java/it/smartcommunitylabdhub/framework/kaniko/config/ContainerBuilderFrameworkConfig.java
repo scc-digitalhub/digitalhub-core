@@ -37,6 +37,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
 @PropertySource(value = "classpath:/framework-kaniko.yml", factory = YamlPropertySourceFactory.class)
@@ -46,9 +47,10 @@ public class ContainerBuilderFrameworkConfig {
     @Bean
     @ConditionalOnKubernetes
     public RunnableStore<K8sContainerBuilderRunnable> k8sKanikoRunnableStoreService(
-        RunnableRepository runnableRepository
+        RunnableRepository runnableRepository,
+        PlatformTransactionManager transactionManager
     ) {
-        return new RunnableStoreImpl<>(K8sContainerBuilderRunnable.class, runnableRepository);
+        return new RunnableStoreImpl<>(K8sContainerBuilderRunnable.class, runnableRepository, transactionManager);
     }
 
     @Bean

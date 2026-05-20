@@ -6,7 +6,7 @@
       "type" : "string",
       "title" : "fields.container.image.title",
       "description" : "fields.container.image.description",
-      "pattern" : "^kserve\\/huggingfaceserver?:"
+      "pattern" : "^(kserve\\/huggingfaceserver?:).*"
     },
     "model_name" : {
       "type" : "string",
