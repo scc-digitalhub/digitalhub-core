@@ -1,0 +1,11 @@
+kind: huggingface
+metadata:
+  name: qwen3
+  updated_by: msaloni@fbk.eu
+  description: "Qwen3 is the latest generation of large language models in Qwen
+    series, offering a comprehensive suite of dense and mixture-of-experts (MoE)
+    models. "
+  labels: ["Qwen", "Qwen3", "MoE", "License: Apache-2.0"]
+name: qwen
+spec:
+  path: hf://Qwen/Qwen3-235B-A22B

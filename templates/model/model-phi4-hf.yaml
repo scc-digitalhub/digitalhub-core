@@ -1,0 +1,14 @@
+kind: huggingface
+metadata:
+  name: phi4
+  description: Phi-4-reasoning is a state-of-the-art open-weight reasoning model
+    finetuned from Phi-4 using supervised fine-tuning on a dataset of
+    chain-of-thought traces and reinforcement learning. The supervised
+    fine-tuning dataset includes a blend of synthetic prompts and high-quality
+    filtered data from public domain websites, focused on math, science, and
+    coding skills as well as alignment data for safety and Responsible AI.
+  labels: ["Phi", "Phi4", "Reasoning", "License: MIT"]
+name: phi4
+spec:
+  path: microsoft/Phi-4-reasoning
+
