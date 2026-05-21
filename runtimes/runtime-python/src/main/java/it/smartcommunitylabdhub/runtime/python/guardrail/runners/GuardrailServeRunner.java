@@ -101,7 +101,9 @@ public class GuardrailServeRunner extends PythonBaseRunner {
         String handler = buildHandler(sourceCode);
 
         //requirements
-        List<String> requirements = buildRequirements(image, functionSpec.getRequirements());
+        List<String> requirements = properties.installDependencies()
+            ? buildRequirements(image, functionSpec.getRequirements())
+            : List.of();
 
         //read source and build context
         List<ContextRef> contextRefs = PythonRunnerHelper.createContextRefs(sourceCode);
@@ -111,8 +113,7 @@ public class GuardrailServeRunner extends PythonBaseRunner {
 
         //inject custom passwd to add our user
         if (passwdFile != null) {
-            ContextSource entry = ContextSource
-                .builder()
+            ContextSource entry = ContextSource.builder()
                 .name("passwd")
                 .base64(Base64.getEncoder().encodeToString(passwdFile.getBytes(StandardCharsets.UTF_8)))
                 .mountPath("/etc/passwd")
@@ -142,8 +143,7 @@ public class GuardrailServeRunner extends PythonBaseRunner {
             }
         }
 
-        K8sRunnable k8sServeRunnable = K8sServeRunnable
-            .builder()
+        K8sRunnable k8sServeRunnable = K8sServeRunnable.builder()
             .runtime(GuardrailRuntime.RUNTIME)
             .task(GuardrailServeTaskSpec.KIND)
             .state(State.READY.name())

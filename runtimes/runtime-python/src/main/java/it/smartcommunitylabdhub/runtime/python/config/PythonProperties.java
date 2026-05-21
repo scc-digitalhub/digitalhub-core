@@ -38,6 +38,8 @@ public class PythonProperties {
 
     private String command;
     private List<String> dependencies;
+    private Boolean useBetaDependencies;
+    private Boolean installDependencies;
 
     private Map<String, String> images;
     private Map<String, String> serverlessImages;
@@ -45,4 +47,12 @@ public class PythonProperties {
 
     private String entrypoint;
     private String passwdTemplate;
+
+    public boolean installDependencies() {
+        return installDependencies != null ? installDependencies.booleanValue() : true;
+    }
+
+    public boolean useBetaDependencies() {
+        return useBetaDependencies != null ? useBetaDependencies.booleanValue() : false;
+    }
 }
