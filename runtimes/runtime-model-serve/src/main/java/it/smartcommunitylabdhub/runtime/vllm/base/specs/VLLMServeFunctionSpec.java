@@ -45,17 +45,7 @@ import lombok.Setter;
 public class VLLMServeFunctionSpec extends FunctionBaseSpec {
 
     @NotNull
-    @Pattern(
-        regexp = "^(store://([^/]+)/model/huggingface/.*)" +
-        "|" +
-        Keys.FOLDER_PATTERN +
-        "|" +
-        Keys.ZIP_PATTERN +
-        "|" +
-        "^huggingface?://.*$" +
-        "|" +
-        "^hf?://.*$"
-    )
+    @Pattern(regexp = "^(store://([^/]+)/model/huggingface/.*)")
     @Schema(title = "fields.vllm.url.title", description = "fields.vllm.url.description")
     private String url;
 

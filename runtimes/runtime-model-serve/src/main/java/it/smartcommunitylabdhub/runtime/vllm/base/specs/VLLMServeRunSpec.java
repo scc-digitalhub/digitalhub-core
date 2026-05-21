@@ -25,7 +25,6 @@ package it.smartcommunitylabdhub.runtime.vllm.base.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
-import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
@@ -40,17 +39,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class VLLMServeRunSpec extends RunBaseSpec {
 
-    @Pattern(
-        regexp = "^(store://([^/]+)/model/huggingface/.*)" +
-        "|" +
-        Keys.FOLDER_PATTERN +
-        "|" +
-        Keys.ZIP_PATTERN +
-        "|" +
-        "^huggingface?://.*$" +
-        "|" +
-        "^hf?://.*$"
-    )
+    @Pattern(regexp = "^(store://([^/]+)/model/huggingface/.*)")
     @Schema(title = "fields.vllm.url.title", description = "fields.vllm.url.description")
     private String url;
 
