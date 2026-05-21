@@ -93,8 +93,9 @@ public class K8sSecretHelper {
                                     new V1EnvVar()
                                         .name(key)
                                         .valueFrom(
-                                            new V1EnvVarSource()
-                                                .secretKeyRef(new V1SecretKeySelector().name(s).key(key))
+                                            new V1EnvVarSource().secretKeyRef(
+                                                new V1SecretKeySelector().name(s).key(key)
+                                            )
                                         )
                                 )
                             );
@@ -131,14 +132,19 @@ public class K8sSecretHelper {
     }
 
     public void deleteSecret(String secretName) throws ApiException {
+        V1Secret sec;
         try {
-            api.readNamespacedSecret(secretName, namespace, "");
+            sec = api.readNamespacedSecret(secretName, namespace, "");
         } catch (ApiException e) {
             return;
         }
 
-        //delete
-        api.deleteNamespacedSecret(secretName, namespace, null, null, 0, null, null, "Foreground", null);
+        if (sec != null) {
+            log.debug("delete secret {}", secretName);
+
+            //delete
+            api.deleteNamespacedSecret(secretName, namespace, null, null, 0, null, null, "Foreground", null);
+        }
     }
 
     public void deleteSecretKeys(String secretName, Set<String> keys) throws JsonProcessingException, ApiException {

@@ -192,8 +192,7 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
         try {
             cr = get(build(runnable), dynamicApi);
         } catch (K8sFrameworkException | IllegalArgumentException e) {
-            runnable.setState(K8sRunnableState.DELETED.name());
-            return runnable;
+            cr = null;
         }
 
         if (cr != null) {
@@ -202,7 +201,7 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
             messages.add(String.format("CR %s deleted", cr.getMetadata().getName()));
         }
 
-        //secrets
+        //secrets delete is idempotent, we can try to delete even if CR is not found
         cleanRunSecret(runnable);
 
         try {

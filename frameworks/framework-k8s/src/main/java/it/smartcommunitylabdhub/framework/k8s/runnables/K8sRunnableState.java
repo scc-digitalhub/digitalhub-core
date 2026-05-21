@@ -23,13 +23,8 @@
 
 package it.smartcommunitylabdhub.framework.k8s.runnables;
 
-import it.smartcommunitylabdhub.commons.lifecycle.LifecycleState;
-import it.smartcommunitylabdhub.runs.Run;
-
-public enum K8sRunnableState implements LifecycleState<Run> {
-    BUILT,
+public enum K8sRunnableState {
     COMPLETED,
-    CREATED,
     DELETED,
     DELETING,
     ERROR,
