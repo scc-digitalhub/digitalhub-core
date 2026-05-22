@@ -11,4 +11,5 @@ metadata:
 name: phi4
 spec:
   path: microsoft/Phi-4-reasoning
-
+status:
+  state: READY

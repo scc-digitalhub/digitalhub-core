@@ -1,14 +1,14 @@
 kind: huggingface
 metadata:
-  name: gemma-4
-  description: Gemma is a family of open models built by Google DeepMind. Gemma 4
+  name: gemma-4-E4B
+  description:
+    Gemma is a family of open models built by Google DeepMind. Gemma 4
     models are multimodal, handling text and image input (with audio supported
-    on small models) and generating text output. This release includes
-    open-weights models in both pre-trained and instruction-tuned variants.
-    Gemma 4 features a context window of up to 256K tokens and maintains
-    multilingual support in over 140 languages. 
+    on small models) and generating text output. This release includes Dense
+    4.5B effective (8B with embeddings)
   labels: ["Gemma", "Gemma4", "Multimodal", "License: Apache-2.0"]
-name: gemma4
+name: gemma-4-E4B
 spec:
-  path: hf://google/gemma-4-26B-A4B-it
-
+  path: hf://google/gemma-4-E4B
+status:
+  state: READY
