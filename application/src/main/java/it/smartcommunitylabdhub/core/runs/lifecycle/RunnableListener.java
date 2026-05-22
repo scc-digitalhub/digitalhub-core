@@ -23,6 +23,9 @@
 
 package it.smartcommunitylabdhub.core.runs.lifecycle;
 
+import it.smartcommunitylabdhub.authorization.UserAuthenticationManager;
+import it.smartcommunitylabdhub.authorization.UserAuthenticationManagerBuilder;
+import it.smartcommunitylabdhub.authorization.providers.NoOpAuthenticationProvider;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.runs.Run;
@@ -36,6 +39,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.Message;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -50,6 +54,7 @@ public class RunnableListener {
     private final RunManager runService;
     private final KindAwareRunLifecycleManager runManager;
     private Collection<RunnableStore<?>> stores = Collections.emptyList();
+    private UserAuthenticationManager authenticationManager;
 
     public RunnableListener(RunManager runService, KindAwareRunLifecycleManager runManager) {
         Assert.notNull(runManager, "run manager is required");
@@ -63,6 +68,11 @@ public class RunnableListener {
         this.stores = stores;
     }
 
+    @Autowired
+    public void setAuthenticationManagerBuilder(UserAuthenticationManagerBuilder authenticationManagerBuilder) {
+        this.authenticationManager = authenticationManagerBuilder.build(new NoOpAuthenticationProvider());
+    }
+
     /*
      * Set security context on the current thread, run the lambda, then clear.
      * The caller (rex- thread) blocks for the duration, preserving backpressure
@@ -74,10 +84,17 @@ public class RunnableListener {
         log.trace("wrap run callback for user {}", String.valueOf(user));
         if (user != null) {
             // TODO restore user roles/context?
-            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                    user,
-                    null,
-                    Collections.singleton(new SimpleGrantedAuthority("ROLE_USER")));
+            UsernamePasswordAuthenticationToken userAuth = new UsernamePasswordAuthenticationToken(
+                user,
+                null,
+                Collections.singleton(new SimpleGrantedAuthority("ROLE_USER"))
+            );
+            // restore user roles/context
+            Authentication auth = userAuth;
+            if (authenticationManager != null) {
+                //process to get full credentials
+                auth = authenticationManager.process(userAuth);
+            }
             SecurityContext ctx = new TransientSecurityContext(auth);
             SecurityContextHolder.setContext(ctx);
         }
@@ -121,9 +138,10 @@ public class RunnableListener {
                             RunRunnable rr = store.find(id);
                             if (rr != null) {
                                 log.warn(
-                                        "Remove orphaned runnable {} from store {}",
-                                        id,
-                                        store.getResolvableType().resolve().getName());
+                                    "Remove orphaned runnable {} from store {}",
+                                    id,
+                                    store.getResolvableType().resolve().getName()
+                                );
                                 store.remove(id);
                             }
                         } catch (StoreException e) {

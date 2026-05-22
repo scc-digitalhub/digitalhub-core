@@ -23,6 +23,9 @@
 
 package it.smartcommunitylabdhub.core.events;
 
+import it.smartcommunitylabdhub.authorization.UserAuthenticationManager;
+import it.smartcommunitylabdhub.authorization.UserAuthenticationManagerBuilder;
+import it.smartcommunitylabdhub.authorization.providers.NoOpAuthenticationProvider;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import java.util.Collections;
@@ -30,8 +33,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.Message;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -52,6 +57,7 @@ public class EntityEventDispatcher {
         Class<? extends BaseEntity>,
         AbstractEntityListener<? extends BaseEntity, ? extends BaseDTO>
     > listeners = new HashMap<>();
+    private UserAuthenticationManager authenticationManager;
 
     public EntityEventDispatcher(List<AbstractEntityListener<? extends BaseEntity, ? extends BaseDTO>> allListeners) {
         for (AbstractEntityListener<? extends BaseEntity, ? extends BaseDTO> listener : allListeners) {
@@ -68,6 +74,11 @@ public class EntityEventDispatcher {
                 listeners.put(entityClass, listener);
             }
         }
+    }
+
+    @Autowired
+    public void setAuthenticationManagerBuilder(UserAuthenticationManagerBuilder authenticationManagerBuilder) {
+        this.authenticationManager = authenticationManagerBuilder.build(new NoOpAuthenticationProvider());
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -95,11 +106,18 @@ public class EntityEventDispatcher {
         String user = event.getEntity().getCreatedBy();
         if (user != null) {
             // TODO restore user roles/context?
-            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+            UsernamePasswordAuthenticationToken userAuth = new UsernamePasswordAuthenticationToken(
                 user,
                 null,
                 Collections.singleton(new SimpleGrantedAuthority("ROLE_USER"))
             );
+            // restore user roles/context
+            Authentication auth = userAuth;
+            if (authenticationManager != null) {
+                //process to get full credentials
+                auth = authenticationManager.process(userAuth);
+            }
+
             SecurityContext ctx = new TransientSecurityContext(auth);
             SecurityContextHolder.setContext(ctx);
         }
