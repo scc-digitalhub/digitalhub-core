@@ -90,6 +90,7 @@
 
 ### Bug Fixes
 
+* abstract runtime handles actions only for non-local runs ([442f357](https://github.com/scc-digitalhub/digitalhub-core/commit/442f357d5714cb7b510e226c1e3c5073239de788))
 * async ops need a fully inflated user authentication, post-process synthetic auth (workaround) ([bf43a3a](https://github.com/scc-digitalhub/digitalhub-core/commit/bf43a3a82e644ab41d9fe69017f13d2e50b3bb4f))
 * handle DELETED on k8s runnables by removing from store and DELETE on runs from abstractRuntime via op if no runnable available ([e44d639](https://github.com/scc-digitalhub/digitalhub-core/commit/e44d63994bdcde193f0fe8a033eb50e54562e161))
 * run DELETE goes through runManager and not directly to LM ([4455e57](https://github.com/scc-digitalhub/digitalhub-core/commit/4455e57198c68a7ab419aff8200f69345ff7bb86))
