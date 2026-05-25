@@ -23,6 +23,7 @@ runtime:
     passwd-template: classpath:/runtime-python/docker/passwd.template
     dependencies: ${RUNTIME_PYTHON_DEPENDENCIES:digitalhub[full],digitalhub-runtime-python}
     use-beta-dependencies: ${RUNTIME_PYTHON_USE_BETA_DEPENDENCIES:false}
+    install-dependencies: ${RUNTIME_PYTHON_INSTALL_DEPENDENCIES:true}
     volume-size: ${RUNTIME_PYTHON_VOLUME_SIZE:1Gi}
   guardrail:
     images:
@@ -48,6 +49,7 @@ runtime:
     passwd-template: ${runtime.python.passwd-template:classpath:/runtime-python/docker/passwd.template}
     dependencies: ${RUNTIME_GUARDRAIL_DEPENDENCIES:digitalhub[full],digitalhub-runtime-python}
     use-beta-dependencies: ${RUNTIME_GUARDRAIL_USE_BETA_DEPENDENCIES:${runtime.python.use-beta-dependencies}}
+    install-dependencies: ${RUNTIME_GUARDRAIL_INSTALL_DEPENDENCIES:${runtime.python.install-dependencies}}
     volume-size: ${RUNTIME_GUARDRAIL_VOLUME_SIZE:${runtime.python.volume-size}}
   openinference:
     images:
@@ -73,5 +75,6 @@ runtime:
     passwd-template: ${runtime.python.passwd-template:classpath:/runtime-python/docker/passwd.template}
     dependencies: ${RUNTIME_OPENINFERENCE_DEPENDENCIES:digitalhub[full],digitalhub-runtime-python}
     use-beta-dependencies: ${RUNTIME_OPENINFERENCE_USE_BETA_DEPENDENCIES:${runtime.python.use-beta-dependencies}}
+    install-dependencies: ${RUNTIME_OPENINFERENCE_INSTALL_DEPENDENCIES:${runtime.python.install-dependencies}}
     volume-size: ${RUNTIME_OPENINFERENCE_VOLUME_SIZE:${runtime.python.volume-size}}    
         

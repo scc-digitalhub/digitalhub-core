@@ -1,4 +1,167 @@
-# [0.14.2](https://github.com/scc-digitalhub/digitalhub-core/compare/0.14.1...0.14.0) (2026-03-16)
+# [0.15.0](https://github.com/scc-digitalhub/digitalhub-core/compare/0.14.3...0.15.0) (2026-05-22)
+
+## What's Changed
+* vLLM runtime integration by @kazhamiakin in https://github.com/scc-digitalhub/digitalhub-core/pull/201
+* Entity name removal + refactoring by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/202
+* Envoy gateway integration module by @kazhamiakin in https://github.com/scc-digitalhub/digitalhub-core/pull/204
+* Refactoring python runtime: integrated python handler code by @kazhamiakin in https://github.com/scc-digitalhub/digitalhub-core/pull/206
+* fix: clone updated entity before persistence by @etomaselli in https://github.com/scc-digitalhub/digitalhub-core/pull/205
+* chore(deps): bump io.minio:minio from 8.5.16 to 8.6.0 in /providers/credentials-provider-minio by @dependabot[bot] in https://github.com/scc-digitalhub/digitalhub-core/pull/199
+* #feat: Guardrails based on Envoy proxy extProc extension by @kazhamiakin in https://github.com/scc-digitalhub/digitalhub-core/pull/207
+* feat: support extensible fsm for entities via fsm builders scan by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/208
+* refactor: removed default /shared dir by @EvangMM in https://github.com/scc-digitalhub/digitalhub-core/pull/209
+* feat: s3 files and credentials provider with aws sdk by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/211
+* Openinference by @kazhamiakin in https://github.com/scc-digitalhub/digitalhub-core/pull/210
+* feat: consolidate python base runtime and derived runtimes by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/213
+* feat: Extensions by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/214
+* feat: Run extensions support, gateway extension support by @kazhamiakin in https://github.com/scc-digitalhub/digitalhub-core/pull/216
+* feat: pass secrets and envs to build by @kazhamiakin in https://github.com/scc-digitalhub/digitalhub-core/pull/217
+* feat: Support project-based access policy restrictions by @kazhamiakin in https://github.com/scc-digitalhub/digitalhub-core/pull/218
+* feat: switch to queue-based event dispatching by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/219
+* Run operations channel by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/220
+
+
+### Features
+
+* templates supports status ([4f1d38b](https://github.com/scc-digitalhub/digitalhub-core/commit/4f1d38b6eb0a07e1b8c28c95e8a84d00232e60a5))
+* let administrators disable dependencies install at runtime for python ([edb460e](https://github.com/scc-digitalhub/digitalhub-core/commit/edb460e39c334ebbe592c5cb7c81ba0d30c7115f))
+* detach runnableStore from spring transactional proxies and directly handle writes ([5c590ec](https://github.com/scc-digitalhub/digitalhub-core/commit/5c590ec98f277431157c99818633bd967a9a0e67))
+* entity operations queue support + dispatch delete/finalize async when possible ([36ba2cf](https://github.com/scc-digitalhub/digitalhub-core/commit/36ba2cfade4233e29ece8e9cf621cf149d51156c))
+* k8s jobs always go through RUNNING when passing to PENDING ([3e666f7](https://github.com/scc-digitalhub/digitalhub-core/commit/3e666f7c88d7e13996d42df6e50feed861f7e8b8))
+* switch to queue-based event dispatching ([be7a901](https://github.com/scc-digitalhub/digitalhub-core/commit/be7a9018d9591bc0f5d4129ada1f3d37b274c39c))
+* adopt caffeine cache with expire after 600s by default ([56b2f69](https://github.com/scc-digitalhub/digitalhub-core/commit/56b2f69145c793f82eb417f7ae36052e8ed96ac6))
+* clarity telemetry for console ([ae851a6](https://github.com/scc-digitalhub/digitalhub-core/commit/ae851a648517b0d6683049f1c0c1ba3405ad94d3))
+* support PENDING state for k8s builder framework ([aff6252](https://github.com/scc-digitalhub/digitalhub-core/commit/aff62523b32dd2eec1c7fc1ba866b03216716300))
+* cache runnable entries in store ([27a2dca](https://github.com/scc-digitalhub/digitalhub-core/commit/27a2dca5ebccf236dfd36b26c8d9c15988a6089f))
+* kubeai ollama enable cors support ([b8bc7eb](https://github.com/scc-digitalhub/digitalhub-core/commit/b8bc7eb9ecdce17d14ea09ed631889bba9573f7e))
+* labels for filters for artifacts, dataitems, models, functions, workflows ([743f68f](https://github.com/scc-digitalhub/digitalhub-core/commit/743f68fabee3efebdf84d4da3a4c91818c9f62af))
+* add service aliases to k8s service status ([96ab4d1](https://github.com/scc-digitalhub/digitalhub-core/commit/96ab4d15ea63a375ae79c506222d2b3d391d2b4e))
+* Support project-based access policy restritions ([#218](https://github.com/scc-digitalhub/digitalhub-core/issues/218)) ([ee74e00](https://github.com/scc-digitalhub/digitalhub-core/commit/ee74e00c74689b1b65e32728ddb1e625214fdddc))
+* add caching to base repository ([35db491](https://github.com/scc-digitalhub/digitalhub-core/commit/35db491cc72b18ac54865b7ada569783d6a85534))
+* k8s deploy/serve stop deletes the deployment ([0ba197c](https://github.com/scc-digitalhub/digitalhub-core/commit/0ba197c1c04fbe218d72370dc0d8acd42b43aeaf))
+* pass secrets and envs to build ([#217](https://github.com/scc-digitalhub/digitalhub-core/issues/217)) ([befd656](https://github.com/scc-digitalhub/digitalhub-core/commit/befd6566e69fe029a789ce25c7e8da28b659902c))
+* proxy configuration provider ([370ff93](https://github.com/scc-digitalhub/digitalhub-core/commit/370ff93be27081f78a296b7670ccdb8cd72c6661))
+* switch from async events to message queue + executor pool for runnable callbacks ([0513f4f](https://github.com/scc-digitalhub/digitalhub-core/commit/0513f4f19f7779308dc60a2d99fb4b6c135bc108))
+* extensions service as proper aspect ([171af47](https://github.com/scc-digitalhub/digitalhub-core/commit/171af47126af70f074b8604321d173dd3f3ed486))
+* parallel and ordered processors execution ([eb71db9](https://github.com/scc-digitalhub/digitalhub-core/commit/eb71db9ff7452afbf7934f98594967c9c8372037))
+* remove hera pipeline input/outputs ([6ee57c9](https://github.com/scc-digitalhub/digitalhub-core/commit/6ee57c96d274515e5566812ab7d0294a0f0cf848))
+* use upsert for runnablestore to avoid find-update pattern ([2f416a3](https://github.com/scc-digitalhub/digitalhub-core/commit/2f416a3ef82ea9029dff0e56a4f9a171b0732dcc))
+* add core labels to ephemeral volumes ([57b7142](https://github.com/scc-digitalhub/digitalhub-core/commit/57b71426f9e63e97a1847a29b566a069a5c6226c))
+* add pvc and pods to k8s metrics ([dfec185](https://github.com/scc-digitalhub/digitalhub-core/commit/dfec18569ea465b240289f1ed99de3daafd683a8))
+* project metrics as aggregated from k8s metrics ([2128fc9](https://github.com/scc-digitalhub/digitalhub-core/commit/2128fc9053f16eab8d115048f1fda14d0568cd00))
+* revisit k8s labels to expose dhcore as manager and application as component ([08a8093](https://github.com/scc-digitalhub/digitalhub-core/commit/08a80936fce9bab1cebb3a726d67b127c5acda1d))
+* Run extensions support, gateway extension support ([#216](https://github.com/scc-digitalhub/digitalhub-core/issues/216)) ([ffe7f71](https://github.com/scc-digitalhub/digitalhub-core/commit/ffe7f71af71f4712d7877721e702122fb623a47b))
+* use fixed namespace `dhcore` for k8s labels ([d94f5c1](https://github.com/scc-digitalhub/digitalhub-core/commit/d94f5c125b0863ab981c799af15e25642a69b978))
+* extensible for models and dataitems ([642f472](https://github.com/scc-digitalhub/digitalhub-core/commit/642f47242d163dfaf95e1cebfe5f365ec5fd39e5))
+* build status records dockerFile ([6689f2d](https://github.com/scc-digitalhub/digitalhub-core/commit/6689f2de3d6f5bde318c88c86baed5c6334a9a7d))
+* consolidate python base runtime and derived runtimes + align build and layer handling ([de62fc1](https://github.com/scc-digitalhub/digitalhub-core/commit/de62fc1621422a723ea850a6b8532ff232377960))
+* extension definition ([447e38a](https://github.com/scc-digitalhub/digitalhub-core/commit/447e38a14f5da62d7abe014a8b2dde6b484ec497))
+* extensions for entities ([bd32e0a](https://github.com/scc-digitalhub/digitalhub-core/commit/bd32e0a821f53cd6e1b31d2f7222431b6a3b566c))
+* increment default db pool size ([d44681a](https://github.com/scc-digitalhub/digitalhub-core/commit/d44681a2d3ae39656a12b2007384a5326c7a95ce))
+* open inference v2 protocol support for python ([86873f2](https://github.com/scc-digitalhub/digitalhub-core/commit/86873f2c222502fda15751d095eb2e068795d9fe))
+* refactor builder-tool to remove hardcoded config, remove minio, add parallel download, support for read-only fs and arbitrary user, recap section ([5ef81d3](https://github.com/scc-digitalhub/digitalhub-core/commit/5ef81d3b54cda16acd6e89a91781c9920aacd2b0))
+* s3 assumerole provider uses MIN_DURATION as min cache duration ([0442369](https://github.com/scc-digitalhub/digitalhub-core/commit/0442369a5fff9a19c3ab661836f3e76a258c9616))
+* support uiSchema with schema ([4e5722e](https://github.com/scc-digitalhub/digitalhub-core/commit/4e5722e94f3610f18fc5b83ff36e28e508f9e606))
+* update python image and layer logic ([d87b84b](https://github.com/scc-digitalhub/digitalhub-core/commit/d87b84b5127370843c45b8ab651fe610ffdf910d))
+* run manager supports externally generated state changes ([e6c6840](https://github.com/scc-digitalhub/digitalhub-core/commit/e6c6840f282bb176ddbf256baa0e04131c9c35d2))
+* s3 files and credentials provider with aws sdk, deprecates credentials-provider-minio and credentials-provider-s3 ([e070344](https://github.com/scc-digitalhub/digitalhub-core/commit/e070344679c36342707680da68673c7065b97f03))
+* vllm runtime auto-configures cpu kv cache as 50% of mem ([5f95972](https://github.com/scc-digitalhub/digitalhub-core/commit/5f959725706a30aa2a17178e641b5974a346690b))
+* k8s runnable command is an array ([b388b12](https://github.com/scc-digitalhub/digitalhub-core/commit/b388b12b942032b9a2971710cb9773f09f04f5d4))
+* support context-source mount as file for k8s ([0ad13e9](https://github.com/scc-digitalhub/digitalhub-core/commit/0ad13e9ce8d6dda14a9c85b4f80a21bca7a44ee0))
+* support extensible fsm for entities via fsm builders scan ([4a84d5c](https://github.com/scc-digitalhub/digitalhub-core/commit/4a84d5c4901afad2d3f054fa14859b85717f1164))
+* vllm runtime template for injecting custom user ([ed063fe](https://github.com/scc-digitalhub/digitalhub-core/commit/ed063fe7659fcebf1f3277a1c1eac51249a9e60c))
+* support multiple runnables as output of run fsm events ([38e6565](https://github.com/scc-digitalhub/digitalhub-core/commit/38e65658cf73908260bff9b44c5bd6259ecf2285))
+* croissant ml dataitem ([0135d8f](https://github.com/scc-digitalhub/digitalhub-core/commit/0135d8f58ea314046ac3e310c7c19276e24c8a62))
+* drop Python 3.9 support ([bba5429](https://github.com/scc-digitalhub/digitalhub-core/commit/bba5429f35055e39daf7c890843bf0b6055727f6))
+* model serve runtimes support model override as run parameter ([6b0819a](https://github.com/scc-digitalhub/digitalhub-core/commit/6b0819a9873e53cbd4719ff5727317fff189b5eb))
+* add disk resource for requesting scratch space + set default in runtimes when needed ([47359d9](https://github.com/scc-digitalhub/digitalhub-core/commit/47359d9a871109e3030f62ce4e32f352d757fe5b))
+* configuration in well-known is sorted by key ([d9f983f](https://github.com/scc-digitalhub/digitalhub-core/commit/d9f983f83dac827e3fbf5bf27e0f2a776596f305))
+* dbconfig exposed as configuration ([2560718](https://github.com/scc-digitalhub/digitalhub-core/commit/256071821cceb1027bf28bef02134fe105831264))
+* inference_v2 service status for model serve ([a7104d5](https://github.com/scc-digitalhub/digitalhub-core/commit/a7104d5a5b6a89e66be7e68387924d3a7657f2db))
+* mlflowserve build action support ([9be151f](https://github.com/scc-digitalhub/digitalhub-core/commit/9be151fee261fd6bbe9cb5b3d3bdfb2c5092a1fa))
+* path for model serve is a run parameter ([f239d49](https://github.com/scc-digitalhub/digitalhub-core/commit/f239d494921d64de6ef7016f89a9bb07565346fd))
+* per-module property loading ([5950799](https://github.com/scc-digitalhub/digitalhub-core/commit/5950799e4bdb5a542e7955fb4fa911f2d8c34e56))
+* python 3.13 ([41fba1f](https://github.com/scc-digitalhub/digitalhub-core/commit/41fba1f9e0f44f9e09ba477f41a0a24ac7492b64))
+* remove entityName enum and refactor spec handling ([aba60f1](https://github.com/scc-digitalhub/digitalhub-core/commit/aba60f1014b951cf874e83ba783a7f6ec3d01c19))
+* search providers expose factory for indexers ([0e6fc2a](https://github.com/scc-digitalhub/digitalhub-core/commit/0e6fc2a3d40c280ebc398f58e3a80fd97ddf0836))
+* spring boot 3.5.9 upgrade ([a041ed8](https://github.com/scc-digitalhub/digitalhub-core/commit/a041ed84b3ad833f6673276ab6d4e929c35c53e0))
+* upgrade dependencies to spring 3.5 ([6b7c786](https://github.com/scc-digitalhub/digitalhub-core/commit/6b7c786054a49a0f4943a30b5bff84869b6e2cfb))
+
+
+### Bug Fixes
+
+* abstract runtime handles actions only for non-local runs ([442f357](https://github.com/scc-digitalhub/digitalhub-core/commit/442f357d5714cb7b510e226c1e3c5073239de788))
+* async ops need a fully inflated user authentication, post-process synthetic auth (workaround) ([bf43a3a](https://github.com/scc-digitalhub/digitalhub-core/commit/bf43a3a82e644ab41d9fe69017f13d2e50b3bb4f))
+* handle DELETED on k8s runnables by removing from store and DELETE on runs from abstractRuntime via op if no runnable available ([e44d639](https://github.com/scc-digitalhub/digitalhub-core/commit/e44d63994bdcde193f0fe8a033eb50e54562e161))
+* run DELETE goes through runManager and not directly to LM ([4455e57](https://github.com/scc-digitalhub/digitalhub-core/commit/4455e57198c68a7ab419aff8200f69345ff7bb86))
+* runlifeCycle manager executes both externally provided effect AND internal callback on every op ([b1bc41a](https://github.com/scc-digitalhub/digitalhub-core/commit/b1bc41ad524d199b678edc20b4b9aafc549c1ce2))
+* switch to custom cache resolver for repositories with generics because SPel does not work in Cache ([1fd26dd](https://github.com/scc-digitalhub/digitalhub-core/commit/1fd26dd48f0218f7294d00a04043fe87bab01926))
+* k8s service missing is not an error for stop/deleting ([7ad5a2e](https://github.com/scc-digitalhub/digitalhub-core/commit/7ad5a2e0b63e9576d3f3d9acc0e40dd5c77a0381))
+* log/metrics keep naming consistent ([d3646d7](https://github.com/scc-digitalhub/digitalhub-core/commit/d3646d7a679c8b84b2aaf197e14a2046e0442fa9))
+* model serve CONSUMES relationship direction ([56e364a](https://github.com/scc-digitalhub/digitalhub-core/commit/56e364a465405253251d4d07567153818d4b86bf))
+* watcher/monitor debouncer + concurrency issues fixed ([33ecb6b](https://github.com/scc-digitalhub/digitalhub-core/commit/33ecb6b35276898117c785fe427d59c4c920de4c))
+* filter user notifications on state change was incorrect ([aad49d7](https://github.com/scc-digitalhub/digitalhub-core/commit/aad49d77d084b93760c9e5577a00a540a0031607))
+* cleanup filters + let clients use all entity primitive fields for search ([2ab968b](https://github.com/scc-digitalhub/digitalhub-core/commit/2ab968ba3494bfa4cec9f3c3963dfb5ea3b4c593))
+* detach entity + send events in transaction from baseRepository to avoid concurrency ([47435f0](https://github.com/scc-digitalhub/digitalhub-core/commit/47435f0e2f0ca00ebf3e264a66422a54a9859e68))
+* kubeai env in spec as envs ([d09ee17](https://github.com/scc-digitalhub/digitalhub-core/commit/d09ee17e99b350a527c3c8cedae9fd5b621ba252))
+* k8s log collection with container id + name to account for restarts ([5fb1eb8](https://github.com/scc-digitalhub/digitalhub-core/commit/5fb1eb8a457be2135e5c7966a69138f6b460d627))
+* sklearn model serve uses model name for folder ([8de7214](https://github.com/scc-digitalhub/digitalhub-core/commit/8de7214a06a6932a40b87ef1bf762a29c726845b))
+* add mixin for deserializing old runnables with single command ([5593119](https://github.com/scc-digitalhub/digitalhub-core/commit/5593119f1ab171a2e06309e647532be56691bf29))
+* correct import path for python build wheels from layer image ([45da90a](https://github.com/scc-digitalhub/digitalhub-core/commit/45da90af7a658b57db5be899c3dcc926a815b6de))
+* disable default prefix caching for vllm ([aa0bf33](https://github.com/scc-digitalhub/digitalhub-core/commit/aa0bf3301ec92a64470f140cf08dadb0a62202b3))
+* revert change to default shared-dir size ([67f218a](https://github.com/scc-digitalhub/digitalhub-core/commit/67f218ab9faa1b648500e0de781f32f477d4f833))
+* align with vLLM version used in KubeAi ([d88428d](https://github.com/scc-digitalhub/digitalhub-core/commit/d88428d39e1b223be81886d873b45db2fe5f292b))
+* updated depenencies to include the correct version ([c6ec5f2](https://github.com/scc-digitalhub/digitalhub-core/commit/c6ec5f2110b62ec233e378755dd2d948abb55cc4))
+* vllm model parameter missing ([480f9f7](https://github.com/scc-digitalhub/digitalhub-core/commit/480f9f7e9f5675f5d5e8ae8fd1e0c9dbb7fec0dc))
+* contextRefs write to csv with null values ([a4e371f](https://github.com/scc-digitalhub/digitalhub-core/commit/a4e371f8d13f8842bff86e4a7efdeeda05f14177))
+* entity managers are *not* transactional ([368dbfe](https://github.com/scc-digitalhub/digitalhub-core/commit/368dbfe7582efaa93ae4024bf5a1344ad969620c))
+* files service is *not* transactional ([5263735](https://github.com/scc-digitalhub/digitalhub-core/commit/5263735e1c16e54af0ccf58ab767e6059998562b))
+* use correct destination path for context refs in runnners ([a50d217](https://github.com/scc-digitalhub/digitalhub-core/commit/a50d217eb0e97bad3d5b803eb8f3efb8616d5b41))
+* avoid transaction NEW on async listeners and make sure they execute *after* repository commits ([c9573dc](https://github.com/scc-digitalhub/digitalhub-core/commit/c9573dc8a404c280ab8d948fdd18888f517a096b))
+* correct delete query for refresh token removal after consumption ([54ebe5e](https://github.com/scc-digitalhub/digitalhub-core/commit/54ebe5e38b1ac5bc9e57fe2e6f735766f0f1c8f0))
+* disable open-in-view and further detach baseMonitor from runnableStore to early close connections ([03b6b3c](https://github.com/scc-digitalhub/digitalhub-core/commit/03b6b3c39a454e268bade6859c5604425a2f67c1))
+* fix optional.of usage in builders ([714bc0d](https://github.com/scc-digitalhub/digitalhub-core/commit/714bc0d53a9be0b6b6354c3bfbc49c4717f96121))
+* path for python dockerfile bulid instruction ([ffade55](https://github.com/scc-digitalhub/digitalhub-core/commit/ffade55cceeda9e8d6c2015b31fc63a73f6520dd))
+* support paths with spaces in builder tool ([7c21c07](https://github.com/scc-digitalhub/digitalhub-core/commit/7c21c07cb391d46b92e5e94b1f9906be0310ec94))
+* avoid appending null messages in lifecycle manager envents ([85b3c07](https://github.com/scc-digitalhub/digitalhub-core/commit/85b3c078e794ef8b2106ff780e0981a6be9c5cc3))
+* check path/url override for vllm, kubeai during build ([c7585cb](https://github.com/scc-digitalhub/digitalhub-core/commit/c7585cbc12544f38fdaf485215a6d347b9c8bc78))
+* check path/url override for model serve during build ([41c9e27](https://github.com/scc-digitalhub/digitalhub-core/commit/41c9e27263cb1965b834c307fbfd4aca44b1dccb))
+* proxy service handles empty responses as plain text ([b2b1723](https://github.com/scc-digitalhub/digitalhub-core/commit/b2b172328a5528256e271b000c7c721157a81aec))
+* boolean check in vllmserve ([c0751bc](https://github.com/scc-digitalhub/digitalhub-core/commit/c0751bca38ffc24e54711edd79ac1fa61d7589a5))
+* clone updated entity before persistence and pass previous value to event publisher ([3e52953](https://github.com/scc-digitalhub/digitalhub-core/commit/3e5295399f14581669179b7cdb99af7ff41c7853))
+* detach all entities via clone before sending events from repo ([96ba943](https://github.com/scc-digitalhub/digitalhub-core/commit/96ba9434f3f87ca5b8b8a564ebae11ab15a49142))
+* proxy controller permission checks ([d41642a](https://github.com/scc-digitalhub/digitalhub-core/commit/d41642a8ccc827fcd12539d7cfcffb451732588d))
+* double /v2 in sklearn and mlflow service urls ([bda4563](https://github.com/scc-digitalhub/digitalhub-core/commit/bda45634215df39b2c1cadb8e10ab670f94d1720))
+* ephemeral volumes with name may cause errors ([862dfb3](https://github.com/scc-digitalhub/digitalhub-core/commit/862dfb319660dcda2303a5547fb634fcb1f95cde))
+* hugging face image regex ([ed0fe70](https://github.com/scc-digitalhub/digitalhub-core/commit/ed0fe70161e29551dce3781ed5be3e284f37b8e6))
+* post create lifecycle action uses newly persisted entry ([bc818e1](https://github.com/scc-digitalhub/digitalhub-core/commit/bc818e13223111109466ab3387cf666fac219457))
+* skip lost+found in init container chmods ([5b6f434](https://github.com/scc-digitalhub/digitalhub-core/commit/5b6f4347407b6f277da12b9c74849c4836908998))
+
+**Full Changelog**: https://github.com/scc-digitalhub/digitalhub-core/compare/0.14.3...0.15.0
+
+
+# [0.14.3](https://github.com/scc-digitalhub/digitalhub-core/compare/0.14.2...0.14.3) (2026-03-30)
+
+Maintenance release for 14.x
+
+### Bug Fixes
+
+* contextRefs write to csv with null values ([5cb3d9e](https://github.com/scc-digitalhub/digitalhub-core/commit/5cb3d9efdc92815fa4cf02b78e7e9831234ecafe))
+* entity managers are *not* transactional ([604835e](https://github.com/scc-digitalhub/digitalhub-core/commit/604835e51f35a0fd40ef7cfa6e551692e22dca0a))
+* files service is *not* transactional ([e9a219f](https://github.com/scc-digitalhub/digitalhub-core/commit/e9a219f6ed90e6d0d8f8c105bb382d7c61170d75))
+* missing force param for dataitem controller ([cfc437b](https://github.com/scc-digitalhub/digitalhub-core/commit/cfc437b4cf3a60d9bd1d8e05de577fa7bb8abf71))
+* use correct destination path for context refs in runnners ([037d203](https://github.com/scc-digitalhub/digitalhub-core/commit/037d203d90f6184308bb06dca384e494077580fe))
+
+
+### Features
+
+* revisit k8s labels to expose dhcore as manager and application as component ([ba4b702](https://github.com/scc-digitalhub/digitalhub-core/commit/ba4b70274b81b110ed1371331e52a7d6cde2a98a))
+* use fixed namespace `dhcore` for k8s labels ([ba534f3](https://github.com/scc-digitalhub/digitalhub-core/commit/ba534f39e4d4a340bc649fdf94c1ad3ab8dec992))
+
+**Full Changelog**: https://github.com/scc-digitalhub/digitalhub-core/compare/0.14.2...0.14.3
+
+
+# [0.14.2](https://github.com/scc-digitalhub/digitalhub-core/compare/0.14.1...0.14.2) (2026-03-16)
 
 Maintenance release for 14.x
 
@@ -18,7 +181,7 @@ Maintenance release for 14.x
 
 
 
-# [0.14.0](https://github.com/scc-digitalhub/digitalhub-core/compare/0.14.0-beta19...0.14.0) (2025-10-24)
+# [0.14.0](https://github.com/scc-digitalhub/digitalhub-core/compare/0.13.0...0.14.0) (2025-10-24)
 
 ## What's Changed
 * Fsm refactor states by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/187

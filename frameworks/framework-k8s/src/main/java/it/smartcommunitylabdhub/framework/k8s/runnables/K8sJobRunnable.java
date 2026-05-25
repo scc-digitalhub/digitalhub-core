@@ -26,6 +26,7 @@ package it.smartcommunitylabdhub.framework.k8s.runnables;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RunnableComponent;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sJobFramework;
+import java.util.Arrays;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -42,6 +43,13 @@ import lombok.experimental.SuperBuilder;
 @ToString(callSuper = true)
 public final class K8sJobRunnable extends K8sRunnable {
 
+    public static final String[] FINAL_STATES = {
+        K8sRunnableState.COMPLETED.name(),
+        K8sRunnableState.DELETED.name(),
+        K8sRunnableState.ERROR.name(),
+        K8sRunnableState.STOPPED.name(),
+    };
+
     @JsonProperty("backoff_limit")
     private Integer backoffLimit;
 
@@ -50,5 +58,10 @@ public final class K8sJobRunnable extends K8sRunnable {
     @Override
     public String getFramework() {
         return K8sJobFramework.FRAMEWORK;
+    }
+
+    @Override
+    public boolean isFinal() {
+        return (getState() != null && Arrays.asList(K8sJobRunnable.FINAL_STATES).contains(getState()));
     }
 }

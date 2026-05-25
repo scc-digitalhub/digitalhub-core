@@ -23,6 +23,9 @@
 
 package it.smartcommunitylabdhub.core.events;
 
+import it.smartcommunitylabdhub.authorization.UserAuthenticationManager;
+import it.smartcommunitylabdhub.authorization.UserAuthenticationManagerBuilder;
+import it.smartcommunitylabdhub.authorization.providers.NoOpAuthenticationProvider;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.events.EntityOperation;
@@ -37,6 +40,7 @@ import org.springframework.core.ResolvableTypeProvider;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -56,6 +60,7 @@ public class EntityOperationsDispatcher {
 
     private final Map<Class<?>, EntityOperationsListener<?>> listeners = new HashMap<>();
     protected MessageChannel entityOperationsChannel;
+    private UserAuthenticationManager authenticationManager;
 
     public EntityOperationsDispatcher(List<EntityOperationsListener<?>> allListeners) {
         for (EntityOperationsListener<?> listener : allListeners) {
@@ -83,6 +88,11 @@ public class EntityOperationsDispatcher {
         this.entityOperationsChannel = entityOperationsChannel;
     }
 
+    @Autowired
+    public void setAuthenticationManagerBuilder(UserAuthenticationManagerBuilder authenticationManagerBuilder) {
+        this.authenticationManager = authenticationManagerBuilder.build(new NoOpAuthenticationProvider());
+    }
+
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public void handle(Message<EntityOperation<?>> message) {
         if (message == null) {
@@ -105,11 +115,18 @@ public class EntityOperationsDispatcher {
         String user = op.getDto().getUser();
         if (user != null) {
             // TODO restore user roles/context?
-            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+            UsernamePasswordAuthenticationToken userAuth = new UsernamePasswordAuthenticationToken(
                 user,
                 null,
                 Collections.singleton(new SimpleGrantedAuthority("ROLE_USER"))
             );
+            // restore user roles/context
+            Authentication auth = userAuth;
+            if (authenticationManager != null) {
+                //process to get full credentials
+                auth = authenticationManager.process(userAuth);
+            }
+
             SecurityContext ctx = new TransientSecurityContext(auth);
             SecurityContextHolder.setContext(ctx);
         }

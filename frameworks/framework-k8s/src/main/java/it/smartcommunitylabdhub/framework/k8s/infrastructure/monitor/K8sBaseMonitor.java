@@ -54,8 +54,6 @@ public abstract class K8sBaseMonitor<T extends K8sRunnable> implements Runnable 
         ArrayList<HashMap<String, Serializable>>
     >() {};
 
-    protected static String[] STATES = { K8sRunnableState.PENDING.name(), K8sRunnableState.RUNNING.name() };
-
     protected final RunnableStore<T> store;
     private RunnableEventPublisher eventPublisher;
 
@@ -101,7 +99,7 @@ public abstract class K8sBaseMonitor<T extends K8sRunnable> implements Runnable 
         List<T> runnables = store
             .findAll()
             .stream()
-            .filter(runnable -> runnable.getState() != null && Arrays.asList(STATES).contains(runnable.getState()))
+            .filter(runnable -> runnable.getState() != null && !runnable.isTransient())
             .toList();
 
         runnables
@@ -113,16 +111,24 @@ public abstract class K8sBaseMonitor<T extends K8sRunnable> implements Runnable 
                     log.trace("runnable: {}", runnable);
                 }
 
-                T refreshed = refresh(runnable);
+                //if final avoid refresh
+                T refreshed = runnable.isFinal() ? runnable : refresh(runnable);
                 if (log.isTraceEnabled()) {
                     log.trace("refreshed: {}", refreshed);
                 }
 
                 // Update the runnable
                 try {
-                    log.debug("store run {}", refreshed.getId());
-                    store.store(refreshed.getId(), refreshed);
+                    //if runnable state is final, remove from store, otherwise update
+                    if (refreshed.isFinal()) {
+                        log.debug("delete run {} with state {}", refreshed.getId(), refreshed.getState());
+                        store.remove(refreshed.getId());
+                    } else {
+                        log.debug("store run {} with state {}", refreshed.getId(), refreshed.getState());
+                        store.store(refreshed.getId(), refreshed);
+                    }
 
+                    //always publish, even if final. We expect receivers to be idempotent
                     publish(refreshed);
                 } catch (StoreException e) {
                     log.error("Error with runnable store: {}", e.getMessage());
@@ -142,21 +148,29 @@ public abstract class K8sBaseMonitor<T extends K8sRunnable> implements Runnable 
             }
 
             //skip refresh for transient states, we don't wanna override an operation in progress
-            if (runnable.getState() != null && !Arrays.asList(STATES).contains(runnable.getState())) {
+            if (runnable.getState() != null && runnable.isTransient()) {
                 log.debug("runnable {} in transient state {}, skipping refresh", id, runnable.getState());
                 return;
             }
 
-            runnable = refresh(runnable);
+            //if final avoid refresh
+            T refreshed = runnable.isFinal() ? runnable : refresh(runnable);
             if (log.isTraceEnabled()) {
-                log.trace("refreshed: {}", runnable);
+                log.trace("refreshed: {}", refreshed);
             }
 
             // Update the runnable
-            log.debug("store run {}", runnable.getId());
-            store.store(runnable.getId(), runnable);
+            //if runnable state is final, remove from store, otherwise update
+            if (refreshed.isFinal()) {
+                log.debug("delete run {} with state {}", refreshed.getId(), refreshed.getState());
+                store.remove(refreshed.getId());
+            } else {
+                log.debug("store run {} with state {}", refreshed.getId(), refreshed.getState());
+                store.store(refreshed.getId(), refreshed);
+            }
 
-            publish(runnable);
+            //always publish, even if final. We expect receivers to be idempotent
+            publish(refreshed);
         } catch (StoreException e) {
             log.error("Error with runnable store: {}", e.getMessage());
             throw e;

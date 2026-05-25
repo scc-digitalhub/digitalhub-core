@@ -1,0 +1,12 @@
+kind: huggingface
+metadata:
+  name: Qwen3-4B
+  updated_by: msaloni@fbk.eu
+  description: "Qwen3-4B, a smaller Dense model with 4 billion total parameters
+    and 3 billion activated parameters"
+  labels: ["Qwen", "Qwen3", "Dense", "License: Apache-2.0"]
+name: Qwen3-4B
+spec:
+  path: hf://Qwen/Qwen3-4B
+status:
+  state: READY

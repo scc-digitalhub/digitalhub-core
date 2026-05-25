@@ -43,6 +43,7 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreResources;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreToleration;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -63,6 +64,19 @@ import org.springframework.util.StringUtils;
 @NoArgsConstructor
 @ToString
 public class K8sRunnable implements RunRunnable, SecuredRunnable, ConfigurableRunnable, CredentialsContainer {
+
+    public static final String[] FINAL_STATES = {
+        K8sRunnableState.DELETED.name(),
+        K8sRunnableState.ERROR.name(),
+        K8sRunnableState.STOPPED.name(),
+    };
+
+    public static final String[] TRANSIENT_STATES = {
+        K8sRunnableState.READY.name(),
+        K8sRunnableState.STOP.name(),
+        K8sRunnableState.RESUME.name(),
+        K8sRunnableState.DELETING.name(),
+    };
 
     private String id;
 
@@ -153,13 +167,12 @@ public class K8sRunnable implements RunRunnable, SecuredRunnable, ConfigurableRu
     public void setCredentials(Collection<Credentials> credentials) {
         if (credentials != null) {
             //export to map
-            this.credentialsMap =
-                credentials
-                    .stream()
-                    .flatMap(c -> c.toMap().entrySet().stream())
-                    //filter empty
-                    .filter(e -> StringUtils.hasText(e.getValue()))
-                    .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
+            this.credentialsMap = credentials
+                .stream()
+                .flatMap(c -> c.toMap().entrySet().stream())
+                //filter empty
+                .filter(e -> StringUtils.hasText(e.getValue()))
+                .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
         }
     }
 
@@ -167,18 +180,28 @@ public class K8sRunnable implements RunRunnable, SecuredRunnable, ConfigurableRu
     public void setConfigurations(Collection<Configuration> configurations) {
         if (configurations != null) {
             //export to map
-            this.configurationMap =
-                configurations
-                    .stream()
-                    .flatMap(c -> c.toStringMap().entrySet().stream())
-                    //filter empty
-                    .filter(e -> StringUtils.hasText(e.getValue()))
-                    .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
+            this.configurationMap = configurations
+                .stream()
+                .flatMap(c -> c.toStringMap().entrySet().stream())
+                //filter empty
+                .filter(e -> StringUtils.hasText(e.getValue()))
+                .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
         }
     }
 
+    //final state means we won't watch it anymore, so we can remove from store and stop sending events
+    public boolean isFinal() {
+        return Arrays.asList(FINAL_STATES).contains(getState());
+    }
+
+    //transient state means we are waiting for an update from the framework
+    public boolean isTransient() {
+        return Arrays.asList(TRANSIENT_STATES).contains(getState());
+    }
+
     public abstract static class K8sRunnableBuilder<
-        C extends K8sRunnable, B extends K8sRunnable.K8sRunnableBuilder<C, B>
+        C extends K8sRunnable,
+        B extends K8sRunnable.K8sRunnableBuilder<C, B>
     > {
 
         public B command(String command) {

@@ -29,6 +29,7 @@ import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
+import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
@@ -49,7 +50,7 @@ import org.springframework.lang.Nullable;
 @Builder
 @ToString
 @JsonPropertyOrder(alphabetic = true)
-public class Template implements BaseDTO, MetadataDTO, SpecDTO {
+public class Template implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO {
 
     @Nullable
     @Pattern(regexp = Keys.SLUG_PATTERN)
@@ -71,6 +72,10 @@ public class Template implements BaseDTO, MetadataDTO, SpecDTO {
     @Builder.Default
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Map<String, Serializable> spec = new HashMap<>();
+
+    @Builder.Default
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private Map<String, Serializable> status = new HashMap<>();
 
     @Override
     public String getKey() {

@@ -81,7 +81,9 @@ public class PythonJobRunner extends PythonBaseRunner {
 
             List<String> args = buildArgs(pythonVersion, baseImage, userImage);
             String image = buildImage(pythonVersion, baseImage, userImage);
-            List<String> requirements = buildRequirements(image, functionSpec.getRequirements());
+            List<String> requirements = properties.installDependencies()
+                ? buildRequirements(image, functionSpec.getRequirements())
+                : List.of();
 
             //fetch source code
             PythonSourceCode sourceCode = functionSpec.getSource();
@@ -105,8 +107,7 @@ public class PythonJobRunner extends PythonBaseRunner {
 
             //inject custom passwd to add our user
             if (passwdFile != null) {
-                ContextSource entry = ContextSource
-                    .builder()
+                ContextSource entry = ContextSource.builder()
                     .name("passwd")
                     .base64(Base64.getEncoder().encodeToString(passwdFile.getBytes(StandardCharsets.UTF_8)))
                     .mountPath("/etc/passwd")
@@ -114,8 +115,7 @@ public class PythonJobRunner extends PythonBaseRunner {
                 contextSources.add(entry);
             }
 
-            K8sJobRunnable k8sJobRunnable = K8sJobRunnable
-                .builder()
+            K8sJobRunnable k8sJobRunnable = K8sJobRunnable.builder()
                 .runtime(PythonRuntime.RUNTIME)
                 .task(PythonJobTaskSpec.KIND)
                 .state(State.READY.name())
