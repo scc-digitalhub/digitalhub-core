@@ -388,11 +388,6 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-runtime-guardrail</artifactId>
-            <version>${revision}</version>
-        </dependency>
-        <dependency>
-            <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-runtime-servicegraph</artifactId>
             <version>${revision}</version>
         </dependency>
