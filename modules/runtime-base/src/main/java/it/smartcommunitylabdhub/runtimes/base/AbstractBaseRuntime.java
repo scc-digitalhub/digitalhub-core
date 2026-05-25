@@ -23,6 +23,7 @@
 
 package it.smartcommunitylabdhub.runtimes.base;
 
+import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.runs.Run;
@@ -50,13 +51,17 @@ public abstract class AbstractBaseRuntime<
             throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
         }
 
-        //build runnable same as run
-        R runnable = run(run);
+        //non-local are not manageable
+        RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
+        if (!specAccessor.isLocalExecution()) {
+            //build runnable same as run
+            R runnable = run(run);
 
-        if (runnable != null) {
-            runnable.setState(RunState.STOP.name());
-            runnable.setMessage("stopping runnable " + runnable.getId());
-            return runnable;
+            if (runnable != null) {
+                runnable.setState(RunState.STOP.name());
+                runnable.setMessage("stopping runnable " + runnable.getId());
+                return runnable;
+            }
         }
 
         log.warn("Error stopping run {}", run.getId());
@@ -70,13 +75,17 @@ public abstract class AbstractBaseRuntime<
             throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
         }
 
-        //build runnable same as run
-        R runnable = run(run);
+        //non-local are not manageable
+        RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
+        if (!specAccessor.isLocalExecution()) {
+            //build runnable same as run
+            R runnable = run(run);
 
-        if (runnable != null) {
-            runnable.setState(RunState.RESUME.name());
-            runnable.setMessage("resuming runnable " + runnable.getId());
-            return runnable;
+            if (runnable != null) {
+                runnable.setState(RunState.RESUME.name());
+                runnable.setMessage("resuming runnable " + runnable.getId());
+                return runnable;
+            }
         }
 
         log.warn("Error resuming run {}", run.getId());
@@ -91,13 +100,28 @@ public abstract class AbstractBaseRuntime<
             throw new IllegalArgumentException("Run kind {} unsupported".formatted(String.valueOf(run.getKind())));
         }
 
-        //build runnable same as run
-        R runnable = run(run);
+        try {
+            //non-local are not manageable
+            RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
+            RunBaseStatus status = RunBaseStatus.with(run.getStatus());
+            if (
+                !specAccessor.isLocalExecution() &&
+                status.getState() != null &&
+                !RunState.CREATED.name().equals(status.getState())
+            ) {
+                //build runnable same as run
+                R runnable = run(run);
 
-        if (runnable != null) {
-            runnable.setState(RunState.DELETING.name());
-            runnable.setMessage("deleting runnable " + runnable.getId());
-            return runnable;
+                if (runnable != null) {
+                    runnable.setState(RunState.DELETING.name());
+                    runnable.setMessage("deleting runnable " + runnable.getId());
+                    return runnable;
+                }
+            }
+        } catch (RuntimeException e) {
+            //build or runners may throw errors:  we log and swallow the exception to allow deletion to proceed,
+            // we want to avoid blocking deletion due to runtime errors, even at the cost of leaving orphaned runnables
+            log.warn("Error deleting runnable {}, swallowing exception: {}", run.getId(), e.getMessage());
         }
 
         //nothing to do
