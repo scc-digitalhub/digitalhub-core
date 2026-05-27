@@ -115,6 +115,9 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
     protected String initImage;
     protected List<String> initCommand = null;
 
+    protected String pvcStorageClass;
+    protected String pvcAccessMode = "ReadWriteMany";
+
     /**
      * Object mapper for serializing Ray CR specs.
      *
@@ -188,6 +191,20 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
                 new LinkedList<>(Arrays.asList(StringUtils.commaDelimitedListToStringArray(initCommand)));
         }
     }
+
+    @Autowired
+    @Override
+    public void setPvcStorageClass(@Value("${kubernetes.resources.shared.storage-class}") String pvcStorageClass) {
+        if (StringUtils.hasText(pvcStorageClass)) {
+            this.pvcStorageClass = pvcStorageClass;
+        }
+    }
+
+    @Autowired
+    public void setPvcAccessMode(@Value("${kubernetes.resources.shared.access-mode}") String pvcAccessMode) {
+        this.pvcAccessMode = pvcAccessMode;
+    }
+
 
     /**
      * @return CR kind, e.g. {@code RayCluster}
@@ -265,7 +282,7 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
             throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
         }
 
-        //pvcs only for head for now, as workers are managed by the operator and can't be guaranteed to be created at runnable start time; if needed in the future we can add support for operator-managed volumes and let the operator create them based on a spec in the CR
+        //pvcs considered to be shared
         List<V1PersistentVolumeClaim> pvcs = buildPersistentVolumeClaims(runnable);
         if (pvcs != null) {
             List<V1PersistentVolumeClaim> pvcsFinal = new ArrayList<>();
@@ -805,6 +822,37 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
         }
 
         return podSpec;
+    }
+
+    @Override
+    public List<V1PersistentVolumeClaim> buildPersistentVolumeClaims(T runnable)
+        throws K8sFrameworkException {
+        List<V1PersistentVolumeClaim> volumes = super.buildPersistentVolumeClaims(runnable);
+        if (volumes != null) {
+    
+            String crName = getResourceName(runnable.getRuntime(), runnable.getTask(), runnable.getId());
+            for (V1PersistentVolumeClaim pvc : volumes) {
+                if (pvc.getMetadata() == null) {
+                    pvc.setMetadata(new V1ObjectMeta());
+                }
+
+                //add workflow label to pvcs
+                //workflow name is == runnable.id (see build)
+                Map<String, String> crl = Collections.singletonMap("ray.io/originated-from-cr-name", crName);
+                Map<String, String> labels = MapUtils.mergeMultipleMaps(crl, pvc.getMetadata().getLabels());
+                pvc.getMetadata().setLabels(labels);
+
+                //set access mode+storage class
+                if (pvc.getSpec() != null) {
+                    pvc.getSpec().setAccessModes(List.of(pvcAccessMode));
+                    if (StringUtils.hasText(pvcStorageClass)) {
+                        pvc.getSpec().setStorageClassName(pvcStorageClass);
+                    }
+                }
+            }
+        }
+
+        return volumes;
     }
 
     /**
