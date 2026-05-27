@@ -112,8 +112,9 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
     @Autowired
     public void setInitCommand(@Value("${kubernetes.init.command}") String initCommand) {
         if (StringUtils.hasText(initCommand)) {
-            this.initCommand =
-                new LinkedList<>(Arrays.asList(StringUtils.commaDelimitedListToStringArray(initCommand)));
+            this.initCommand = new LinkedList<>(
+                Arrays.asList(StringUtils.commaDelimitedListToStringArray(initCommand))
+            );
         }
     }
 
@@ -172,8 +173,8 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
                                     "context-refs.txt",
                                     contextRefsList
                                         .stream()
-                                        .map(v ->
-                                            v.getProtocol() + "," + v.getDestination() + "," + v.getSource() + "\n"
+                                        .map(
+                                            v -> v.getProtocol() + "," + v.getDestination() + "," + v.getSource() + "\n"
                                         )
                                         .collect(Collectors.joining(""))
                                 )
@@ -187,8 +188,7 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
                                     .collect(
                                         Collectors.toMap(
                                             c ->
-                                                Base64
-                                                    .getUrlEncoder()
+                                                Base64.getUrlEncoder()
                                                     .withoutPadding()
                                                     .encodeToString(c.getName().getBytes()),
                                             c ->
@@ -206,14 +206,14 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
                                     "context-sources-map.txt",
                                     contextSources
                                         .stream()
-                                        .map(c ->
-                                            Base64
-                                                .getUrlEncoder()
-                                                .withoutPadding()
-                                                .encodeToString(c.getName().getBytes()) +
-                                            "," +
-                                            c.getName() +
-                                            "\n"
+                                        .map(
+                                            c ->
+                                                Base64.getUrlEncoder()
+                                                    .withoutPadding()
+                                                    .encodeToString(c.getName().getBytes()) +
+                                                "," +
+                                                c.getName() +
+                                                "\n"
                                         )
                                         .collect(Collectors.joining(""))
                                 )
@@ -267,33 +267,11 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
             log.trace("runnable: {}", runnable);
         }
 
-        List<String> messages = new ArrayList<>();
-
-        V1Job job = get(build(runnable));
-
         //stop by deleting
-        log.info("delete job for {}", String.valueOf(job.getMetadata().getName()));
-        delete(job);
-        messages.add(String.format("job %s deleted", job.getMetadata().getName()));
-
-        //secrets
-        cleanRunSecret(runnable);
-
-        //init config map
-        try {
-            String configMapName = "init-config-map-" + runnable.getId();
-            V1ConfigMap initConfigMap = coreV1Api.readNamespacedConfigMap(configMapName, namespace, null);
-            if (initConfigMap != null) {
-                coreV1Api.deleteNamespacedConfigMap(configMapName, namespace, null, null, null, null, null, null, null);
-                messages.add(String.format("configMap %s deleted", configMapName));
-            }
-        } catch (ApiException | NullPointerException e) {
-            //ignore, not existing or error
-        }
+        runnable = delete(runnable);
 
         //update state
         runnable.setState(K8sRunnableState.STOPPED.name());
-        runnable.setMessage(String.join(", ", messages));
 
         if (log.isTraceEnabled()) {
             log.trace("result: {}", runnable);
@@ -309,20 +287,28 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
             log.trace("runnable: {}", runnable);
         }
 
+        K8sFrameworkException exception = null;
+        List<String> messages = new ArrayList<>();
         V1Job job;
         try {
             job = get(build(runnable));
         } catch (K8sFrameworkException e) {
-            runnable.setState(K8sRunnableState.DELETED.name());
-            return runnable;
+            job = null;
         }
 
-        List<String> messages = new ArrayList<>();
-        log.info("delete job for {}", String.valueOf(job.getMetadata().getName()));
-        delete(job);
-        messages.add(String.format("job %s deleted", job.getMetadata().getName()));
+        if (job != null) {
+            try {
+                log.info("delete job for {}", String.valueOf(job.getMetadata().getName()));
+                delete(job);
+                messages.add(String.format("job %s deleted", job.getMetadata().getName()));
+            } catch (K8sFrameworkException | NullPointerException e) {
+                //collect but keep going
+                log.error("error deleting job {}: {}", runnable.getId(), e.getMessage());
+                exception = new K8sFrameworkException(e.getMessage());
+            }
+        }
 
-        //secrets
+        //secrets delete is idempotent, so we can try to delete even if not existing
         cleanRunSecret(runnable);
 
         //init config map
@@ -345,6 +331,9 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
             log.trace("result: {}", runnable);
         }
 
+        if (exception != null) {
+            throw exception;
+        }
         return runnable;
     }
 
@@ -466,8 +455,7 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
             .env(env);
 
         // Create a PodSpec for the container, leverage template if provided
-        V1PodSpec podSpec = Optional
-            .ofNullable(template)
+        V1PodSpec podSpec = Optional.ofNullable(template)
             .map(K8sTemplate::getJob)
             .map(V1Job::getSpec)
             .map(V1JobSpec::getTemplate)
@@ -503,8 +491,7 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
         podSpec.setInitContainers(Collections.singletonList(initContainer));
 
         // Create the JobSpec with the PodTemplateSpec, leverage template if provided
-        V1JobSpec jobSpec = Optional
-            .ofNullable(template)
+        V1JobSpec jobSpec = Optional.ofNullable(template)
             .map(K8sTemplate::getJob)
             .map(V1Job::getSpec)
             .orElse(new V1JobSpec());

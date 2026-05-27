@@ -27,6 +27,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
+import java.util.Arrays;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -40,6 +42,13 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @AllArgsConstructor
 public final class K8sContainerBuilderRunnable extends K8sRunnable {
+
+    public static final String[] FINAL_STATES = {
+        K8sRunnableState.COMPLETED.name(),
+        K8sRunnableState.DELETED.name(),
+        K8sRunnableState.ERROR.name(),
+        K8sRunnableState.STOPPED.name(),
+    };
 
     public static final String FRAMEWORK = "k8sbuild";
 
@@ -55,5 +64,10 @@ public final class K8sContainerBuilderRunnable extends K8sRunnable {
     @Override
     public String getFramework() {
         return FRAMEWORK;
+    }
+
+    @Override
+    public boolean isFinal() {
+        return (getState() != null && Arrays.asList(K8sContainerBuilderRunnable.FINAL_STATES).contains(getState()));
     }
 }

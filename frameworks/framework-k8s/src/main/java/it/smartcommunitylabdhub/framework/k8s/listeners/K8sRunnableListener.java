@@ -33,6 +33,7 @@ import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import it.smartcommunitylabdhub.runtimes.events.RunnableChangedEvent;
 import it.smartcommunitylabdhub.runtimes.events.RunnableEventPublisher;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
+import java.util.Arrays;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.Assert;
@@ -78,24 +79,73 @@ public abstract class K8sRunnableListener<R extends K8sRunnable> {
         String framework = runnable.getFramework();
         String state = runnable.getState();
 
+        //load runnable from store to ensure we have the latest version, and to check if it exists
+        R stored = null;
         try {
+            stored = runnableStore.find(id);
+        } catch (StoreException e) {
+            log.error("Error loading runnable {} {} from store: {}", clazz.getSimpleName(), id, e.getMessage());
+        }
+
+        //if present update to new state now to avoid concurrency, we'll sync in finally
+        if (stored != null) {
+            log.debug("update state for runnable {} {} to {}", clazz.getSimpleName(), id, state);
+            stored.setState(state);
+            try {
+                runnableStore.store(id, stored);
+            } catch (StoreException e) {
+                log.error(
+                    "Error updating state for runnable {} {} in store: {}",
+                    clazz.getSimpleName(),
+                    id,
+                    e.getMessage()
+                );
+            }
+        } else {
+            log.warn("runnable {} {} not found in store, processing with provided instance", clazz.getSimpleName(), id);
+            stored = runnable;
+        }
+
+        try {
+            //handle supported operations with framework
             runnable = switch (K8sRunnableState.valueOf(state)) {
                 case K8sRunnableState.READY -> {
+                    //READY needs the new runnable
                     //sanity check: reset left-over messages
                     runnable.setMessage(null);
                     yield k8sFramework.run(runnable);
                 }
                 case K8sRunnableState.STOP -> {
+                    //stop on old if present
+                    if (stored != null) {
+                        runnable = stored;
+                        runnable.setState(state);
+                    }
+
                     //sanity check: reset left-over messages
                     runnable.setMessage(null);
+
                     yield k8sFramework.stop(runnable);
                 }
                 case K8sRunnableState.RESUME -> {
+                    //resume on old if present
+                    if (stored != null) {
+                        runnable = stored;
+                        runnable.setState(state);
+                    }
+
                     //sanity check: reset left-over messages
                     runnable.setMessage(null);
+                    //TODO drop
                     yield k8sFramework.resume(runnable);
                 }
                 case K8sRunnableState.DELETING -> {
+                    //delete on old if present
+                    if (stored != null) {
+                        runnable = stored;
+                        runnable.setState(state);
+                    }
+
                     //sanity check: reset left-over messages
                     runnable.setMessage(null);
                     yield k8sFramework.delete(runnable);
@@ -137,10 +187,24 @@ public abstract class K8sRunnableListener<R extends K8sRunnable> {
             if (runnable != null) {
                 try {
                     log.debug("update runnable {} {} in store", clazz.getSimpleName(), id);
-                    //if runnable is DELETED, remove from store, otherwise update
-                    if (K8sRunnableState.DELETED.name().equals(runnable.getState())) {
+                    //runnables shouldn't have a transient state at this point, but we can have a state change in case of error, so we update the store with the new state
+                    if (runnable.isTransient()) {
+                        log.warn(
+                            "runnable {} {} in transient state {}, updating to non-transient state {}",
+                            clazz.getSimpleName(),
+                            id,
+                            runnable.getState(),
+                            K8sRunnableState.ERROR.name()
+                        );
+                        runnable.setState(K8sRunnableState.ERROR.name());
+                    }
+
+                    //if runnable state is final, remove from store, otherwise update
+                    if (runnable.isFinal()) {
+                        log.debug("delete run {} with state {}", runnable.getId(), runnable.getState());
                         runnableStore.remove(id);
                     } else {
+                        log.debug("store run {} with state {}", runnable.getId(), runnable.getState());
                         runnableStore.store(id, runnable);
                     }
                 } catch (StoreException se) {

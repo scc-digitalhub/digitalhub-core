@@ -102,8 +102,9 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
     @Autowired
     public void setInitCommand(@Value("${kubernetes.init.command}") String initCommand) {
         if (StringUtils.hasText(initCommand)) {
-            this.initCommand =
-                new LinkedList<>(Arrays.asList(StringUtils.commaDelimitedListToStringArray(initCommand)));
+            this.initCommand = new LinkedList<>(
+                Arrays.asList(StringUtils.commaDelimitedListToStringArray(initCommand))
+            );
         }
     }
 
@@ -330,7 +331,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
             }
         }
 
-        //secrets
+        //secrets delete is idempotent, we can try to delete even if deployment is not found
         cleanRunSecret(runnable);
 
         //init config map
@@ -373,7 +374,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
                             messages.add(String.format("pvc %s deleted", pvcName));
                         }
                     } catch (ApiException e) {
-                        log.error("Error with k8s: {}", e.getMessage());
+                        log.debug("Error with k8s: {}", e.getMessage());
                         if (log.isTraceEnabled()) {
                             log.trace("k8s api response: {}", e.getResponseBody());
                         }
@@ -573,9 +574,10 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
         }
 
         // Generate deploymentName and ContainerName
-        String serviceName = serviceNameSuffix == null
-            ? k8sBuilderHelper.getServiceName(runnable.getRuntime(), runnable.getTask(), runnable.getId())
-            : k8sBuilderHelper.getServiceName(runnable.getRuntime(), runnable.getProject(), serviceNameSuffix);
+        String serviceName =
+            serviceNameSuffix == null
+                ? k8sBuilderHelper.getServiceName(runnable.getRuntime(), runnable.getTask(), runnable.getId())
+                : k8sBuilderHelper.getServiceName(runnable.getRuntime(), runnable.getProject(), serviceNameSuffix);
 
         log.debug("build k8s service for {}", serviceName);
 
@@ -598,8 +600,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
         }
 
         //build ports
-        List<V1ServicePort> ports = Optional
-            .ofNullable(runnable.getServicePorts())
+        List<V1ServicePort> ports = Optional.ofNullable(runnable.getServicePorts())
             .map(list ->
                 list
                     .stream()
@@ -623,19 +624,18 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
             K8sServeRunnable profile = template.getProfile();
             if (profile.getServicePorts() != null && !profile.getServicePorts().isEmpty()) {
                 //override
-                ports =
-                    profile
-                        .getServicePorts()
-                        .stream()
-                        .filter(p -> p.port() != null && p.targetPort() != null)
-                        .map(p ->
-                            new V1ServicePort()
-                                .port(p.port())
-                                .targetPort(new IntOrString(p.targetPort()))
-                                .protocol("TCP")
-                                .name("port" + p.port())
-                        )
-                        .collect(Collectors.toList());
+                ports = profile
+                    .getServicePorts()
+                    .stream()
+                    .filter(p -> p.port() != null && p.targetPort() != null)
+                    .map(p ->
+                        new V1ServicePort()
+                            .port(p.port())
+                            .targetPort(new IntOrString(p.targetPort()))
+                            .protocol("TCP")
+                            .name("port" + p.port())
+                    )
+                    .collect(Collectors.toList());
             }
 
             if (profile.getServiceType() != null) {
@@ -645,8 +645,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
         }
 
         //build service spec, leveraging template
-        V1ServiceSpec serviceSpec = Optional
-            .ofNullable(template)
+        V1ServiceSpec serviceSpec = Optional.ofNullable(template)
             .map(K8sTemplate::getService)
             .map(V1Service::getSpec)
             .orElse(new V1ServiceSpec());
@@ -799,9 +798,8 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
         List<String> args = buildArgs(runnable);
 
         //image policy
-        String imagePullPolicy = runnable.getImagePullPolicy() != null
-            ? runnable.getImagePullPolicy().name()
-            : defaultImagePullPolicy;
+        String imagePullPolicy =
+            runnable.getImagePullPolicy() != null ? runnable.getImagePullPolicy().name() : defaultImagePullPolicy;
 
         // Build Container
         V1Container container = new V1Container()
@@ -817,8 +815,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
             .securityContext(buildSecurityContext(runnable));
 
         // Create a PodSpec for the container, leverage template if provided
-        V1PodSpec podSpec = Optional
-            .ofNullable(template)
+        V1PodSpec podSpec = Optional.ofNullable(template)
             .map(K8sTemplate::getDeployment)
             .map(V1Deployment::getSpec)
             .map(V1DeploymentSpec::getTemplate)
@@ -850,9 +847,10 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
                 .volumeMounts(
                     volumeMounts
                         .stream()
-                        .filter(v ->
-                            k8sProperties.getSharedVolume().getMountPath().equals(v.getMountPath()) ||
-                            "/init-config-map".equals(v.getMountPath())
+                        .filter(
+                            v ->
+                                k8sProperties.getSharedVolume().getMountPath().equals(v.getMountPath()) ||
+                                "/init-config-map".equals(v.getMountPath())
                         )
                         .collect(Collectors.toList())
                 )
@@ -880,8 +878,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
         }
 
         // Create the deploymentSpec with the PodTemplateSpec, leveraging template
-        V1DeploymentSpec deploymentSpec = Optional
-            .ofNullable(template)
+        V1DeploymentSpec deploymentSpec = Optional.ofNullable(template)
             .map(K8sTemplate::getDeployment)
             .map(V1Deployment::getSpec)
             .orElse(new V1DeploymentSpec());

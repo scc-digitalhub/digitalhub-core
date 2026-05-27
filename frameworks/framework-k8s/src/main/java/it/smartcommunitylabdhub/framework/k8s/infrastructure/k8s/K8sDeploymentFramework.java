@@ -94,8 +94,9 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
     @Autowired
     public void setInitCommand(@Value("${kubernetes.init.command}") String initCommand) {
         if (StringUtils.hasText(initCommand)) {
-            this.initCommand =
-                new LinkedList<>(Arrays.asList(StringUtils.commaDelimitedListToStringArray(initCommand)));
+            this.initCommand = new LinkedList<>(
+                Arrays.asList(StringUtils.commaDelimitedListToStringArray(initCommand))
+            );
         }
     }
 
@@ -267,21 +268,22 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
         try {
             deployment = get(build(runnable));
         } catch (K8sFrameworkException | IllegalArgumentException e) {
-            runnable.setState(K8sRunnableState.DELETED.name());
-            return runnable;
+            deployment = null;
         }
 
-        try {
-            log.info("delete deployment for {}", String.valueOf(deployment.getMetadata().getName()));
-            delete(deployment);
-            messages.add(String.format("deployment %s deleted", deployment.getMetadata().getName()));
-        } catch (K8sFrameworkException | NullPointerException e) {
-            //collect but keep going
-            log.error("error deleting deployment {}: {}", runnable.getId(), e.getMessage());
-            exception = new K8sFrameworkException(e.getMessage());
+        if (deployment != null) {
+            try {
+                log.info("delete deployment for {}", String.valueOf(deployment.getMetadata().getName()));
+                delete(deployment);
+                messages.add(String.format("deployment %s deleted", deployment.getMetadata().getName()));
+            } catch (K8sFrameworkException | NullPointerException e) {
+                //collect but keep going
+                log.error("error deleting deployment {}: {}", runnable.getId(), e.getMessage());
+                exception = new K8sFrameworkException(e.getMessage());
+            }
         }
 
-        //secrets
+        //secrets delete is idempotent, we can try to delete even if deployment is not found
         cleanRunSecret(runnable);
 
         //init config map
@@ -324,7 +326,7 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
                             messages.add(String.format("pvc %s deleted", pvcName));
                         }
                     } catch (ApiException e) {
-                        log.error("Error with k8s: {}", e.getMessage());
+                        log.debug("Error with k8s: {}", e.getMessage());
                         if (log.isTraceEnabled()) {
                             log.trace("k8s api response: {}", e.getResponseBody());
                         }
@@ -509,9 +511,8 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
         List<String> args = buildArgs(runnable);
 
         //image policy
-        String imagePullPolicy = runnable.getImagePullPolicy() != null
-            ? runnable.getImagePullPolicy().name()
-            : defaultImagePullPolicy;
+        String imagePullPolicy =
+            runnable.getImagePullPolicy() != null ? runnable.getImagePullPolicy().name() : defaultImagePullPolicy;
 
         // Build Container
         V1Container container = new V1Container()
@@ -527,8 +528,7 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
             .securityContext(buildSecurityContext(runnable));
 
         // Create a PodSpec for the container, leverage template if provided
-        V1PodSpec podSpec = Optional
-            .ofNullable(template)
+        V1PodSpec podSpec = Optional.ofNullable(template)
             .map(K8sTemplate::getDeployment)
             .map(V1Deployment::getSpec)
             .map(V1DeploymentSpec::getTemplate)
@@ -560,9 +560,10 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
                 .volumeMounts(
                     volumeMounts
                         .stream()
-                        .filter(v ->
-                            k8sProperties.getSharedVolume().getMountPath().equals(v.getMountPath()) ||
-                            "/init-config-map".equals(v.getMountPath())
+                        .filter(
+                            v ->
+                                k8sProperties.getSharedVolume().getMountPath().equals(v.getMountPath()) ||
+                                "/init-config-map".equals(v.getMountPath())
                         )
                         .collect(Collectors.toList())
                 )
@@ -590,8 +591,7 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
         }
 
         // Create the deploymentSpec with the PodTemplateSpec, leveraging template
-        V1DeploymentSpec deploymentSpec = Optional
-            .ofNullable(template)
+        V1DeploymentSpec deploymentSpec = Optional.ofNullable(template)
             .map(K8sTemplate::getDeployment)
             .map(V1Deployment::getSpec)
             .orElse(new V1DeploymentSpec());

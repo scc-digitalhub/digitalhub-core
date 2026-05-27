@@ -145,13 +145,12 @@ public class VLLMServeRunner {
                 "passwd"
             );
 
-            passwd =
-                template
-                    .execute(
-                        new StringWriter(),
-                        Map.of("userId", this.userId, "groupId", this.groupId, "homeDir", this.homeDir)
-                    )
-                    .toString();
+            passwd = template
+                .execute(
+                    new StringWriter(),
+                    Map.of("userId", this.userId, "groupId", this.groupId, "homeDir", this.homeDir)
+                )
+                .toString();
         } catch (IOException ioe) {
             log.error("error with building passwd template for runtime-vllm", ioe);
             //disable template
@@ -171,9 +170,14 @@ public class VLLMServeRunner {
         // workaround for mc config dir to avoid eventual user permissions issues
         coreEnvList.add(new CoreEnv("MC_CONFIG_DIR", "/shared/mc"));
 
-        List<CoreEnv> coreSecrets = secretData == null
-            ? null
-            : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
+        List<CoreEnv> coreSecrets =
+            secretData == null
+                ? null
+                : secretData
+                      .entrySet()
+                      .stream()
+                      .map(e -> new CoreEnv(e.getKey(), e.getValue()))
+                      .toList();
 
         Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
 
@@ -190,9 +194,9 @@ public class VLLMServeRunner {
 
             // define VLLM_CPU_KVCACHE_SPACE as 50% of mem size if not defined, to avoid using too much memory for caching and OOM
             Integer cacheSize = calculateCacheSize(memSize);
-            Optional
-                .ofNullable(cacheSize)
-                .ifPresent(size -> coreEnvList.add(new CoreEnv("VLLM_CPU_KVCACHE_SPACE", String.valueOf(size))));
+            Optional.ofNullable(cacheSize).ifPresent(size ->
+                coreEnvList.add(new CoreEnv("VLLM_CPU_KVCACHE_SPACE", String.valueOf(size)))
+            );
         }
 
         //check if scratch disk is requested as resource or set default
@@ -200,11 +204,9 @@ public class VLLMServeRunner {
         CoreResource diskResource = new CoreResource();
         diskResource.setDisk(volumeSize);
 
-        Optional
-            .ofNullable(k8sBuilderHelper)
-            .ifPresent(helper -> {
-                Optional.ofNullable(helper.buildSharedVolume(diskResource)).ifPresent(coreVolumes::add);
-            });
+        Optional.ofNullable(k8sBuilderHelper).ifPresent(helper -> {
+            Optional.ofNullable(helper.buildSharedVolume(diskResource)).ifPresent(coreVolumes::add);
+        });
 
         //read source and build context
         List<ContextRef> contextRefs = null;
@@ -212,8 +214,7 @@ public class VLLMServeRunner {
 
         //inject custom passwd to add our user
         if (passwdFile != null) {
-            ContextSource entry = ContextSource
-                .builder()
+            ContextSource entry = ContextSource.builder()
                 .name("passwd")
                 .base64(Base64.getEncoder().encodeToString(passwdFile.getBytes(StandardCharsets.UTF_8)))
                 .mountPath("/etc/passwd")
@@ -227,9 +228,11 @@ public class VLLMServeRunner {
             throw new IllegalArgumentException("model url is missing or invalid");
         }
 
-        if (url.startsWith(Keys.STORE_PREFIX)) {
-            url = linkToModel(run, url);
+        if (!url.startsWith(Keys.STORE_PREFIX)) {
+            //enforce model from store
+            throw new IllegalArgumentException("invalid model url, must be a store reference");
         }
+        url = linkToModel(run, url);
 
         UriComponents uri = UriComponentsBuilder.fromUriString(url).build();
 
@@ -256,10 +259,9 @@ public class VLLMServeRunner {
         } else {
             args.add("/shared/model");
 
-            contextRefs =
-                Collections.singletonList(
-                    ContextRef.builder().source(url).protocol(uri.getScheme()).destination("model").build()
-                );
+            contextRefs = Collections.singletonList(
+                ContextRef.builder().source(url).protocol(uri.getScheme()).destination("model").build()
+            );
         }
 
         Map<String, List<String>> defaultArgMap = new HashMap<>();
@@ -294,9 +296,11 @@ public class VLLMServeRunner {
 
             for (VLLMAdapter adapter : functionSpec.getAdapters()) {
                 String adapterPath = adapter.getUrl();
-                if (adapterPath.startsWith(Keys.STORE_PREFIX)) {
-                    adapterPath = linkToModel(run, adapterPath);
+                if (!adapterPath.startsWith(Keys.STORE_PREFIX)) {
+                    //enforce model from store
+                    throw new IllegalArgumentException("invalid adapter url, must be a store reference");
                 }
+                adapterPath = linkToModel(run, adapterPath);
 
                 UriComponents adapterUri = UriComponentsBuilder.fromUriString(adapterPath).build();
                 String adapterSource = adapter.getUrl().trim();
@@ -305,15 +309,13 @@ public class VLLMServeRunner {
                 if (!"huggingface".equals(adapterUri.getScheme()) || "hf".equals(adapterUri.getScheme())) {
                     if (!adapterSource.endsWith("/")) adapterSource += "/";
                     ref = "/shared/adapters/" + adapter.getName() + "/";
-                    contextRefs =
-                        Collections.singletonList(
-                            ContextRef
-                                .builder()
-                                .source(adapterSource)
-                                .protocol(adapterUri.getScheme())
-                                .destination("adapters/" + adapter.getName())
-                                .build()
-                        );
+                    contextRefs = Collections.singletonList(
+                        ContextRef.builder()
+                            .source(adapterSource)
+                            .protocol(adapterUri.getScheme())
+                            .destination("adapters/" + adapter.getName())
+                            .build()
+                    );
                 }
                 args.add(adapter.getName() + "=" + ref);
             }
@@ -347,8 +349,7 @@ public class VLLMServeRunner {
         appendHFVariables(coreEnvList);
 
         //build runnable
-        K8sRunnable k8sServeRunnable = K8sServeRunnable
-            .builder()
+        K8sRunnable k8sServeRunnable = K8sServeRunnable.builder()
             .runtime(runtime)
             .task(runtime + "+serve")
             .state(State.READY.name())
@@ -415,9 +416,10 @@ public class VLLMServeRunner {
         if (!EntityUtils.getEntityName(Model.class).equalsIgnoreCase(keyAccessor.getType())) {
             throw new CoreRuntimeException("invalid entity kind reference, expected model");
         }
-        Model model = keyAccessor.getId() != null
-            ? modelService.findModel(keyAccessor.getId())
-            : modelService.getLatestModel(keyAccessor.getProject(), keyAccessor.getName());
+        Model model =
+            keyAccessor.getId() != null
+                ? modelService.findModel(keyAccessor.getId())
+                : modelService.getLatestModel(keyAccessor.getProject(), keyAccessor.getName());
         if (model == null) {
             throw new CoreRuntimeException("invalid entity reference, HuggingFace model not found");
         }

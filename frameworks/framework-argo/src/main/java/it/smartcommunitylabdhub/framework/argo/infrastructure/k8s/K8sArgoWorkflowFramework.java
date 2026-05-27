@@ -207,52 +207,11 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
             log.trace("runnable: {}", runnable);
         }
 
-        List<String> messages = new ArrayList<>();
-
-        K8sWorkflowObject workflow = get(build(runnable));
-
         //stop by deleting
-        log.info("stopping Argo Workflow for {}", String.valueOf(workflow.getMetadata().getName()));
-        delete(workflow);
-        messages.add(String.format("workflow %s deleted", workflow.getMetadata().getName()));
-
-        //pvcs
-        List<V1PersistentVolumeClaim> pvcs = buildPersistentVolumeClaims(runnable);
-        if (pvcs != null) {
-            for (V1PersistentVolumeClaim pvc : pvcs) {
-                String pvcName = pvc.getMetadata().getName();
-                try {
-                    V1PersistentVolumeClaim v = coreV1Api.readNamespacedPersistentVolumeClaim(pvcName, namespace, null);
-                    if (v != null) {
-                        log.info("delete pvc for {}", String.valueOf(pvcName));
-
-                        coreV1Api.deleteNamespacedPersistentVolumeClaim(
-                            pvcName,
-                            namespace,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            "Background",
-                            null
-                        );
-                        messages.add(String.format("pvc %s deleted", pvcName));
-                    }
-                } catch (ApiException e) {
-                    log.error("Error with k8s: {}", e.getMessage());
-                    if (log.isTraceEnabled()) {
-                        log.trace("k8s api response: {}", e.getResponseBody());
-                    }
-                    //don't propagate
-                    // throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
-                }
-            }
-        }
+        runnable = delete(runnable);
 
         //update state
         runnable.setState(K8sRunnableState.STOPPED.name());
-        runnable.setMessage(String.join(", ", messages));
 
         if (log.isTraceEnabled()) {
             log.trace("result: {}", runnable);
@@ -274,16 +233,17 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
         try {
             workflow = get(build(runnable));
         } catch (K8sFrameworkException | IllegalArgumentException e) {
-            runnable.setState(K8sRunnableState.DELETED.name());
-            return runnable;
+            workflow = null;
         }
 
-        //secrets
-        cleanRunSecret(runnable);
+        if (workflow != null) {
+            log.info("delete Argo Workflow for {}", String.valueOf(workflow.getMetadata().getName()));
+            delete(workflow);
+            messages.add(String.format("workflow %s deleted", workflow.getMetadata().getName()));
+        }
 
-        log.info("delete Argo Workflow for {}", String.valueOf(workflow.getMetadata().getName()));
-        delete(workflow);
-        messages.add(String.format("workflow %s deleted", workflow.getMetadata().getName()));
+        //secrets delete is idempotent, we can try to delete even if workflow is not found
+        cleanRunSecret(runnable);
 
         //pvcs
         List<V1PersistentVolumeClaim> pvcs = buildPersistentVolumeClaims(runnable);
@@ -309,7 +269,7 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
                         messages.add(String.format("pvc %s deleted", pvcName));
                     }
                 } catch (ApiException e) {
-                    log.error("Error with k8s: {}", e.getMessage());
+                    log.debug("Error with k8s: {}", e.getMessage());
                     if (log.isTraceEnabled()) {
                         log.trace("k8s api response: {}", e.getResponseBody());
                     }
@@ -321,6 +281,7 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
 
         //update state
         runnable.setState(K8sRunnableState.DELETED.name());
+        runnable.setMessage(String.join(", ", messages));
 
         if (log.isTraceEnabled()) {
             log.trace("result: {}", runnable);
@@ -348,9 +309,10 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
             workflow.setKind("Workflow");
             workflow.setMetadata(new V1ObjectMeta());
             workflow.getMetadata().setName(runnable.getId());
-            IoArgoprojWorkflowV1alpha1WorkflowSpec workflowSpec = YamlMapperFactory
-                .yamlObjectMapper()
-                .readValue(runnable.getWorkflowSpec(), IoArgoprojWorkflowV1alpha1WorkflowSpec.class);
+            IoArgoprojWorkflowV1alpha1WorkflowSpec workflowSpec = YamlMapperFactory.yamlObjectMapper().readValue(
+                runnable.getWorkflowSpec(),
+                IoArgoprojWorkflowV1alpha1WorkflowSpec.class
+            );
             workflow.setSpec(workflowSpec);
             sanitize(workflow);
             //build labels
@@ -377,17 +339,16 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
         //set parameters in workflow if defined in runnable
         if (runnable.getParameters() != null && workflow.getSpec() != null) {
             //args must be set to set parameters
-            IoArgoprojWorkflowV1alpha1Arguments arguments = Optional
-                .ofNullable(workflow.getSpec().getArguments())
-                .orElse(new IoArgoprojWorkflowV1alpha1Arguments());
+            IoArgoprojWorkflowV1alpha1Arguments arguments = Optional.ofNullable(
+                workflow.getSpec().getArguments()
+            ).orElse(new IoArgoprojWorkflowV1alpha1Arguments());
 
             if (workflow.getSpec().getArguments() == null) {
                 workflow.getSpec().setArguments(new IoArgoprojWorkflowV1alpha1Arguments());
             }
 
             //collect current params, if preset
-            Map<String, IoArgoprojWorkflowV1alpha1Parameter> parameters = Optional
-                .ofNullable(arguments.getParameters())
+            Map<String, IoArgoprojWorkflowV1alpha1Parameter> parameters = Optional.ofNullable(arguments.getParameters())
                 .map(params -> params.stream().collect(Collectors.toMap(p -> p.getName(), p -> p)))
                 .orElse(Collections.emptyMap());
 
@@ -431,30 +392,22 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
         //     }
         // }
 
-        Optional
-            .ofNullable(workflow.getSpec().getTemplateDefaults())
-            .ifPresent(templateDefaults -> {
-                templateDefaults.setServiceAccountName(serviceAccountName);
+        Optional.ofNullable(workflow.getSpec().getTemplateDefaults()).ifPresent(templateDefaults -> {
+            templateDefaults.setServiceAccountName(serviceAccountName);
 
-                Optional
-                    .ofNullable(templateDefaults.getContainer())
-                    .ifPresent(container -> {
-                        container.setEnvFrom(Collections.emptyList());
-                    });
+            Optional.ofNullable(templateDefaults.getContainer()).ifPresent(container -> {
+                container.setEnvFrom(Collections.emptyList());
             });
+        });
 
-        Optional
-            .ofNullable(workflow.getSpec().getTemplates())
-            .ifPresent(templates -> {
-                templates.forEach(template -> {
-                    template.setServiceAccountName(serviceAccountName);
-                    Optional
-                        .ofNullable(template.getContainer())
-                        .ifPresent(container -> {
-                            container.setEnvFrom(Collections.emptyList());
-                        });
+        Optional.ofNullable(workflow.getSpec().getTemplates()).ifPresent(templates -> {
+            templates.forEach(template -> {
+                template.setServiceAccountName(serviceAccountName);
+                Optional.ofNullable(template.getContainer()).ifPresent(container -> {
+                    container.setEnvFrom(Collections.emptyList());
                 });
             });
+        });
 
         workflow.getSpec().setServiceAccountName(serviceAccountName);
     }
@@ -510,14 +463,12 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
         }
         // templateDefaults.getExecutor().setServiceAccountName(serviceAccountName);
 
-        Optional
-            .ofNullable(workflow.getSpec().getTemplates())
-            .ifPresent(templates -> {
-                templates.forEach(template -> {
-                    template.securityContext(securityContext);
-                    // .automountServiceAccountToken(false)
-                });
+        Optional.ofNullable(workflow.getSpec().getTemplates()).ifPresent(templates -> {
+            templates.forEach(template -> {
+                template.securityContext(securityContext);
+                // .automountServiceAccountToken(false)
             });
+        });
     }
 
     public V1SecurityContext buildSecurityContext(K8sArgoWorkflowRunnable runnable) throws K8sFrameworkException {

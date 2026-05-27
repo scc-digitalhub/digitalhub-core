@@ -1,0 +1,13 @@
+kind: huggingface
+metadata:
+  name: Qwen3-30B-A3B
+  updated_by: msaloni@fbk.eu
+  description:
+    "Qwen3-30B-A3B, a smaller MoE model with 30 billion total parameters
+    and 3 billion activated parameters"
+  labels: ["Qwen", "Qwen3", "MoE", "License: Apache-2.0"]
+name: Qwen3-30B-A3B
+spec:
+  path: hf://Qwen/Qwen3-30B-A3B
+status:
+  state: READY
