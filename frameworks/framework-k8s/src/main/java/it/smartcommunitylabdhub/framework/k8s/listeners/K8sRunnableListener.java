@@ -30,16 +30,28 @@ import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sBaseFramework;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
+import it.smartcommunitylabdhub.framework.k8s.runnables.RunnableEventPublisher;
 import it.smartcommunitylabdhub.runtimes.events.RunnableChangedEvent;
-import it.smartcommunitylabdhub.runtimes.events.RunnableEventPublisher;
+import it.smartcommunitylabdhub.runtimes.events.RunnableListener;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
-import java.util.Arrays;
+import java.time.Instant;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ResolvableType;
+import org.springframework.core.ResolvableTypeProvider;
+import org.springframework.data.util.Pair;
 import org.springframework.util.Assert;
 
 @Slf4j
-public abstract class K8sRunnableListener<R extends K8sRunnable> {
+public abstract class K8sRunnableListener<
+    R extends K8sRunnable
+> implements RunnableListener<R>, ResolvableTypeProvider {
+
+    private static final int LOCK_TIMEOUT = 30;
 
     private final Class<R> clazz;
 
@@ -48,6 +60,18 @@ public abstract class K8sRunnableListener<R extends K8sRunnable> {
     private final RunnableStore<R> runnableStore;
 
     private RunnableEventPublisher eventPublisher;
+
+    private Map<String, Pair<ReentrantLock, Instant>> locks = new ConcurrentHashMap<>();
+
+    private synchronized ReentrantLock getLock(String id) {
+        //build lock
+        ReentrantLock l = locks.containsKey(id) ? locks.get(id).getFirst() : new ReentrantLock();
+
+        //update last used date
+        locks.put(id, Pair.of(l, Instant.now()));
+
+        return l;
+    }
 
     @SuppressWarnings("unchecked")
     protected K8sRunnableListener(K8sBaseFramework<R, ?> k8sFramework, RunnableStore<R> runnableStore) {
@@ -59,6 +83,17 @@ public abstract class K8sRunnableListener<R extends K8sRunnable> {
 
         this.clazz = (Class<R>) runnableStore.getResolvableType().resolve();
         log.debug("started listener for {} with framework {}", clazz.getName(), k8sFramework.getClass().getName());
+    }
+
+    @Autowired
+    public void setEventPublisher(RunnableEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
+    }
+
+    public void receive(R runnable) {
+        if (runnable != null) {
+            process(runnable);
+        }
     }
 
     public void process(R runnable) {
@@ -79,158 +114,186 @@ public abstract class K8sRunnableListener<R extends K8sRunnable> {
         String framework = runnable.getFramework();
         String state = runnable.getState();
 
-        //load runnable from store to ensure we have the latest version, and to check if it exists
-        R stored = null;
+        ReentrantLock lock = getLock(id);
+        boolean acquired = false;
         try {
-            stored = runnableStore.find(id);
-        } catch (StoreException e) {
-            log.error("Error loading runnable {} {} from store: {}", clazz.getSimpleName(), id, e.getMessage());
-        }
-
-        //if present update to new state now to avoid concurrency, we'll sync in finally
-        if (stored != null) {
-            log.debug("update state for runnable {} {} to {}", clazz.getSimpleName(), id, state);
-            stored.setState(state);
-            try {
-                runnableStore.store(id, stored);
-            } catch (StoreException e) {
-                log.error(
-                    "Error updating state for runnable {} {} in store: {}",
+            acquired = lock.tryLock(LOCK_TIMEOUT, TimeUnit.SECONDS);
+            if (!acquired) {
+                log.warn(
+                    "Unable to acquire lock for runnable {} {}, skipping state {}",
                     clazz.getSimpleName(),
                     id,
-                    e.getMessage()
+                    state
                 );
+                return;
             }
-        } else {
-            log.warn("runnable {} {} not found in store, processing with provided instance", clazz.getSimpleName(), id);
-            stored = runnable;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Interrupted waiting for lock on runnable {} {}", clazz.getSimpleName(), id);
+            return;
         }
 
         try {
-            //handle supported operations with framework
-            runnable = switch (K8sRunnableState.valueOf(state)) {
-                case K8sRunnableState.READY -> {
-                    //READY needs the new runnable
-                    //sanity check: reset left-over messages
-                    runnable.setMessage(null);
-                    yield k8sFramework.run(runnable);
-                }
-                case K8sRunnableState.STOP -> {
-                    //stop on old if present
-                    if (stored != null) {
-                        runnable = stored;
-                        runnable.setState(state);
-                    }
-
-                    //sanity check: reset left-over messages
-                    runnable.setMessage(null);
-
-                    yield k8sFramework.stop(runnable);
-                }
-                case K8sRunnableState.RESUME -> {
-                    //resume on old if present
-                    if (stored != null) {
-                        runnable = stored;
-                        runnable.setState(state);
-                    }
-
-                    //sanity check: reset left-over messages
-                    runnable.setMessage(null);
-                    //TODO drop
-                    yield k8sFramework.resume(runnable);
-                }
-                case K8sRunnableState.DELETING -> {
-                    //delete on old if present
-                    if (stored != null) {
-                        runnable = stored;
-                        runnable.setState(state);
-                    }
-
-                    //sanity check: reset left-over messages
-                    runnable.setMessage(null);
-                    yield k8sFramework.delete(runnable);
-                }
-                default -> {
-                    yield null;
-                }
-            };
-
-            if (runnable != null) {
-                //sanity check: id+framework can not change
-                if (!id.equals(runnable.getId()) || !framework.equals(runnable.getFramework())) {
-                    throw new IllegalArgumentException("id mismatch");
-                }
-
-                if (log.isTraceEnabled()) {
-                    log.trace("runnable result from framework {}: {}", clazz.getSimpleName(), runnable);
-                }
+            //load runnable from store to ensure we have the latest version, and to check if it exists
+            R stored = null;
+            try {
+                stored = runnableStore.find(id);
+            } catch (StoreException e) {
+                log.error("Error loading runnable {} {} from store: {}", clazz.getSimpleName(), id, e.getMessage());
             }
-        } catch (FrameworkException e) {
-            // Set runnable to error state send event
-            log.error("Error with k8s for runnable {} {}: {}", clazz.getSimpleName(), id, e.getMessage());
-            if (runnable != null) {
-                runnable.setState(K8sRunnableState.ERROR.name());
-                runnable.setError(clazz.getSimpleName() + ":" + String.valueOf(e.getMessage()));
 
-                if (e instanceof K8sFrameworkException) {
-                    runnable.setError(((K8sFrameworkException) e).toError());
-                }
-            }
-        } catch (RuntimeException e) {
-            // Set runnable to error state send event
-            log.error("Error for runnable {} {}: {}", clazz.getSimpleName(), id, e.getMessage());
-            if (runnable != null) {
-                runnable.setState(K8sRunnableState.ERROR.name());
-                runnable.setError(String.valueOf(e.getMessage()));
-            }
-        } finally {
-            if (runnable != null) {
+            //if present update to new state now to avoid concurrency, we'll sync in finally
+            if (stored != null) {
+                log.debug("update state for runnable {} {} to {}", clazz.getSimpleName(), id, state);
+                stored.setState(state);
                 try {
-                    log.debug("update runnable {} {} in store", clazz.getSimpleName(), id);
-                    //runnables shouldn't have a transient state at this point, but we can have a state change in case of error, so we update the store with the new state
-                    if (runnable.isTransient()) {
-                        log.warn(
-                            "runnable {} {} in transient state {}, updating to non-transient state {}",
-                            clazz.getSimpleName(),
-                            id,
-                            runnable.getState(),
-                            K8sRunnableState.ERROR.name()
-                        );
-                        runnable.setState(K8sRunnableState.ERROR.name());
-                    }
-
-                    //if runnable state is final, remove from store, otherwise update
-                    if (runnable.isFinal()) {
-                        log.debug("delete run {} with state {}", runnable.getId(), runnable.getState());
-                        runnableStore.remove(id);
-                    } else {
-                        log.debug("store run {} with state {}", runnable.getId(), runnable.getState());
-                        runnableStore.store(id, runnable);
-                    }
-                } catch (StoreException se) {
-                    log.error("Error with store: {}", se.getMessage());
+                    runnableStore.store(id, stored);
+                } catch (StoreException e) {
+                    log.error(
+                        "Error updating state for runnable {} {} in store: {}",
+                        clazz.getSimpleName(),
+                        id,
+                        e.getMessage()
+                    );
                 }
+            } else {
+                log.warn(
+                    "runnable {} {} not found in store, processing with provided instance",
+                    clazz.getSimpleName(),
+                    id
+                );
+                stored = runnable;
+            }
 
-                log.debug("Processed runnable {} {}", clazz.getSimpleName(), id);
+            try {
+                //handle supported operations with framework
+                runnable = switch (K8sRunnableState.valueOf(state)) {
+                    case K8sRunnableState.READY -> {
+                        //READY needs the new runnable
+                        //sanity check: reset left-over messages
+                        runnable.setMessage(null);
+                        yield k8sFramework.run(runnable);
+                    }
+                    case K8sRunnableState.STOP -> {
+                        //stop on old if present
+                        if (stored != null) {
+                            runnable = stored;
+                            runnable.setState(state);
+                        }
 
-                if (eventPublisher != null) {
-                    log.debug("Publish runnable {} {}", clazz.getSimpleName(), id);
+                        //sanity check: reset left-over messages
+                        runnable.setMessage(null);
 
-                    RunnableChangedEvent<RunRunnable> event = RunnableChangedEvent.build(runnable, state);
+                        yield k8sFramework.stop(runnable);
+                    }
+                    // case K8sRunnableState.RESUME -> {
+                    //     //resume on old if present
+                    //     if (stored != null) {
+                    //         runnable = stored;
+                    //         runnable.setState(state);
+                    //     }
+
+                    //     //sanity check: reset left-over messages
+                    //     runnable.setMessage(null);
+                    //     //TODO drop
+                    //     yield k8sFramework.resume(runnable);
+                    // }
+                    case K8sRunnableState.DELETING -> {
+                        //delete on old if present
+                        if (stored != null) {
+                            runnable = stored;
+                            runnable.setState(state);
+                        }
+
+                        //sanity check: reset left-over messages
+                        runnable.setMessage(null);
+                        yield k8sFramework.delete(runnable);
+                    }
+                    default -> {
+                        yield null;
+                    }
+                };
+
+                if (runnable != null) {
+                    //sanity check: id+framework can not change
+                    if (!id.equals(runnable.getId()) || !framework.equals(runnable.getFramework())) {
+                        throw new IllegalArgumentException("id mismatch");
+                    }
 
                     if (log.isTraceEnabled()) {
-                        log.trace("runnable {} {} event {}", clazz.getSimpleName(), id, event);
+                        log.trace("runnable result from framework {}: {}", clazz.getSimpleName(), runnable);
+                    }
+                }
+            } catch (FrameworkException e) {
+                // Set runnable to error state send event
+                log.error("Error with k8s for runnable {} {}: {}", clazz.getSimpleName(), id, e.getMessage());
+                if (runnable != null) {
+                    runnable.setState(K8sRunnableState.ERROR.name());
+                    runnable.setError(clazz.getSimpleName() + ":" + String.valueOf(e.getMessage()));
+
+                    if (e instanceof K8sFrameworkException) {
+                        runnable.setError(((K8sFrameworkException) e).toError());
+                    }
+                }
+            } catch (RuntimeException e) {
+                // Set runnable to error state send event
+                log.error("Error for runnable {} {}: {}", clazz.getSimpleName(), id, e.getMessage());
+                if (runnable != null) {
+                    runnable.setState(K8sRunnableState.ERROR.name());
+                    runnable.setError(String.valueOf(e.getMessage()));
+                }
+            } finally {
+                if (runnable != null) {
+                    try {
+                        log.debug("update runnable {} {} in store", clazz.getSimpleName(), id);
+                        //runnables shouldn't have a transient state at this point, but we can have a state change in case of error, so we update the store with the new state
+                        if (runnable.isTransient()) {
+                            log.warn(
+                                "runnable {} {} in transient state {}, updating to non-transient state {}",
+                                clazz.getSimpleName(),
+                                id,
+                                runnable.getState(),
+                                K8sRunnableState.ERROR.name()
+                            );
+                            runnable.setState(K8sRunnableState.ERROR.name());
+                        }
+
+                        //if runnable state is final, remove from store, otherwise update
+                        if (runnable.isFinal()) {
+                            log.debug("delete run {} with state {}", runnable.getId(), runnable.getState());
+                            runnableStore.remove(id);
+                        } else {
+                            log.debug("store run {} with state {}", runnable.getId(), runnable.getState());
+                            runnableStore.store(id, runnable);
+                        }
+                    } catch (StoreException se) {
+                        log.error("Error with store: {}", se.getMessage());
                     }
 
-                    // Publish event to Run Manager
-                    eventPublisher.publishEvent(event);
+                    log.debug("Processed runnable {} {}", clazz.getSimpleName(), id);
+
+                    if (eventPublisher != null) {
+                        log.debug("Publish runnable {} {}", clazz.getSimpleName(), id);
+
+                        RunnableChangedEvent<RunRunnable> event = RunnableChangedEvent.build(runnable, state);
+
+                        if (log.isTraceEnabled()) {
+                            log.trace("runnable {} {} event {}", clazz.getSimpleName(), id, event);
+                        }
+
+                        // Publish event to Run Manager
+                        eventPublisher.publishEvent(event);
+                    }
                 }
+            }
+        } finally {
+            if (acquired) {
+                lock.unlock();
             }
         }
     }
 
-    @Autowired
-    public void setEventPublisher(RunnableEventPublisher eventPublisher) {
-        this.eventPublisher = eventPublisher;
+    public ResolvableType getResolvableType() {
+        return ResolvableType.forClass(clazz);
     }
 }

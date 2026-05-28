@@ -25,22 +25,18 @@ package it.smartcommunitylabdhub.framework.k8s.listeners;
 
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sJobFramework;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
+import it.smartcommunitylabdhub.runtimes.events.RunnableListener;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
-import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
 
-public class K8sJobListener extends K8sRunnableListener<K8sJobRunnable> {
+public class K8sJobListener extends K8sRunnableListener<K8sJobRunnable> implements RunnableListener<K8sJobRunnable> {
 
     public K8sJobListener(K8sJobFramework k8sFramework, RunnableStore<K8sJobRunnable> runnableStore) {
         super(k8sFramework, runnableStore);
     }
 
-    @Async
-    @EventListener
     public void listen(K8sJobRunnable runnable) {
         if (runnable != null) {
-            //clone to fully detach
-            process(runnable.toBuilder().build());
+            process(runnable);
         }
     }
 }
