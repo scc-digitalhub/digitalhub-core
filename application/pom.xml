@@ -327,6 +327,11 @@
             <artifactId>dh-framework-kaniko</artifactId>
             <version>${revision}</version>
         </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-framework-ray</artifactId>
+            <version>${revision}</version>
+        </dependency>
 
         <!-- TRIGGERS -->
         <dependency>
@@ -369,6 +374,11 @@
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-runtime-python</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-runtime-ray</artifactId>
             <version>${revision}</version>
         </dependency>
         <dependency>

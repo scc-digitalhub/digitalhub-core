@@ -108,7 +108,6 @@ public class K8sMetricsService implements InitializingBean {
             ContainerMetrics metrics = new ContainerMetrics();
             metrics.setName(key);
             metrics.setUsage(new HashMap<>());
-            BigDecimal big1 = new BigDecimal(1);
 
             //aggregate metrics for all pods matching
             List<PodMetrics> podMetrics = metricsApi
@@ -122,88 +121,11 @@ public class K8sMetricsService implements InitializingBean {
                 })
                 .toList();
 
-            podMetrics.forEach(pm -> {
-                //count pods
-                if (metrics.getUsage().containsKey("pods")) {
-                    Quantity existing = metrics.getUsage().get("pods");
-                    metrics.getUsage().put("pods", new Quantity(existing.getNumber().add(big1), Format.DECIMAL_SI));
-                } else {
-                    metrics.getUsage().put("pods", new Quantity(big1, Format.DECIMAL_SI));
-                }
-
-                if (pm.getContainers() != null) {
-                    pm
-                        .getContainers()
-                        .forEach(cm -> {
-                            //count containers
-                            if (metrics.getUsage().containsKey("containers")) {
-                                Quantity existing = metrics.getUsage().get("containers");
-                                metrics
-                                    .getUsage()
-                                    .put("containers", new Quantity(existing.getNumber().add(big1), Format.DECIMAL_SI));
-                            } else {
-                                metrics.getUsage().put("containers", new Quantity(big1, Format.DECIMAL_SI));
-                            }
-
-                            if (cm.getUsage() != null) {
-                                log.trace(
-                                    "Adding metrics for {} {} pod {} container {}: {}",
-                                    key,
-                                    value,
-                                    pm.getMetadata().getName(),
-                                    cm.getName(),
-                                    cm.getUsage()
-                                );
-
-                                cm
-                                    .getUsage()
-                                    .forEach((k, v) -> {
-                                        if (metrics.getUsage().containsKey(k)) {
-                                            //we expect format to match, or skip
-                                            try {
-                                                Quantity existing = metrics.getUsage().get(k);
-                                                if (existing.getFormat().equals(v.getFormat())) {
-                                                    metrics
-                                                        .getUsage()
-                                                        .put(
-                                                            k,
-                                                            new Quantity(
-                                                                existing.getNumber().add(v.getNumber()),
-                                                                v.getFormat()
-                                                            )
-                                                        );
-                                                }
-                                            } catch (NumberFormatException e) {
-                                                log.warn(
-                                                    "Error parsing metric for {} {} pod {} container {}: {}",
-                                                    key,
-                                                    value,
-                                                    pm.getMetadata().getName(),
-                                                    cm.getName(),
-                                                    e.getMessage()
-                                                );
-                                            }
-                                        } else {
-                                            metrics.getUsage().put(k, v);
-                                        }
-                                    });
-                            } else {
-                                log.trace(
-                                    "No usage metrics for {} {} pod {} container {}",
-                                    key,
-                                    value,
-                                    pm.getMetadata().getName(),
-                                    cm.getName()
-                                );
-                            }
-                        });
-                }
-            });
+            mergePodMetrics(metrics, podMetrics);
 
             //fetch pvc metrics for matching pods
-
-            try {
-                String labelSelector = label.getKey() + "=" + label.getValue();
+            String labelSelector = label.getKey() + "=" + label.getValue();
+            try{
                 List<V1PersistentVolumeClaim> pvcs = coreV1Api
                     .listNamespacedPersistentVolumeClaim(
                         namespace,
@@ -221,46 +143,7 @@ public class K8sMetricsService implements InitializingBean {
                     )
                     .getItems();
 
-                pvcs.forEach(pvc -> {
-                    Optional
-                        .ofNullable(pvc.getStatus())
-                        .map(s -> s.getCapacity())
-                        .map(m -> m.get("storage"))
-                        .ifPresent(c -> {
-                            log.trace(
-                                "Adding PVC metrics for {} {} pvc {}: {}",
-                                key,
-                                value,
-                                pvc.getMetadata().getName(),
-                                c
-                            );
-
-                            if (metrics.getUsage().containsKey("disk")) {
-                                //we expect format to match, or skip
-                                try {
-                                    Quantity existing = metrics.getUsage().get("disk");
-                                    if (existing.getFormat().equals(c.getFormat())) {
-                                        metrics
-                                            .getUsage()
-                                            .put(
-                                                "disk",
-                                                new Quantity(existing.getNumber().add(c.getNumber()), c.getFormat())
-                                            );
-                                    }
-                                } catch (NumberFormatException e) {
-                                    log.warn(
-                                        "Error parsing disk metric for {} {} pvc {}: {}",
-                                        key,
-                                        value,
-                                        pvc.getMetadata().getName(),
-                                        e.getMessage()
-                                    );
-                                }
-                            } else {
-                                metrics.getUsage().put("disk", c);
-                            }
-                        });
-                });
+                mergePvcMetrics(metrics, pvcs);
             } catch (ApiException e) {
                 log.error("Error fetching pod details for metrics: {}", e.getMessage());
                 if (log.isTraceEnabled()) {
@@ -278,4 +161,131 @@ public class K8sMetricsService implements InitializingBean {
             return null;
         }
     }
+
+    /**
+     * Merge PVC metrics into aggregated container metrics, summing storage usage where possible.
+     * @param metrics
+     * @param pvcs
+     */
+    public static void mergePvcMetrics(ContainerMetrics metrics, List<V1PersistentVolumeClaim> pvcs) {
+        pvcs.forEach(pvc -> {
+            Optional
+                .ofNullable(pvc.getStatus())
+                .map(s -> s.getCapacity())
+                .map(m -> m.get("storage"))
+                .ifPresent(c -> {
+                    log.trace(
+                        "Adding PVC metrics pvc {}: {}",
+                        pvc.getMetadata().getName(),
+                        c
+                    );
+
+                    if (metrics.getUsage().containsKey("disk")) {
+                        //we expect format to match, or skip
+                        try {
+                            Quantity existing = metrics.getUsage().get("disk");
+                            if (existing.getFormat().equals(c.getFormat())) {
+                                metrics
+                                    .getUsage()
+                                    .put(
+                                        "disk",
+                                        new Quantity(existing.getNumber().add(c.getNumber()), c.getFormat())
+                                    );
+                            }
+                        } catch (NumberFormatException e) {
+                            log.warn(
+                                "Error parsing disk metric for pvc {}: {}",
+                                pvc.getMetadata().getName(),
+                                e.getMessage()
+                            );
+                        }
+                    } else {
+                        metrics.getUsage().put("disk", c);
+                    }
+                });
+        });
+    }
+
+    /**
+     * Merge pod metrics into aggregated container metrics, counting pods and containers, and summing usage where possible.
+     * 
+     * @param metrics
+     * @param podMetrics
+     */
+    public static void mergePodMetrics(ContainerMetrics metrics, List<PodMetrics> podMetrics) {
+        BigDecimal big1 = new BigDecimal(1);
+
+        podMetrics.forEach(pm -> {
+            //count pods
+            if (metrics.getUsage().containsKey("pods")) {
+                Quantity existing = metrics.getUsage().get("pods");
+                metrics.getUsage().put("pods", new Quantity(existing.getNumber().add(big1), Format.DECIMAL_SI));
+            } else {
+                metrics.getUsage().put("pods", new Quantity(big1, Format.DECIMAL_SI));
+            }
+
+            if (pm.getContainers() != null) {
+                pm
+                    .getContainers()
+                    .forEach(cm -> {
+                        //count containers
+                        if (metrics.getUsage().containsKey("containers")) {
+                            Quantity existing = metrics.getUsage().get("containers");
+                            metrics
+                                .getUsage()
+                                .put("containers", new Quantity(existing.getNumber().add(big1), Format.DECIMAL_SI));
+                        } else {
+                            metrics.getUsage().put("containers", new Quantity(big1, Format.DECIMAL_SI));
+                        }
+
+                        if (cm.getUsage() != null) {
+                            log.trace(
+                                "Adding metrics for pod {} container {}: {}",
+                                pm.getMetadata().getName(),
+                                cm.getName(),
+                                cm.getUsage()
+                            );
+
+                            cm
+                                .getUsage()
+                                .forEach((k, v) -> {
+                                    if (metrics.getUsage().containsKey(k)) {
+                                        //we expect format to match, or skip
+                                        try {
+                                            Quantity existing = metrics.getUsage().get(k);
+                                            if (existing.getFormat().equals(v.getFormat())) {
+                                                metrics
+                                                    .getUsage()
+                                                    .put(
+                                                        k,
+                                                        new Quantity(
+                                                            existing.getNumber().add(v.getNumber()),
+                                                            v.getFormat()
+                                                        )
+                                                    );
+                                            }
+                                        } catch (NumberFormatException e) {
+                                            log.warn(
+                                                "Error parsing metric for pod {} container {}: {}",
+                                                pm.getMetadata().getName(),
+                                                cm.getName(),
+                                                e.getMessage()
+                                            );
+                                        }
+                                    } else {
+                                        metrics.getUsage().put(k, v);
+                                    }
+                                });
+                        } else {
+                            log.trace(
+                                "No usage metrics for pod {} container {}",
+                                pm.getMetadata().getName(),
+                                cm.getName()
+                            );
+                        }
+                    });
+            }
+        });
+    }
+
 }

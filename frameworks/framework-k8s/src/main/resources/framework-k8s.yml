@@ -59,6 +59,9 @@ kubernetes:
     workflow:
       storage-class: ${K8S_RESOURCE_WORKFLOW_STORAGE_CLASS:}
       access-mode: ${K8S_RESOURCE_WORKFLOW_ACCESS_MODE:ReadWriteMany}
+    shared:
+      storage-class: ${K8S_RESOURCE_SHARED_STORAGE_CLASS:${K8S_RESOURCE_WORKFLOW_STORAGE_CLASS:}}
+      access-mode: ${K8S_RESOURCE_SHARED_ACCESS_MODE:${K8S_RESOURCE_WORKFLOW_ACCESS_MODE:ReadWriteMany}}
   config:
     config-map: ${DH_CONFIG_COMMON_MAPS:}
     secret: ${DH_CONFIG_COMMON_SECRETS:}

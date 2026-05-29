@@ -60,6 +60,7 @@
         <module>frameworks/framework-k8s</module>
         <module>frameworks/framework-argo</module>
         <module>frameworks/framework-kaniko</module>
+        <module>frameworks/framework-ray</module>
         <module>modules/trigger-base</module>
         <module>triggers/trigger-scheduler</module>
         <module>triggers/trigger-lifecycle</module>
@@ -68,6 +69,7 @@
         <module>runtimes/runtime-kfp</module>
         <module>runtimes/runtime-hera</module>
         <module>runtimes/runtime-python</module>
+        <module>runtimes/runtime-ray</module>
         <module>runtimes/runtime-flower</module>
         <module>runtimes/runtime-model-serve</module>
         <module>runtimes/runtime-kubeai</module>
