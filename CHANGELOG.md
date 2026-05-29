@@ -19,10 +19,12 @@
 * feat: Support project-based access policy restrictions by @kazhamiakin in https://github.com/scc-digitalhub/digitalhub-core/pull/218
 * feat: switch to queue-based event dispatching by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/219
 * Run operations channel by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/220
-
+* use message channels and parallel + partitioned dispatch for runnables by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/222
 
 ### Features
 
+
+* use message channels and parallel + partitioned dispatch for runnables to control concurrency and serialization of ops ([c9d80c2](https://github.com/scc-digitalhub/digitalhub-core/commit/c9d80c240671f04de59ccdfd58ab3198f9d64183))
 * templates supports status ([4f1d38b](https://github.com/scc-digitalhub/digitalhub-core/commit/4f1d38b6eb0a07e1b8c28c95e8a84d00232e60a5))
 * let administrators disable dependencies install at runtime for python ([edb460e](https://github.com/scc-digitalhub/digitalhub-core/commit/edb460e39c334ebbe592c5cb7c81ba0d30c7115f))
 * detach runnableStore from spring transactional proxies and directly handle writes ([5c590ec](https://github.com/scc-digitalhub/digitalhub-core/commit/5c590ec98f277431157c99818633bd967a9a0e67))
