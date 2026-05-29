@@ -32,12 +32,14 @@ import it.smartcommunitylabdhub.runs.lifecycle.RunState;
 import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
 import it.smartcommunitylabdhub.runtimes.Runtime;
+import it.smartcommunitylabdhub.runtimes.events.RunnableMessagePublisher;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 @Slf4j
@@ -46,6 +48,8 @@ public class RunLifecycleManager<
     Z extends RunBaseStatus,
     R extends RunRunnable
 > extends BaseLifecycleManager<Run> {
+
+    protected RunnableMessagePublisher runnablePublisher;
 
     public RunLifecycleManager(Runtime<S, Z, R> runtime) {
         this(new RunFsmFactory<>(runtime));
@@ -57,6 +61,11 @@ public class RunLifecycleManager<
         super(Run.class);
         //set fsm factory
         this.setFsmFactory(fsmFactory);
+    }
+
+    @Autowired(required = false)
+    public void setRunnablePublisher(RunnableMessagePublisher runnablePublisher) {
+        this.runnablePublisher = runnablePublisher;
     }
 
     @Override
@@ -122,7 +131,17 @@ public class RunLifecycleManager<
             }
 
             //publish to dispatcher, we will receive a callback
-            this.eventPublisher.publishEvent(runnable);
+            if (runnablePublisher != null) {
+                if (log.isTraceEnabled()) {
+                    log.trace("publishing runnable {} as message to dispatcher", runnable);
+                }
+                runnablePublisher.publish(runnable);
+            } else {
+                if (log.isTraceEnabled()) {
+                    log.trace("publishing runnable {} as event to listener", runnable);
+                }
+                this.eventPublisher.publishEvent(runnable);
+            }
         }
     }
 }

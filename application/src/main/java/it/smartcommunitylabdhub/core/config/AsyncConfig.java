@@ -23,10 +23,13 @@
 
 package it.smartcommunitylabdhub.core.config;
 
+import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.core.events.EntityEventDispatcher;
 import it.smartcommunitylabdhub.core.events.EntityOperationsDispatcher;
-import it.smartcommunitylabdhub.core.runs.lifecycle.RunnableListener;
-import it.smartcommunitylabdhub.runtimes.events.RunnableEventPublisher;
+import it.smartcommunitylabdhub.core.events.RunnableEventListener;
+import it.smartcommunitylabdhub.core.events.RunnableMessageDispatcher;
+import it.smartcommunitylabdhub.framework.k8s.runnables.RunnableEventPublisher;
+import it.smartcommunitylabdhub.runtimes.events.RunnableMessagePublisher;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -39,6 +42,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.channel.ExecutorChannel;
+import org.springframework.integration.channel.PartitionedChannel;
 import org.springframework.integration.config.EnableIntegration;
 import org.springframework.integration.dsl.IntegrationFlow;
 import org.springframework.messaging.MessageChannel;
@@ -66,26 +70,15 @@ public class AsyncConfig implements AsyncConfigurer {
     }
 
     // -----------------------------------------------------------------
-    // Runnable saga channel: DirectChannel entry point -> ExecutorChannel.
+    // Runnable saga channel: DirectChannel entry point -> PartitionedChannel.
     // Publishers detach as soon as the task is handed to the rex- pool.
+    // Messages for the same run id are always routed to the same thread,
+    // giving per-run sequential processing without any locking.
     // An optional delayMs header defers dispatch to reduce contention.
     // -----------------------------------------------------------------
     @Bean(name = "runnableQueueChannel")
     MessageChannel runnableQueueChannel() {
         return new DirectChannel();
-    }
-
-    @Bean
-    IntegrationFlow runnableMessageFlow(
-        @Qualifier("runnableQueueChannel") MessageChannel runnableQueueChannel,
-        @Qualifier("runnableExecutor") Executor runnableExecutor,
-        RunnableListener handler
-    ) {
-        return IntegrationFlow.from(runnableQueueChannel)
-            .delay(d -> d.messageGroupId("runnable-channel-group").delayExpression("headers['delayMs'] ?: 0"))
-            .channel(new ExecutorChannel(runnableExecutor))
-            .handle(handler, "handle")
-            .get();
     }
 
     @Bean
@@ -95,18 +88,82 @@ public class AsyncConfig implements AsyncConfigurer {
         return new RunnableEventPublisher(runnableQueueChannel);
     }
 
-    @Bean(name = "runnableExecutor")
-    AsyncTaskExecutor runnableExecutor() {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(CORE_POOL_SIZE);
-        executor.setMaxPoolSize(CORE_POOL_SIZE);
-        executor.setQueueCapacity(QUEUE_CAPACITY);
-        executor.setThreadNamePrefix("rex-");
-        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
-        executor.initialize();
+    @Bean
+    IntegrationFlow runnableEventFlow(
+        @Qualifier("runnableQueueChannel") MessageChannel runnableQueueChannel,
+        RunnableEventListener handler
+    ) {
+        // PartitionedChannel(int partitions, Function<Message<?>, Object> partitionKeyStrategy)
+        // creates CORE_POOL_SIZE single-threaded internal executors — one per partition.
+        // Same run id always maps to the same partition → sequential per-run processing.
+        PartitionedChannel partitionedChannel = new PartitionedChannel(CORE_POOL_SIZE, msg -> {
+            Object payload = msg.getPayload();
+            if (payload instanceof it.smartcommunitylabdhub.runtimes.events.RunnableChangedEvent<?> event) {
+                return event.getId();
+            }
+            return msg.getHeaders().getId();
+        });
+        java.util.concurrent.atomic.AtomicInteger counter = new java.util.concurrent.atomic.AtomicInteger();
+        partitionedChannel.setThreadFactory(r -> {
+            Thread t = new Thread(r);
+            t.setName("rex-" + counter.incrementAndGet());
+            t.setDaemon(true);
+            return t;
+        });
+        // Each partition gets its own bounded queue. Divide by the number of partitions
+        // so that total capacity across all partitions equals QUEUE_CAPACITY.
+        partitionedChannel.setWorkerQueueSize(QUEUE_CAPACITY / CORE_POOL_SIZE);
 
-        // use a delegating executor to propagate security context
-        return new DelegatingSecurityContextAsyncTaskExecutor(executor);
+        return IntegrationFlow.from(runnableQueueChannel)
+            .delay(d -> d.messageGroupId("runnable-channel-group").delayExpression("headers['delayMs'] ?: 0"))
+            .channel(partitionedChannel)
+            .handle(handler, "handle")
+            .get();
+    }
+
+    @Bean(name = "runnableMessageChannel")
+    MessageChannel runnableMessageChannel() {
+        return new DirectChannel();
+    }
+
+    @Bean
+    RunnableMessagePublisher runnableMessagePublisher(
+        @Qualifier("runnableMessageChannel") MessageChannel runnableMessageChannel
+    ) {
+        return new RunnableMessagePublisher(runnableMessageChannel);
+    }
+
+    @Bean
+    IntegrationFlow runnableMessageFlow(
+        @Qualifier("runnableMessageChannel") MessageChannel runnableMessageChannel,
+        RunnableMessageDispatcher dispatcher
+    ) {
+        // PartitionedChannel(int partitions, Function<Message<?>, Object> partitionKeyStrategy)
+        // creates CORE_POOL_SIZE single-threaded internal executors — one per partition.
+        // Same run id always maps to the same partition → sequential per-run processing.
+        PartitionedChannel partitionedChannel = new PartitionedChannel(CORE_POOL_SIZE, msg -> {
+            Object payload = msg.getPayload();
+            if (payload instanceof RunRunnable run) {
+                return run.getId();
+            }
+            return msg.getHeaders().getId();
+        });
+        java.util.concurrent.atomic.AtomicInteger counter = new java.util.concurrent.atomic.AtomicInteger();
+        partitionedChannel.setThreadFactory(r -> {
+            Thread t = new Thread(r);
+            t.setName("mex-" + counter.incrementAndGet());
+            t.setDaemon(true);
+            return t;
+        });
+        // Each partition gets its own bounded queue. Divide by the number of partitions
+        // so that total capacity across all partitions equals QUEUE_CAPACITY.
+        partitionedChannel.setWorkerQueueSize(QUEUE_CAPACITY / CORE_POOL_SIZE);
+
+        return IntegrationFlow.from(runnableMessageChannel)
+            .delay(d -> d.messageGroupId("runnable-message-group").delayExpression("headers['delayMs'] ?: 0"))
+            .channel(partitionedChannel)
+            .handle(dispatcher, "receive")
+            .get();
     }
 
     // -----------------------------------------------------------------
@@ -189,11 +246,13 @@ public class AsyncConfig implements AsyncConfigurer {
     @Bean(name = "processorExecutor")
     Executor processorExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(2);
-        executor.setMaxPoolSize(10);
-        executor.setQueueCapacity(0); // no queue: CallerRunsPolicy kicks in immediately when pool is full
+        executor.setCorePoolSize(2 * CORE_POOL_SIZE);
+        executor.setMaxPoolSize(2 * CORE_POOL_SIZE);
+        // bounded queue: AbortPolicy rejects when full, completing the future exceptionally
+        // rather than falling back to the calling rex- thread via CallerRunsPolicy
+        executor.setQueueCapacity(100 * CORE_POOL_SIZE);
         executor.setThreadNamePrefix("processor-");
-        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
         executor.initialize();
 
         // propagate security context from calling thread to processor threads

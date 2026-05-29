@@ -28,16 +28,18 @@ import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernete
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sBaseFramework;
 import it.smartcommunitylabdhub.framework.k8s.listeners.K8sRunnableListener;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
+import it.smartcommunitylabdhub.runtimes.events.RunnableListener;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 @Component
 @ConditionalOnKubernetes
 @Slf4j
-public class K8sContainerBuilderRunnableListener extends K8sRunnableListener<K8sContainerBuilderRunnable> {
+public class K8sContainerBuilderRunnableListener
+    extends K8sRunnableListener<K8sContainerBuilderRunnable>
+    implements RunnableListener<K8sContainerBuilderRunnable>
+{
 
     public K8sContainerBuilderRunnableListener(
         K8sBaseFramework<K8sContainerBuilderRunnable, V1Job> k8sFramework,
@@ -46,8 +48,6 @@ public class K8sContainerBuilderRunnableListener extends K8sRunnableListener<K8s
         super(k8sFramework, runnableStore);
     }
 
-    @Async
-    @EventListener
     public void listen(K8sContainerBuilderRunnable runnable) {
         if (runnable != null) {
             process(runnable);

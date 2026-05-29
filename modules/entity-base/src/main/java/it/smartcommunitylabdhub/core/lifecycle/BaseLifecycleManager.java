@@ -54,7 +54,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
@@ -67,6 +70,8 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
     extends AbstractLifecycleManager<D>
     implements LifecycleManager<D>
 {
+
+    private static final long PROCESSOR_TIMEOUT = 10L; // seconds
 
     protected final Class<D> typeClass;
 
@@ -382,13 +387,33 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
 
         List<Map<String, Serializable>> res;
         if (processorExecutor != null) {
-            // scatter: run all processors in parallel, join in @Order-sorted sequence
+            // scatter: each future gets its own independent PROCESSOR_TIMEOUT budget via orTimeout().
+            // All futures run concurrently; join() waits for completion or exceptional timeout.
             List<CompletableFuture<Map<String, Serializable>>> futures = processorRegistry
                 .getProcessors(stage)
                 .stream()
-                .map(p -> CompletableFuture.supplyAsync(() -> invokeProcessor(p, stage, dto, input), processorExecutor))
+                .map(p ->
+                    CompletableFuture
+                        .supplyAsync(() -> invokeProcessor(p, stage, dto, input), processorExecutor)
+                        .orTimeout(PROCESSOR_TIMEOUT, TimeUnit.SECONDS)
+                )
                 .toList();
-            res = futures.stream().map(CompletableFuture::join).toList();
+            res = futures
+                .stream()
+                .map(f -> {
+                    try {
+                        return f.join();
+                    } catch (CompletionException e) {
+                        if (e.getCause() instanceof TimeoutException) {
+                            log.warn("Processor timed out for stage {} on {}, skipping", stage, dto.getId());
+                        } else {
+                            log.error("Processor failed for stage {} on {}: {}", stage, dto.getId(),
+                                e.getCause().getMessage());
+                        }
+                        return null;
+                    }
+                })
+                .toList();
         } else {
             res = processorRegistry
                 .getProcessors(stage)

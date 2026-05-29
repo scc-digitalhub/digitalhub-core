@@ -63,6 +63,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.util.Pair;
 import org.springframework.security.crypto.keygen.StringKeyGenerator;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.Assert;
@@ -178,6 +179,7 @@ public abstract class BaseEntityRepositoryImpl<
         }
 
         this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     @Override
@@ -254,6 +256,7 @@ public abstract class BaseEntityRepositoryImpl<
         try {
             //acquire write lock BEFORE starting the transaction to avoid holding a connection while waiting
             if (!getLock(id).tryLock(timeout, TimeUnit.SECONDS)) {
+                log.warn("Lock timeout on create for id {}", id);
                 throw new StoreException("unable to acquire lock for create " + id);
             }
 
@@ -296,6 +299,7 @@ public abstract class BaseEntityRepositoryImpl<
                 getLock(id).unlock();
             }
         } catch (InterruptedException e) {
+            log.error("Thread interrupted waiting for create lock on id {}", id);
             throw new StoreException("unable to access the store: " + e.getMessage());
         }
     }
@@ -311,6 +315,7 @@ public abstract class BaseEntityRepositoryImpl<
         try {
             //acquire write lock BEFORE starting the transaction to avoid holding a connection while waiting
             if (!getLock(id).tryLock(timeout, TimeUnit.SECONDS)) {
+                log.warn("Lock timeout on update for id {}", id);
                 throw new StoreException("unable to acquire lock for update " + id);
             }
 
@@ -371,6 +376,7 @@ public abstract class BaseEntityRepositoryImpl<
                 getLock(id).unlock();
             }
         } catch (InterruptedException ex) {
+            log.error("Thread interrupted waiting for update lock on id {}", id);
             throw new StoreException("unable to access the store: " + ex.getMessage());
         }
     }
@@ -382,6 +388,7 @@ public abstract class BaseEntityRepositoryImpl<
         try {
             //acquire write lock BEFORE starting the transaction to avoid holding a connection while waiting
             if (!getLock(id).tryLock(timeout, TimeUnit.SECONDS)) {
+                log.warn("Lock timeout on delete for id {}", id);
                 throw new StoreException("unable to acquire lock for delete " + id);
             }
 
@@ -418,6 +425,7 @@ public abstract class BaseEntityRepositoryImpl<
                 getLock(id).unlock();
             }
         } catch (InterruptedException e) {
+            log.error("Thread interrupted waiting for delete lock on id {}", id);
             throw new StoreException("unable to access the store: " + e.getMessage());
         }
     }
@@ -436,6 +444,7 @@ public abstract class BaseEntityRepositoryImpl<
         try {
             //acquire read lock
             if (!getLock(id).tryLock(timeout, TimeUnit.SECONDS)) {
+                log.warn("Lock timeout on find for id {}", id);
                 throw new StoreException("unable to acquire lock for find " + id);
             }
 
@@ -453,6 +462,7 @@ public abstract class BaseEntityRepositoryImpl<
                 getLock(id).unlock();
             }
         } catch (InterruptedException e) {
+            log.error("Thread interrupted waiting for find lock on id {}", id);
             throw new StoreException("unable to access the store: " + e.getMessage());
         }
     }
@@ -470,6 +480,7 @@ public abstract class BaseEntityRepositoryImpl<
         try {
             //acquire read lock
             if (!getLock(id).tryLock(timeout, TimeUnit.SECONDS)) {
+                log.warn("Lock timeout on get for id {}", id);
                 throw new StoreException("unable to acquire lock for get " + id);
             }
 
@@ -487,6 +498,7 @@ public abstract class BaseEntityRepositoryImpl<
                 getLock(id).unlock();
             }
         } catch (InterruptedException e) {
+            log.error("Thread interrupted waiting for get lock on id {}", id);
             throw new StoreException("unable to access the store: " + e.getMessage());
         }
     }

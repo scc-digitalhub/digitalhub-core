@@ -23,19 +23,30 @@
 
 package it.smartcommunitylabdhub.runtimes.events;
 
-import org.springframework.beans.factory.annotation.Qualifier;
+import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.support.MessageBuilder;
 
-public class RunnableEventPublisher {
+@Slf4j
+public class RunnableMessagePublisher {
 
-    private final MessageChannel runnableQueueChannel;
+    private final MessageChannel channel;
 
-    public RunnableEventPublisher(@Qualifier("runnableQueueChannel") MessageChannel runnableQueueChannel) {
-        this.runnableQueueChannel = runnableQueueChannel;
+    public RunnableMessagePublisher(MessageChannel runnableMessageChannel) {
+        this.channel = runnableMessageChannel;
     }
 
-    public void publishEvent(RunnableChangedEvent<?> event) {
-        runnableQueueChannel.send(MessageBuilder.withPayload(event).build());
+    public void publish(RunRunnable runnable) {
+        if (runnable == null) {
+            return;
+        }
+
+        log.debug("publish message for runnable {}", runnable.getId());
+        if (log.isTraceEnabled()) {
+            log.trace("publishing runnable event for runnable {}", runnable.getId());
+        }
+
+        channel.send(MessageBuilder.withPayload(runnable).build());
     }
 }
