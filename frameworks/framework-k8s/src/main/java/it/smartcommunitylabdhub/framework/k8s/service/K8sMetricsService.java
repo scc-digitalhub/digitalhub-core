@@ -44,8 +44,7 @@ public class K8sMetricsService implements InitializingBean {
     protected String namespace;
 
     //loading cache for project metrics
-    LoadingCache<Pair<String, String>, ContainerMetrics> cache = CacheBuilder
-        .newBuilder()
+    LoadingCache<Pair<String, String>, ContainerMetrics> cache = CacheBuilder.newBuilder()
         .expireAfterWrite(CACHE_TIMEOUT, TimeUnit.SECONDS)
         .build(
             new CacheLoader<Pair<String, String>, ContainerMetrics>() {
@@ -89,11 +88,11 @@ public class K8sMetricsService implements InitializingBean {
         Assert.notNull(applicationProperties, "application properties required");
     }
 
-    public ContainerMetrics getMetrics(String entity, String project) throws StoreException {
+    public ContainerMetrics getMetrics(String key, String value) throws StoreException {
         try {
-            return cache.get(Pair.of(entity, project));
+            return cache.get(Pair.of(key, value));
         } catch (Exception e) {
-            throw new StoreException("Error getting metrics for project " + project, e);
+            throw new StoreException("Error getting metrics for " + key + " " + value, e);
         }
     }
 
@@ -118,7 +117,12 @@ public class K8sMetricsService implements InitializingBean {
                 .filter(m -> m.getMetadata() != null && m.getMetadata().getLabels() != null)
                 .filter(m -> {
                     Map<String, String> labels = k8sLabelHelper.extractCoreLabels(m.getMetadata().getLabels());
-                    return labels != null && value.equals(labels.get(key));
+                    return (
+                        labels != null &&
+                        label != null &&
+                        label.getValue() != null &&
+                        label.getValue().equals(labels.get(key))
+                    );
                 })
                 .toList();
 
@@ -222,8 +226,7 @@ public class K8sMetricsService implements InitializingBean {
                     .getItems();
 
                 pvcs.forEach(pvc -> {
-                    Optional
-                        .ofNullable(pvc.getStatus())
+                    Optional.ofNullable(pvc.getStatus())
                         .map(s -> s.getCapacity())
                         .map(m -> m.get("storage"))
                         .ifPresent(c -> {

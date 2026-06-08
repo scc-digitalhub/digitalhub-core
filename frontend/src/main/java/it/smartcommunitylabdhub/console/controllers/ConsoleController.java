@@ -27,6 +27,7 @@ import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
 import it.smartcommunitylabdhub.commons.config.SecurityProperties;
 import it.smartcommunitylabdhub.components.proxy.provider.ProxyProvider;
 import it.smartcommunitylabdhub.console.Keys;
+import it.smartcommunitylabdhub.framework.k8s.service.K8sMetricsService;
 import it.smartcommunitylabdhub.search.service.SearchService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
@@ -64,6 +65,9 @@ public class ConsoleController {
     @Autowired(required = false)
     private ProxyProvider proxyProvider;
 
+    @Autowired(required = false)
+    private K8sMetricsService k8sMetricsService;
+
     @Value("${jwt.client-id}")
     private String clientId;
 
@@ -78,21 +82,22 @@ public class ConsoleController {
     }
 
     // @GetMapping(value = { CONSOLE_CONTEXT, CONSOLE_CONTEXT + "/**" })
-    @GetMapping(value = {
+    @GetMapping(
+        value = {
             CONSOLE_CONTEXT + "/",
             CONSOLE_CONTEXT + "/{path:^(?!\\S+(?:\\.[a-z0-9]{2,}))\\S+$}",
             CONSOLE_CONTEXT + "/-/**",
-    })
+        }
+    )
     public String console(Model model, HttpServletRequest request) {
-        String requestUrl = ServletUriComponentsBuilder
-                .fromRequestUri(request)
-                .replacePath(request.getContextPath())
-                .build()
-                .toUriString();
+        String requestUrl = ServletUriComponentsBuilder.fromRequestUri(request)
+            .replacePath(request.getContextPath())
+            .build()
+            .toUriString();
 
         String applicationUrl = StringUtils.hasText(applicationProperties.getEndpoint())
-                ? applicationProperties.getEndpoint()
-                : requestUrl;
+            ? applicationProperties.getEndpoint()
+            : requestUrl;
 
         // build config
         Map<String, String> config = new HashMap<>();
@@ -124,6 +129,12 @@ public class ConsoleController {
             }
         }
 
+        if (k8sMetricsService != null) {
+            config.put("REACT_APP_ENABLE_METRICS", "true");
+        } else {
+            config.put("REACT_APP_ENABLE_METRICS", "false");
+        }
+
         config.put("REACT_APP_ENABLE_SOLR", String.valueOf(searchService != null));
 
         if (StringUtils.hasText(clarityKey)) {
@@ -140,7 +151,14 @@ public class ConsoleController {
             return ResponseEntity.internalServerError().build();
         }
 
-        User user = new User(auth.getName(), auth.getAuthorities().stream().map(a -> a.getAuthority()).toList());
+        User user = new User(
+            auth.getName(),
+            auth
+                .getAuthorities()
+                .stream()
+                .map(a -> a.getAuthority())
+                .toList()
+        );
         return ResponseEntity.ok(user);
     }
 
