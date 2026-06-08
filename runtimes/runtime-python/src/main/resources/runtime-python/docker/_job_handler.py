@@ -155,7 +155,8 @@ def handler(context: Context, event: Event) -> Response:
         context.run.set_status(new_status)
         context.run.save(update=True)
 
-    except Exception as e:
+    except BaseException as e:
+        context.logger.error(f"Function execution failed with error: {str(e)}")
         raise e
     finally:
         context.run.end_execution()

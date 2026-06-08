@@ -132,7 +132,7 @@ def handler(context: Context, event: Event) -> Any:
     ############################
     try:
         return context.user_function(**func_args)
-    except Exception as e:
-        raise e
+    except BaseException as e:
+        context.logger.error(f"Function execution failed with error: {str(e)}")
     finally:
         context.run.end_execution()
