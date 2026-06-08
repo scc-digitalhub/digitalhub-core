@@ -110,9 +110,9 @@ public abstract class AbstractLifecycleManager<D extends BaseDTO & SpecDTO & Sta
             try {
                 //acquire write lock
                 if (!getLock(id).tryLock(timeout, TimeUnit.SECONDS)) {
+                    log.warn("Lock timeout for id {}, action {}", id, op.getAction());
                     throw new SystemException("unable to acquire lock for " + id);
                 }
-
                 //perform logic
                 dto = logic.apply(dto);
 
@@ -144,6 +144,7 @@ public abstract class AbstractLifecycleManager<D extends BaseDTO & SpecDTO & Sta
                 getLock(id).unlock();
             }
         } catch (InterruptedException e) {
+            log.error("Thread interrupted waiting for lock on id {}", id);
             throw new SystemException("unable to acquire lock: " + e.getMessage());
         }
     }

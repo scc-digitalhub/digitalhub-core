@@ -21,23 +21,27 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.runs.lifecycle;
+package it.smartcommunitylabdhub.core.events;
 
 import it.smartcommunitylabdhub.authorization.UserAuthenticationManager;
 import it.smartcommunitylabdhub.authorization.UserAuthenticationManagerBuilder;
 import it.smartcommunitylabdhub.authorization.providers.NoOpAuthenticationProvider;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
+import it.smartcommunitylabdhub.core.runs.lifecycle.KindAwareRunLifecycleManager;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.RunManager;
 import it.smartcommunitylabdhub.runtimes.events.RunnableChangedEvent;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.concurrent.ScheduledFuture;
 import java.util.function.BiConsumer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.messaging.Message;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -49,14 +53,17 @@ import org.springframework.util.Assert;
 
 @Component
 @Slf4j
-public class RunnableListener {
+public class RunnableEventListener {
+
+    private static final int WORK_TIMEOUT = 60;
 
     private final RunManager runService;
     private final KindAwareRunLifecycleManager runManager;
     private Collection<RunnableStore<?>> stores = Collections.emptyList();
     private UserAuthenticationManager authenticationManager;
+    private ThreadPoolTaskScheduler taskScheduler;
 
-    public RunnableListener(RunManager runService, KindAwareRunLifecycleManager runManager) {
+    public RunnableEventListener(RunManager runService, KindAwareRunLifecycleManager runManager) {
         Assert.notNull(runManager, "run manager is required");
         Assert.notNull(runService, "run service is required");
         this.runService = runService;
@@ -71,6 +78,12 @@ public class RunnableListener {
     @Autowired
     public void setAuthenticationManagerBuilder(UserAuthenticationManagerBuilder authenticationManagerBuilder) {
         this.authenticationManager = authenticationManagerBuilder.build(new NoOpAuthenticationProvider());
+    }
+
+    @Autowired
+    @Qualifier("taskScheduler")
+    public void setTaskScheduler(ThreadPoolTaskScheduler taskScheduler) {
+        this.taskScheduler = taskScheduler;
     }
 
     /*
@@ -106,8 +119,16 @@ public class RunnableListener {
     }
 
     public void handle(Message<RunnableChangedEvent<RunRunnable>> message) {
+        if (log.isTraceEnabled()) {
+            log.trace("received message: {}", message);
+        }
+
         RunnableChangedEvent<RunRunnable> event = message.getPayload();
         receive(event);
+
+        if (log.isTraceEnabled()) {
+            log.trace("finished handling message: {}", message);
+        }
     }
 
     // @Async
@@ -122,9 +143,24 @@ public class RunnableListener {
             log.trace("event: {}", event);
         }
 
+        String id = event.getId();
+
+        Thread self = Thread.currentThread();
+        ScheduledFuture<?> watchdog = taskScheduler.schedule(
+            () -> {
+                log.warn(
+                    "Work timeout ({}s) exceeded for run {}, interrupting thread {}",
+                    WORK_TIMEOUT,
+                    id,
+                    self.getName()
+                );
+                self.interrupt();
+            },
+            java.time.Instant.now().plusSeconds(WORK_TIMEOUT)
+        );
+
         try {
             // read event
-            String id = event.getId();
             String state = event.getState();
 
             // Use service to retrieve the run and check if state is changed
@@ -171,6 +207,16 @@ public class RunnableListener {
             wrap(run, event.getRunnable(), (r, rb) -> runManager.handle(r, state, rb));
         } catch (Exception e) {
             log.error("Error handling runnable changed event: {}", e.getMessage(), e);
+        } finally {
+            watchdog.cancel(false);
+            // clear interrupt flag set by watchdog if it fired just before/during cancel
+            if (Thread.interrupted()) {
+                log.warn(
+                    "Watchdog interrupt was delivered for run {}, handler may have been cut short on thread {}",
+                    id,
+                    Thread.currentThread().getName()
+                );
+            }
         }
     }
 }

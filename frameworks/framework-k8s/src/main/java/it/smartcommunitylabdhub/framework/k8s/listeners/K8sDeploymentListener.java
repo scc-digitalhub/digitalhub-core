@@ -25,11 +25,13 @@ package it.smartcommunitylabdhub.framework.k8s.listeners;
 
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sDeploymentFramework;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sDeploymentRunnable;
+import it.smartcommunitylabdhub.runtimes.events.RunnableListener;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
-import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
 
-public class K8sDeploymentListener extends K8sRunnableListener<K8sDeploymentRunnable> {
+public class K8sDeploymentListener
+    extends K8sRunnableListener<K8sDeploymentRunnable>
+    implements RunnableListener<K8sDeploymentRunnable>
+{
 
     public K8sDeploymentListener(
         K8sDeploymentFramework k8sFramework,
@@ -38,12 +40,9 @@ public class K8sDeploymentListener extends K8sRunnableListener<K8sDeploymentRunn
         super(k8sFramework, runnableStore);
     }
 
-    @Async
-    @EventListener
     public void listen(K8sDeploymentRunnable runnable) {
         if (runnable != null) {
-            //clone to fully detach
-            process(runnable.toBuilder().build());
+            process(runnable);
         }
     }
 }

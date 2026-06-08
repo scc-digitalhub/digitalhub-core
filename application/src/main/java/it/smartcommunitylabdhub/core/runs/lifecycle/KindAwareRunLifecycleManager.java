@@ -31,6 +31,7 @@ import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
 import it.smartcommunitylabdhub.runtimes.Runtime;
+import it.smartcommunitylabdhub.runtimes.events.RunnableMessagePublisher;
 import it.smartcommunitylabdhub.runtimes.lifecycle.RunLifecycleManager;
 import jakarta.annotation.PostConstruct;
 import java.util.ArrayList;
@@ -64,6 +65,8 @@ public class KindAwareRunLifecycleManager extends KindAwareLifecycleManager<Run>
 
     protected EntityRepository<Run> entityRepository;
     protected ApplicationEventPublisher eventPublisher;
+    protected RunnableMessagePublisher runnablePublisher;
+
     protected ProcessorRegistry<Run, Metadata> metadataProcessorRegistry;
     protected ProcessorRegistry<Run, Spec> specProcessorRegistry;
     protected ProcessorRegistry<Run, Status> statusProcessorRegistry;
@@ -77,13 +80,19 @@ public class KindAwareRunLifecycleManager extends KindAwareLifecycleManager<Run>
 
     @Autowired(required = false)
     public void setManagers(List<LifecycleManager<Run>> managers) {
-        this.managers =
-            new HashMap<>(managers.stream().collect(Collectors.toMap(r -> getRuntimeFromAnnotation(r), r -> r)));
+        this.managers = new HashMap<>(
+            managers.stream().collect(Collectors.toMap(r -> getRuntimeFromAnnotation(r), r -> r))
+        );
     }
 
     @Autowired
     public void setEventPublisher(ApplicationEventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
+    }
+
+    @Autowired
+    public void setRunnablePublisher(RunnableMessagePublisher runnablePublisher) {
+        this.runnablePublisher = runnablePublisher;
     }
 
     @Autowired
@@ -174,6 +183,7 @@ public class KindAwareRunLifecycleManager extends KindAwareLifecycleManager<Run>
                     //inject deps
                     m.setEntityRepository(this.entityRepository);
                     m.setEventPublisher(this.eventPublisher);
+                    m.setRunnablePublisher(runnablePublisher);
                     m.setMetadataProcessorRegistry(metadataProcessorRegistry);
                     m.setSpecProcessorRegistry(specProcessorRegistry);
                     m.setStatusProcessorRegistry(statusProcessorRegistry);
