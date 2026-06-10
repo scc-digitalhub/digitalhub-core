@@ -28,12 +28,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import it.smartcommunitylabdhub.commons.Keys;
-import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
-import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
-import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
-import it.smartcommunitylabdhub.commons.utils.EntityUtils;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
@@ -54,62 +48,29 @@ import org.springframework.util.StringUtils;
 @Setter
 @Builder
 @JsonPropertyOrder(alphabetic = true)
-public class Log implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO {
+public class Log {
 
     @Nullable
     @Pattern(regexp = Keys.SLUG_PATTERN)
     private String id;
 
+    private String run;
+
     private String project;
     private String user;
 
     @Builder.Default
-    @JsonIgnore
-    private String kind = "log";
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private Map<String, Serializable> extensions = new HashMap<>();
 
     @Builder.Default
     @JsonIgnore
     private String content = "";
-
-    @Builder.Default
-    private Map<String, Serializable> metadata = new HashMap<>();
-
-    @Builder.Default
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    private Map<String, Serializable> spec = new HashMap<>();
-
-    @Builder.Default
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    private Map<String, Serializable> status = new HashMap<>();
-
-    @Override
-    public String getName() {
-        return id;
-    }
-
-    @Override
-    public @NotNull String getKind() {
-        return "log";
-    }
 
     @JsonProperty("content")
     public String getContentAsBase64() {
         return StringUtils.hasText(content)
             ? Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8))
             : "";
-    }
-
-    @Override
-    public String getKey() {
-        return (
-            Keys.STORE_PREFIX +
-            getProject() +
-            Keys.PATH_DIVIDER +
-            EntityUtils.getEntityName(Log.class).toLowerCase() +
-            Keys.PATH_DIVIDER +
-            getKind() +
-            Keys.PATH_DIVIDER +
-            getId()
-        );
     }
 }

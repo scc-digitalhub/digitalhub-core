@@ -31,6 +31,7 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.validation.BindException;
 
@@ -43,7 +44,7 @@ public interface LogService {
      * @param pageable
      * @return
      */
-    Page<Log> listLogs(Pageable pageable) throws SystemException;
+    Page<Log> listLogs(@NonNull Pageable pageable) throws SystemException;
 
     /**
      * List all versions of every log for a user
@@ -65,7 +66,7 @@ public interface LogService {
      * @param pageable
      * @return
      */
-    Page<Log> listLogsByProject(@NotNull String project, Pageable pageable) throws SystemException;
+    Page<Log> listLogsByProject(@NotNull String project, @NonNull Pageable pageable) throws SystemException;
 
     /**
      * List all logs, with optional filters
@@ -73,7 +74,7 @@ public interface LogService {
      * @param filter
      * @return
      */
-    Page<Log> searchLogs(Pageable pageable, @Nullable SearchFilter<Log> filter) throws SystemException;
+    Page<Log> searchLogs(@NonNull Pageable pageable, @Nullable SearchFilter<Log> filter) throws SystemException;
 
     /**
      * List the latest version of every log, with optional filters
@@ -82,8 +83,11 @@ public interface LogService {
      * @param filter
      * @return
      */
-    Page<Log> searchLogsByProject(@NotNull String project, Pageable pageable, @Nullable SearchFilter<Log> filter)
-        throws SystemException;
+    Page<Log> searchLogsByProject(
+        @NotNull String project,
+        @NonNull Pageable pageable,
+        @Nullable SearchFilter<Log> filter
+    ) throws SystemException;
 
     /**
      * List all logs for a given run

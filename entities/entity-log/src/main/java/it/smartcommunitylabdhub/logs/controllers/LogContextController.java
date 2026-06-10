@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.controllers.v1.context;
+package it.smartcommunitylabdhub.logs.controllers;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,8 +30,6 @@ import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.core.ApplicationKeys;
-import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.logs.Log;
 import it.smartcommunitylabdhub.logs.LogService;
 import it.smartcommunitylabdhub.logs.filter.LogEntityFilter;
@@ -62,8 +60,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@ApiVersion("v1")
-@RequestMapping("/-/{project}/logs")
+@RequestMapping("/api/v1/-/{project}/logs")
 @PreAuthorize(
     "hasAuthority('ROLE_ADMIN') or (hasAuthority(#project+':ROLE_USER') or hasAuthority(#project+':ROLE_ADMIN'))"
 )
@@ -71,6 +68,8 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @Tag(name = "Log context API", description = "Endpoints related to logs management in Context")
 public class LogContextController {
+
+    public static final int DEFAULT_PAGE_SIZE = 25;
 
     @Autowired
     LogService logService;
@@ -100,7 +99,7 @@ public class LogContextController {
     public Page<Log> searchLogs(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @ParameterObject @Valid @Nullable LogEntityFilter filter,
-        @ParameterObject @PageableDefault(page = 0, size = ApplicationKeys.DEFAULT_PAGE_SIZE) @SortDefault.SortDefaults(
+        @ParameterObject @PageableDefault(page = 0, size = DEFAULT_PAGE_SIZE) @SortDefault.SortDefaults(
             { @SortDefault(sort = "created", direction = Direction.DESC) }
         ) Pageable pageable
     ) {
