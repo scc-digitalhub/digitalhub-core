@@ -21,22 +21,21 @@
  *
  */
 
-package it.smartcommunitylabdhub.logs.persistence;
+package it.smartcommunitylabdhub.logs.local.persistence;
 
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 public interface LogRepository extends JpaRepository<LogEntity, String>, JpaSpecificationExecutor<LogEntity> {
+    List<LogEntity> findByProject(String name);
     Page<LogEntity> findByProject(String name, Pageable pageable);
 
-    Page<LogEntity> findByRun(String uuid, Pageable pageable);
+    List<LogEntity> findByRun(String id);
+    Page<LogEntity> findByRun(String id, Pageable pageable);
 
-    @Modifying
-    @Query("DELETE FROM LogEntity l WHERE l.project = :project ")
-    void deleteByProjectName(@Param("project") String project);
+    List<LogEntity> findByCreatedBy(String user);
+    Page<LogEntity> findByCreatedBy(String user, Pageable pageable);
 }
