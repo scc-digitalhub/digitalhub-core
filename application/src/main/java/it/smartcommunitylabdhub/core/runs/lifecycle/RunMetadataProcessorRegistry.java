@@ -24,7 +24,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
 @Slf4j
-@Component
+// @Component
 public class RunMetadataProcessorRegistry extends ProcessorRegistryImpl<Run, Metadata> {
 
     public RunMetadataProcessorRegistry(ApplicationContext applicationContext) {

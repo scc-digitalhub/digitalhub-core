@@ -14,20 +14,15 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.core.runs.lifecycle;
+package it.smartcommunitylabdhub.containerimage.lifecycle;
 
-import it.smartcommunitylabdhub.commons.models.specs.Spec;
-import it.smartcommunitylabdhub.core.components.infrastructure.processors.ProcessorRegistryImpl;
-import it.smartcommunitylabdhub.runs.Run;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationContext;
-import org.springframework.stereotype.Component;
+import it.smartcommunitylabdhub.commons.lifecycle.LifecycleState;
+import it.smartcommunitylabdhub.containerimage.ContainerImage;
 
-@Slf4j
-// @Component
-public class RunSpecProcessorRegistry extends ProcessorRegistryImpl<Run, Spec> {
-
-    public RunSpecProcessorRegistry(ApplicationContext applicationContext) {
-        super(applicationContext);
-    }
+public enum ContainerImageState implements LifecycleState<ContainerImage> {
+    CREATED,
+    UPLOADING,
+    READY,
+    ERROR,
+    DELETED,
 }

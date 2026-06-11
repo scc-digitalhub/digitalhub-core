@@ -44,6 +44,7 @@
         <module>modules/component-files</module>
         <module>modules/component-envoy-gateway</module>
         <module>modules/component-extensions</module>
+        <module>modules/component-container-images</module>
         <module>modules/entity-base</module>
         <module>modules/runtime-base</module>
         <module>entities/entity-artifact</module>
@@ -57,6 +58,7 @@
         <module>entities/entity-trigger</module>
         <module>entities/entity-log</module>
         <module>entities/entity-workflow</module>
+        <module>entities/entity-container-image</module>
         <module>frameworks/framework-k8s</module>
         <module>frameworks/framework-argo</module>
         <module>frameworks/framework-kaniko</module>
