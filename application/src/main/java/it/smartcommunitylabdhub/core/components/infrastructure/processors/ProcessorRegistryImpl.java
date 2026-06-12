@@ -42,17 +42,16 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
 import org.springframework.core.Ordered;
+import org.springframework.core.ResolvableType;
+import org.springframework.core.ResolvableTypeProvider;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.annotation.Order;
+import org.springframework.util.Assert;
 
-public class ProcessorRegistryImpl<D extends BaseDTO & SpecDTO & StatusDTO, Z extends Spec>
-    implements ProcessorRegistry<D, Z>, ApplicationListener<ApplicationReadyEvent> {
-
-    private record ProcessorEntry<D extends BaseDTO & SpecDTO & StatusDTO, Z extends Spec>(
-        String name,
-        int order,
-        Processor<D, ? extends Z> processor
-    ) {}
+public class ProcessorRegistryImpl<
+    D extends BaseDTO & SpecDTO & StatusDTO,
+    Z extends Spec
+> implements ProcessorRegistry<D, Z>, ApplicationListener<ApplicationReadyEvent>, ResolvableTypeProvider {
 
     protected final Class<D> typeClass;
     protected final Class<Z> specClass;
@@ -72,6 +71,21 @@ public class ProcessorRegistryImpl<D extends BaseDTO & SpecDTO & StatusDTO, Z ex
         this.typeClass = (Class<D>) t;
         Type s = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
         this.specClass = (Class<Z>) s;
+    }
+
+    public ProcessorRegistryImpl(ApplicationContext applicationContext, Class<D> typeClass, Class<Z> specClass) {
+        Assert.notNull(applicationContext, "application context is required");
+        Assert.notNull(typeClass, "type class is required");
+        Assert.notNull(specClass, "spec class is required");
+
+        this.applicationContext = applicationContext;
+        this.typeClass = typeClass;
+        this.specClass = specClass;
+    }
+
+    @Override
+    public ResolvableType getResolvableType() {
+        return ResolvableType.forClassWithGenerics(ProcessorRegistryImpl.class, typeClass, specClass);
     }
 
     @Override
@@ -121,4 +135,10 @@ public class ProcessorRegistryImpl<D extends BaseDTO & SpecDTO & StatusDTO, Z ex
     public List<Processor<D, ? extends Z>> getProcessors(String stage) {
         return processors.getOrDefault(stage, List.of());
     }
+
+    private record ProcessorEntry<D extends BaseDTO & SpecDTO & StatusDTO, Z extends Spec>(
+        String name,
+        int order,
+        Processor<D, ? extends Z> processor
+    ) {}
 }
