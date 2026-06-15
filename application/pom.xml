@@ -125,7 +125,7 @@
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
         </dependency>
-        
+
         <!-- <dependency>
             <groupId>io.kubernetes</groupId>
             <artifactId>client-java</artifactId>
@@ -237,7 +237,7 @@
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-component-container-images</artifactId>
             <version>${revision}</version>
-        </dependency>        
+        </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-entity-base</artifactId>
@@ -258,7 +258,7 @@
             <artifactId>dh-extensions</artifactId>
             <version>${revision}</version>
         </dependency>
-        
+
         <!-- ENTITIES  -->
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
@@ -416,6 +416,11 @@
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-search-lucene</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>trinodb-provider</artifactId>
             <version>${revision}</version>
         </dependency>
         <!-- <dependency>
