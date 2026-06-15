@@ -44,6 +44,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -109,10 +111,20 @@ public class FilesService implements ConfigurationProvider, InitializingBean {
     //TODO refactor
     public String getDefaultStore(@Nullable Project project) {
         //define base store, prefer any s3 with bucket if available
-        List<String> keys = stores.keySet().stream().filter(k -> k.startsWith("s3://")).collect(Collectors.toList());
+        List<String> keys = stores
+            .keySet()
+            .stream()
+            .filter(k -> k.startsWith("s3://"))
+            .collect(Collectors.toList());
 
-        Optional<String> dk = keys.stream().filter(k -> !k.equals("s3://")).findFirst();
-        Optional<String> df = keys.stream().filter(k -> k.equals("s3://")).findFirst();
+        Optional<String> dk = keys
+            .stream()
+            .filter(k -> !k.equals("s3://"))
+            .findFirst();
+        Optional<String> df = keys
+            .stream()
+            .filter(k -> k.equals("s3://"))
+            .findFirst();
 
         String baseStore = dk.isPresent() ? dk.get() : (df.isPresent() ? df.get() : null);
         String store = StringUtils.hasText(properties.getDefaultStore()) ? properties.getDefaultStore() : baseStore;
@@ -176,8 +188,11 @@ public class FilesService implements ConfigurationProvider, InitializingBean {
         throw new UnsupportedOperationException();
     }
 
-    public List<FileInfo> getFileInfo(@NotNull String path, @Nullable List<Credentials> credentials)
-        throws StoreException {
+    public Slice<FileInfo> getFileInfo(
+        @NotNull String path,
+        @Nullable List<Credentials> credentials,
+        @Nullable Pageable pageable
+    ) throws StoreException {
         Assert.hasText(path, "path can not be null or empty");
 
         log.debug("resolve store for {}", path);
@@ -190,7 +205,7 @@ public class FilesService implements ConfigurationProvider, InitializingBean {
 
         log.debug("found store {}", store.getClass().getName());
 
-        List<FileInfo> metadata = store.fileInfo(path, true, credentials);
+        Slice<FileInfo> metadata = store.fileInfo(path, true, credentials, pageable);
 
         if (log.isTraceEnabled()) {
             log.trace("path resolved to metadata {}", metadata);

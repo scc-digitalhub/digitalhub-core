@@ -27,6 +27,8 @@ import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.files.models.DownloadInfo;
 import it.smartcommunitylabdhub.files.models.FileInfo;
+import it.smartcommunitylabdhub.files.models.TokenPageRequest;
+import it.smartcommunitylabdhub.files.models.TokenSlice;
 import it.smartcommunitylabdhub.files.models.UploadInfo;
 import it.smartcommunitylabdhub.files.service.FilesStore;
 import it.smartcommunitylabdhub.s3.config.S3Config;
@@ -41,6 +43,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.http.HttpMethod;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -109,16 +113,14 @@ public class S3FilesStore implements FilesStore {
 
         if (StringUtils.hasText(s3Credentials.getSessionToken())) {
             //use session token
-            return AwsSessionCredentials
-                .builder()
+            return AwsSessionCredentials.builder()
                 .accessKeyId(s3Credentials.getAccessKey())
                 .secretAccessKey(s3Credentials.getSecretKey())
                 .sessionToken(s3Credentials.getSessionToken())
                 .build();
         } else {
             //use static credentials
-            return AwsBasicCredentials
-                .builder()
+            return AwsBasicCredentials.builder()
                 .accessKeyId(s3Credentials.getAccessKey())
                 .secretAccessKey(s3Credentials.getSecretKey())
                 .build();
@@ -132,8 +134,7 @@ public class S3FilesStore implements FilesStore {
         }
 
         if (StringUtils.hasText(endpoint)) {
-            return S3Client
-                .builder()
+            return S3Client.builder()
                 .credentialsProvider(StaticCredentialsProvider.create(credentials))
                 .endpointOverride(URI.create(endpoint))
                 //also enable path style for endpoint by default
@@ -152,13 +153,11 @@ public class S3FilesStore implements FilesStore {
         }
 
         if (StringUtils.hasText(endpoint)) {
-            return S3Presigner
-                .builder()
+            return S3Presigner.builder()
                 .credentialsProvider(StaticCredentialsProvider.create(credentials))
                 //also enable path style for endpoint by default
                 .serviceConfiguration(
-                    S3Configuration
-                        .builder()
+                    S3Configuration.builder()
                         .pathStyleAccessEnabled(
                             config.getPathStyle() != null ? config.getPathStyle().booleanValue() : true
                         )
@@ -177,17 +176,17 @@ public class S3FilesStore implements FilesStore {
         return credentials == null
             ? null
             : credentials
-                .stream()
-                .filter(S3Credentials.class::isInstance)
-                .map(c -> (S3Credentials) c)
-                //DISABLED: only single provider supported for now
-                // //pick either matching or global credentials
-                // .filter(c ->
-                //     (c.getBucket() == null || c.getBucket().equals(bucket)) &&
-                //     (c.getEndpoint() == null || c.getEndpoint().equals(endpoint))
-                // )
-                .findFirst()
-                .orElse(null);
+                  .stream()
+                  .filter(S3Credentials.class::isInstance)
+                  .map(c -> (S3Credentials) c)
+                  //DISABLED: only single provider supported for now
+                  // //pick either matching or global credentials
+                  // .filter(c ->
+                  //     (c.getBucket() == null || c.getBucket().equals(bucket)) &&
+                  //     (c.getEndpoint() == null || c.getEndpoint().equals(endpoint))
+                  // )
+                  .findFirst()
+                  .orElse(null);
     }
 
     @Override
@@ -203,9 +202,10 @@ public class S3FilesStore implements FilesStore {
 
         String key = keys.key;
         String bucketName = keys.bucket;
-        int expiresIn = duration != null && (duration.intValue() > 0 && duration.intValue() < MAX_DURATION)
-            ? duration.intValue()
-            : urlDuration;
+        int expiresIn =
+            duration != null && (duration.intValue() > 0 && duration.intValue() < MAX_DURATION)
+                ? duration.intValue()
+                : urlDuration;
 
         if (StringUtils.hasText(bucket) && !bucket.equals(bucketName)) {
             throw new StoreException("bucket mismatch");
@@ -230,8 +230,7 @@ public class S3FilesStore implements FilesStore {
 
             S3Presigner presigner = getPresignerClient(s3Credentials);
 
-            GetObjectPresignRequest preq = GetObjectPresignRequest
-                .builder()
+            GetObjectPresignRequest preq = GetObjectPresignRequest.builder()
                 .signatureDuration(Duration.ofSeconds(expiresIn))
                 .getObjectRequest(GetObjectRequest.builder().bucket(bucketName).key(key).build())
                 .build();
@@ -249,10 +248,11 @@ public class S3FilesStore implements FilesStore {
     }
 
     @Override
-    public List<FileInfo> fileInfo(
+    public Slice<FileInfo> fileInfo(
         @NotNull String path,
         @Nullable Boolean recursive,
-        @Nullable List<Credentials> credentials
+        @Nullable List<Credentials> credentials,
+        @Nullable Pageable pageable
     ) throws StoreException {
         log.debug("file info for {}", path);
 
@@ -284,16 +284,23 @@ public class S3FilesStore implements FilesStore {
 
         try {
             S3Client client = getClient(s3Credentials);
-            //support single file in path for now
+            //folder-like list of objects
             if (key.endsWith("/")) {
-                log.warn("reading metadata for folders is partially supported: {}", path);
+                //check if we recieved a continuation token
+                String token =
+                    pageable != null && pageable instanceof TokenPageRequest
+                        ? ((TokenPageRequest) pageable).getToken()
+                        : null;
+
+                Integer limit = Math.min(pageable != null ? pageable.getPageSize() : MAX_KEYS, MAX_KEYS);
+
                 String prefix = "/".equals(key) ? null : key;
-                ListObjectsV2Request req = ListObjectsV2Request
-                    .builder()
+                ListObjectsV2Request req = ListObjectsV2Request.builder()
                     .bucket(bucketName)
                     .prefix(prefix)
                     .delimiter(delimiter)
-                    .maxKeys(MAX_KEYS)
+                    .maxKeys(limit)
+                    .continuationToken(token)
                     .build();
 
                 ListObjectsV2Response response = client.listObjectsV2(req);
@@ -301,11 +308,10 @@ public class S3FilesStore implements FilesStore {
                 List<FileInfo> files = response
                     .contents()
                     .stream()
-                    .limit(MAX_KEYS)
+                    .limit(limit)
                     .map(o -> {
                         Keys kk = parseKey("s3://" + bucketName + "/" + (prefix != null ? prefix : "") + o.key());
-                        return FileInfo
-                            .builder()
+                        return FileInfo.builder()
                             .path(prefix != null ? o.key().substring(prefix.length()) : o.key())
                             .name(kk.fileName)
                             .size(o.size())
@@ -320,14 +326,17 @@ public class S3FilesStore implements FilesStore {
                     .stream()
                     // .filter(o -> StringUtils.countOccurrencesOf(o.prefix(), "/") < 2)
                     .map(o -> {
-                        String p = prefix != null
-                            ? (o.prefix().startsWith(prefix) ? o.prefix().substring(prefix.length()) : o.prefix())
-                            : o.prefix();
+                        String p =
+                            prefix != null
+                                ? (o.prefix().startsWith(prefix) ? o.prefix().substring(prefix.length()) : o.prefix())
+                                : o.prefix();
                         return FileInfo.builder().path(p).name(p).build();
                     })
                     .toList();
 
-                return Stream.concat(folders.stream(), files.stream()).toList();
+                List<FileInfo> combined = Stream.concat(folders.stream(), files.stream()).toList();
+                String nextToken = response.nextContinuationToken();
+                return new TokenSlice<>(combined, pageable, nextToken != null, nextToken);
             } else {
                 HeadObjectResponse headObject = client.headObject(
                     HeadObjectRequest.builder().bucket(bucketName).key(key).build()
@@ -353,7 +362,7 @@ public class S3FilesStore implements FilesStore {
                         response.getMetadata().put("Metadata." + entry.getKey(), entry.getValue());
                     });
 
-                return Collections.singletonList(response);
+                return new TokenSlice<>(List.of(response), Pageable.unpaged(), false, null);
             }
         } catch (SdkException e) {
             log.error("error with s3 for {}: {}", path, e.getMessage());
@@ -394,8 +403,7 @@ public class S3FilesStore implements FilesStore {
 
             S3Presigner presigner = getPresignerClient(s3Credentials);
 
-            PutObjectPresignRequest preq = PutObjectPresignRequest
-                .builder()
+            PutObjectPresignRequest preq = PutObjectPresignRequest.builder()
                 .signatureDuration(Duration.ofSeconds(urlDuration))
                 .putObjectRequest(PutObjectRequest.builder().bucket(bucketName).key(key).build())
                 .build();
@@ -499,12 +507,10 @@ public class S3FilesStore implements FilesStore {
                 return null;
             }
 
-            UploadPartPresignRequest preq = UploadPartPresignRequest
-                .builder()
+            UploadPartPresignRequest preq = UploadPartPresignRequest.builder()
                 .signatureDuration(Duration.ofSeconds(urlDuration))
                 .uploadPartRequest(
-                    UploadPartRequest
-                        .builder()
+                    UploadPartRequest.builder()
                         .bucket(bucketName)
                         .key(key)
                         .uploadId(uploadId)
@@ -569,8 +575,7 @@ public class S3FilesStore implements FilesStore {
                 parts.add(cp);
             }
             CompletedMultipartUpload mp = CompletedMultipartUpload.builder().parts(parts).build();
-            CompleteMultipartUploadRequest req = CompleteMultipartUploadRequest
-                .builder()
+            CompleteMultipartUploadRequest req = CompleteMultipartUploadRequest.builder()
                 .bucket(bucketName)
                 .key(key)
                 .uploadId(uploadId)
@@ -631,8 +636,7 @@ public class S3FilesStore implements FilesStore {
             if (key.endsWith("/")) {
                 //experimental: bulk delete folders with batch on pages
                 log.warn("remove for folders is experimental: {}", path);
-                ListObjectsV2Request listRequest = ListObjectsV2Request
-                    .builder()
+                ListObjectsV2Request listRequest = ListObjectsV2Request.builder()
                     .bucket(bucketName)
                     .prefix(key)
                     .delimiter(delimiter)
@@ -650,8 +654,7 @@ public class S3FilesStore implements FilesStore {
                     }
 
                     //delete objects batch (max 1000)
-                    DeleteObjectsRequest req = DeleteObjectsRequest
-                        .builder()
+                    DeleteObjectsRequest req = DeleteObjectsRequest.builder()
                         .bucket(bucketName)
                         .delete(Delete.builder().objects(objects).build())
                         .build();

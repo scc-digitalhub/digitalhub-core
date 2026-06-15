@@ -41,6 +41,7 @@ import it.smartcommunitylabdhub.extensions.model.Extension;
 import it.smartcommunitylabdhub.extensions.persistence.ExtensionBuilder;
 import it.smartcommunitylabdhub.files.models.DownloadInfo;
 import it.smartcommunitylabdhub.files.models.FileInfo;
+import it.smartcommunitylabdhub.files.models.TokenPageRequest;
 import it.smartcommunitylabdhub.files.models.UploadInfo;
 import it.smartcommunitylabdhub.files.service.EntityFilesService;
 import it.smartcommunitylabdhub.metrics.service.MetricsService;
@@ -66,6 +67,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.SortDefault;
@@ -352,9 +354,10 @@ public class ModelContextController {
 
     @Operation(summary = "Get file info for a given entity, if available")
     @GetMapping(path = "/{id}/files/info", produces = "application/json; charset=UTF-8")
-    public List<FileInfo> getFilesInfoById(
+    public Slice<FileInfo> getFilesInfoById(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
+        @ParameterObject TokenPageRequest pageable
     ) throws NoSuchEntityException {
         Model entity = modelManager.getModel(id);
 
@@ -363,7 +366,7 @@ public class ModelContextController {
             throw new IllegalArgumentException("invalid project");
         }
 
-        return filesService.getFileInfo(id);
+        return filesService.getFileInfo(id, pageable);
     }
 
     @Operation(summary = "Store file info for a given entity, if available")

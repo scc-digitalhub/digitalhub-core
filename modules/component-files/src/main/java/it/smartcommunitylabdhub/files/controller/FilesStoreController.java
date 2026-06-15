@@ -28,6 +28,7 @@ import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.files.models.DownloadInfo;
 import it.smartcommunitylabdhub.files.models.FileInfo;
+import it.smartcommunitylabdhub.files.models.TokenPageRequest;
 import it.smartcommunitylabdhub.files.models.UploadInfo;
 import it.smartcommunitylabdhub.files.service.FilesService;
 import it.smartcommunitylabdhub.files.service.FilesStore;
@@ -39,7 +40,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Slice;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -79,22 +82,22 @@ public class FilesStoreController {
     }
 
     @GetMapping(path = "/info", produces = "application/json; charset=UTF-8")
-    public List<FileInfo> listFiles(
+    public Slice<FileInfo> listFiles(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @RequestParam @Valid @NotNull String path
+        @RequestParam @Valid @NotNull String path,
+        @ParameterObject TokenPageRequest pageable
     ) throws NoSuchEntityException, StoreException {
         //try to resolve credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-        List<Credentials> credentials = auth != null && credentialsService != null
-            ? credentialsService.getCredentials(auth)
-            : null;
+        List<Credentials> credentials =
+            auth != null && credentialsService != null ? credentialsService.getCredentials(auth) : null;
 
         Optional<FilesStore> store = Optional.ofNullable(filesService.getStore(path));
         if (!store.isPresent()) {
             throw new NoSuchEntityException();
         }
 
-        return store.get().fileInfo(path, false, credentials);
+        return store.get().fileInfo(path, false, credentials, pageable);
     }
 
     /*
@@ -107,9 +110,8 @@ public class FilesStoreController {
     ) throws NoSuchEntityException, StoreException {
         //try to resolve credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-        List<Credentials> credentials = auth != null && credentialsService != null
-            ? credentialsService.getCredentials(auth)
-            : null;
+        List<Credentials> credentials =
+            auth != null && credentialsService != null ? credentialsService.getCredentials(auth) : null;
 
         Optional<FilesStore> store = Optional.ofNullable(filesService.getStore(path));
         if (!store.isPresent()) {
@@ -127,9 +129,8 @@ public class FilesStoreController {
     ) throws NoSuchEntityException, StoreException {
         //try to resolve credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-        List<Credentials> credentials = auth != null && credentialsService != null
-            ? credentialsService.getCredentials(auth)
-            : null;
+        List<Credentials> credentials =
+            auth != null && credentialsService != null ? credentialsService.getCredentials(auth) : null;
 
         Optional<FilesStore> store = Optional.ofNullable(filesService.getStore(path));
         if (!store.isPresent()) {
@@ -146,9 +147,8 @@ public class FilesStoreController {
     ) throws NoSuchEntityException, StoreException {
         //try to resolve credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-        List<Credentials> credentials = auth != null && credentialsService != null
-            ? credentialsService.getCredentials(auth)
-            : null;
+        List<Credentials> credentials =
+            auth != null && credentialsService != null ? credentialsService.getCredentials(auth) : null;
 
         Optional<FilesStore> store = Optional.ofNullable(filesService.getStore(path));
         if (!store.isPresent()) {
@@ -166,9 +166,8 @@ public class FilesStoreController {
     ) throws NoSuchEntityException, StoreException {
         //try to resolve credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-        List<Credentials> credentials = auth != null && credentialsService != null
-            ? credentialsService.getCredentials(auth)
-            : null;
+        List<Credentials> credentials =
+            auth != null && credentialsService != null ? credentialsService.getCredentials(auth) : null;
 
         Optional<FilesStore> store = Optional.ofNullable(filesService.getStore(path));
         if (!store.isPresent()) {
@@ -191,9 +190,8 @@ public class FilesStoreController {
     ) throws NoSuchEntityException, StoreException {
         //try to resolve credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-        List<Credentials> credentials = auth != null && credentialsService != null
-            ? credentialsService.getCredentials(auth)
-            : null;
+        List<Credentials> credentials =
+            auth != null && credentialsService != null ? credentialsService.getCredentials(auth) : null;
 
         Optional<FilesStore> store = Optional.ofNullable(filesService.getStore(path));
         if (!store.isPresent()) {
@@ -218,9 +216,8 @@ public class FilesStoreController {
     ) throws NoSuchEntityException, StoreException {
         //try to resolve credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-        List<Credentials> credentials = auth != null && credentialsService != null
-            ? credentialsService.getCredentials(auth)
-            : null;
+        List<Credentials> credentials =
+            auth != null && credentialsService != null ? credentialsService.getCredentials(auth) : null;
 
         Optional<FilesStore> store = Optional.ofNullable(filesService.getStore(path));
         if (!store.isPresent()) {
@@ -245,9 +242,8 @@ public class FilesStoreController {
     ) throws NoSuchEntityException, StoreException {
         //try to resolve credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-        List<Credentials> credentials = auth != null && credentialsService != null
-            ? credentialsService.getCredentials(auth)
-            : null;
+        List<Credentials> credentials =
+            auth != null && credentialsService != null ? credentialsService.getCredentials(auth) : null;
 
         Optional<FilesStore> store = Optional.ofNullable(filesService.getStore(path));
         if (!store.isPresent()) {
