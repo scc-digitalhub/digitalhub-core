@@ -55,7 +55,7 @@ import org.springframework.util.StringUtils;
  * {@code @Autowired} setter injection in {@code BaseLifecycleManager} subclasses finds them.
  */
 @Slf4j
-@Configuration
+@Configuration(proxyBeanMethods = false)
 public class ProcessorRegistryInitializer implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
 
     private ApplicationContext applicationContext;
