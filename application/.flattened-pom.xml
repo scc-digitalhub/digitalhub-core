@@ -238,6 +238,12 @@
     </dependency>
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
+      <artifactId>dh-component-container-images</artifactId>
+      <version>0.15.1-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>it.smartcommunitylabdhub</groupId>
       <artifactId>dh-entity-base</artifactId>
       <version>0.15.1-SNAPSHOT</version>
       <scope>compile</scope>
@@ -328,6 +334,12 @@
     </dependency>
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
+      <artifactId>dh-entity-container-image</artifactId>
+      <version>0.15.1-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>it.smartcommunitylabdhub</groupId>
       <artifactId>dh-framework-k8s</artifactId>
       <version>0.15.1-SNAPSHOT</version>
       <scope>compile</scope>
@@ -407,6 +419,12 @@
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
       <artifactId>dh-runtime-kubeai</artifactId>
+      <version>0.15.1-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>it.smartcommunitylabdhub</groupId>
+      <artifactId>dh-runtime-servicegraph</artifactId>
       <version>0.15.1-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>

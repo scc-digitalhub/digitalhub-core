@@ -1,0 +1,12 @@
+# Credentials
+providers:
+  trinodb:
+    enable: ${TRINODB_PROVIDER:false}
+    scheme: ${TRINODB_SCHEME:}
+    host: ${TRINODB_HOST:}
+    port: ${TRINODB_PORT:}
+    catalog: ${TRINODB_CATALOG:}
+    user: ${TRINODB_USER:}
+    password: ${TRINODB_PASSWORD:}
+    use-core-credentials: ${TRINODB_USE_CORE_CREDENTIALS:false}
+    use-jwt-token: ${TRINODB_USE_JWT_TOKEN:${providers.trinodb.use-core-credentials}}
