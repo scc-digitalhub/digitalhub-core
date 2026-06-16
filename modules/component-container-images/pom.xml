@@ -43,7 +43,11 @@
             <artifactId>dh-framework-k8s</artifactId>
             <version>${revision}</version>
         </dependency>
-
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-framework-kaniko</artifactId>
+            <version>${revision}</version>
+        </dependency>
         <!-- Source: https://mvnrepository.com/artifact/com.google.cloud.tools/jib-core -->
         <dependency>
             <groupId>com.google.cloud.tools</groupId>

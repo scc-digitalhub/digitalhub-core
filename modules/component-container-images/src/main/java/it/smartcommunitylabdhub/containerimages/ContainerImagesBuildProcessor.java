@@ -17,26 +17,22 @@
 package it.smartcommunitylabdhub.containerimages;
 
 import it.smartcommunitylabdhub.commons.Keys;
-import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.common.ProcessorType;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.infrastructure.Processor;
-import it.smartcommunitylabdhub.commons.models.metadata.Metadata;
+import it.smartcommunitylabdhub.commons.models.status.Status;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.containerimage.ContainerImage;
 import it.smartcommunitylabdhub.containerimage.filter.ContainerImageEntityFilter;
 import it.smartcommunitylabdhub.containerimage.lifecycle.ContainerImageState;
-import it.smartcommunitylabdhub.containerimage.specs.ContainerImageBaseStatus;
 import it.smartcommunitylabdhub.containerimage.specs.ContainerImageSpec;
+import it.smartcommunitylabdhub.containerimages.model.ContainerBuildInfo;
+import it.smartcommunitylabdhub.containerimages.model.ContainerBuildStatus;
 import it.smartcommunitylabdhub.core.services.EntityService;
-import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
-import it.smartcommunitylabdhub.relationships.RelationshipDetail;
-import it.smartcommunitylabdhub.relationships.RelationshipName;
-import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
 import it.smartcommunitylabdhub.runs.Run;
-import java.util.ArrayList;
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -47,34 +43,26 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
-@ProcessorType(stages = { "onPending" }, type = Run.class, spec = Metadata.class)
+@ProcessorType(stages = { "onCompleted" }, type = Run.class, spec = Status.class)
 @Component
 @Slf4j
-public class ContainerImagesRunProcessor implements Processor<Run, Metadata> {
+public class ContainerImagesBuildProcessor implements Processor<Run, Status> {
 
     @Autowired
     private EntityService<ContainerImage> imageService;
 
     @Override
-    public <I> Metadata process(String stage, Run dto, I input) throws CoreRuntimeException {
+    public <I> Status process(String stage, Run dto, I input) throws CoreRuntimeException {
         try {
             if (dto == null || dto.getProject() == null) {
                 return null;
             }
 
             String project = dto.getProject();
-            RunSpecAccessor specAccessor = RunSpecAccessor.with(dto.getSpec());
-
-            if (input instanceof K8sContainerBuilderRunnable) {
-                //skip k8s build run, we don't want to create a container image for it
-                //note: there is a dedicated processor registering the image on completed
-                return null;
-            }
 
             //check if run uses an image
-            if (input instanceof K8sRunnable runnable) {
-                //a k8s runnable needs to have an image
-                //note: we don't check spec.image because runtimes could mean different things with it
+            if (input instanceof K8sContainerBuilderRunnable runnable) {
+                //a k8s runnable needs to have an image: on completed this is the final image
                 String image = runnable.getImage();
                 if (image == null) {
                     return null;
@@ -107,6 +95,7 @@ public class ContainerImagesRunProcessor implements Processor<Run, Metadata> {
                 ContainerImageEntityFilter filter = new ContainerImageEntityFilter();
                 filter.setImage(image);
 
+                //we register the built image only if new
                 List<ContainerImage> images = imageService.searchByProject(project, filter.toSearchFilter());
                 if (images.isEmpty()) {
                     log.debug("Create container image for image {}", image);
@@ -131,54 +120,25 @@ public class ContainerImagesRunProcessor implements Processor<Run, Metadata> {
                         log.trace("image: {}", ci);
                     }
 
-                    //update run lineage with relationship to this image
-                    RelationshipDetail rel = new RelationshipDetail(RelationshipName.CONSUMES, null, ci.getKey());
-                    RelationshipsMetadata metadata = RelationshipsMetadata.from(dto.getMetadata());
-                    List<RelationshipDetail> relationships = new ArrayList<>();
+                    // build status info
+                    ContainerBuildInfo buildInfo = ContainerBuildInfo.builder().image(image).build();
 
-                    if (metadata.getRelationships() != null) {
-                        relationships.addAll(metadata.getRelationships());
-                    }
-                    relationships.add(rel);
-                    metadata.setRelationships(relationships);
+                    // status
+                    //note: outputs could be already there, we don't wanna override them
+                    ContainerBuildStatus status = ContainerBuildStatus.with(dto.getStatus());
+
+                    status.setBuild(buildInfo);
+                    Map<String, Serializable> outputs = MapUtils.mergeMultipleMaps(
+                        Map.of("image", ci.getKey()),
+                        status.getOutputs()
+                    );
+                    status.setOutputs(outputs);
 
                     if (log.isTraceEnabled()) {
-                        log.trace("run metadata: {}", metadata);
+                        log.trace("build status: {}", status);
                     }
 
-                    return metadata;
-                } else {
-                    //mark as READY if not already
-                    for (ContainerImage ci : images) {
-                        StatusFieldAccessor statusAccessor = StatusFieldAccessor.with(ci.getStatus());
-                        if (
-                            ci.getStatus() == null ||
-                            !ContainerImageState.READY.name().equals(statusAccessor.getState())
-                        ) {
-                            //set to READY, will trigger refresh when needed
-                            ci.setStatus(
-                                MapUtils.mergeMultipleMaps(
-                                    ci.getStatus(),
-                                    Map.of("state", ContainerImageState.READY.name())
-                                )
-                            );
-                            imageService.update(ci.getId(), ci);
-                        } else {
-                            //check if we miss status, we'll mark it and then next time it will be refreshed
-                            //note: we avoid refreshing here because we don't wanna delay the run processing
-                            ContainerImageBaseStatus currentStatus = ContainerImageBaseStatus.with(ci.getStatus());
-                            if (currentStatus.getDigest() == null || currentStatus.getMediaType() == null) {
-                                //set to CREATED, will trigger refresh when needed
-                                ci.setStatus(
-                                    MapUtils.mergeMultipleMaps(
-                                        ci.getStatus(),
-                                        Map.of("state", ContainerImageState.CREATED.name())
-                                    )
-                                );
-                                imageService.update(ci.getId(), ci);
-                            }
-                        }
-                    }
+                    return status;
                 }
             }
         } catch (Exception e) {
