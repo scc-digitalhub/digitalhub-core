@@ -52,4 +52,10 @@ public class PythonConfig {
     public PythonProperties openinferenceProperties() {
         return new PythonProperties();
     }
+
+    @Bean("hydraProperties")
+    @ConfigurationProperties(prefix = "runtime.hydra", ignoreUnknownFields = true)
+    public PythonProperties hydraProperties() {
+        return new PythonProperties();
+    }
 }
