@@ -61,4 +61,11 @@ public class ServicegraphFunctionSpec extends FunctionBaseSpec {
 
         this.source = spec.getSource();
     }
+
+    public static ServicegraphFunctionSpec with(Map<String, Serializable> data) {
+        ServicegraphFunctionSpec spec = new ServicegraphFunctionSpec();
+        spec.configure(data);
+
+        return spec;
+    }
 }

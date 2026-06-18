@@ -49,6 +49,7 @@ import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -155,6 +156,13 @@ public class ServicegraphServeRunner {
             }
         }
 
+        List<CorePort> ports = new LinkedList<>();
+
+        if (taskSpec.getServicePorts() != null && !taskSpec.getServicePorts().isEmpty()) {
+            ports.addAll(taskSpec.getServicePorts());
+        }
+        ports.add(new CorePort(HTTP_PORT, HTTP_PORT));
+
         K8sRunnable k8sServeRunnable = K8sServeRunnable
             .builder()
             .runtime(ServicegraphRuntime.RUNTIME)
@@ -183,7 +191,7 @@ public class ServicegraphServeRunner {
             //specific
             .replicas(taskSpec.getReplicas())
             // http and grpc ports
-             .servicePorts(List.of(new CorePort(HTTP_PORT, HTTP_PORT)))
+             .servicePorts(ports)
             .serviceType(taskSpec.getServiceType())
             .serviceNames(serviceNames != null && !serviceNames.isEmpty() ? serviceNames : null)
             .build();
