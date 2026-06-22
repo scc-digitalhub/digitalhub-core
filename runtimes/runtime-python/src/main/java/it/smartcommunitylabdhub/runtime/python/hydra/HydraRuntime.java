@@ -28,6 +28,7 @@ import it.smartcommunitylabdhub.authorization.services.CredentialsService;
 import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
@@ -35,12 +36,15 @@ import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
+import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
+import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
 import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.runs.Run;
+import it.smartcommunitylabdhub.runs.persistence.RunEntity;
 import it.smartcommunitylabdhub.runtime.python.config.PythonProperties;
 import it.smartcommunitylabdhub.runtime.python.hydra.runners.HydraBuildRunner;
 import it.smartcommunitylabdhub.runtime.python.hydra.runners.HydraJobRunner;
@@ -60,10 +64,14 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 @Slf4j
@@ -98,6 +106,9 @@ public class HydraRuntime
 
     @Autowired
     private ConfigurationService configurationService;
+
+    @Autowired
+    private SearchableEntityRepository<RunEntity, Run> entityRepository;
 
     public HydraRuntime(@Qualifier("hydraProperties") PythonProperties properties) {
         Assert.notNull(properties, "properties are required");
@@ -222,11 +233,53 @@ public class HydraRuntime
     }
 
     @Override
-    public HydraRunStatus onDeleted(@NotNull Run run, RunRunnable runnable) {
+    @Nullable
+    public K8sRunnable delete(@NotNull Run run) {
+        K8sRunnable k8sRunnable = super.delete(run);
         if (run.getKind().equals(HydraJobRunSpec.KIND)) {
-            // TODO remove subtask related secrets
+            RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
+            String functionId = runAccessor.getFunctionId();
+            // find subtask task
+            Optional<Task> task = functionService.getTasksByFunctionId(functionId).stream().filter(t -> t.getKind().equals(HydraSubtaskTaskSpec.KIND)).findFirst();
+            if (task.isPresent()) {
+                // find subtask runs and delete them
+                try {
+                    List<Run> subtaskRuns = findSubtaskRuns(runAccessor.getProject(), task.get(), run.getId());
+                    for (Run r : subtaskRuns) {
+                        entityRepository.delete(r.getId());
+                    }
+                } catch (StoreException e) {
+                    log.error("Error deleting subtasks run {}", run.getId(), e);
+                }
+            }
+
         }
-        return super.onDeleted(run, runnable);
+        return k8sRunnable;
+    }
+
+
+    private List<Run> findSubtaskRuns(String project, Task task, String id) throws StoreException {
+        //define a spec for runs building task path
+        String path = (task.getKind() + "://" +project + "/" + task.getId());
+        Specification<RunEntity> where = Specification.allOf(
+            CommonSpecification.projectEquals(task.getProject()),
+            createTaskSpecification(path)
+        );
+        //fetch all runs ordered by created DESC
+        Specification<RunEntity> specification = (root, query, builder) -> {
+            return where.toPredicate(root, query, builder);
+        };
+
+        List<Run> runs = entityRepository.searchAll(specification).stream().filter(r -> {
+            HydraSubtaskRunSpec runSpec = new HydraSubtaskRunSpec(r.getSpec());
+            return id.equals(runSpec.getJobRef());
+        }).toList();
+
+        return runs;
+    }
+
+    private Specification<RunEntity> createTaskSpecification(String task) {
+        return (root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("task"), task);
     }
 
 
