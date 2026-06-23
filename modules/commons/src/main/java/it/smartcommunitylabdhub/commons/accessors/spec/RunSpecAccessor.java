@@ -115,6 +115,10 @@ public interface RunSpecAccessor extends Accessor<Serializable> {
             //missing or invalid, skip
         }
 
+        //local execution
+        //TODO remove, this is runtime related
+        m.put("local_execution", map.getOrDefault("local_execution", false));
+
         //try parse
         Matcher matcher = Pattern.compile(Keys.TASK_PATTERN).matcher((String) tsk);
         if (matcher.matches()) {
@@ -128,9 +132,6 @@ public interface RunSpecAccessor extends Accessor<Serializable> {
 
             return () -> m;
         }
-
-        //local execution
-        m.put("local_execution", map.get("local_execution"));
 
         throw new IllegalArgumentException("Cannot create accessor for the given task string.");
     }
