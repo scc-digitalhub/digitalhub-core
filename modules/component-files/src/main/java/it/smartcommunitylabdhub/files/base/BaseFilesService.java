@@ -55,6 +55,8 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ResolvableType;
+import org.springframework.core.ResolvableTypeProvider;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -66,7 +68,7 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class BaseFilesService<
     D extends BaseDTO & MetadataDTO & SpecDTO & StatusDTO
-> implements EntityFilesService<D>, InitializingBean {
+> implements EntityFilesService<D>, InitializingBean, ResolvableTypeProvider {
 
     protected final Class<D> type;
 
@@ -115,6 +117,10 @@ public class BaseFilesService<
         Assert.notNull(projectService, "project service can not be null");
         Assert.notNull(filesService, "files service can not be null");
         Assert.notNull(filesInfoService, "files info service can not be null");
+    }
+
+    public ResolvableType getResolvableType() {
+        return ResolvableType.forClass(type);
     }
 
     @Override

@@ -83,5 +83,8 @@ public class WorkflowEntityListener extends AbstractEntityListener<WorkflowEntit
                 log.error("store error", e.getMessage());
             }
         }
+
+        //always broadcast updates
+        super.broadcast(event);
     }
 }

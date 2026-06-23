@@ -44,7 +44,9 @@ import java.util.HashMap;
 public class JacksonMapper {
 
     public static final ObjectMapper CUSTOM_OBJECT_MAPPER = new ObjectMapper();
-    public static final TypeReference<HashMap<String, Object>> typeRef = new TypeReference<>() {};
+    public static final TypeReference<HashMap<String, Serializable>> typeRef = new TypeReference<
+        HashMap<String, Serializable>
+    >() {};
     public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     public static final ObjectMapper CBOR_OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
     public static final ObjectMapper YAML_OBJECT_MAPPER = new ObjectMapper(YamlMapperFactory.yamlFactory());

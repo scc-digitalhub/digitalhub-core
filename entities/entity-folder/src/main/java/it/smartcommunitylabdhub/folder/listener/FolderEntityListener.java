@@ -21,16 +21,14 @@
  *
  */
 
-package it.smartcommunitylabdhub.functions.listeners;
+package it.smartcommunitylabdhub.folder.listener;
 
-import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.models.function.Function;
-import it.smartcommunitylabdhub.commons.models.project.Project;
-import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.core.events.AbstractEntityListener;
 import it.smartcommunitylabdhub.core.events.EntityEvent;
-import it.smartcommunitylabdhub.functions.persistence.FunctionEntity;
+import it.smartcommunitylabdhub.folder.Folder;
+import it.smartcommunitylabdhub.folder.persistence.FolderEntity;
+import it.smartcommunitylabdhub.folder.services.FolderEntriesService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.convert.converter.Converter;
@@ -41,21 +39,17 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 @Component
 @Slf4j
-public class FunctionEntityListener extends AbstractEntityListener<FunctionEntity, Function> {
+public class FolderEntityListener extends AbstractEntityListener<FolderEntity, Folder> {
 
-    private EntityRepository<Project> projectService;
+    @Autowired
+    private FolderEntriesService entriesService;
 
-    public FunctionEntityListener(Converter<FunctionEntity, Function> converter) {
+    public FolderEntityListener(Converter<FolderEntity, Folder> converter) {
         super(converter);
     }
 
-    @Autowired
-    public void setProjectService(EntityRepository<Project> projectService) {
-        this.projectService = projectService;
-    }
-
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void receive(EntityEvent<FunctionEntity> event) {
+    public void receive(EntityEvent<FolderEntity> event) {
         if (event.getEntity() == null) {
             return;
         }
@@ -63,28 +57,45 @@ public class FunctionEntityListener extends AbstractEntityListener<FunctionEntit
     }
 
     @Override
-    public void handle(Message<EntityEvent<FunctionEntity>> message) {
+    public void handle(Message<EntityEvent<FolderEntity>> message) {
         // index + relationships
         super.handle(message);
 
-        EntityEvent<FunctionEntity> event = message.getPayload();
+        EntityEvent<FolderEntity> event = message.getPayload();
+        FolderEntity entity = event.getEntity();
+        FolderEntity prev = event.getPrev();
+        if (log.isTraceEnabled()) {
+            log.trace("{}: {}", clazz.getSimpleName(), String.valueOf(entity));
+        }
 
-        //update project date
-        if (projectService != null) {
-            String projectId = event.getEntity().getProject();
-            log.debug("touch update project {}", projectId);
+        //always align entries
+        if (entriesService != null) {
             try {
-                Project project = projectService.find(projectId);
-                if (project != null) {
-                    //touch to set updated
-                    projectService.update(project.getId(), project);
-                }
-            } catch (StoreException | IllegalArgumentException | NoSuchEntityException e) {
-                log.error("store error", e.getMessage());
+                entriesService.registerEntry(entity.getProject(), entity.getParentId(), converter.convert(entity));
+            } catch (StoreException e) {
+                log.error("store error", e);
             }
         }
 
         //always broadcast updates
         super.broadcast(event);
+    }
+
+    @Override
+    protected void onDelete(FolderEntity entity, Folder dto) {
+        super.onDelete(entity, dto);
+
+        //delete all entries
+        if (entriesService != null) {
+            try {
+                //delete the folder entry
+                entriesService.deleteEntry(entity.getId());
+
+                //delete all children entries
+                entriesService.deleteAllEntriesByFolderId(entity.getProject(), entity.getId());
+            } catch (StoreException e) {
+                log.error("store error", e);
+            }
+        }
     }
 }

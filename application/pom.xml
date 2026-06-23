@@ -320,6 +320,11 @@
             <artifactId>dh-entity-container-image</artifactId>
             <version>${revision}</version>
         </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-entity-folder</artifactId>
+            <version>${revision}</version>
+        </dependency>
         <!-- FRAMEWORKS -->
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>

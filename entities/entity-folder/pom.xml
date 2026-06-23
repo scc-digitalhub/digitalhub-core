@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="http://maven.apache.org/POM/4.0.0"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>it.smartcommunitylabdhub</groupId>
+        <artifactId>digitalhub-core</artifactId>
+        <version>${revision}</version>
+        <relativePath>../../</relativePath> <!-- lookup parent from repository -->
+    </parent>
+    <groupId>it.smartcommunitylabdhub</groupId>
+    <artifactId>dh-entity-folder</artifactId>
+    <name>entity-folder</name>
+    <description>DHCore entity-folder</description>
+
+    <properties>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-commons</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-entity-base</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <scope>compile</scope>
+            <optional>true</optional>
+        </dependency>
+
+    </dependencies>
+
+</project>

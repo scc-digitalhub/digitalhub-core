@@ -98,11 +98,11 @@ public class ArtifactEntityListener extends AbstractEntityListener<ArtifactEntit
             }
         }
 
+        //always broadcast updates
+        super.broadcast(event);
+
         //notify user event if either: prev == null (for create/delete), prev != null and state has changed (update)
         if (prev == null || (prev != null && !entity.getState().equals(prev.getState()))) {
-            //always broadcast updates
-            super.broadcast(event);
-
             if (entity.getUpdatedBy() != null) {
                 //notify user
                 super.notify(entity.getUpdatedBy(), event);
