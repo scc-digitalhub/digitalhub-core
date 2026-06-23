@@ -26,11 +26,13 @@ package it.smartcommunitylabdhub.runtime.servicegraph.specs;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
+import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreServiceType;
 import it.smartcommunitylabdhub.runtime.servicegraph.ServicegraphRuntime;
 import jakarta.validation.constraints.Min;
 
 import java.io.Serializable;
+import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -52,6 +54,9 @@ public class ServicegraphServeTaskSpec extends K8sFunctionTaskBaseSpec {
     @Min(0)
     private Integer replicas;
 
+    @JsonProperty("service_ports")
+    private List<CorePort> servicePorts;
+
     @JsonProperty(value = "service_type", defaultValue = "ClusterIP")
     @Schema(defaultValue = "ClusterIP")
     private CoreServiceType serviceType;
@@ -72,5 +77,6 @@ public class ServicegraphServeTaskSpec extends K8sFunctionTaskBaseSpec {
         this.replicas = spec.getReplicas();
         this.setServiceType(spec.getServiceType());
         this.setServiceName(spec.getServiceName());
+        this.setServicePorts(spec.getServicePorts());
     }
 }

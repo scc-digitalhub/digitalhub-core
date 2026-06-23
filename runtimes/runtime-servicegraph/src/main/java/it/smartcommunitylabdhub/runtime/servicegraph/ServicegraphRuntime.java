@@ -30,15 +30,18 @@ import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
+import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
+import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.runs.Run;
+import it.smartcommunitylabdhub.runtime.servicegraph.model.WebInfo;
 import it.smartcommunitylabdhub.runtime.servicegraph.runners.ServicegraphServeRunner;
 import it.smartcommunitylabdhub.runtime.servicegraph.specs.ServicegraphFunctionSpec;
 import it.smartcommunitylabdhub.runtime.servicegraph.specs.ServicegraphRunSpec;
@@ -47,10 +50,13 @@ import it.smartcommunitylabdhub.runtime.servicegraph.specs.ServicegraphServeRunS
 import it.smartcommunitylabdhub.runtime.servicegraph.specs.ServicegraphServeTaskSpec;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -181,5 +187,37 @@ public class ServicegraphRuntime
     @Override
     public boolean isSupported(@NotNull Run run) {
         return Arrays.asList(KINDS).contains(run.getKind());
+    }
+
+
+    @Override
+    public ServicegraphRunStatus onRunning(@NotNull Run run, RunRunnable runnable) {
+        ServicegraphRunStatus status = ServicegraphRunStatus.with(run.getStatus());
+        ServicegraphFunctionSpec functionSpec = ServicegraphFunctionSpec.with(run.getSpec());
+        if (status == null || functionSpec == null) {
+            return null;
+        }
+
+        //build web descriptor only once
+        if (status.getWeb() == null && status.getService() != null) {
+            K8sServiceInfo service = status.getService();
+            List<String> urls = service.getUrls() != null ? new ArrayList<>(service.getUrls()) : new ArrayList<>();
+            if (service.getUrls() == null || service.getUrls().isEmpty()) {
+                urls.add(service.getUrl());
+            }
+            service.setUrls(urls);
+            status.setService(service);
+
+            //inflate super or rebuild
+            WebInfo web = new WebInfo();
+
+            // by default, add all urls to web info
+            web.setUrls(urls);
+            web.setUrl(service.getUrl());
+
+            status.setWeb(web);
+        }
+
+        return status;
     }
 }
