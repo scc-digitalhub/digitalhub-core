@@ -53,7 +53,7 @@ import org.springframework.util.StringUtils;
 public class K8sServiceProcessor implements Processor<Run, K8sServiceStatus> {
 
     @Override
-    public <I> K8sServiceStatus process(String stage, Run run, I input) throws CoreRuntimeException {
+    public K8sServiceStatus process(String stage, Run run, Serializable input) throws CoreRuntimeException {
         if (input instanceof K8sRunnable k8sRunnable) {
             Map<String, Serializable> res = k8sRunnable.getResults();
             //extract k8s details for svc
@@ -160,8 +160,7 @@ public class K8sServiceProcessor implements Processor<Run, K8sServiceStatus> {
             builder.clusterIP(spec.getClusterIP());
 
             //if loadbalancer is in status we can build url
-            Optional
-                .ofNullable(service.getStatus())
+            Optional.ofNullable(service.getStatus())
                 .map(V1ServiceStatus::getLoadBalancer)
                 .map(l -> l.getIngress())
                 .map(i -> i.getFirst())

@@ -17,7 +17,6 @@
 package it.smartcommunitylabdhub.containerimages;
 
 import it.smartcommunitylabdhub.commons.Keys;
-import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.common.ProcessorType;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.infrastructure.Processor;
@@ -52,7 +51,7 @@ public class ContainerImagesBuildProcessor implements Processor<Run, Status> {
     private EntityService<ContainerImage> imageService;
 
     @Override
-    public <I> Status process(String stage, Run dto, I input) throws CoreRuntimeException {
+    public Status process(String stage, Run dto, Serializable input) throws CoreRuntimeException {
         try {
             if (dto == null || dto.getProject() == null) {
                 return null;
@@ -84,7 +83,8 @@ public class ContainerImagesBuildProcessor implements Processor<Run, Status> {
                     .orElse(image);
 
                 //TODO evaluate if we want to use the function name as image name or the image itself
-                // String name = StringUtils.hasText(specAccessor.getFunction()) ? specAccessor.getFunction() : baseName;
+                // String name = StringUtils.hasText(specAccessor.getFunction()) ?
+                // specAccessor.getFunction() : baseName;
                 String name = baseName
                     .chars()
                     .mapToObj(c -> String.valueOf((char) c))

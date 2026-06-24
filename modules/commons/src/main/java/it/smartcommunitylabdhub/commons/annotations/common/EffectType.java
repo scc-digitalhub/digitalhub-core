@@ -21,35 +21,20 @@
  *
  */
 
-package it.smartcommunitylabdhub.triggers.infrastructure;
+package it.smartcommunitylabdhub.commons.annotations.common;
 
-import it.smartcommunitylabdhub.triggers.lifecycle.TriggerJob;
-import java.io.Serializable;
-import java.time.Instant;
-import java.util.Map;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import org.springframework.stereotype.Indexed;
 
-@AllArgsConstructor
-@Builder
-@Getter
-@Setter
-public class TriggerRun<J extends TriggerJob> implements Serializable {
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+@Indexed
+public @interface EffectType {
+    String[] stages();
 
-    private J job;
-
-    @Builder.Default
-    private Instant timestamp = Instant.now();
-
-    private Map<String, Serializable> details;
-
-    public String getId() {
-        return job != null ? job.getId() : null;
-    }
-
-    public String getUser() {
-        return job != null ? job.getUser() : null;
-    }
+    Class<? extends BaseDTO> type();
 }

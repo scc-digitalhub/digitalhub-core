@@ -36,6 +36,7 @@ import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipName;
 import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
 import it.smartcommunitylabdhub.runs.Run;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -56,7 +57,7 @@ public class ContainerImagesRunProcessor implements Processor<Run, Metadata> {
     private EntityService<ContainerImage> imageService;
 
     @Override
-    public <I> Metadata process(String stage, Run dto, I input) throws CoreRuntimeException {
+    public Metadata process(String stage, Run dto, Serializable input) throws CoreRuntimeException {
         try {
             if (dto == null || dto.getProject() == null) {
                 return null;
@@ -96,7 +97,8 @@ public class ContainerImagesRunProcessor implements Processor<Run, Metadata> {
                     .orElse(image);
 
                 //TODO evaluate if we want to use the function name as image name or the image itself
-                // String name = StringUtils.hasText(specAccessor.getFunction()) ? specAccessor.getFunction() : baseName;
+                // String name = StringUtils.hasText(specAccessor.getFunction()) ?
+                // specAccessor.getFunction() : baseName;
                 String name = baseName
                     .chars()
                     .mapToObj(c -> String.valueOf((char) c))

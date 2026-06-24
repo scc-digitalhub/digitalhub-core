@@ -56,9 +56,9 @@ public class K8sPodProcessor implements Processor<Run, K8sPodStatus> {
     protected static final TypeReference<ArrayList<V1Pod>> arrayRef = new TypeReference<ArrayList<V1Pod>>() {};
 
     @Override
-    public <I> K8sPodStatus process(String stage, Run run, I input) throws CoreRuntimeException {
-        if (input instanceof K8sRunnable) {
-            Map<String, Serializable> res = ((K8sRunnable) input).getResults();
+    public K8sPodStatus process(String stage, Run run, Serializable input) throws CoreRuntimeException {
+        if (input instanceof K8sRunnable runnable) {
+            Map<String, Serializable> res = runnable.getResults();
 
             try {
                 if (res != null && !res.isEmpty()) {
@@ -128,29 +128,29 @@ public class K8sPodProcessor implements Processor<Run, K8sPodStatus> {
                                                         c.put(
                                                             "state",
                                                             "running since " +
-                                                            (s.getState().getRunning().getStartedAt() != null
+                                                                (s.getState().getRunning().getStartedAt() != null
                                                                     ? s
-                                                                        .getState()
-                                                                        .getRunning()
-                                                                        .getStartedAt()
-                                                                        .toString()
+                                                                          .getState()
+                                                                          .getRunning()
+                                                                          .getStartedAt()
+                                                                          .toString()
                                                                     : "unknown")
                                                         );
                                                     } else if (s.getState().getTerminated() != null) {
                                                         c.put(
                                                             "state",
                                                             "terminated at " +
-                                                            (s.getState().getTerminated().getFinishedAt() != null
+                                                                (s.getState().getTerminated().getFinishedAt() != null
                                                                     ? s
-                                                                        .getState()
-                                                                        .getTerminated()
-                                                                        .getFinishedAt()
-                                                                        .toString()
+                                                                          .getState()
+                                                                          .getTerminated()
+                                                                          .getFinishedAt()
+                                                                          .toString()
                                                                     : "unknown") +
-                                                            " exitCode: " +
-                                                            s.getState().getTerminated().getExitCode() +
-                                                            " reason: " +
-                                                            String.valueOf(s.getState().getTerminated().getReason())
+                                                                " exitCode: " +
+                                                                s.getState().getTerminated().getExitCode() +
+                                                                " reason: " +
+                                                                String.valueOf(s.getState().getTerminated().getReason())
                                                         );
                                                     } else if (s.getState().getWaiting() != null) {
                                                         c.put(

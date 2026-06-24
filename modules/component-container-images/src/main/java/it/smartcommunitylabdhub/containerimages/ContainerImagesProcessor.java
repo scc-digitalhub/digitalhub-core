@@ -56,7 +56,8 @@ public class ContainerImagesProcessor implements Processor<ContainerImage, Conta
     private ContainerImagesService imagesService;
 
     @Override
-    public <I> ContainerImageBaseStatus process(String stage, ContainerImage dto, I input) throws CoreRuntimeException {
+    public ContainerImageBaseStatus process(String stage, ContainerImage dto, Serializable input)
+        throws CoreRuntimeException {
         if (imagesService == null) {
             return null;
         }

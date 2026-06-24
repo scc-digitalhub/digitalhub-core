@@ -21,6 +21,7 @@ import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import jakarta.validation.constraints.NotNull;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -65,12 +66,17 @@ public class KindAwareLifecycleManager<D extends BaseDTO & SpecDTO & StatusDTO> 
     }
 
     @Override
-    public <I> D perform(@NotNull D dto, @NotNull String event, I input) {
+    public <I extends Serializable> D perform(@NotNull D dto, @NotNull String event, I input) {
         return getManager(resolve(dto)).perform(dto, event, input);
     }
 
     @Override
-    public <I, R> D perform(@NotNull D dto, @NotNull String event, I input, BiConsumer<D, R> effect) {
+    public <I extends Serializable, R extends Serializable> D perform(
+        @NotNull D dto,
+        @NotNull String event,
+        I input,
+        BiConsumer<D, R> effect
+    ) {
         return getManager(resolve(dto)).perform(dto, event, input, effect);
     }
 
@@ -80,7 +86,7 @@ public class KindAwareLifecycleManager<D extends BaseDTO & SpecDTO & StatusDTO> 
     }
 
     @Override
-    public <I> D handle(@NotNull D dto, String nexState, I input) {
+    public <I extends Serializable> D handle(@NotNull D dto, String nexState, I input) {
         return getManager(resolve(dto)).handle(dto, nexState, input);
     }
 }

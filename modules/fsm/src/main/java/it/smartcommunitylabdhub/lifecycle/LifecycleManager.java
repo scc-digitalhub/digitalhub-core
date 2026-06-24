@@ -20,6 +20,7 @@ import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
+import java.io.Serializable;
 import java.util.function.BiConsumer;
 
 public interface LifecycleManager<D extends BaseDTO & StatusDTO> {
@@ -28,9 +29,9 @@ public interface LifecycleManager<D extends BaseDTO & StatusDTO> {
      */
     public D perform(@NotNull D dto, @NotNull String event);
 
-    public <I> D perform(@NotNull D dto, @NotNull String event, @Nullable I input);
+    public <I extends Serializable> D perform(@NotNull D dto, @NotNull String event, @Nullable I input);
 
-    public <I, R> D perform(
+    public <I extends Serializable, R extends Serializable> D perform(
         @NotNull D dto,
         @NotNull String event,
         @Nullable I input,
@@ -42,5 +43,5 @@ public interface LifecycleManager<D extends BaseDTO & StatusDTO> {
      */
     public D handle(@NotNull D dto, String nexState);
 
-    public <I> D handle(@NotNull D dto, String nexState, @Nullable I input);
+    public <I extends Serializable> D handle(@NotNull D dto, String nexState, @Nullable I input);
 }

@@ -71,11 +71,11 @@ public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
     }
 
     @Override
-    public <I> RunBaseStatus process(String stage, Run run, I input) throws CoreRuntimeException {
-        if (input instanceof K8sRunnable) {
+    public RunBaseStatus process(String stage, Run run, Serializable input) throws CoreRuntimeException {
+        if (input instanceof K8sRunnable runnable) {
             //extract logs
-            List<CoreLog> logs = ((K8sRunnable) input).getLogs();
-            List<CoreMetric> metrics = ((K8sRunnable) input).getMetrics();
+            List<CoreLog> logs = runnable.getLogs();
+            List<CoreMetric> metrics = runnable.getMetrics();
 
             if (logs != null) {
                 writeLogs(run, logs, metrics);
@@ -168,9 +168,10 @@ public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
                         K8sLogStatus logStatus = new K8sLogStatus();
                         logStatus.configure(log.getStatus());
 
-                        List<Serializable> list = logStatus.getMetrics() != null
-                            ? new ArrayList<>(logStatus.getMetrics())
-                            : new ArrayList<>();
+                        List<Serializable> list =
+                            logStatus.getMetrics() != null
+                                ? new ArrayList<>(logStatus.getMetrics())
+                                : new ArrayList<>();
 
                         list.addLast(metric);
                         logStatus.setMetrics(list);
@@ -208,9 +209,10 @@ public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
                         HashMap<String, Serializable> metric = mmetrics.get(baseKey);
 
                         //append to status
-                        List<Serializable> list = logStatus.getMetrics() != null
-                            ? new ArrayList<>(logStatus.getMetrics())
-                            : new ArrayList<>();
+                        List<Serializable> list =
+                            logStatus.getMetrics() != null
+                                ? new ArrayList<>(logStatus.getMetrics())
+                                : new ArrayList<>();
                         list.addLast(metric);
                         logStatus.setMetrics(list);
 
@@ -224,8 +226,7 @@ public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
                         }
                     }
 
-                    Log log = Log
-                        .builder()
+                    Log log = Log.builder()
                         .project(run.getProject())
                         .spec(logSpec.toMap())
                         .status(logStatus.toMap())

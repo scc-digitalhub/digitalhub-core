@@ -24,6 +24,8 @@ package it.smartcommunitylabdhub.core.lifecycle;
 
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
+import it.smartcommunitylabdhub.commons.infrastructure.Effect;
+import it.smartcommunitylabdhub.commons.infrastructure.EffectRegistry;
 import it.smartcommunitylabdhub.commons.infrastructure.Processor;
 import it.smartcommunitylabdhub.commons.infrastructure.ProcessorRegistry;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
@@ -56,10 +58,11 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -79,10 +82,12 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
     protected ProcessorRegistry<D, Spec> specProcessorRegistry;
     protected ProcessorRegistry<D, Status> statusProcessorRegistry;
 
+    protected EffectRegistry<D> effectRegistry;
+
     protected Fsm.Factory<String, String, D> fsmFactory;
     protected EntityOperationsPublisher operationsPublisher;
 
-    private Executor processorExecutor;
+    private Executor processorExecutor = Executors.newSingleThreadExecutor();
 
     @SuppressWarnings("unchecked")
     protected BaseLifecycleManager() {
@@ -123,6 +128,11 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
     @Autowired(required = false)
     public void setProcessorExecutor(@Qualifier("processorExecutor") Executor processorExecutor) {
         this.processorExecutor = processorExecutor;
+    }
+
+    @Autowired(required = false)
+    public void setEffectRegistry(EffectRegistry<D> effectRegistry) {
+        this.effectRegistry = effectRegistry;
     }
 
     protected Fsm<String, String, D> fsm(D dto) {
@@ -183,11 +193,11 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         return perform(dto, event, null, null);
     }
 
-    public <I> D perform(@NotNull D dto, @NotNull String event, @Nullable I input) {
+    public <I extends Serializable> D perform(@NotNull D dto, @NotNull String event, @Nullable I input) {
         return perform(dto, event, input, null);
     }
 
-    public <I, R> D perform(
+    public <I extends Serializable, R extends Serializable> D perform(
         @NotNull D dto,
         @NotNull String event,
         @Nullable I input,
@@ -202,7 +212,7 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         // E lifecycleEvent = Enum.valueOf(eventsClass, event);
         D res = dto;
         try {
-            res = transition(dto, fsm -> fsm.perform(event, input), input, effect);
+            res = transition(dto, (fsm, i) -> fsm.perform(event, i), input, effect);
         } catch (CoreRuntimeException e) {
             //on ex try transitioning to ERROR
             log.debug("entity {} transition to {} generated an exception, move to ERROR", dto.getId());
@@ -212,7 +222,7 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
             }
 
             //transition
-            res = transition(dto, fsm -> fsm.goToState("ERROR", input), input, effect);
+            res = transition(dto, (fsm, i) -> fsm.goToState("ERROR", i), input, effect);
         }
 
         StatusFieldAccessor status = StatusFieldAccessor.with(res.getStatus());
@@ -251,11 +261,16 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         return handle(dto, nexState, null, null);
     }
 
-    public <I> D handle(@NotNull D dto, String nextState, @Nullable I input) {
+    public <I extends Serializable> D handle(@NotNull D dto, String nextState, @Nullable I input) {
         return handle(dto, nextState, input, null);
     }
 
-    public <I, R> D handle(@NotNull D dto, String nextState, @Nullable I input, @Nullable BiConsumer<D, R> effect) {
+    public <I extends Serializable, R extends Serializable> D handle(
+        @NotNull D dto,
+        String nextState,
+        @Nullable I input,
+        @Nullable BiConsumer<D, R> effect
+    ) {
         log.debug("handle {} for {} with id {}", nextState, dto.getClass().getSimpleName().toLowerCase(), dto.getId());
         if (log.isTraceEnabled()) {
             log.trace("dto: {}", dto);
@@ -265,7 +280,7 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         // S nextState = Enum.valueOf(stateClass, nextStateValue);
         D res = dto;
         try {
-            res = transition(dto, fsm -> fsm.goToState(nextState, input), input, effect);
+            res = transition(dto, (fsm, i) -> fsm.goToState(nextState, i), input, effect);
         } catch (CoreRuntimeException e) {
             //on ex try transitioning to ERROR
             log.debug("entity {} transition to {} generated an exception, move to ERROR", dto.getId());
@@ -274,7 +289,7 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
                 dto.setStatus(MapUtils.mergeMultipleMaps(dto.getStatus(), Map.of("message", e.getMessage())));
             }
             //transition
-            res = transition(dto, fsm -> fsm.goToState("ERROR", input), input, effect);
+            res = transition(dto, (fsm, i) -> fsm.goToState("ERROR", i), input, effect);
         }
         StatusFieldAccessor status = StatusFieldAccessor.with(res.getStatus());
         if ("DELETED".equals(status.getState())) {
@@ -304,9 +319,9 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         return res;
     }
 
-    private <I, R> D transition(
+    private <I extends Serializable, R extends Serializable> D transition(
         @NotNull D dto,
-        Function<Fsm<String, String, D>, Optional<R>> logic,
+        @NotNull BiFunction<Fsm<String, String, D>, I, Optional<R>> logic,
         @Nullable I input,
         @Nullable BiConsumer<D, R> effect
     ) {
@@ -318,7 +333,7 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
                 Fsm<String, String, D> fsm = fsm(d);
 
                 //perform via FSM
-                Optional<R> output = logic.apply(fsm);
+                Optional<R> output = logic.apply(fsm, input);
                 String state = fsm.getCurrentState();
                 D context = fsm.getContext();
 
@@ -359,7 +374,11 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
                 }
 
                 //side effect consumes output if available
-                if (effect != null) {
+                if (effectRegistry != null) {
+                    //provided effect as last element in chain
+                    effect.accept(d, effectSaga(d, state, output.orElse(null), effectRegistry));
+                } else if (effect != null) {
+                    //process only locally provided effect
                     effect.accept(d, output.orElse(null));
                 }
 
@@ -375,63 +394,59 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         });
     }
 
-    protected <I> Map<String, Serializable> postProcess(
+    protected <I extends Serializable> Map<String, Serializable> postProcess(
         @NotNull D dto,
         @NotNull String state,
         @Nullable I input,
-        @NotNull ProcessorRegistry<D, ? extends Spec> processorRegistry
+        @Nullable @NotNull ProcessorRegistry<D, ? extends Spec> processorRegistry
     ) {
         String stage = "on" + StringUtils.capitalize(state.toLowerCase());
 
-        // Iterate over all processor and store all RunBaseStatus as optional
-
-        List<Map<String, Serializable>> res;
-        if (processorExecutor != null) {
-            // scatter: each future gets its own independent PROCESSOR_TIMEOUT budget via orTimeout().
-            // All futures run concurrently; join() waits for completion or exceptional timeout.
-            List<CompletableFuture<Map<String, Serializable>>> futures = processorRegistry
-                .getProcessors(stage)
-                .stream()
-                .map(p ->
-                    CompletableFuture
-                        .supplyAsync(() -> invokeProcessor(p, stage, dto, input), processorExecutor)
-                        .orTimeout(PROCESSOR_TIMEOUT, TimeUnit.SECONDS)
+        // scatter: submit all tasks upfront so a multi-thread executor can run them in parallel.
+        // Each future has its own independent PROCESSOR_TIMEOUT budget via orTimeout
+        // The calling thread is never the executor thread, so join() cannot deadlock.
+        List<CompletableFuture<Map<String, Serializable>>> futures = processorRegistry
+            .getProcessors(stage)
+            .stream()
+            .map(p ->
+                CompletableFuture.supplyAsync(() -> invokeProcessor(p, stage, dto, input), processorExecutor).orTimeout(
+                    PROCESSOR_TIMEOUT,
+                    TimeUnit.SECONDS
                 )
-                .toList();
-            res = futures
-                .stream()
-                .map(f -> {
-                    try {
-                        return f.join();
-                    } catch (CompletionException e) {
-                        if (e.getCause() instanceof TimeoutException) {
-                            log.warn("Processor timed out for stage {} on {}, skipping", stage, dto.getId());
-                        } else {
-                            log.error("Processor failed for stage {} on {}: {}", stage, dto.getId(),
-                                e.getCause().getMessage());
-                        }
-                        return null;
+            )
+            .toList();
+        List<Map<String, Serializable>> res = futures
+            .stream()
+            .map(f -> {
+                try {
+                    return f.join();
+                } catch (CompletionException e) {
+                    if (e.getCause() instanceof TimeoutException) {
+                        log.warn("Processor timed out for stage {} on {}, skipping", stage, dto.getId());
+                    } else {
+                        log.error(
+                            "Processor failed for stage {} on {}: {}",
+                            stage,
+                            dto.getId(),
+                            e.getCause().getMessage()
+                        );
                     }
-                })
-                .toList();
-        } else {
-            res = processorRegistry
-                .getProcessors(stage)
-                .stream()
-                .map(p -> invokeProcessor(p, stage, dto, input))
-                .toList();
-        }
+                    return null;
+                }
+            })
+            .toList();
 
         return res.stream().reduce(new HashMap<>(), MapUtils::mergeMultipleMaps);
     }
 
-    private <I> Map<String, Serializable> invokeProcessor(
+    private <I extends Serializable> Map<String, Serializable> invokeProcessor(
         @NotNull Processor<D, ? extends Spec> processor,
         @NotNull String stage,
         @NotNull D dto,
         @Nullable I input
     ) {
         try {
+            //safeguard dto from side effects by deep cloning it for each processor
             D cd = JacksonMapper.deepClone(dto, typeClass);
             Spec s = processor.process(stage, cd, input);
             return s != null ? s.toMap() : null;
@@ -439,5 +454,55 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
             log.error("Error processing stage {} for {}", stage, dto.getId(), e);
             return null;
         }
+    }
+
+    protected <I extends Serializable> I effectSaga(
+        @NotNull D dto,
+        @NotNull String state,
+        @Nullable I input,
+        @Nullable @NotNull EffectRegistry<D> effectRegistry
+    ) {
+        String stage = "on" + StringUtils.capitalize(state.toLowerCase());
+
+        // Iterate over all effects in order (sequential: each consumes the previous output).
+        // Each step is individually guarded by PROCESSOR_TIMEOUT via a dedicated future.
+        // null outputs are allowed and bypassed in the chain.
+        I output = input;
+        for (Effect<D> effect : effectRegistry.getEffects(stage)) {
+            final I currentOutput = output;
+            try {
+                //safeguard dto from side effects by deep cloning it for each effect
+                I o = CompletableFuture.supplyAsync(
+                    () -> {
+                        try {
+                            D cd = JacksonMapper.deepClone(dto, typeClass);
+                            return effect.process(stage, cd, currentOutput);
+                        } catch (IOException | CoreRuntimeException e) {
+                            throw new CompletionException(e);
+                        }
+                    },
+                    processorExecutor
+                )
+                    .orTimeout(PROCESSOR_TIMEOUT, TimeUnit.SECONDS)
+                    .join();
+                //keep only non null, as null means bypass and continue with next effect
+                if (o != null) {
+                    output = o;
+                }
+            } catch (CompletionException e) {
+                if (e.getCause() instanceof TimeoutException) {
+                    log.warn("Effect timed out for stage {} on {}, skipping", stage, dto.getId());
+                } else {
+                    log.error("Effect failed for stage {} on {}: {}", stage, dto.getId(), e.getCause().getMessage());
+                }
+                //bypass effect and continue with next
+            }
+        }
+
+        if (log.isTraceEnabled()) {
+            log.trace("effect saga for stage {} on {} output {}", stage, dto.getId(), output);
+        }
+
+        return output;
     }
 }

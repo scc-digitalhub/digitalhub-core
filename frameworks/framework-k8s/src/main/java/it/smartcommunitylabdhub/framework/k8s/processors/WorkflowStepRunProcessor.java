@@ -34,6 +34,7 @@ import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipName;
 import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
 import it.smartcommunitylabdhub.runs.Run;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -57,7 +58,7 @@ public class WorkflowStepRunProcessor implements Processor<Run, K8sFunctionTaskB
     protected K8sBuilderHelper k8sBuilderHelper;
 
     @Override
-    public <I> K8sFunctionTaskBaseSpec process(String stage, Run dto, I input) throws CoreRuntimeException {
+    public K8sFunctionTaskBaseSpec process(String stage, Run dto, Serializable input) throws CoreRuntimeException {
         //check if run is linked to a workflow step
         RelationshipsMetadata rm = RelationshipsMetadata.from(dto.getMetadata());
         if (rm.getRelationships() != null) {

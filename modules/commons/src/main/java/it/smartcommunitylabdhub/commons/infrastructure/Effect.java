@@ -25,14 +25,18 @@ package it.smartcommunitylabdhub.commons.infrastructure;
 
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import java.io.Serializable;
 import org.springframework.lang.Nullable;
 
+/*
+ * An Effect is a functional interface that represents a processing operation that can be applied to a DTO.
+ * The processor is invoked after a stage transition and can alter the result by returning a new input object.
+ * Contract does not impose a type restriction: processors need to be aware of the type of the input and output
+ */
 @FunctionalInterface
-public interface Processor<D extends BaseDTO & SpecDTO & StatusDTO, Z extends Spec> {
+public interface Effect<D extends BaseDTO & SpecDTO & StatusDTO> {
     @Nullable
-    <I extends Serializable> Z process(String stage, D dto, @Nullable I input) throws CoreRuntimeException;
+    <I extends Serializable> I process(String stage, D dto, @Nullable I input) throws CoreRuntimeException;
 }
