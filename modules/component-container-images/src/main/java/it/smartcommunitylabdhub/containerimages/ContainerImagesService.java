@@ -16,8 +16,6 @@
 
 package it.smartcommunitylabdhub.containerimages;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.tools.jib.api.Credential;
 import com.google.cloud.tools.jib.api.DescriptorDigest;
@@ -36,6 +34,11 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.containerimages.config.ContainerImagesProperties;
+import it.smartcommunitylabdhub.containerimages.model.ImageConfig;
+import it.smartcommunitylabdhub.containerimages.model.ImageDescription;
+import it.smartcommunitylabdhub.containerimages.model.LayerInfo;
+import it.smartcommunitylabdhub.containerimages.model.TagsResponse;
+import it.smartcommunitylabdhub.containerimages.model.TokenResponse;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
@@ -47,8 +50,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import lombok.Builder;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -73,6 +74,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class ContainerImagesService {
 
     public static final long CACHE_TIMEOUT = 300; //seconds
+    public static final long DESCRIPTION_CACHE_TIMEOUT = 43200; //seconds (12 hours)
 
     // Accept both Docker v2 and OCI manifests for broad registry compatibility
     private static final String MANIFEST_ACCEPT_HEADER =
@@ -93,7 +95,6 @@ public class ContainerImagesService {
     private final ContainerImagesProperties properties;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    //loading cache for project metrics
     LoadingCache<String, ManifestAndDigest<ManifestTemplate>> cache = CacheBuilder.newBuilder()
         .expireAfterWrite(CACHE_TIMEOUT, TimeUnit.SECONDS)
         .build(
@@ -101,6 +102,17 @@ public class ContainerImagesService {
                 @Override
                 public ManifestAndDigest<ManifestTemplate> load(@Nonnull String key) throws Exception {
                     return fetchManifestAndDigest(key);
+                }
+            }
+        );
+
+    LoadingCache<String, ImageDescription> descriptionCache = CacheBuilder.newBuilder()
+        .expireAfterWrite(DESCRIPTION_CACHE_TIMEOUT, TimeUnit.SECONDS)
+        .build(
+            new CacheLoader<String, ImageDescription>() {
+                @Override
+                public ImageDescription load(@Nonnull String key) throws Exception {
+                    return fetchDescription(key);
                 }
             }
         );
@@ -459,11 +471,6 @@ public class ContainerImagesService {
         }
     }
 
-    @FunctionalInterface
-    private interface AuthenticatedCall<T> {
-        T execute(@Nullable String authHeader) throws IOException, StoreException;
-    }
-
     /**
      * Maps a Content-Type value (or a fallback parse of the JSON body) to the appropriate
      * jib {@link ManifestTemplate} subclass.
@@ -599,6 +606,196 @@ public class ContainerImagesService {
         return null;
     }
 
+    /**
+     * Returns a description for the given image reference, served from a 12-hour loading cache.
+     * External calls (Docker Hub API, GitHub API, OCI manifest) are only made on a cache miss.
+     */
+    public ImageDescription getDescription(@NotNull String imageReference)
+        throws IOException, InvalidImageReferenceException, StoreException {
+        try {
+            return descriptionCache.get(imageReference);
+        } catch (Exception e) {
+            throw new IOException("Failed to fetch description for image: " + imageReference, e);
+        }
+    }
+
+    /**
+     * Internal implementation invoked by the cache loader.
+     * <p>
+     * OCI annotations ({@code org.opencontainers.image.*}) are always read from the raw manifest
+     * JSON, which is part of the standard OCI Image Spec and therefore works with any v2-compatible
+     * registry. For Docker Hub images the full markdown README is additionally fetched from the
+     * Docker Hub public API ({@code hub.docker.com/v2/repositories/…}).
+     */
+    private ImageDescription fetchDescription(@NotNull String imageReference)
+        throws IOException, InvalidImageReferenceException, StoreException {
+        ImageReference imageRef = ImageReference.parse(imageReference);
+
+        java.util.Map<String, String> annotations = fetchOciAnnotations(imageRef);
+
+        String title = annotations.get("org.opencontainers.image.title");
+        String description = annotations.get("org.opencontainers.image.description");
+        String documentation = annotations.get("org.opencontainers.image.documentation");
+        String source = annotations.get("org.opencontainers.image.source");
+        String fullDescription = null;
+
+        if (isDockerHub(imageRef.getRegistry())) {
+            fullDescription = fetchDockerHubFullDescription(imageRef);
+            if (description == null) {
+                description = fetchDockerHubShortDescription(imageRef);
+            }
+        } else if (isGitHubRegistry(imageRef.getRegistry())) {
+            // Use org.opencontainers.image.source if present, otherwise infer from image path
+            String repoUrl = StringUtils.hasText(source) ? source : inferGitHubRepoUrl(imageRef);
+            if (StringUtils.hasText(repoUrl)) {
+                fullDescription = fetchGitHubReadme(repoUrl);
+            }
+        }
+
+        return ImageDescription.builder()
+            .title(title)
+            .description(description)
+            .fullDescription(fullDescription)
+            .documentation(documentation)
+            .source(source)
+            .build();
+    }
+
+    private java.util.Map<String, String> fetchOciAnnotations(ImageReference imageRef)
+        throws IOException, StoreException {
+        String manifestUrl = buildManifestUrl(imageRef);
+        try {
+            return withAuth(imageRef.getRegistry(), authHeader -> {
+                ResponseEntity<String> response = restTemplate.exchange(
+                    manifestUrl,
+                    HttpMethod.GET,
+                    new HttpEntity<>(buildManifestHeaders(authHeader)),
+                    String.class
+                );
+                String body = response.getBody();
+                if (!StringUtils.hasText(body)) {
+                    return Collections.emptyMap();
+                }
+                com.fasterxml.jackson.databind.JsonNode node = objectMapper.readTree(body);
+                com.fasterxml.jackson.databind.JsonNode annotationsNode = node.path("annotations");
+                if (annotationsNode.isMissingNode() || annotationsNode.isNull()) {
+                    return Collections.emptyMap();
+                }
+                java.util.Map<String, String> result = new java.util.HashMap<>();
+                annotationsNode.fields().forEachRemaining(e -> result.put(e.getKey(), e.getValue().asText()));
+                return result;
+            });
+        } catch (IOException | StoreException | RestClientException e) {
+            log.debug("Failed to extract OCI annotations for {}: {}", imageRef, e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
+    private String fetchDockerHubShortDescription(ImageReference imageRef) {
+        try {
+            com.fasterxml.jackson.databind.JsonNode node = fetchDockerHubRepositoryNode(imageRef);
+            if (node != null) {
+                String value = node.path("description").asText(null);
+                return StringUtils.hasText(value) ? value : null;
+            }
+        } catch (IOException e) {
+            log.debug("Failed to fetch Docker Hub short description for {}: {}", imageRef, e.getMessage());
+        }
+        return null;
+    }
+
+    private String fetchDockerHubFullDescription(ImageReference imageRef) {
+        try {
+            com.fasterxml.jackson.databind.JsonNode node = fetchDockerHubRepositoryNode(imageRef);
+            if (node != null) {
+                String value = node.path("full_description").asText(null);
+                return StringUtils.hasText(value) ? value : null;
+            }
+        } catch (IOException e) {
+            log.debug("Failed to fetch Docker Hub full description for {}: {}", imageRef, e.getMessage());
+        }
+        return null;
+    }
+
+    private com.fasterxml.jackson.databind.JsonNode fetchDockerHubRepositoryNode(ImageReference imageRef)
+        throws IOException {
+        String[] parts = imageRef.getRepository().split("/", 2);
+        String namespace = parts.length == 2 ? parts[0] : "library";
+        String repo = parts.length == 2 ? parts[1] : parts[0];
+        String hubUrl = "https://hub.docker.com/v2/repositories/" + namespace + "/" + repo + "/";
+
+        try {
+            ResponseEntity<String> hubResponse = restTemplate.exchange(
+                hubUrl,
+                HttpMethod.GET,
+                new HttpEntity<>(new HttpHeaders()),
+                String.class
+            );
+            String body = hubResponse.getBody();
+            return StringUtils.hasText(body) ? objectMapper.readTree(body) : null;
+        } catch (RestClientException e) {
+            log.debug("Failed to call Docker Hub API for {}: {}", imageRef, e.getMessage());
+            return null;
+        }
+    }
+
+    private boolean isDockerHub(String registry) {
+        return "index.docker.io".equals(registry) || "registry-1.docker.io".equals(registry);
+    }
+
+    private boolean isGitHubRegistry(String registry) {
+        return "ghcr.io".equals(registry);
+    }
+
+    /**
+     * For GHCR images the repository path is {@code owner/repo[/…]}, so the first two
+     * segments map directly to a GitHub repository.
+     */
+    private String inferGitHubRepoUrl(ImageReference imageRef) {
+        String[] parts = imageRef.getRepository().split("/", 3);
+        if (parts.length >= 2) {
+            return "https://github.com/" + parts[0] + "/" + parts[1];
+        }
+        return null;
+    }
+
+    /**
+     * Fetches the README for a GitHub repository identified by its URL
+     * (e.g. {@code https://github.com/owner/repo}).
+     * Uses the GitHub REST API {@code /repos/{owner}/{repo}/readme} endpoint.
+     * An optional token from {@code containerimages.github-token} is sent as a Bearer header
+     * to raise the rate-limit and reach private repositories.
+     */
+    private String fetchGitHubReadme(String repoUrl) {
+        try {
+            // Accept both https://github.com/owner/repo and https://github.com/owner/repo/… forms
+            String path = repoUrl.replaceFirst("https?://github\\.com/", "");
+            String[] parts = path.split("/", 3);
+            if (parts.length < 2) {
+                log.debug("Cannot parse GitHub repo URL: {}", repoUrl);
+                return null;
+            }
+            String owner = parts[0];
+            String repo = parts[1];
+            String apiUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/readme";
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set(HttpHeaders.ACCEPT, "application/vnd.github.raw+json");
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                apiUrl,
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                String.class
+            );
+            String body = response.getBody();
+            return StringUtils.hasText(body) ? body : null;
+        } catch (RestClientException e) {
+            log.debug("Failed to fetch GitHub README for {}: {}", repoUrl, e.getMessage());
+            return null;
+        }
+    }
+
     /*
      * Implements the standard Docker/OCI Bearer token flow described in
      * https://distribution.github.io/distribution/spec/auth/token/
@@ -650,48 +847,8 @@ public class ContainerImagesService {
         return null;
     }
 
-    @Getter
-    private static class TokenResponse {
-
-        private String token;
-
-        @JsonProperty("access_token")
-        private String accessToken;
-    }
-
-    @Getter
-    private static class TagsResponse {
-
-        private String name;
-
-        private List<String> tags;
-    }
-
-    @Getter
-    @Builder
-    public static class LayerInfo {
-
-        private String digest;
-        private Long size;
-        private String instruction;
-        private boolean emptyLayer;
-    }
-
-    @Getter
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    private static class ImageConfig {
-
-        private List<HistoryEntry> history;
-
-        @Getter
-        @JsonIgnoreProperties(ignoreUnknown = true)
-        static class HistoryEntry {
-
-            @JsonProperty("created_by")
-            private String createdBy;
-
-            @JsonProperty("empty_layer")
-            private Boolean emptyLayer;
-        }
+    @FunctionalInterface
+    private interface AuthenticatedCall<T> {
+        T execute(@Nullable String authHeader) throws IOException, StoreException;
     }
 }

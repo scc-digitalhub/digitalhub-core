@@ -28,7 +28,7 @@ import it.smartcommunitylabdhub.commons.models.status.Status;
 import it.smartcommunitylabdhub.containerimage.ContainerImage;
 import it.smartcommunitylabdhub.containerimage.specs.ContainerImageBaseSpec;
 import it.smartcommunitylabdhub.containerimage.specs.ContainerImageBaseStatus;
-import it.smartcommunitylabdhub.containerimages.ContainerImagesService.LayerInfo;
+import it.smartcommunitylabdhub.containerimages.model.LayerInfo;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
