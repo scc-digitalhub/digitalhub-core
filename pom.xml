@@ -76,6 +76,7 @@
         <module>runtimes/runtime-servicegraph</module>
         <module>modules/openmetadata-integration</module>
         <module>modules/proxy</module>
+        <module>modules/component-run-initializer</module>
         <module>providers/credentials-provider-db</module>
         <module>providers/trinodb-provider</module>
         <module>providers/s3-provider</module>
