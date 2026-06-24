@@ -66,4 +66,32 @@ public class ContextRef implements Serializable {
             return null;
         }
     }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((destination == null) ? 0 : destination.hashCode());
+        result = prime * result + ((protocol == null) ? 0 : protocol.hashCode());
+        result = prime * result + ((source == null) ? 0 : source.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null) return false;
+        if (getClass() != obj.getClass()) return false;
+        ContextRef other = (ContextRef) obj;
+        if (destination == null) {
+            if (other.destination != null) return false;
+        } else if (!destination.equals(other.destination)) return false;
+        if (protocol == null) {
+            if (other.protocol != null) return false;
+        } else if (!protocol.equals(other.protocol)) return false;
+        if (source == null) {
+            if (other.source != null) return false;
+        } else if (!source.equals(other.source)) return false;
+        return true;
+    }
 }
