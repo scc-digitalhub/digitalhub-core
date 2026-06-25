@@ -376,9 +376,11 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
                 //side effect consumes output if available
                 if (effectRegistry != null) {
                     //provided effect as last element in chain
-                    effect.accept(d, effectSaga(d, state, output.orElse(null), effectRegistry));
-                } else if (effect != null) {
-                    //process only locally provided effect
+                    output = Optional.ofNullable(effectSaga(d, state, output.orElse(null), effectRegistry));
+                }
+
+                if (effect != null) {
+                    //process  locally provided effect
                     effect.accept(d, output.orElse(null));
                 }
 
