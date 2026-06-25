@@ -449,6 +449,8 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
             .orElse(new V1PodSpec());
 
         V1PodSecurityContext podSecurityContext = buildPodSecurityContext(runnable);
+        //add custom profile to security context
+        podSecurityContext.runAsGroup(DEFAULT_USER_ID).runAsUser(DEFAULT_USER_ID).fsGroup(DEFAULT_USER_ID);
         if (!disableRoot) {
             podSecurityContext.seccompProfile(new V1SeccompProfile().type("Unconfined"));
         }
