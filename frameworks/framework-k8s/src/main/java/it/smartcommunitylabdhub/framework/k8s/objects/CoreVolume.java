@@ -60,5 +60,6 @@ public class CoreVolume implements Serializable {
         ephemeral,
         empty_dir,
         image,
+        workflow_volume
     }
 }

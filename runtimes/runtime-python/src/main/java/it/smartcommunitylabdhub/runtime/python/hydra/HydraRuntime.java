@@ -80,11 +80,6 @@ public class HydraRuntime
     extends K8sFunctionBaseRuntime<HydraFunctionSpec, HydraRunSpec, HydraRunStatus, K8sRunnable>
     implements InitializingBean {
 
-    public static final int HTTP_PORT = 8080;
-    public static final int GRPC_PORT = 9000;
-    public static final int UID = 8877;
-    public static final int GID = 999;
-    public static final String HOME_DIR = "/home/hydra";
 
     public static final String RUNTIME = "hydra";
     public static final String[] KINDS = { HydraJobRunSpec.KIND, HydraBuildRunSpec.KIND, HydraSubtaskRunSpec.KIND };

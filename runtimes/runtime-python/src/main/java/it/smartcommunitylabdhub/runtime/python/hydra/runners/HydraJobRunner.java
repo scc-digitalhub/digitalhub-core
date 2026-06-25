@@ -24,8 +24,10 @@
 package it.smartcommunitylabdhub.runtime.python.hydra.runners;
 
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
+import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.enums.State;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
@@ -43,27 +45,36 @@ import it.smartcommunitylabdhub.runtime.python.hydra.specs.HydraFunctionSpec;
 import it.smartcommunitylabdhub.runtime.python.hydra.specs.HydraJobRunSpec;
 import it.smartcommunitylabdhub.runtime.python.hydra.specs.HydraJobTaskSpec;
 import it.smartcommunitylabdhub.runtime.python.job.PythonJobTaskSpec;
+import it.smartcommunitylabdhub.runtime.python.model.PythonSourceCode;
 import it.smartcommunitylabdhub.runtime.python.runners.PythonRunnerHelper;
+import it.smartcommunitylabdhub.runtime.python.utils.NoEncodingMustacheFactory;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.Serializable;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.mustachejava.Mustache;
+import com.github.mustachejava.MustacheFactory;
 
 @Slf4j
 public class HydraJobRunner extends PythonBaseRunner {
 
     private static ObjectMapper jsonMapper = JacksonMapper.CUSTOM_OBJECT_MAPPER;
 
-    protected Mustache mainTemplate;
+    protected Mustache subtaskTemplate;
 
 
     public HydraJobRunner(
@@ -74,12 +85,24 @@ public class HydraJobRunner extends PythonBaseRunner {
 
         //set handler for serve
         setHandlerTemplate(new ClassPathResource("runtime-hydra/docker/_job_handler.py"));
+        setSubtaskHandlerTemplate(new ClassPathResource("runtime-hydra/docker/_subtask_handler.py"));
     }    
+
+    public void setSubtaskHandlerTemplate(Resource resource) {
+        try {
+            log.debug("Loading subtask template handler from {}", resource.getURI().toURL());
+            MustacheFactory mustacheFactory = new NoEncodingMustacheFactory();
+            this.subtaskTemplate = mustacheFactory.compile(new InputStreamReader(resource.getInputStream()), "subtask_handler");
+        } catch (IOException ioe) {
+            throw new CoreRuntimeException("error with reading subtask handler template for runtime");
+        }
+    }
+
 
     public K8sRunnable produce(Run run, Map<String, String> secretData) {
         HydraJobRunSpec runSpec = new HydraJobRunSpec(run.getSpec());
-        HydraJobTaskSpec taskSpec = runSpec.getTaskServeSpec();
-        TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(runSpec.getTaskServeSpec().toMap());
+        HydraJobTaskSpec taskSpec = runSpec.getTaskJobSpec();
+        TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(runSpec.getTaskJobSpec().toMap());
         HydraFunctionSpec functionSpec = runSpec.getFunctionSpec();
 
         String pythonVersion = functionSpec.getPythonVersion().name();
@@ -111,6 +134,7 @@ public class HydraJobRunner extends PythonBaseRunner {
 
             String nuclioFunction = buildNuclioFunction(triggers, event);
             String handler = buildHandler(sourceCode);
+            String subtaskHandler = buildSubtaskHandler(sourceCode);
 
             //read source and build context
             List<ContextRef> contextRefs = new ArrayList<>(
@@ -118,6 +142,15 @@ public class HydraJobRunner extends PythonBaseRunner {
             );
             List<ContextSource> contextSources = new ArrayList<>(
                 PythonRunnerHelper.createContextSources(entrypoint, handler, nuclioFunction, sourceCode, requirements)
+            );
+
+            //write subtask handler file
+            contextSources.add(
+                ContextSource
+                    .builder()
+                    .name("subtask_handler.py")
+                    .base64(Base64.getEncoder().encodeToString(subtaskHandler.getBytes(StandardCharsets.UTF_8)))
+                    .build()
             );
 
             //inject custom passwd to add our user
@@ -168,4 +201,30 @@ public class HydraJobRunner extends PythonBaseRunner {
             throw new IllegalArgumentException(e.getMessage());
         }
     }
+
+    protected String buildSubtaskHandler(PythonSourceCode source) {
+        if (this.subtaskTemplate == null) {
+            throw new CoreRuntimeException("subtask handler template not set");
+        }
+
+        try {
+            StringWriter writer = new StringWriter();
+            Mustache handlerMustache = this.subtaskTemplate;
+            handlerMustache.execute(
+                writer,
+                Collections.singletonMap("source", JacksonMapper.CUSTOM_OBJECT_MAPPER.writeValueAsString(source))
+            );
+            writer.flush();
+
+            return writer.toString();
+        } catch (IOException ioe) {
+            throw new CoreRuntimeException("error with building handler template", ioe);
+        }
+    }
+
+
+    protected List<CoreVolume> createVolumes(Run run, K8sFunctionTaskBaseSpec taskSpec) {
+       return HydraRunnerHelper.createVolumes(run, taskSpec, properties.getVolumeSize(), k8sBuilderHelper, run.getId(), CoreVolume.VolumeType.workflow_volume); 
+    }
+
 }

@@ -26,6 +26,7 @@ package it.smartcommunitylabdhub.runtime.python.hydra.runners;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.enums.State;
+import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
@@ -40,20 +41,24 @@ import it.smartcommunitylabdhub.runtime.python.build.PythonBaseRunner;
 import it.smartcommunitylabdhub.runtime.python.config.PythonProperties;
 import it.smartcommunitylabdhub.runtime.python.hydra.model.HydraSourceCode;
 import it.smartcommunitylabdhub.runtime.python.hydra.specs.HydraFunctionSpec;
-import it.smartcommunitylabdhub.runtime.python.hydra.specs.HydraJobRunSpec;
-import it.smartcommunitylabdhub.runtime.python.hydra.specs.HydraJobTaskSpec;
+import it.smartcommunitylabdhub.runtime.python.hydra.specs.HydraSubtaskRunSpec;
+import it.smartcommunitylabdhub.runtime.python.hydra.specs.HydraSubtaskTaskSpec;
 import it.smartcommunitylabdhub.runtime.python.job.PythonJobTaskSpec;
 import it.smartcommunitylabdhub.runtime.python.runners.PythonRunnerHelper;
+import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.util.StringUtils;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -73,14 +78,16 @@ public class HydraSubtaskRunner extends PythonBaseRunner {
     }
 
     public K8sRunnable produce(Run run, Map<String, String> secretData) {
-        HydraJobRunSpec runSpec = new HydraJobRunSpec(run.getSpec());
-        HydraJobTaskSpec taskSpec = runSpec.getTaskServeSpec();
-        TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(runSpec.getTaskServeSpec().toMap());
+        HydraSubtaskRunSpec runSpec = new HydraSubtaskRunSpec(run.getSpec());
+        HydraSubtaskTaskSpec taskSpec = runSpec.getTaskSubtaskSpec();
+        TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(runSpec.getTaskSubtaskSpec().toMap());
         HydraFunctionSpec functionSpec = runSpec.getFunctionSpec();
 
         String pythonVersion = functionSpec.getPythonVersion().name();
         String userImage = functionSpec.getImage();
         String baseImage = functionSpec.getBaseImage();
+
+        boolean standalone = !StringUtils.hasText(runSpec.getJobRef());
 
         try {
             //build base resources
@@ -88,15 +95,17 @@ public class HydraSubtaskRunner extends PythonBaseRunner {
             List<CoreEnv> coreSecrets = createSecrets(run, secretData);
             List<CoreVolume> coreVolumes = buildVolumes(run, taskSpec, pythonVersion, baseImage, userImage);
 
-            List<String> args = buildArgs(pythonVersion, baseImage, userImage);
             String image = buildImage(pythonVersion, baseImage, userImage);
             List<String> requirements = properties.installDependencies()
                 ? buildRequirements(image, functionSpec.getRequirements())
                 : List.of();
 
+            
+            List<ContextSource> contextSources = new ArrayList<>();
+            List<ContextRef> contextRefs = new ArrayList<>();
+
             //fetch source code
             HydraSourceCode sourceCode = functionSpec.getSource();
-
             //build nuclio definition
             HashMap<String, Serializable> event = new HashMap<>();
             event.put("body", jsonMapper.writeValueAsString(run));
@@ -105,31 +114,47 @@ public class HydraSubtaskRunner extends PythonBaseRunner {
             HashMap<String, Serializable> job = new HashMap<>(Map.of("kind", "job", "attributes", attributes));
             triggers.put("job", job);
 
-            String nuclioFunction = buildNuclioFunction(triggers, event);
+            String handlerRef = standalone ? "handler:handler" : "subtask_handler:handler";    
+            String nuclioFunction = buildNuclioFunction(triggers, event, handlerRef);
             String handler = buildHandler(sourceCode);
 
-            //read source and build context
-            List<ContextRef> contextRefs = new ArrayList<>(
-                PythonRunnerHelper.createContextRefs(sourceCode)
-            );
-            List<ContextSource> contextSources = new ArrayList<>(
-                PythonRunnerHelper.createContextSources(entrypoint, handler, nuclioFunction, sourceCode, requirements)
-            );
+            List<String> args = null;
+            // it is expected that for non standalone runs the requirements and config are already present in the shared volume, 
+            // so we skip the source and requirements injection for non-standalone runs
+            if (standalone) {
+                args = buildArgs(pythonVersion, baseImage, userImage);
+                //read source and build context
+                contextRefs.addAll(
+                    PythonRunnerHelper.createContextRefs(sourceCode)
+                );
+                contextSources.addAll(
+                    PythonRunnerHelper.createContextSources(entrypoint, handler, nuclioFunction, sourceCode, requirements)
+                );
+                //inject custom config to add our user
+                contextSources.addAll(HydraRunnerHelper.createConfigSources(functionSpec.getConfig()));
+                contextRefs.addAll(HydraRunnerHelper.createConfigRefs(functionSpec.getConfig()));
 
-            //inject custom passwd to add our user
-            if (passwdFile != null) {
-                ContextSource entry = ContextSource.builder()
-                    .name("passwd")
-                    .base64(Base64.getEncoder().encodeToString(passwdFile.getBytes(StandardCharsets.UTF_8)))
-                    .mountPath("/etc/passwd")
-                    .build();
-                contextSources.add(entry);
+                //inject custom passwd to add our user
+                if (passwdFile != null) {
+                    ContextSource entry = ContextSource.builder()
+                        .name("passwd")
+                        .base64(Base64.getEncoder().encodeToString(passwdFile.getBytes(StandardCharsets.UTF_8)))
+                        .mountPath("/etc/passwd")
+                        .build();
+                    contextSources.add(entry);
+                }
+            } else {
+                String functionRef = "subtask_" + run.getId() + ".yaml";
+                //write function file
+                contextSources.add(
+                    ContextSource
+                        .builder()
+                        .name(functionRef)
+                        .base64(Base64.getEncoder().encodeToString(nuclioFunction.getBytes(StandardCharsets.UTF_8)))
+                        .build()
+                );
+                args = buildSubtaskArgs(pythonVersion, baseImage, userImage, functionRef);
             }
-
-            //inject custom config to add our user
-            // TODO should be already done in shared volume, check if we can skip
-            contextSources.addAll(HydraRunnerHelper.createConfigSources(functionSpec.getConfig()));
-            contextRefs.addAll(HydraRunnerHelper.createConfigRefs(functionSpec.getConfig()));
 
             K8sJobRunnable k8sJobRunnable = K8sJobRunnable.builder()
                 .runtime(PythonRuntime.RUNTIME)
@@ -165,4 +190,36 @@ public class HydraSubtaskRunner extends PythonBaseRunner {
             throw new IllegalArgumentException(e.getMessage());
         }
     }
+
+    protected List<String> buildSubtaskArgs(String pythonVersion, @Nullable String baseImage, @Nullable String userImage, String functionRef) {
+        List<String> args = new ArrayList<>();
+        if (useLayer(pythonVersion, baseImage, userImage)) {
+            args.addAll(
+                PythonRunnerHelper.buildEntrypointArgs(
+                    homeDir,
+                    command,
+                    functionRef,
+                    "/opt/nuclio/uv/uv",
+                    List.of("/opt/nuclio/requirements/nuclio.txt", "/opt/nuclio/requirements/common.txt"),
+                    "/opt/nuclio/whl"
+                )
+            );
+        } else {
+            args.addAll(PythonRunnerHelper.buildEntrypointArgs(homeDir, command, functionRef, null, null, null));
+        }
+
+        return args;
+    }
+
+    protected List<CoreVolume> createVolumes(Run run, K8sFunctionTaskBaseSpec taskSpec) {
+        HydraSubtaskRunSpec runSpec = new HydraSubtaskRunSpec(run.getSpec());
+        boolean standalone = !StringUtils.hasText(runSpec.getJobRef());
+        if (!standalone) {
+            // create shared volume
+            return HydraRunnerHelper.createVolumes(run, taskSpec, properties.getVolumeSize(), k8sBuilderHelper, runSpec.getJobRef(), CoreVolume.VolumeType.shared_volume);
+        }
+        return super.createVolumes(run, taskSpec); 
+    }
+
+    
 }

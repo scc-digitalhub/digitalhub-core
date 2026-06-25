@@ -50,7 +50,7 @@ public final class HydraJobRunSpec extends HydraRunSpec {
     private HydraFunctionSpec functionSpec;
 
     @JsonUnwrapped
-    private HydraJobTaskSpec taskServeSpec;
+    private HydraJobTaskSpec taskJobSpec;
 
     @JsonProperty("init_parameters")
     private Map<String, Serializable> initParameters = new HashMap<>();
@@ -69,7 +69,7 @@ public final class HydraJobRunSpec extends HydraRunSpec {
 
         HydraJobRunSpec spec = mapper.convertValue(data, HydraJobRunSpec.class);
         this.functionSpec = spec.getFunctionSpec();
-        this.taskServeSpec = spec.getTaskServeSpec();
+        this.taskJobSpec = spec.getTaskJobSpec();
         this.initParameters = spec.getInitParameters();
         this.parameters = spec.getParameters();
         this.workers = spec.getWorkers();
@@ -79,7 +79,7 @@ public final class HydraJobRunSpec extends HydraRunSpec {
         this.functionSpec = functionSpec;
     }
 
-    public void setTaskServeSpec(HydraJobTaskSpec taskServeSpec) {
-        this.taskServeSpec = taskServeSpec;
+    public void setTaskJobSpec(HydraJobTaskSpec taskJobSpec) {
+        this.taskJobSpec = taskJobSpec;
     }
 }

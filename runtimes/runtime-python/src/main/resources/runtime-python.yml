@@ -99,7 +99,7 @@ runtime:
     command: ${RUNTIME_HYDRA_COMMAND:${runtime.python.command}}
     entrypoint: ${runtime.python.entrypoint:classpath:/runtime-python/docker/entrypoint.sh}
     passwd-template: ${runtime.python.passwd-template:classpath:/runtime-python/docker/passwd.template}
-    dependencies: ${RUNTIME_HYDRA_DEPENDENCIES:digitalhub[full],digitalhub-runtime-python,hydra-core}      
+    dependencies: ${RUNTIME_HYDRA_DEPENDENCIES:digitalhub[full],digitalhub-runtime-python,hydra-core,omegaconf}      
     use-beta-dependencies: ${RUNTIME_HYDRA_USE_BETA_DEPENDENCIES:${runtime.python.use-beta-dependencies}}
     install-dependencies: ${RUNTIME_HYDRA_INSTALL_DEPENDENCIES:${runtime.python.install-dependencies}}
     volume-size: ${RUNTIME_HYDRA_VOLUME_SIZE:${runtime.python.volume-size}}

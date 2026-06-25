@@ -50,7 +50,7 @@ public final class HydraSubtaskRunSpec extends HydraRunSpec {
     private HydraFunctionSpec functionSpec;
 
     @JsonUnwrapped
-    private HydraSubtaskTaskSpec taskServeSpec;
+    private HydraSubtaskTaskSpec taskSubtaskSpec;
 
     @JsonProperty("job_ref")
     private String jobRef;
@@ -67,7 +67,7 @@ public final class HydraSubtaskRunSpec extends HydraRunSpec {
 
         HydraSubtaskRunSpec spec = mapper.convertValue(data, HydraSubtaskRunSpec.class);
         this.functionSpec = spec.getFunctionSpec();
-        this.taskServeSpec = spec.getTaskServeSpec();
+        this.taskSubtaskSpec = spec.getTaskSubtaskSpec();
         this.jobRef = spec.getJobRef();
         this.parameters = spec.getParameters();
     }
@@ -76,8 +76,8 @@ public final class HydraSubtaskRunSpec extends HydraRunSpec {
         this.functionSpec = functionSpec;
     }
 
-    public void setTaskServeSpec(HydraSubtaskTaskSpec taskServeSpec) {
-        this.taskServeSpec = taskServeSpec;
+    public void setTaskSubtaskSpec(HydraSubtaskTaskSpec taskSubtaskSpec) {
+        this.taskSubtaskSpec = taskSubtaskSpec;
     }
 
     public void setJobRef(String jobRef) {
