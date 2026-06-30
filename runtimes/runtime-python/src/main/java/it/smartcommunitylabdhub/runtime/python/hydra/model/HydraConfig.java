@@ -21,45 +21,33 @@
  *
  */
 
-package it.smartcommunitylabdhub.framework.k8s.objects;
+package it.smartcommunitylabdhub.runtime.python.hydra.model;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.io.Serializable;
-import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.lang.Nullable;
 
-@AllArgsConstructor
-@NoArgsConstructor
 @Getter
 @Setter
-public class CoreVolume implements Serializable {
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class HydraConfig implements Serializable {
 
-    @JsonProperty("volume_type")
-    @NotNull
-    private VolumeType volumeType;
+    @Nullable
+    @Schema(title = "fields.hydra.config.source.title", description = "fields.hydra.config.source.description")
+    private String source;
 
-    @JsonProperty("mount_path")
-    @NotBlank
-    private String mountPath;
+    @Nullable
+    @Schema(title = "fields.hydra.config.path.title", description = "fields.hydra.config.path.description")
+    private String path;
 
-    @NotBlank
-    private String name;
+    @Schema(title = "fields.hydra.config.base64.title", description = "fields.hydra.config.base64.description")
+    private String base64;
 
-    private Map<String, String> spec;
-
-    public enum VolumeType {
-        // config_map,
-        // secret,
-        shared_volume,
-        persistent_volume_claim,
-        ephemeral,
-        empty_dir,
-        image,
-        workflow_volume
-    }
 }
