@@ -29,6 +29,5 @@ public class HydraJobLifecycleManager
 
     HydraJobLifecycleManager(HydraRuntime runtime) {
         super(runtime);
-        setFsmFactory(new HydraFsmFactory(runtime));
     }
 }

@@ -119,7 +119,7 @@ def init_context(context: Context) -> None:
         handler = source.get("handler")
         source_code = source.get("source")
 
-        function_path = _get_function_path(handler, source_code, ctx.root)
+        function_path = _get_function_path(handler, source_code, DEFAULT_PATH)
         complete_function = import_function(function_path, complete_handler)
         setattr(context, "complete_function", complete_function)
 
@@ -168,7 +168,7 @@ def handler(context: Context, event: Event) -> Response:
 
         if hasattr(context, "complete_function"):
             context.logger.info("Executing complete function.")
-            complete_args = {"project": context.project, "run": context.run}
+            complete_args = {"context": context}
             context.complete_function(**complete_args)
             context.logger.info(f"Complete function executed.")
 
@@ -242,7 +242,7 @@ def _configure_execution(spec: dict, run: dict, ctx: Context) -> tuple[Callable,
         "local_execution": False,
     }
 
-    runtime_dir = Path("/shared")
+    runtime_dir = DEFAULT_PATH
 
     extra_conf_dir = runtime_dir / "dh_extra_conf" / "hydra" / "launcher"
     extra_conf_dir.mkdir(parents=True, exist_ok=True)
@@ -266,7 +266,13 @@ def _configure_execution(spec: dict, run: dict, ctx: Context) -> tuple[Callable,
             path = runtime_dir / config["path"]
             sys.argv = args + [f"--config-path={path.absolute()}"]
 
-    sys.argv += [f"--config-dir={(runtime_dir / "dh_extra_conf" ).absolute()}", "hydra/launcher=dh_launcher", f"hydra.launcher.job_ref={run.id}"]
+    sys.argv += [
+        f"--config-dir={(runtime_dir / "dh_extra_conf" ).absolute()}", 
+        "hydra/launcher=dh_launcher", 
+        f"hydra.launcher.job_ref={run.id}", 
+        f"hydra.sweep.dir={(runtime_dir / "multirun_output" ).absolute()}"
+    ]
+    if "parameters" in spec:
+        sys.argv += [f"{key}={value}" for key, value in spec["parameters"].items()]
 
-    # treat as not wrapped, as the wrapping is done by hydra.main and we do not need to pass the extra attributes
     return {"cfg_passthrough": None}

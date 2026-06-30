@@ -71,7 +71,6 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 @Slf4j
@@ -227,10 +226,35 @@ public class HydraRuntime
         return null;
     }
 
+    // @Override
+    // @Nullable
+    // public K8sRunnable delete(@NotNull Run run) {
+    //     K8sRunnable k8sRunnable = super.delete(run);
+    //     if (run.getKind().equals(HydraJobRunSpec.KIND)) {
+    //         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
+    //         String functionId = runAccessor.getFunctionId();
+    //         // find subtask task
+    //         Optional<Task> task = functionService.getTasksByFunctionId(functionId).stream().filter(t -> t.getKind().equals(HydraSubtaskTaskSpec.KIND)).findFirst();
+    //         if (task.isPresent()) {
+    //             // find subtask runs and delete them
+    //             try {
+    //                 List<Run> subtaskRuns = findSubtaskRuns(runAccessor.getProject(), task.get(), run.getId());
+    //                 for (Run r : subtaskRuns) {
+    //                     entityRepository.delete(r.getId());
+    //                 }
+    //             } catch (StoreException e) {
+    //                 log.error("Error deleting subtasks run {}", run.getId(), e);
+    //             }
+    //         }
+
+    //     }
+    //     return k8sRunnable;
+    // }
+
     @Override
-    @Nullable
-    public K8sRunnable delete(@NotNull Run run) {
-        K8sRunnable k8sRunnable = super.delete(run);
+    public HydraRunStatus onDeleted(@NotNull Run run, RunRunnable runnable) {
+        //cleanup
+        super.onDeleted(run, runnable);
         if (run.getKind().equals(HydraJobRunSpec.KIND)) {
             RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
             String functionId = runAccessor.getFunctionId();
@@ -247,9 +271,9 @@ public class HydraRuntime
                     log.error("Error deleting subtasks run {}", run.getId(), e);
                 }
             }
-
         }
-        return k8sRunnable;
+        return null;
+
     }
 
 
