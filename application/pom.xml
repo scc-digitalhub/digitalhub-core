@@ -428,6 +428,11 @@
             <artifactId>trinodb-provider</artifactId>
             <version>${revision}</version>
         </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-loki-logs-provider</artifactId>
+            <version>${revision}</version>
+        </dependency>        
         <!-- <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-search-solr</artifactId>

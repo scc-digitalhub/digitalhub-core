@@ -21,42 +21,65 @@
  *
  */
 
-package it.smartcommunitylabdhub.logs.persistence;
+package it.smartcommunitylabdhub.logs.local.persistence;
 
-import it.smartcommunitylabdhub.core.persistence.AbstractEntity;
-import it.smartcommunitylabdhub.core.persistence.MetadataEntity;
-import it.smartcommunitylabdhub.core.persistence.SpecEntity;
-import it.smartcommunitylabdhub.core.persistence.StatusEntity;
-import it.smartcommunitylabdhub.logs.service.LogServiceImpl;
+import it.smartcommunitylabdhub.logs.local.LocalLogServiceImpl;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotNull;
 import java.sql.Types;
+import java.util.Date;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
-@SuperBuilder
+@Builder
 @Entity
 @Table(name = "logs")
-public class LogEntity extends AbstractEntity implements MetadataEntity, SpecEntity, StatusEntity {
+public class LogEntity {
 
-    @Column(nullable = false)
+    @Id
+    @Column(unique = true, updatable = false)
+    protected String id;
+
+    @Column(nullable = false, updatable = false)
     private String run;
+
+    @Column(nullable = false, updatable = false)
+    protected String project;
+
+    @CreatedDate
+    @Column(updatable = false)
+    protected Date created;
+
+    @LastModifiedDate
+    protected Date updated;
+
+    @CreatedBy
+    @Column(name = "created_by", updatable = false)
+    protected String createdBy;
+
+    @LastModifiedBy
+    @Column(name = "updated_by")
+    protected String updatedBy;
 
     @Lob
     @JdbcTypeCode(Types.LONGVARBINARY)
-    @Column(length = LogServiceImpl.MAX_LENGTH)
+    @Column(length = LocalLogServiceImpl.MAX_LENGTH)
     @ToString.Exclude
     private byte[] content;
 
@@ -66,34 +89,5 @@ public class LogEntity extends AbstractEntity implements MetadataEntity, SpecEnt
 
     @JdbcTypeCode(Types.LONGVARBINARY)
     @ToString.Exclude
-    protected byte[] spec;
-
-    @JdbcTypeCode(Types.LONGVARBINARY)
-    @ToString.Exclude
     protected byte[] status;
-
-    @Override
-    public @NotNull String getName() {
-        return id;
-    }
-
-    @Override
-    public void setName(String name) {
-        //not available
-    }
-
-    @Override
-    public @NotNull String getKind() {
-        return "log";
-    }
-
-    @Override
-    public String getState() {
-        return null;
-    }
-
-    @Override
-    public void setState(String state) {
-        //not available
-    }
 }

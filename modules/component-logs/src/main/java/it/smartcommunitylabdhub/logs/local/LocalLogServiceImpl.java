@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.logs.service;
+package it.smartcommunitylabdhub.logs.local;
 
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
@@ -31,48 +31,60 @@ import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
-import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
-import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
-import it.smartcommunitylabdhub.core.services.EntityService;
 import it.smartcommunitylabdhub.logs.Log;
 import it.smartcommunitylabdhub.logs.LogService;
-import it.smartcommunitylabdhub.logs.persistence.LogEntity;
-import it.smartcommunitylabdhub.logs.spec.LogBaseSpec;
+import it.smartcommunitylabdhub.logs.local.persistence.LogEntity;
+import it.smartcommunitylabdhub.logs.local.persistence.LogRepository;
 import it.smartcommunitylabdhub.runs.Run;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
-import java.io.Serializable;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
-import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.BindException;
 
-@Service
 @Transactional
 @Slf4j
-public class LogServiceImpl implements LogService {
+public class LocalLogServiceImpl implements LogService {
 
     public static final int MAX_LENGTH = 2 * 1024 * 1024; //2MB
 
     @Value("${logs.max-length}")
     private int maxLength = MAX_LENGTH;
 
-    @Autowired
-    private EntityService<Log> entityService;
+    private LogRepository logRepository;
+    private Converter<LogEntity, Log> entityConverter;
+    private Converter<Log, LogEntity> dtoConverter;
+    private Converter<SearchFilter<Log>, SearchFilter<LogEntity>> filterConverter;
 
-    @Autowired
-    private SearchableEntityRepository<LogEntity, Log> entityRepository;
+    public LocalLogServiceImpl(
+        LogRepository logRepository,
+        Converter<LogEntity, Log> entityConverter,
+        Converter<Log, LogEntity> dtoConverter
+    ) {
+        Assert.notNull(logRepository, "log repository can not be null");
+        Assert.notNull(entityConverter, "entity converter can not be null");
+        Assert.notNull(dtoConverter, "dto converter can not be null");
+
+        this.logRepository = logRepository;
+        this.entityConverter = entityConverter;
+        this.dtoConverter = dtoConverter;
+    }
+
+    @Autowired(required = false)
+    public void setFilterConverter(Converter<SearchFilter<Log>, SearchFilter<LogEntity>> filterConverter) {
+        this.filterConverter = filterConverter;
+    }
 
     @Autowired
     private EntityRepository<Run> runEntityService;
@@ -80,74 +92,74 @@ public class LogServiceImpl implements LogService {
     @Autowired
     private EntityRepository<Project> projectService;
 
-    @Override
-    public Page<Log> listLogs(Pageable pageable) {
+    public Page<Log> listLogs(@NonNull Pageable pageable) {
         log.debug("list logs page {}", pageable);
-        try {
-            return entityService.list(pageable);
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
+        return logRepository.findAll(pageable).map(entityConverter::convert);
     }
 
     @Override
-    public Page<Log> searchLogs(Pageable pageable, @Nullable SearchFilter<Log> filter) {
+    public Page<Log> searchLogs(@NonNull Pageable pageable, @Nullable SearchFilter<Log> filter) {
         log.debug("list logs page {}, filter {}", pageable, String.valueOf(filter));
-        try {
-            return entityService.search(filter, pageable);
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
+        if (filter != null && filterConverter != null) {
+            SearchFilter<LogEntity> ef = filterConverter.convert(filter);
+            if (ef == null) {
+                log.error("invalid filter {}", String.valueOf(filter));
+                throw new IllegalArgumentException("invalid filter");
+            }
+
+            return logRepository.findAll(ef.toSpecification(), pageable).map(entityConverter::convert);
+        } else {
+            return logRepository.findAll(pageable).map(entityConverter::convert);
         }
     }
 
-    @Override
     public List<Log> listLogsByUser(@NotNull String user) {
         log.debug("list all logs for user {}  ", user);
-        try {
-            return entityService.listByUser(user);
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
+        return logRepository.findByCreatedBy(user).stream().map(entityConverter::convert).toList();
     }
 
     @Override
     public List<Log> listLogsByProject(@NotNull String project) {
         log.debug("list all logs for project {}  ", project);
-        try {
-            return entityService.listByProject(project);
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
+        return logRepository.findByProject(project).stream().map(entityConverter::convert).toList();
     }
 
     @Override
-    public Page<Log> listLogsByProject(@NotNull String project, Pageable pageable) {
+    public Page<Log> listLogsByProject(@NotNull String project, @NonNull Pageable pageable) {
         log.debug("list logs for project {} page {}", project, pageable);
-        try {
-            return entityService.listByProject(project, pageable);
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
+
+        return logRepository.findByProject(project, pageable).map(entityConverter::convert);
     }
 
     @Override
     public Page<Log> searchLogsByProject(
         @NotNull String project,
-        Pageable pageable,
+        @NonNull Pageable pageable,
         @Nullable SearchFilter<Log> filter
     ) {
         log.debug("list logs for project {} with {} page {}", project, String.valueOf(filter), pageable);
 
-        try {
-            return entityService.searchByProject(project, filter, pageable);
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
+        if (filter != null && filterConverter != null) {
+            SearchFilter<LogEntity> ef = filterConverter.convert(filter);
+            if (ef == null) {
+                log.error("invalid filter {}", String.valueOf(filter));
+                throw new IllegalArgumentException("invalid filter");
+            }
+
+            Specification<LogEntity> where = Specification.allOf(
+                createProjectSpecification(project),
+                ef.toSpecification()
+            );
+
+            //fetch all logs ordered by date ASC
+            Specification<LogEntity> specification = (root, query, builder) -> {
+                query.orderBy(builder.asc(root.get(AbstractEntity_.CREATED)));
+                return where.toPredicate(root, query, builder);
+            };
+
+            return logRepository.findAll(specification, pageable).map(entityConverter::convert);
+        } else {
+            return logRepository.findByProject(project, pageable).map(entityConverter::convert);
         }
     }
 
@@ -162,7 +174,7 @@ public class LogServiceImpl implements LogService {
 
             //define a spec for logs building run path
             Specification<LogEntity> where = Specification.allOf(
-                CommonSpecification.projectEquals(run.getProject()),
+                createProjectSpecification(run.getProject()),
                 createRunSpecification(runId)
             );
 
@@ -172,9 +184,9 @@ public class LogServiceImpl implements LogService {
                 return where.toPredicate(root, query, builder);
             };
 
-            return entityRepository.searchAll(specification).stream().collect(Collectors.toList());
+            return logRepository.findAll(specification).stream().map(entityConverter::convert).toList();
         } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
+            log.error("error fetching logs for run {}", runId, e);
             throw new SystemException(e.getMessage());
         }
     }
@@ -182,24 +194,17 @@ public class LogServiceImpl implements LogService {
     @Override
     public Log findLog(@NotNull String id) {
         log.debug("find log with id {}", String.valueOf(id));
-        try {
-            return entityService.find(id);
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
+        return logRepository.findById(id).map(entityConverter::convert).orElse(null);
     }
 
     @Override
     public Log getLog(@NotNull String id) throws NoSuchEntityException {
         log.debug("get log with id {}", String.valueOf(id));
 
-        try {
-            return entityService.get(id);
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
+        return logRepository
+            .findById(id)
+            .map(entityConverter::convert)
+            .orElseThrow(() -> new NoSuchEntityException("log not found with id " + String.valueOf(id)));
     }
 
     @Override
@@ -212,11 +217,7 @@ public class LogServiceImpl implements LogService {
                 throw new IllegalArgumentException("invalid or missing project");
             }
 
-            //parse base spec to resolve run
-            LogBaseSpec spec = new LogBaseSpec();
-            spec.configure(dto.getSpec());
-
-            String runId = spec.getRun();
+            String runId = dto.getRun();
             if (!StringUtils.hasText(runId)) {
                 throw new IllegalArgumentException("missing or invalid run");
             }
@@ -237,9 +238,11 @@ public class LogServiceImpl implements LogService {
             }
 
             //create as new
-            return entityService.create(dto);
+            LogEntity e = dtoConverter.convert(dto);
+            e = logRepository.saveAndFlush(e);
+            return entityConverter.convert(e);
         } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
+            log.error("error creating log", e);
             throw new SystemException(e.getMessage());
         }
     }
@@ -248,72 +251,62 @@ public class LogServiceImpl implements LogService {
     public Log updateLog(@NotNull String id, @NotNull Log dto)
         throws NoSuchEntityException, BindException, IllegalArgumentException {
         log.debug("update log with id {}", String.valueOf(id));
-        try {
-            //fetch current and merge
-            Log current = entityService.get(id);
+        //fetch current and merge
+        LogEntity current = logRepository
+            .findById(id)
+            .orElseThrow(() -> new NoSuchEntityException("log not found with id " + String.valueOf(id)));
 
-            //hardcoded: run ref is not modifiable
-            Map<String, Serializable> specMap = new HashMap<>();
-            if (dto.getSpec() != null) {
-                specMap.putAll(dto.getSpec());
-            }
-            if (current.getSpec() != null) {
-                specMap.put("run", current.getSpec().get("run"));
-            }
-
-            //update spec
-            dto.setSpec(specMap);
-
-            //check if too big and slice
-            if (dto.getContent() != null && dto.getContent().length() > maxLength) {
-                log.debug("log content too long, slice to {}", maxLength);
-                dto.setContent(dto.getContent().substring(dto.getContent().length() - maxLength));
-            }
-
-            //full update, log is modifiable
-            return entityRepository.update(id, dto);
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
+        //hardcoded: run ref is not modifiable
+        if (!current.getRun().equals(dto.getRun())) {
+            throw new IllegalArgumentException("run reference can not be modified");
         }
+
+        //check if too big and slice
+        if (dto.getContent() != null && dto.getContent().length() > maxLength) {
+            log.debug("log content too long, slice to {}", maxLength);
+            dto.setContent(dto.getContent().substring(dto.getContent().length() - maxLength));
+        }
+
+        //full update, log is modifiable
+        LogEntity e = dtoConverter.convert(dto);
+        current.setContent(e.getContent());
+        current = logRepository.saveAndFlush(current);
+        return entityConverter.convert(current);
     }
 
     @Override
     public void deleteLog(@NotNull String id) {
         log.debug("delete log with id {}", String.valueOf(id));
-        try {
-            Log log = findLog(id);
-            if (log != null) {
-                //delete the log
-                entityService.delete(id, false);
-            }
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
+        logRepository.deleteById(id);
     }
 
     @Override
     public void deleteLogsByRunId(@NotNull String runId) {
         log.debug("delete logs for run {}", runId);
-
-        getLogsByRunId(runId).forEach(log -> deleteLog(log.getId()));
+        List<LogEntity> logs = logRepository.findByRun(runId);
+        if (!logs.isEmpty()) {
+            logRepository.deleteAll(logs);
+        }
     }
 
     @Override
     public void deleteLogsByProject(@NotNull String project) {
         log.debug("delete logs for project {}", project);
-        try {
-            entityService.deleteByProject(project, false);
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
+        List<LogEntity> logs = logRepository.findByProject(project);
+        if (!logs.isEmpty()) {
+            logRepository.deleteAll(logs);
         }
     }
 
     private Specification<LogEntity> createRunSpecification(String run) {
         return (root, query, criteriaBuilder) -> {
             return criteriaBuilder.equal(root.get("run"), run);
+        };
+    }
+
+    private Specification<LogEntity> createProjectSpecification(String project) {
+        return (root, query, criteriaBuilder) -> {
+            return criteriaBuilder.equal(root.get("project"), project);
         };
     }
 }

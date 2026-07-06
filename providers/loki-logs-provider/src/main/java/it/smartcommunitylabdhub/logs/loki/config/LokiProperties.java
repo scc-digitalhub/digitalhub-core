@@ -21,26 +21,33 @@
  *
  */
 
-package it.smartcommunitylabdhub.logs.spec;
+package it.smartcommunitylabdhub.logs.loki.config;
 
-import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.logs.Log;
-import java.io.Serializable;
 import java.util.Map;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @Getter
 @Setter
 @AllArgsConstructor
-@Builder
-@SpecType(kind = "log", entity = Log.class)
-public class LogSpec extends LogBaseSpec {
+@NoArgsConstructor
+@ToString
+@ConfigurationProperties(prefix = "providers.loki", ignoreUnknownFields = true)
+public class LokiProperties {
 
-    @Override
-    public void configure(Map<String, Serializable> data) {
-        super.configure(data);
+    private String url;
+    private String orgId;
+    private String username;
+    private String password;
+
+    private Map<String, String> mapping;
+    private Boolean mapWithPrefix;
+
+    public boolean usePrefixForValues() {
+        return mapWithPrefix != null && mapWithPrefix;
     }
 }

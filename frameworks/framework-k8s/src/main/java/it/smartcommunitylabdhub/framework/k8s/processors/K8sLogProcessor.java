@@ -36,7 +36,6 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreMetric;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.logs.Log;
 import it.smartcommunitylabdhub.logs.LogService;
-import it.smartcommunitylabdhub.logs.spec.LogSpec;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
 import java.io.Serializable;
@@ -95,7 +94,7 @@ public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
             .stream()
             .map(e -> {
                 K8sLogStatus status = new K8sLogStatus();
-                status.configure(e.getStatus());
+                status.configure(e.getExtensions());
 
                 String pod = status.getPod() != null ? status.getPod() : "";
                 String container = status.getContainer() != null ? status.getContainer() : "";
@@ -166,7 +165,7 @@ public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
 
                         //append to status
                         K8sLogStatus logStatus = new K8sLogStatus();
-                        logStatus.configure(log.getStatus());
+                        logStatus.configure(log.getExtensions());
 
                         List<Serializable> list =
                             logStatus.getMetrics() != null
@@ -185,15 +184,12 @@ public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
                             logStatus.setMetrics(slice);
                         }
 
-                        log.setStatus(logStatus.toMap());
+                        log.setExtensions(logStatus.toMap());
                     }
 
                     logService.updateLog(log.getId(), log);
                 } else {
                     //add as new
-                    LogSpec logSpec = new LogSpec();
-                    logSpec.setRun(runId);
-                    logSpec.setTimestamp(now.toEpochMilli());
 
                     K8sLogStatus logStatus = new K8sLogStatus();
                     logStatus.setPod(l.pod());
@@ -228,8 +224,8 @@ public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
 
                     Log log = Log.builder()
                         .project(run.getProject())
-                        .spec(logSpec.toMap())
-                        .status(logStatus.toMap())
+                        .run(run.getId())
+                        .extensions(logStatus.toMap())
                         .content(l.value())
                         .build();
 

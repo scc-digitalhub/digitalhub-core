@@ -27,7 +27,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.models.queries.SearchCriteria;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilter;
 import it.smartcommunitylabdhub.core.queries.filters.BaseEntityFilter;
 import it.smartcommunitylabdhub.core.queries.filters.BaseEntitySearchCriteria;
 import it.smartcommunitylabdhub.logs.Log;
@@ -45,26 +44,28 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class LogEntityFilter extends AbstractEntityFilter<Log> {
+public class LogEntityFilter {
+
+    @Nullable
+    protected String user;
 
     @Nullable
     @Pattern(regexp = Keys.SLUG_PATTERN)
     @Schema(example = "1231-asdf", defaultValue = "", description = "Run id")
     private String run;
 
-    @Override
     public SearchFilter<Log> toSearchFilter() {
         List<SearchCriteria<Log>> criteria = new ArrayList<>();
 
-        //base criteria
-        criteria.addAll(super.toSearchFilter().getCriteria());
+        //user exact match
+        Optional.ofNullable(user).ifPresent(value ->
+            criteria.add(new BaseEntitySearchCriteria<>("user", value, SearchCriteria.Operation.equal))
+        );
 
-        //function exact match
-        Optional
-            .ofNullable(run)
-            .ifPresent(value ->
-                criteria.add(new BaseEntitySearchCriteria<>("run", value, SearchCriteria.Operation.equal))
-            );
+        //run exact match
+        Optional.ofNullable(run).ifPresent(value ->
+            criteria.add(new BaseEntitySearchCriteria<>("run", value, SearchCriteria.Operation.equal))
+        );
 
         return BaseEntityFilter.<Log>builder().criteria(criteria).condition(SearchFilter.Condition.and).build();
     }

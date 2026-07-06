@@ -10,9 +10,9 @@
         <relativePath>../../</relativePath> <!-- lookup parent from repository -->
     </parent>
     <groupId>it.smartcommunitylabdhub</groupId>
-    <artifactId>dh-logs</artifactId>
-    <name>logs</name>
-    <description>DHCore logs</description>
+    <artifactId>dh-loki-logs-provider</artifactId>
+    <name>loki-logs-provider</name>
+    <description>DHCore Loki logs provider</description>
 
     <properties>
         <jsonschema.version>4.36.0</jsonschema.version>
@@ -28,11 +28,7 @@
             <artifactId>dh-entity-log</artifactId>
             <version>${revision}</version>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-crypto</artifactId>
-            <version>${spring-security.version}</version>
-        </dependency>
+
 
 
         <dependency>

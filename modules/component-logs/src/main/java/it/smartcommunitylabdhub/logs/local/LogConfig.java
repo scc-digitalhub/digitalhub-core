@@ -15,14 +15,13 @@
  *
  */
 
-package it.smartcommunitylabdhub.logs.config;
+package it.smartcommunitylabdhub.logs.local;
 
-import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
-import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
-import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
 import it.smartcommunitylabdhub.logs.Log;
-import it.smartcommunitylabdhub.logs.persistence.LogEntity;
-import it.smartcommunitylabdhub.logs.persistence.LogRepository;
+import it.smartcommunitylabdhub.logs.LogService;
+import it.smartcommunitylabdhub.logs.local.persistence.LogEntity;
+import it.smartcommunitylabdhub.logs.local.persistence.LogRepository;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
@@ -31,16 +30,12 @@ import org.springframework.core.convert.converter.Converter;
 public class LogConfig {
 
     @Bean
-    SearchableEntityRepository<LogEntity, Log> logSearchableEntityRepository(
+    @ConditionalOnMissingBean(LogService.class)
+    public LogService logService(
         LogRepository repository,
         Converter<Log, LogEntity> entityBuilder,
         Converter<LogEntity, Log> dtoBuilder
     ) {
-        return new BaseEntityRepositoryImpl<>(repository, entityBuilder, dtoBuilder) {};
-    }
-
-    @Bean
-    SpecRegistryImpl<Log> logSpecRegistry() {
-        return new SpecRegistryImpl<>(Log.class);
+        return new LocalLogServiceImpl(repository, dtoBuilder, entityBuilder);
     }
 }
