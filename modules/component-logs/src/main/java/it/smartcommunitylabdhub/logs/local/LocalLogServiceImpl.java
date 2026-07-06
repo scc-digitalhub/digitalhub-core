@@ -92,7 +92,6 @@ public class LocalLogServiceImpl implements LogService {
     @Autowired
     private EntityRepository<Project> projectService;
 
-    @Override
     public Page<Log> listLogs(@NonNull Pageable pageable) {
         log.debug("list logs page {}", pageable);
         return logRepository.findAll(pageable).map(entityConverter::convert);
@@ -114,7 +113,6 @@ public class LocalLogServiceImpl implements LogService {
         }
     }
 
-    @Override
     public List<Log> listLogsByUser(@NotNull String user) {
         log.debug("list all logs for user {}  ", user);
         return logRepository.findByCreatedBy(user).stream().map(entityConverter::convert).toList();

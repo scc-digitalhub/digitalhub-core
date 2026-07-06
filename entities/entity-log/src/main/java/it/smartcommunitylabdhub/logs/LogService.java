@@ -37,21 +37,11 @@ import org.springframework.validation.BindException;
 
 /*
  * Service for managing logs
+ * TODO split into read/write services to allow for different implementations (e.g. local vs remote)
  */
 public interface LogService {
-    /**
-     * List all logs
-     * @param pageable
-     * @return
-     */
-    Page<Log> listLogs(@NonNull Pageable pageable) throws SystemException;
 
-    /**
-     * List all versions of every log for a user
-     * @param user
-     * @return
-     */
-    List<Log> listLogsByUser(@NotNull String user) throws SystemException;
+
 
     /**
      * List all versions of every log for a project

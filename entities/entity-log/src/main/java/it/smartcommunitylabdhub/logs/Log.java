@@ -39,6 +39,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 import org.springframework.lang.Nullable;
 import org.springframework.util.StringUtils;
 
@@ -47,6 +48,7 @@ import org.springframework.util.StringUtils;
 @Getter
 @Setter
 @Builder
+@ToString
 @JsonPropertyOrder(alphabetic = true)
 public class Log {
 
@@ -60,11 +62,16 @@ public class Log {
     private String user;
 
     @Builder.Default
+    private Map<String, Serializable> metadata = new HashMap<>();
+
+    @Builder.Default
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    @ToString.Exclude
     private Map<String, Serializable> extensions = new HashMap<>();
 
     @Builder.Default
     @JsonIgnore
+    @ToString.Exclude
     private String content = "";
 
     @JsonProperty("content")

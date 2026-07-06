@@ -1,0 +1,13 @@
+providers:
+  loki:
+    url: ${LOKI_URL:}
+    org-id: ${LOKI_ORG_ID:}
+    username: ${LOKI_USERNAME:}
+    password: ${LOKI_PASSWORD:}
+    map-with-prefix: ${LOKI_MAP_WITH_PREFIX:true}
+    mapping:
+      run: ${LOKI_MAPPING_RUN:instance}
+      project: ${LOKI_MAPPING_PROJECT:component}
+      user: ${LOKI_MAPPING_USER:}
+      applicationName: ${LOKI_MAPPING_APPLICATION_NAME:}
+      namespace: ${LOKI_MAPPING_NAMESPACE:namespace}

@@ -85,5 +85,9 @@ public class LogEntity {
 
     @JdbcTypeCode(Types.LONGVARBINARY)
     @ToString.Exclude
+    protected byte[] metadata;
+
+    @JdbcTypeCode(Types.LONGVARBINARY)
+    @ToString.Exclude
     protected byte[] status;
 }

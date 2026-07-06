@@ -23,9 +23,13 @@
 
 package it.smartcommunitylabdhub.logs.local.persistence;
 
+import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
 import it.smartcommunitylabdhub.logs.Log;
 import jakarta.persistence.AttributeConverter;
 import java.io.Serializable;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.convert.converter.Converter;
@@ -49,11 +53,36 @@ public class LogDTOBuilder implements Converter<LogEntity, Log> {
 
     @Override
     public Log convert(@NonNull LogEntity entity) {
+        //read metadata as-is
+        Map<String, Serializable> meta = converter.convertToEntityAttribute(entity.getMetadata());
+
+        BaseMetadata basemeta = BaseMetadata.from(meta);
+
+        //inflate with values from entity
+        basemeta.setProject(entity.getProject());
+
+        basemeta.setCreated(
+            entity.getCreated() != null
+                ? OffsetDateTime.ofInstant(entity.getCreated().toInstant(), ZoneOffset.UTC)
+                : null
+        );
+        basemeta.setUpdated(
+            entity.getUpdated() != null
+                ? OffsetDateTime.ofInstant(entity.getUpdated().toInstant(), ZoneOffset.UTC)
+                : null
+        );
+
+        // merge metadata
+        Map<String, Serializable> metadata = new HashMap<>();
+        metadata.putAll(meta);
+        metadata.putAll(basemeta.toMap());
+
         return Log.builder()
             .id(entity.getId())
             .project(entity.getProject())
             .user(entity.getCreatedBy())
             .run(entity.getRun())
+            .metadata(metadata)
             .content(stringConverter.convertToEntityAttribute(entity.getContent()))
             .extensions(converter.convertToEntityAttribute(entity.getStatus()))
             .build();

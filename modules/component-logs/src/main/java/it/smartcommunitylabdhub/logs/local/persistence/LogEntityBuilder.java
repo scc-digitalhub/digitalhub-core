@@ -53,6 +53,7 @@ public class LogEntityBuilder implements Converter<Log, LogEntity> {
             .id(dto.getId())
             .project(dto.getProject())
             .run(dto.getRun())
+            .metadata(converter.convertToDatabaseColumn(dto.getMetadata()))
             .content(stringConverter.convertToDatabaseColumn(dto.getContent()))
             .status(converter.convertToDatabaseColumn(dto.getExtensions()))
             .build();
