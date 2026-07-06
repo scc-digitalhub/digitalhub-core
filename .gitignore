@@ -33,6 +33,10 @@ build/
 .vscode/
 .vscode/launch.json
 
+### Metals (Scala/Java LSP) ###
+.metals/
+.bloop/
+
 ### Nodejs ###
 .env
 node_modules
@@ -46,3 +50,6 @@ node_modules
 /application/data/
 /application/src/main/resources/application-local.yml
 /reports
+
+### runtime-tvm docs (not part of the shipped code) ##
+/runtimes/runtime-tvm/docs/
