@@ -3,7 +3,7 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <groupId>it.smartcommunitylabdhub</groupId>
-  <artifactId>dh-component-container-images</artifactId>
+  <artifactId>dh-run-initializer</artifactId>
   <version>0.15.1-SNAPSHOT</version>
   <dependencies>
     <dependency>
@@ -20,13 +20,13 @@
     </dependency>
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-entity-run</artifactId>
+      <artifactId>dh-files</artifactId>
       <version>0.15.1-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-entity-container-image</artifactId>
+      <artifactId>dh-extensions</artifactId>
       <version>0.15.1-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>
@@ -37,23 +37,17 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-framework-kaniko</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.google.cloud.tools</groupId>
-      <artifactId>jib-core</artifactId>
-      <version>0.28.1</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
       <version>1.18.42</version>
       <scope>compile</scope>
       <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+      <version>3.5.9</version>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
