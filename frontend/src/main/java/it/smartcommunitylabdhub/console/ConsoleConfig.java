@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /**
  * Copyright 2025 the original author or authors
  *
@@ -14,7 +20,7 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.trinodb;
+package it.smartcommunitylabdhub.console;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -25,7 +31,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import org.springframework.util.StringUtils;
 
 @Getter
 @Setter
@@ -33,27 +38,21 @@ import org.springframework.util.StringUtils;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonInclude(JsonInclude.Include.NON_EMPTY)
-public class TrinoDbConfiguration extends AbstractConfiguration {
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class ConsoleConfig extends AbstractConfiguration {
 
-    @JsonProperty("trino_host")
-    private String host;
+    @JsonProperty("react_app_context_path")
+    private String contextPath;
 
-    @JsonProperty("trino_port")
-    private Integer port;
+    @JsonProperty("react_app_application_url")
+    private String applicationUrl;
 
-    @JsonProperty("trino_scheme")
-    private String scheme;
+    @JsonProperty("react_app_api_url")
+    private String apiUrl;
 
-    @JsonProperty("trino_catalog")
-    private String catalog;
+    @JsonProperty("react_app_auth_url")
+    private String authUrl;
 
-    @JsonProperty("trino_url")
-    public String getTrinoUrl() {
-        if (!StringUtils.hasText(scheme) || !StringUtils.hasText(host)) {
-            return null;
-        }
-
-        return port != null ? String.format("%s://%s:%d", scheme, host, port) : String.format("%s://%s", scheme, host);
-    }
+    @JsonProperty("react_app_clarity_key")
+    private String clarityKey;
 }

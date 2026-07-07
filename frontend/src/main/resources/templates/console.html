@@ -19,7 +19,6 @@
     //inject config into global from spring env
     var config = [[${ config }]];
     for (c in config) {
-        console.log(c, config[c]);
         globalThis[c] = config[c];
     }
 </script>

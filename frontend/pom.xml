@@ -46,23 +46,13 @@
             <artifactId>spring-boot-starter-thymeleaf</artifactId>
             <version>${spring-boot.version}</version>
         </dependency>
-
+        
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-commons</artifactId>
             <version>${revision}</version>
         </dependency>
-        <dependency>
-            <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-search</artifactId>
-            <version>${revision}</version>
-        </dependency>
-        <dependency>
-            <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-proxy</artifactId>
-            <version>${revision}</version>
-        </dependency>
-        
+
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-common</artifactId>
