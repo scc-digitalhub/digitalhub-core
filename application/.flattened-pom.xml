@@ -268,6 +268,12 @@
     </dependency>
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
+      <artifactId>dh-run-initializer</artifactId>
+      <version>0.15.1-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>it.smartcommunitylabdhub</groupId>
       <artifactId>dh-entity-artifact</artifactId>
       <version>0.15.1-SNAPSHOT</version>
       <scope>compile</scope>
@@ -430,6 +436,12 @@
     </dependency>
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
+      <artifactId>dh-runtime-tvm</artifactId>
+      <version>0.15.1-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>it.smartcommunitylabdhub</groupId>
       <artifactId>credentials-provider-db</artifactId>
       <version>0.15.1-SNAPSHOT</version>
       <scope>compile</scope>
@@ -443,6 +455,12 @@
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
       <artifactId>dh-search-lucene</artifactId>
+      <version>0.15.1-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>it.smartcommunitylabdhub</groupId>
+      <artifactId>trinodb-provider</artifactId>
       <version>0.15.1-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>

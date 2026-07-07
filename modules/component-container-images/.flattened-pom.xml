@@ -37,6 +37,12 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
+      <groupId>it.smartcommunitylabdhub</groupId>
+      <artifactId>dh-framework-kaniko</artifactId>
+      <version>0.15.1-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
       <groupId>com.google.cloud.tools</groupId>
       <artifactId>jib-core</artifactId>
       <version>0.28.1</version>

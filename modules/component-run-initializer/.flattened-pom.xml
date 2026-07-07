@@ -3,7 +3,7 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <groupId>it.smartcommunitylabdhub</groupId>
-  <artifactId>dh-files</artifactId>
+  <artifactId>dh-run-initializer</artifactId>
   <version>0.15.1-SNAPSHOT</version>
   <dependencies>
     <dependency>
@@ -15,6 +15,24 @@
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
       <artifactId>dh-authorization</artifactId>
+      <version>0.15.1-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>it.smartcommunitylabdhub</groupId>
+      <artifactId>dh-files</artifactId>
+      <version>0.15.1-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>it.smartcommunitylabdhub</groupId>
+      <artifactId>dh-extensions</artifactId>
+      <version>0.15.1-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>it.smartcommunitylabdhub</groupId>
+      <artifactId>dh-framework-k8s</artifactId>
       <version>0.15.1-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>
@@ -41,12 +59,6 @@
       <groupId>org.slf4j</groupId>
       <artifactId>log4j-over-slf4j</artifactId>
       <version>2.0.17</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.security</groupId>
-      <artifactId>spring-security-crypto</artifactId>
-      <version>6.5.7</version>
       <scope>compile</scope>
     </dependency>
   </dependencies>
