@@ -2,7 +2,7 @@
 
 DigitalHub CORE runtime that integrates **[Apache TVM](https://tvm.apache.org/)** as a
 managed, three-stage model pipeline on Kubernetes. It is the Java/Spring glue that lets a
-user take a source ML model (ONNX, PyTorch or TVMScript), lower it to TVM's **Relax IR**,
+user take a source ONNX model, lower it to TVM's **Relax IR**,
 compile that IR into a native shared library (`model.so`) for a chosen hardware target, and
 finally serve the compiled model behind an **Open Inference Protocol v2 (KServe v2)** endpoint.
 
@@ -10,14 +10,13 @@ Maven coordinates: `it.smartcommunitylabdhub:dh-runtime-tvm`. It plugs into CORE
 `@RuntimeComponent(runtime = "tvm")` and is discovered automatically at startup — no
 central wiring changes are needed to add it.
 
-> **Note on `docs/`:** the files under `docs/` (`ARCHITECTURE.md`, `RUNBOOK.md`, the
-> `img/fig-*.svg`) are an older, Italian-language design record. Large parts are **stale**:
-> they describe a previous design where `tvm+compile` was a *Kaniko multistage* build that
-> baked a *self-contained per-model serve image* (`function.spec.serve_images[tag]`, a
-> `tvm+package` task, `tvm_target`). **The current code does none of that.** This README
-> supersedes those documents; use it as the source of truth. `docs/img/fig-serve.dot` has
-> been rewritten to match the current model-centric serve; the other figures were left as
-> historical artifacts.
+> **Note on `docs/`:** `docs/ARCHITECTURE.md` is the current, English design reference for
+> this runtime — it is **not** stale and tracks the code described in this README. The old
+> `RUNBOOK.md` has been removed. The figures `img/fig-chaining`, `img/fig-compile`, and
+> `img/fig-overview` originally depicted the earlier *baked / Kaniko* design, where
+> `tvm+compile` built a self-contained per-model serve image published as
+> `function.spec.serve_images[tag]`; they have been redrawn for the current model-centric
+> architecture. This README stays the concise source of truth.
 
 ---
 
@@ -48,14 +47,14 @@ parent **`Function.spec`** (`ir_model`, `so_model`) and through `run.status.outp
 
 | Task | Input | Output | Where it runs |
 |---|---|---|---|
-| `tvm+build`   | source model (ONNX / PyTorch / TVMScript) | Relax IR, published as a Model of kind **`tvm-ir`** | one K8s **Job** on the `tvm-toolkit` image |
+| `tvm+build`   | source model (ONNX) | Relax IR, published as a Model of kind **`tvm-ir`** | one K8s **Job** on the `tvm-toolkit` image |
 | `tvm+compile` | Relax IR (`tvm-ir` Model) + target arch | native `model.so`, published as a Model of kind **`tvm-so`** | one K8s **Job** on the `tvm-toolkit` image (runs `compiler.py`) |
 | `tvm+serve`   | compiled `tvm-so` Model | KServe v2 inference endpoint | K8s **Deployment + Service** running a swappable serve image |
 
 Design principles:
 
 - **Portable IR.** One `tvm+build` → many `tvm+compile` runs, one per target platform
-  (x86, ARM64, CUDA), without re-parsing the source model.
+  (cpu, x86, arm64), without re-parsing the source model.
 - **S3-first via the SDK.** Build and compile Jobs publish their result as a **Model entity**
   on S3 (MinIO) using the `digitalhub` Python SDK, then write the Model key back into the
   run status; CORE copies it onto the function spec on completion.
@@ -65,7 +64,7 @@ Design principles:
   (fixed ports, framework-default Service, no custom Service object).
 - **Selectable serve runtime.** The default serve image is a native **Rust** TVM runtime
   (`digitalhub-tvm-rust`), but any image implementing the same contract can be plugged in
-  per task or per deployment (a native Go runtime in `digitalhub-serverless` is planned).
+  per task or per deployment (a native Go runtime in `digitalhub-serverless` is also available).
 
 ```
                      ┌──────────────────────────────────────────────────────────┐
@@ -73,7 +72,7 @@ Design principles:
                      │  spec.model  spec.format  spec.ir_model  spec.so_model     │
                      └──────────────────────────────────────────────────────────┘
    source model            │ (build writes ir_model)   │ (compile writes so_model)
-   onnx/pytorch/tvmscript  ▼                           ▼
+   onnx source             ▼                           ▼
         ┌───────────┐  tvm+build   ┌───────────┐  tvm+compile  ┌───────────┐  tvm+serve  ┌──────────┐
         │  s3://... │ ───────────► │  tvm-ir   │ ────────────► │  tvm-so   │ ──────────► │ KServe   │
         │ store://  │   (Job)      │  Model    │    (Job)      │  Model    │ (Deployment)│ v2 endpt │
@@ -90,8 +89,8 @@ Design principles:
 
 | Field (JSON) | Type | User input? | Meaning |
 |---|---|---|---|
-| `model`      | string (`@NotNull`) | yes | Source model reference: an `s3://` / `https://` path, a `store://` model key, or a bare file path (`.onnx` / `.py`). |
-| `format`     | enum `TvmFormat`    | yes | `auto` (default), `onnx`, `pytorch`, `tvmscript`. `auto` lets the build task infer the frontend from the file extension. |
+| `model`      | string (`@NotNull`) | yes | Source model reference: an `s3://` / `https://` path, a `store://` model key, or a bare file path (`.onnx`). |
+| `format`     | enum `TvmFormat`    | yes | `auto` (default) or `onnx`. `auto` lets the build task infer the frontend from the `.onnx` file extension. |
 | `ir_model`   | string              | **no — set by build**   | `store://` key of the built Relax IR Model (kind `tvm-ir`). Consumed by `tvm+compile`. |
 | `so_model`   | string              | **no — set by compile** | `store://` key of the compiled Model (kind `tvm-so`). Consumed by `tvm+serve`. |
 
@@ -119,8 +118,7 @@ Converts the source model to TVM Relax IR and publishes it as a `tvm-ir` Model. 
 K8s Job runs on the `tvm-toolkit` image; the frontend (and therefore the injected
 `builder_*.py`) is chosen by format.
 
-Task fields (`TvmBuildTaskSpec`) — most apply only to the ONNX path and are forwarded to the
-builder script as env vars:
+Task fields (`TvmBuildTaskSpec`) — forwarded to the ONNX builder script as env vars:
 
 | Field | Type | Applies to | Effect |
 |---|---|---|---|
@@ -130,7 +128,7 @@ builder script as env vars:
 | `opset_override`         | int     | ONNX    | Opset passed to `from_onnx`, overriding the model's declared opset. |
 | `strict_shape_inference` | bool    | ONNX    | Strict mode during ONNX shape inference. |
 | `data_prop`              | bool    | ONNX    | Enable data propagation during ONNX shape inference. |
-| `keep_params_in_input`   | bool    | ONNX, PyTorch | Keep weights as graph inputs instead of folding them into constants; produces a `params.bin`. |
+| `keep_params_in_input`   | bool    | ONNX    | Keep weights as graph inputs instead of folding them into constants; produces a `params.bin`. |
 | `sanitize_input_names`   | bool    | ONNX    | Rewrite input tensor names to valid Relax identifiers. |
 
 ### 3.2 `tvm+compile` — Relax IR → `model.so`
@@ -146,7 +144,7 @@ Task fields (`TvmCompileTaskSpec`) map directly to `compiler.py` arguments:
 | Field | Type | Default | Effect |
 |---|---|---|---|
 | `model_path`          | string             | → `function.spec.ir_model` | Explicit `store://` IR Model key to compile. |
-| `target_architecture` | enum `TvmArchitecture` | `llvm` | Target arch. **One field is enough**: each enum value expands to a full `tvm.target.Target` string (see §4.4). The JSON key is deliberately `target_architecture`, **not** `target` — a form field literally named `target` breaks the console run-create form. |
+| `target_architecture` | enum `TvmTargetArchitecture` | `cpu` | Target arch. **One field is enough**: each enum value expands to a full `tvm.target.Target` string (see §4.5). The JSON key is deliberately `target_architecture`, **not** `target` — a form field literally named `target` breaks the console run-create form. |
 | `opt_level`           | int ≥ 0            | 3       | TVM optimization level (0–3). |
 | `cross_cc`            | string            | —       | Cross C++ compiler used by `export_library` when cross-compiling (e.g. `aarch64-linux-gnu-g++`). |
 | `exec_mode`           | string            | `bytecode` | Relax VM execution mode: `bytecode` or `compiled`. |
@@ -173,7 +171,8 @@ Task fields (`TvmServeTaskSpec`):
 | `model_path`   | string (pattern `store://…/model/…`) | → `function.spec.so_model` | Explicit `tvm-so` Model key to serve. |
 | `served_name`  | string      | function name (cleaned) | Model name exposed at `/v2/models/<served_name>`. |
 | `image`        | string      | `runtime.tvm.serve`     | Override the serve image. |
-| `replicas`     | int ≥ 0     | —       | Deployment replica count. |
+| `replicas`     | int ≥ 0     | —       | Deployment replica count (horizontal scaling). |
+| `workers`      | int ≥ 1     | —       | In-process inference workers **per replica** (`TVM_SERVE_WORKERS`), read identically by the Rust and Go backends; each worker loads its own copy of the model (vertical scaling). |
 | `service_type` | enum `CoreServiceType` | `ClusterIP` | `ClusterIP` / `NodePort` / `LoadBalancer`. |
 | `service_name` | string      | —       | Extra Service alias `<funcName>-<service_name>`. |
 
@@ -209,7 +208,7 @@ Produced by `tvm+build`. Adds, on top of the base signature, how the IR was deri
 | `sanitize_input_names`| bool | Whether input names were rewritten to valid Relax identifiers. |
 
 Published S3 layout: `model.relax.json` (canonical, round-trip safe), `model.relax.ir`
-(debug TVMScript dump), `metadata.json`, and optionally `params.bin`.
+(debug Relax IR text dump), `metadata.json`, and optionally `params.bin`.
 
 ### 4.4 `TvmSoModelSpec` (`@SpecType kind = "tvm-so"`)
 
@@ -225,20 +224,18 @@ Published S3 layout: `model.so` + `metadata.json`.
 
 ### 4.5 Enums
 
-**`TvmFormat`** — source model format for `tvm+build`: `auto`, `onnx`, `pytorch`,
-`tvmscript`.
+**`TvmFormat`** — source model format for `tvm+build`: `auto`, `onnx`.
 
-**`TvmArchitecture`** — target for `tvm+compile`. Each constant carries the **full**
-`tvm.target.Target` string (TVM 0.24 removed the CLI target syntax, so specialized targets
+**`TvmTargetArchitecture`** — target for `tvm+compile`. Each constant carries the **full**
+`tvm.target.Target` string (TVM 0.25 dropped the CLI target syntax, so specialized targets
 use the JSON-dict form). The constant name equals the schema value so the console renders a
-proper select dropdown.
+proper select dropdown; the legacy value `llvm` is still accepted as an alias for `cpu`.
 
 | Constant | `getValue()` (→ `TVM_TARGET`) |
 |---|---|
-| `llvm`  | `llvm` |
+| `cpu`   | `llvm` |
 | `x86`   | `{"kind":"llvm","mcpu":"x86-64-v2"}` |
 | `arm64` | `{"kind":"llvm","mtriple":"aarch64-linux-gnu"}` |
-| `cuda`  | `cuda` |
 
 ---
 
@@ -281,7 +278,7 @@ TvmRuntime.build()   →  TvmCompileRunSpec
 TvmRuntime.run()     → TvmCompileRunner.produce()
    │                    • modelKey = task.model_path OR function.spec.ir_model  (required)
    │                    • resolveModelPath(store:// → s3://), force trailing "/"
-   │                    • TVM_TARGET = target_architecture.getValue()  (default llvm)
+   │                    • TVM_TARGET = target_architecture.getValue()  (default cpu)
    ▼
 K8sJobRunnable   (image = tvm-toolkit, args = /bin/bash <home>/entrypoint.sh)
    │
@@ -372,9 +369,7 @@ TvmBaseRunner  (abstract)
  └─ createVolumes()  → task volumes + a shared scratch volume (sized from task disk or default)
      │
      ├── TvmBuildFrontendRunner  (abstract; buildJobRunnable() assembles the build Job)
-     │     ├── OnnxFrontend       (@Component; format "onnx",  default input model.onnx)
-     │     ├── PytorchFrontend    (@Component; format "pytorch", default input model.py)
-     │     └── TvmscriptFrontend  (@Component; format "tvmscript", default input model.py)
+     │     └── OnnxFrontend       (@Component; format "onnx", default input model.onnx)
      ├── TvmCompileRunner  (@Component; assembles the compile Job)
      └── TvmServeRunner    (@Component; assembles the serve Deployment)
 
@@ -384,14 +379,13 @@ TvmBuildRunner   (plain class, built in afterPropertiesSet)
 
 **`TvmFrontend`** is a strategy interface (`getFormat`, `canHandle`, `produce`). To add a
 format: implement it as a `@Component` and add a `builders` entry in `runtime-tvm.yml` — **no
-changes to `TvmRuntime`**. All three frontends delegate Job assembly to
-`TvmBuildFrontendRunner.buildJobRunnable` (byte-identical wiring); each only contributes its
-format name, default input filename, and format-specific env vars.
+changes to `TvmRuntime`**. Today the only frontend is `OnnxFrontend`; it delegates Job assembly
+to `TvmBuildFrontendRunner.buildJobRunnable`, contributing its format name, default input
+filename, and format-specific env vars.
 
 **Auto-detect.** `TvmBuildRunner.resolveFormat` uses the explicit `format` if set and not
-`auto`; otherwise it asks each frontend `canHandle(path, null)`. Only ONNX auto-detects
-(by `.onnx` extension); PyTorch and TVMScript both use `.py` and therefore **require an
-explicit `format`**.
+`auto`; otherwise it asks each frontend `canHandle(path, null)`. ONNX auto-detects by the
+`.onnx` extension.
 
 **`TvmRunnerHelper`** (stateless utilities):
 
@@ -419,8 +413,6 @@ mounted as `task.py`), and the shared publish helper `_dh_publish.py`.
 |---|---|
 | `entrypoint.sh` | Pod orchestrator. Reads `TVM_TASK_KIND`, translates the `TVM_*` env contract into CLI flags, and runs `python <home>/task.py …`. Handles both `tvm+build` and `tvm+compile`. |
 | `builder_onnx.py` | ONNX → Relax IR. `onnx.load` → (opset convert / `onnxsim.simplify` / shape inference) → `from_onnx` → `model.relax.json` + `metadata.json` [+ `params.bin`]. Extracts input/output tensor specs. Publishes as `tvm-ir`. |
-| `builder_pytorch.py` | PyTorch `nn.Module` → Relax IR. User file exposes `MODEL`+`EXAMPLE_INPUTS` or `get_model()`; pipeline `torch.export.export` → `from_exported_program` → `detach_params`. Requires `torch` in the builder image. |
-| `builder_tvmscript.py` | TVMScript → Relax IR. User `.py` exposes a `@I.ir_module`-decorated `Module` or `get_module() -> IRModule`. Self-contained IR (TVM only, no onnx/torch). |
 | `compiler.py` | Relax IR → `model.so`. `tvm.ir.load_json` → optional `BindParams` for `keep_params_in_input` builds → `relax.build(target)` → `export_library(model.so)` → updated `metadata.json`. Publishes as `tvm-so`, with an optional CONSUMES link to the source IR. |
 | `_dh_publish.py` | Shared SDK helper. `publish_model_and_register_output()` calls the typed logger (`dh.log_tvm_ir` / `dh.log_tvm_so`, falling back to generic `dh.log_model`), optionally adds a CONSUMES relationship, and PATCH-writes the Model key into `run.status.outputs[<key>]`. |
 
@@ -452,21 +444,17 @@ runtime:
 
     # format -> builder image for tvm+build
     builders:
-      onnx:      ${RUNTIME_TVM_BUILDER_ONNX:ghcr.io/scc-digitalhub/tvm-toolkit:0.24}
-      pytorch:   ${RUNTIME_TVM_BUILDER_PYTORCH:ghcr.io/scc-digitalhub/tvm-toolkit:0.24}
-      tvmscript: ${RUNTIME_TVM_BUILDER_TVMSCRIPT:ghcr.io/scc-digitalhub/tvm-toolkit:0.24}
+      onnx:      ${RUNTIME_TVM_BUILDER_ONNX:ghcr.io/scc-digitalhub/tvm-toolkit:0.25}
 
     # image running compiler.py for tvm+compile (IR -> model.so)
-    compiler:    ${RUNTIME_TVM_COMPILER:ghcr.io/scc-digitalhub/tvm-toolkit:0.24}
+    compiler:    ${RUNTIME_TVM_COMPILER:ghcr.io/scc-digitalhub/tvm-toolkit:0.25}
 
     # base serving image for tvm+serve (native tvm-serve; selectable)
-    serve:       ${RUNTIME_TVM_SERVE:ghcr.io/scc-digitalhub/tvm-runtime-rust:0.24}
+    serve:       ${RUNTIME_TVM_SERVE:ghcr.io/scc-digitalhub/tvm-runtime-rust:0.25}
 
     entrypoint: classpath:/runtime-tvm/docker/entrypoint.sh
     builder-scripts:
       onnx:      classpath:/runtime-tvm/docker/builder_onnx.py
-      pytorch:   classpath:/runtime-tvm/docker/builder_pytorch.py
-      tvmscript: classpath:/runtime-tvm/docker/builder_tvmscript.py
 ```
 
 | Property | Used by | Notes |
@@ -480,7 +468,7 @@ runtime:
 
 Only **two container images** are involved: `tvm-toolkit` (build + compile) and a serve
 runtime image (default `tvm-runtime-rust`). Both default to the GHCR `scc-digitalhub`
-registry at tag `0.24`.
+registry at tag `0.25`.
 
 ---
 
@@ -496,7 +484,7 @@ Serving is intentionally **model-centric** rather than image-centric:
   or the task `image` field (per deployment).
   - Default: a **native Rust** runtime (`digitalhub-tvm-rust`) — loads `model.so`, runs the
     Relax VM, exposes Open Inference v2 (REST `8080` + gRPC `9000`).
-  - Alternative/planned: a **native Go** runtime shipped in `digitalhub-serverless`.
+  - Alternative: a **native Go** runtime shipped in `digitalhub-serverless` (available, same contract).
 - **Contract** the serve image must honor: read `TVM_MODEL_DIR` (a folder with `model.so` +
   `metadata.json`) and `TVM_MODEL_NAME` (the served name), and expose Open Inference v2 on
   ports `8080`/`9000`. The base image's `ENTRYPOINT` starts the server, so the runner sets no
@@ -548,7 +536,7 @@ spec:
 # 3) tvm+compile task → produces a tvm-so Model, sets function.spec.so_model
 kind: tvm+compile
 spec:
-  target_architecture: llvm     # llvm | x86 | arm64 | cuda
+  target_architecture: cpu      # cpu | x86 | arm64
   opt_level: 3
   # model_path omitted → uses function.spec.ir_model from the build
   resources: { cpu: "4", mem: "8Gi" }   # compile is memory-hungry
@@ -592,7 +580,7 @@ Legend: **R** = required, *(x)* = default.
 | Field | Type | R / default | Effect |
 |---|---|---|---|
 | `model`  | string | **R** | Source: `s3://`, `https://`, `store://`, or a file path. |
-| `format` | enum   | *(auto)* | `auto` / `onnx` / `pytorch` / `tvmscript`. |
+| `format` | enum   | *(auto)* | `auto` / `onnx`. |
 | `ir_model` | string | *(output)* | Set by `tvm+build`. |
 | `so_model` | string | *(output)* | Set by `tvm+compile`. |
 
@@ -604,7 +592,7 @@ full field list. Produces a `tvm-ir` Model (`algorithm = tvm-relax-ir`) → `fun
 ### 12.3 Task `tvm+compile`
 
 Consumes the IR (`model_path` **or** `function.spec.ir_model`) + `target_architecture`
-*(default llvm)*. See §3.2. Produces a `tvm-so` Model (`algorithm = tvm-compiled-so`) →
+*(default cpu)*. See §3.2. Produces a `tvm-so` Model (`algorithm = tvm-compiled-so`) →
 `function.spec.so_model`.
 
 ### 12.4 Task `tvm+serve`
@@ -624,7 +612,7 @@ Produces a Deployment + Service (Open Inference v2, REST 8080 + gRPC 9000).
 | + standard k8s fields | node selector, tolerations, affinity, … |
 
 > **Minimum viable input:** build = only `function.model`; compile = nothing beyond the
-> defaults (IR comes from `ir_model`, target defaults to `llvm`); serve = nothing (the model
+> defaults (IR comes from `ir_model`, target defaults to `cpu`); serve = nothing (the model
 > comes from `so_model`, the image from `runtime.tvm.serve`).
 
 ---
@@ -636,7 +624,7 @@ Produces a Deployment + Service (Open Inference v2, REST 8080 + gRPC 9000).
 | **`digitalhub-core`** | This repository. Hosts `runtime-tvm` (the Java/Spring integration) alongside the other runtimes and the platform core. |
 | **`tvm-toolkit`** (`ghcr.io/scc-digitalhub/tvm-toolkit`) | Builder/compiler image: Apache TVM + LLVM + native g++ + ONNX + the `digitalhub` SDK. Runs the build and compile Jobs. |
 | **`digitalhub-tvm-rust`** (`ghcr.io/scc-digitalhub/tvm-runtime-rust`) | Default serve runtime: a native **Rust** server that loads `model.so`, runs the Relax VM, and exposes Open Inference v2 (REST + gRPC). No Python. |
-| **`digitalhub-serverless`** | Home of the **native Go** serve runtime (alternative serve image, planned) implementing the same `TVM_MODEL_DIR` / Open Inference v2 contract. |
+| **`digitalhub-serverless`** | Home of the **native Go** serve runtime (alternative serve image, available) implementing the same `TVM_MODEL_DIR` / Open Inference v2 contract. |
 | **`digitalhub` Python SDK** | Used inside the build/compile pods (`dh.log_tvm_ir` / `dh.log_tvm_so`) to create the Model entities and upload artifacts to S3. |
 
 ---

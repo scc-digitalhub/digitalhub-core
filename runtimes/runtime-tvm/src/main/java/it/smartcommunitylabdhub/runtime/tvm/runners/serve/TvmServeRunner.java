@@ -91,6 +91,13 @@ public class TvmServeRunner extends TvmBaseRunner {
         envs.add(new CoreEnv("TVM_TASK_KIND", TvmServeTaskSpec.KIND));
         envs.add(new CoreEnv("TVM_MODEL_DIR", modelDir));
         envs.add(new CoreEnv("TVM_MODEL_NAME", servedName));
+        // Optional per-pod worker count. Both serve backends read TVM_SERVE_WORKERS
+        // with the same meaning (rust = pool of N threads, each its own model copy;
+        // go = nuclio numWorkers). Only set when specified, so each image keeps its
+        // own default of 1.
+        if (taskSpec.getWorkers() != null) {
+            envs.add(new CoreEnv("TVM_SERVE_WORKERS", String.valueOf(taskSpec.getWorkers())));
+        }
         // tvm-serve listens on REST 8080 / gRPC 9000 by default; these ports are
         // declared on the runnable below.
 

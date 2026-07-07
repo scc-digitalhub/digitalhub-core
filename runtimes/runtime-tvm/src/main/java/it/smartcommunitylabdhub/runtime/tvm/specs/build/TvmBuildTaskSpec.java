@@ -61,7 +61,7 @@ public class TvmBuildTaskSpec extends K8sFunctionTaskBaseSpec {
     private Boolean dataProp;
 
     // Keep model params as graph inputs rather than folding them into constants
-    // (from_onnx/from_pytorch keep_params_in_input).
+    // (from_onnx keep_params_in_input).
     @JsonProperty("keep_params_in_input")
     @Schema(title = "fields.tvm.keepParamsInInput.title", description = "fields.tvm.keepParamsInInput.description")
     private Boolean keepParamsInInput;
@@ -70,27 +70,6 @@ public class TvmBuildTaskSpec extends K8sFunctionTaskBaseSpec {
     @JsonProperty("sanitize_input_names")
     @Schema(title = "fields.tvm.sanitizeInputNames.title", description = "fields.tvm.sanitizeInputNames.description")
     private Boolean sanitizeInputNames;
-
-    // PyTorch-only: from_exported_program flags. Ignored by the ONNX and TVMScript
-    // frontends. When left null the TVM defaults apply (unwrap=false, no_bind=false,
-    // run_ep_decomposition=true).
-    @JsonProperty("unwrap_unit_return_tuple")
-    @Schema(
-        title = "fields.tvm.unwrapUnitReturnTuple.title",
-        description = "fields.tvm.unwrapUnitReturnTuple.description"
-    )
-    private Boolean unwrapUnitReturnTuple;
-
-    @JsonProperty("no_bind_return_tuple")
-    @Schema(title = "fields.tvm.noBindReturnTuple.title", description = "fields.tvm.noBindReturnTuple.description")
-    private Boolean noBindReturnTuple;
-
-    @JsonProperty("run_ep_decomposition")
-    @Schema(
-        title = "fields.tvm.runEpDecomposition.title",
-        description = "fields.tvm.runEpDecomposition.description"
-    )
-    private Boolean runEpDecomposition;
 
     @Override
     public void configure(Map<String, Serializable> data) {
@@ -104,9 +83,6 @@ public class TvmBuildTaskSpec extends K8sFunctionTaskBaseSpec {
         this.dataProp = spec.getDataProp();
         this.keepParamsInInput = spec.getKeepParamsInInput();
         this.sanitizeInputNames = spec.getSanitizeInputNames();
-        this.unwrapUnitReturnTuple = spec.getUnwrapUnitReturnTuple();
-        this.noBindReturnTuple = spec.getNoBindReturnTuple();
-        this.runEpDecomposition = spec.getRunEpDecomposition();
     }
 
     public static TvmBuildTaskSpec with(Map<String, Serializable> data) {

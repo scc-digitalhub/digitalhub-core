@@ -57,7 +57,7 @@ public class TvmCompileRunner extends TvmBaseRunner {
         // so a compile never fails just because it was left unset.
         TvmTargetArchitecture architecture = taskSpec.getTargetArchitecture() != null
                 ? taskSpec.getTargetArchitecture()
-                : TvmTargetArchitecture.llvm;
+                : TvmTargetArchitecture.cpu;
 
         // Pick the IR model to compile: an explicit task.model_path wins,
         // otherwise use the ir_model a prior tvm+build recorded on the function.

@@ -10,7 +10,6 @@ package it.smartcommunitylabdhub.runtime.tvm.util;
 // artifacts can be told apart: tvm+build emits the Relax IR, tvm+compile the model.so.
 public final class TvmModelKeys {
 
-    public static final String ALGORITHM_IR = "tvm-relax-ir";
     public static final String ALGORITHM_SO = "tvm-compiled-so";
 
     private TvmModelKeys() {}

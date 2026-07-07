@@ -55,8 +55,7 @@ def publish_model_and_register_output(
     else:
         if kind != "model":
             print(f"  [SDK] no typed builder for kind={kind!r}; falling back to kind='model'", file=sys.stderr)
-        # generic model: only framework/algorithm/parameters survive -> fold the
-        # typed fields (entry, inputs, target, ...) into parameters so they persist.
+        
         framework = spec.pop("framework", None)
         algorithm = spec.pop("algorithm", None)
         parameters = dict(spec.pop("parameters", {}) or {})
@@ -82,8 +81,6 @@ def publish_model_and_register_output(
         except Exception as e:
             print(f"  [SDK] failed to set relationship: {e}", file=sys.stderr)
 
-    # Direct REST PATCH on run.status.outputs: dh.get_run() requires a Python
-    # runtime builder for tvm+*:run, which doesn't exist (TVM runtime is Java).
     try:
         _patch_run_status_outputs(project, run_id, output_key, model.key)
         print(f"  [SDK] run.status.outputs.{output_key} = {model.key}")
@@ -105,10 +102,6 @@ def _patch_run_status_outputs(project: str, run_id: str, output_key: str, value:
     url = f"{endpoint}/api/v1/-/{project}/runs/{run_id}"
     auth, headers = _build_auth_headers()
 
-    # No PATCH endpoint exists, so this is a read-modify-write PUT of the whole
-    # run. The framework may concurrently update run.status while this pod runs,
-    # so GET immediately before each PUT (small window) and retry on conflict /
-    # transient errors to avoid clobbering or losing the update.
     last = None
     for attempt in range(3):
         r = requests.get(url, auth=auth, headers=headers, timeout=15)

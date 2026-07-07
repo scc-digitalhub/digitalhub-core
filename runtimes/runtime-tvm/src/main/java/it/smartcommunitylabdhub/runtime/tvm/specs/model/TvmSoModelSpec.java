@@ -19,8 +19,8 @@ import lombok.Setter;
 @SpecType(kind = "tvm-so", entity = Model.class)
 public class TvmSoModelSpec extends TvmModelSpec {
 
-    // TVM hardware target the library was built for, e.g. "llvm", "llvm
-    // -mcpu=skylake", "cuda".
+    // TVM hardware target the library was built for, e.g. "llvm" (cpu) or a JSON
+    // target dict for x86/arm64. (The llvm CLI form and cuda targets were removed.)
     @JsonProperty("target")
     private String target;
 

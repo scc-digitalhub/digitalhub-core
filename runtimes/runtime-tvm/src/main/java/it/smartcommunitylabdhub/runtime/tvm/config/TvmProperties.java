@@ -28,7 +28,7 @@ public class TvmProperties {
     private String homeDir;
     private String volumeSize;
 
-    // Source format (onnx/pytorch/tvmscript) -> builder image used by tvm+build.
+    // Source format (onnx) -> builder image used by tvm+build.
     private Map<String, String> builders;
 
     // Image running compiler.py for tvm+compile (Relax IR -> model.so).

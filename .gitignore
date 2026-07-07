@@ -50,6 +50,3 @@ node_modules
 /application/data/
 /application/src/main/resources/application-local.yml
 /reports
-
-### runtime-tvm docs (not part of the shipped code) ##
-/runtimes/runtime-tvm/docs/

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Entrypoint for tvm+build (ONNX/PyTorch/TVMScript -> Relax IR) and tvm+compile
+# Entrypoint for tvm+build (ONNX -> Relax IR) and tvm+compile
 # (Relax IR -> model.so). Dispatches on TVM_TASK_KIND to the injected task.py
 # (builder_*.py or compiler.py) with the right CLI args; both publish the
 # resulting Model via _dh_publish.py.
@@ -43,10 +43,6 @@ case "${TVM_TASK_KIND:-}" in
         [[ -n "${TVM_SIMPLIFY:-}" ]]              && ARGS+=(--simplify "${TVM_SIMPLIFY}")
         [[ -n "${TVM_STRICT_SHAPE_INFER:-}" ]]    && ARGS+=(--strict-shape-inference "${TVM_STRICT_SHAPE_INFER}")
         [[ -n "${TVM_DATA_PROP:-}" ]]             && ARGS+=(--data-prop "${TVM_DATA_PROP}")
-        # PyTorch from_exported_program flags (only builder_pytorch.py reads these)
-        [[ -n "${TVM_UNWRAP_UNIT_RETURN_TUPLE:-}" ]] && ARGS+=(--unwrap-unit-return-tuple "${TVM_UNWRAP_UNIT_RETURN_TUPLE}")
-        [[ -n "${TVM_NO_BIND_RETURN_TUPLE:-}" ]]     && ARGS+=(--no-bind-return-tuple "${TVM_NO_BIND_RETURN_TUPLE}")
-        [[ -n "${TVM_RUN_EP_DECOMPOSITION:-}" ]]     && ARGS+=(--run-ep-decomposition "${TVM_RUN_EP_DECOMPOSITION}")
         ;;
     tvm+compile)
         ARGS=(

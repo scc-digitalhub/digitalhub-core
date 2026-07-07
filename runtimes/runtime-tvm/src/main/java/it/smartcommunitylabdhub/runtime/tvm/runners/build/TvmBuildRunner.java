@@ -70,7 +70,7 @@ public class TvmBuildRunner {
                 new IllegalStateException(
                     "cannot auto-detect TVM source format for path: " +
                     functionSpec.getModel() +
-                    " — set spec.format explicitly (onnx/pytorch/tvmscript) when the source has " +
+                    " — set spec.format explicitly (onnx) when the source has " +
                     "no recognizable extension (e.g. a store:// or folder path)"
                 )
             );

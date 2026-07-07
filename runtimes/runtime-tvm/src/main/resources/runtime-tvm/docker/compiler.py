@@ -201,7 +201,7 @@ def main():
     # suffix for the compiled Model name: defaults to "so" (mirrors the build's
     # "<name>-ir"), overridable via the task `tag` field -> "<name>-<tag>".
     tag = os.environ.get("TVM_TAG") or args.tag or "so"
-    algorithm = os.environ.get("TVM_ALGORITHM", "tvm-aot-cpu")
+    algorithm = os.environ.get("TVM_ALGORITHM", "tvm-compiled-so")
     source_ir = os.environ.get("TVM_SOURCE_IR_KEY") or None
 
     publish_model_and_register_output(

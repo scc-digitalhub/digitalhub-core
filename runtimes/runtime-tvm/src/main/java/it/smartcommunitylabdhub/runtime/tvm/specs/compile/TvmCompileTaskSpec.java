@@ -38,7 +38,7 @@ public class TvmCompileTaskSpec extends K8sFunctionTaskBaseSpec {
     private String modelPath;
 
     @JsonProperty("target_architecture")
-    @Schema(title = "fields.tvm.compile.targetArchitecture.title", description = "fields.tvm.compile.targetArchitecture.description", defaultValue = "llvm")
+    @Schema(title = "fields.tvm.compile.targetArchitecture.title", description = "fields.tvm.compile.targetArchitecture.description", defaultValue = "cpu")
     private TvmTargetArchitecture targetArchitecture;
 
     // TVM optimization level 0-3 (runner default 3).

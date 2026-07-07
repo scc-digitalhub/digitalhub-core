@@ -8,7 +8,5 @@ package it.smartcommunitylabdhub.runtime.tvm.specs.model;
 
 public enum TvmFormat {
     auto,
-    onnx,
-    pytorch,
-    tvmscript;
+    onnx;
 }

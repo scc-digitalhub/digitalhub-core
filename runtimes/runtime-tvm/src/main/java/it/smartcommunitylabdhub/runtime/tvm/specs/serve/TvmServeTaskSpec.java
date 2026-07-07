@@ -61,6 +61,14 @@ public class TvmServeTaskSpec extends K8sFunctionTaskBaseSpec {
     @Min(0)
     private Integer replicas;
 
+    // In-process inference workers per replica (each loads its OWN copy of the
+    // model). Maps to TVM_SERVE_WORKERS, read identically by the rust and go serve
+    // backends: it raises per-pod concurrency at the cost of N model copies in
+    // memory. This is vertical scaling; `replicas` is the horizontal one.
+    @JsonProperty("workers")
+    @Min(1)
+    private Integer workers;
+
     @JsonProperty(value = "service_type", defaultValue = "ClusterIP")
     @Schema(defaultValue = "ClusterIP")
     private CoreServiceType serviceType;
@@ -76,6 +84,7 @@ public class TvmServeTaskSpec extends K8sFunctionTaskBaseSpec {
         this.servedName = spec.getServedName();
         this.image = spec.getImage();
         this.replicas = spec.getReplicas();
+        this.workers = spec.getWorkers();
         this.serviceType = spec.getServiceType();
         this.serviceName = spec.getServiceName();
     }

@@ -1,0 +1,21 @@
+digraph build {
+  rankdir=TB;
+  bgcolor="transparent";
+  node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=11, penwidth=1.3, margin="0.14,0.08"];
+  edge [color="#5b6b7a", penwidth=1.1];
+
+  a [label="POST run  tvm+build:run", fillcolor="#fbf3da", color="#d4a017"];
+  b [label="TvmRuntime.build()  — merges function + task + run", fillcolor="#eef3f8", color="#145a86"];
+  c [label="run() → TvmBuildRunner → OnnxFrontend\n→ K8sJobRunnable (img tvm-toolkit)", fillcolor="#eef3f8", color="#145a86"];
+
+  subgraph cluster_pod {
+    label="Pod (Job)"; fontname="DejaVu Sans"; fontsize=10; color="#9bb0c2"; style="rounded"; bgcolor="#f7fafc";
+    d [label="init: download .onnx → /shared/input", fillcolor="#eef3f8", color="#145a86"];
+    e [label="builder_onnx.py:  ONNX → Relax IR (model.relax.json) + metadata.json", fillcolor="#eef3f8", color="#145a86"];
+    f [label="_dh_publish.py:  dh.log_model (Model on S3)\n+ REST run.status.outputs.ir_module", fillcolor="#eef3f8", color="#145a86"];
+  }
+
+  g [label="onBuildComplete():  function.spec.ir_module\n+ input/output shapes & dtypes (auto-populated)", fillcolor="#fbf3da", color="#d4a017"];
+
+  a -> b -> c -> d -> e -> f -> g;
+}

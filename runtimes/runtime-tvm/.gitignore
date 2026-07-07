@@ -1,20 +1,3 @@
-# Parked code NOT used by CORE (compile/serve/rust/examples moved here while we
-# rebuild the runtime piece by piece — see old/MOVED.md). Excluded from git.
-old/
-
 # Python bytecode caches (generati eseguendo gli script handler/builder in locale)
 __pycache__/
 *.pyc
-
-# Rust build output
-rust/target/
-
-# Regenerable doc artifact (rebuild with docs/build_pdf.py from ARCHITECTURE.md)
-docs/ARCHITECTURE.pdf
-
-# Docker build staging (copied in/out by docker/build-*.sh)
-docker/images/*/lib/
-docker/images/*/python/
-docker/images/tvm-runtime-rust/tvm-serve
-docker/images/tvm-serve-model/model.so
-docker/images/tvm-serve-model/metadata.json

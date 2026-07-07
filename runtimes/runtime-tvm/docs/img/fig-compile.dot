@@ -1,0 +1,20 @@
+digraph compile {
+  rankdir=TB;
+  bgcolor="transparent";
+  node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=11, penwidth=1.3, margin="0.14,0.08"];
+  edge [color="#5b6b7a", penwidth=1.1];
+
+  a [label="POST run  tvm+compile:run", fillcolor="#fbf3da", color="#d4a017"];
+  b [label="run() → TvmCompileRunner → K8sJobRunnable (img tvm-toolkit)\nIR from model_path  or  function.spec.ir_model\nTVM_TARGET = target_architecture", fillcolor="#eef3f8", color="#145a86"];
+
+  subgraph cluster_pod {
+    label="Pod (single Job · no Kaniko, no image build)"; fontname="DejaVu Sans"; fontsize=10; color="#9bb0c2"; style="rounded"; bgcolor="#f7fafc";
+    c [label="init: download IR dir → /shared/input", fillcolor="#eef3f8", color="#145a86"];
+    d [label="compiler.py:  load_json → [bind params] → relax.build(target)\n→ export_library(model.so) + metadata.json", fillcolor="#eef3f8", color="#145a86"];
+    e [label="_dh_publish.py:  dh.log_tvm_so (tvm-so Model on S3)\n+ REST run.status.outputs.compiled_so", fillcolor="#eef3f8", color="#145a86"];
+  }
+
+  g [label="onCompileComplete():  function.spec.so_model = <tvm-so Model key>", fillcolor="#fbf3da", color="#d4a017"];
+
+  a -> b -> c -> d -> e -> g;
+}

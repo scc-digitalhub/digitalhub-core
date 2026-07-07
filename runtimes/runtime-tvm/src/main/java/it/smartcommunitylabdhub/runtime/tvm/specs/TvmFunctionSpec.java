@@ -26,7 +26,7 @@ import lombok.Setter;
 @SpecType(runtime = TvmRuntime.RUNTIME, kind = TvmRuntime.RUNTIME, entity = Function.class)
 public class TvmFunctionSpec extends FunctionBaseSpec {
 
-    // Source model: a path or a store:// key to the ONNX/PyTorch/TVMScript model.
+    // Source model: a path or a store:// key to the ONNX model.
     @JsonProperty("model")
     @NotNull
     @Schema(title = "fields.tvm.model.title", description = "fields.tvm.model.description")

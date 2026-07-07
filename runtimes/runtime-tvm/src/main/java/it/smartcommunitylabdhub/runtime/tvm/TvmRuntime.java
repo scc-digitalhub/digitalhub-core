@@ -58,12 +58,12 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 // DigitalHub runtime that integrates Apache TVM as three K8s tasks:
-//   tvm+build:   source ML (ONNX/PyTorch/TVMScript) -> Relax IR Model (Job)
+//   tvm+build:   source ONNX -> Relax IR Model (Job)
 //   tvm+compile: Relax IR -> model.so Model for a hardware target (Job)
 //   tvm+serve:   deploy the .so Model behind native tvm-serve (OpenInference v2)
 // serve is model-centric: an init container downloads the tvm-so Model into a
 // configurable base serve image. The rust runtime image is the default but is
-// selectable, and a native Go openServerless runtime will be added later.
+// selectable; a native Go serverless runtime is available as an alternative.
 @Slf4j
 @RuntimeComponent(runtime = TvmRuntime.RUNTIME)
 public class TvmRuntime

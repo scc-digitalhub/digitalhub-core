@@ -15,8 +15,7 @@ import it.smartcommunitylabdhub.runtime.tvm.status.TvmRunStatus;
 import it.smartcommunitylabdhub.runtimes.lifecycle.RunLifecycleManager;
 
 // Binds the run lifecycle (state transitions and completion hooks) for
-// tvm+compile runs to TvmRuntime. The @RuntimeComponent kind registers this
-// manager for tvm+compile:run so the framework drives those runs through it.
+// tvm+compile runs to TvmRuntime; all behavior comes from RunLifecycleManager.
 @RuntimeComponent(runtime = TvmCompileRunSpec.KIND)
 public class TvmCompileLifecycleManager extends RunLifecycleManager<TvmRunSpec, TvmRunStatus, K8sRunnable> {
 
