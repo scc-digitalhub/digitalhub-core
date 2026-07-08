@@ -75,6 +75,10 @@ public class KubernetesModule implements com.github.victools.jsonschema.generato
         this.templates = templates;
     }
 
+    public Collection<K8sTemplate<K8sRunnable>> getTemplates() {
+        return List.copyOf(templates);
+    }
+
     @Override
     public void applyToConfigBuilder(SchemaGeneratorConfigBuilder builder) {
         if (templates != null) {
@@ -134,18 +138,15 @@ public class KubernetesModule implements com.github.victools.jsonschema.generato
 
             if (templates != null && javaType.isInstanceOf(K8sResourceProfileAware.class)) {
                 ObjectNode def = context.createStandardDefinition(javaType, this);
-                JsonNode node = Optional
-                    .ofNullable(def.get(config.getKeyword(SchemaKeyword.TAG_PROPERTIES)))
+                JsonNode node = Optional.ofNullable(def.get(config.getKeyword(SchemaKeyword.TAG_PROPERTIES)))
                     .map(o -> o.get("profile"))
                     .orElse(null);
 
                 //add blank as default
-                List<OneOfEntry> profiles = Stream
-                    .concat(
-                        Stream.of(new OneOfEntry("", "", null)),
-                        templates.stream().map(t -> new OneOfEntry(t.getId(), t.getName(), t.getDescription()))
-                    )
-                    .toList();
+                List<OneOfEntry> profiles = Stream.concat(
+                    Stream.of(new OneOfEntry("", "", null)),
+                    templates.stream().map(t -> new OneOfEntry(t.getId(), t.getName(), t.getDescription()))
+                ).toList();
 
                 if (node != null) {
                     //set oneOf
