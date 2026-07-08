@@ -16,6 +16,7 @@
 
 package it.smartcommunitylabdhub.trinodb;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import it.smartcommunitylabdhub.commons.infrastructure.AbstractConfiguration;
@@ -48,8 +49,15 @@ public class TrinoDbConfiguration extends AbstractConfiguration {
     @JsonProperty("trino_catalog")
     private String catalog;
 
+    @JsonIgnore
+    private String url;
+
     @JsonProperty("trino_url")
     public String getTrinoUrl() {
+        if (StringUtils.hasText(url)) {
+            return url;
+        }
+
         if (!StringUtils.hasText(scheme) || !StringUtils.hasText(host)) {
             return null;
         }

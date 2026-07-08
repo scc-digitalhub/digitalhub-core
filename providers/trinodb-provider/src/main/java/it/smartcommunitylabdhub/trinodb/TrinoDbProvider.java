@@ -84,6 +84,7 @@ public class TrinoDbProvider implements CredentialsProvider, ConfigurationProvid
                 .scheme(scheme)
                 .host(host)
                 .port(port)
+                .url(properties.getUrl())
                 .catalog(properties.getCatalog())
                 .build();
 
