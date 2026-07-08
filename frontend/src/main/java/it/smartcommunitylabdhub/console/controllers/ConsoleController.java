@@ -24,6 +24,7 @@
 package it.smartcommunitylabdhub.console.controllers;
 
 import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
+import it.smartcommunitylabdhub.commons.config.SecurityProperties;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.console.ConsoleConfigProvider;
 import it.smartcommunitylabdhub.console.Keys;
@@ -60,9 +61,9 @@ public class ConsoleController {
     @Autowired
     private ConfigurationService configurationService;
 
-    public ConsoleController(ApplicationProperties applicationProperties) {
+    public ConsoleController(ApplicationProperties applicationProperties, SecurityProperties securityProperties) {
         this.applicationProperties = applicationProperties;
-        configProvider = new ConsoleConfigProvider(applicationProperties);
+        configProvider = new ConsoleConfigProvider(applicationProperties, securityProperties);
     }
 
     @Autowired

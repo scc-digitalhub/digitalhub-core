@@ -23,6 +23,7 @@
 package it.smartcommunitylabdhub.console;
 
 import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
+import it.smartcommunitylabdhub.commons.config.SecurityProperties;
 import it.smartcommunitylabdhub.commons.infrastructure.ConfigurationProvider;
 import it.smartcommunitylabdhub.console.controllers.ConsoleController;
 import lombok.extern.slf4j.Slf4j;
@@ -36,8 +37,9 @@ public class ConsoleConfigProvider implements ConfigurationProvider {
 
     private ConsoleConfig config;
 
-    public ConsoleConfigProvider(ApplicationProperties properties) {
+    public ConsoleConfigProvider(ApplicationProperties properties, SecurityProperties securityProperties) {
         Assert.notNull(properties, "properties can not be null");
+        Assert.notNull(securityProperties, "securityProperties can not be null");
 
         log.debug("Build configuration for provider...");
         String applicationUrl = StringUtils.hasText(properties.getEndpoint()) ? properties.getEndpoint() : "";
@@ -46,7 +48,11 @@ public class ConsoleConfigProvider implements ConfigurationProvider {
             .contextPath(ConsoleController.CONSOLE_CONTEXT)
             .applicationUrl(applicationUrl)
             .apiUrl(applicationUrl + "/api/v1")
-            .authUrl(applicationUrl + ConsoleController.AUTH_PATH);
+            .wsUrl(applicationUrl + "/ws");
+
+        if (securityProperties.isRequired()) {
+            builder.authUrl(applicationUrl + ConsoleController.AUTH_PATH);
+        }
 
         this.config = builder.build();
 

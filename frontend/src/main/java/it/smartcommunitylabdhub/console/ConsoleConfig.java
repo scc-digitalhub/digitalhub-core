@@ -53,6 +53,9 @@ public class ConsoleConfig extends AbstractConfiguration {
     @JsonProperty("react_app_auth_url")
     private String authUrl;
 
+    @JsonProperty("react_app_websocket_url")
+    private String wsUrl;
+
     @JsonProperty("react_app_clarity_key")
     private String clarityKey;
 }
