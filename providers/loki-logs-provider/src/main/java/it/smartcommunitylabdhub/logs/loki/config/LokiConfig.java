@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.logs.loki.config;
 import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
 import it.smartcommunitylabdhub.logs.LogService;
 import it.smartcommunitylabdhub.logs.loki.LokiLogService;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -42,7 +42,7 @@ public class LokiConfig {
 
     @Bean
     @Primary
-    @ConditionalOnProperty(prefix = "providers.loki", name = "url", matchIfMissing = false)
+    @ConditionalOnExpression("!T(org.springframework.util.StringUtils).isEmpty('${providers.loki.url:}')")
     public LogService lokiLogService(LokiProperties lokiProperties) {
         return new LokiLogService(lokiProperties);
     }

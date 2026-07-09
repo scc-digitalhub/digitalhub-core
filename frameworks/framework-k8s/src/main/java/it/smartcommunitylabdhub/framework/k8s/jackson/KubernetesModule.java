@@ -41,6 +41,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -57,7 +58,7 @@ import org.springframework.util.StringUtils;
 public class KubernetesModule implements com.github.victools.jsonschema.generator.Module, InitializingBean {
 
     private List<String> templateKeys;
-    private Collection<K8sTemplate<K8sRunnable>> templates = null;
+    private Collection<K8sTemplate<K8sRunnable>> templates = Collections.emptyList();
 
     protected ResourceLoader resourceLoader;
 
