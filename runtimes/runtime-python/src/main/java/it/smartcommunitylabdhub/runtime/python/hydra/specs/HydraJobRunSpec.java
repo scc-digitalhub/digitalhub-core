@@ -25,6 +25,8 @@ package it.smartcommunitylabdhub.runtime.python.hydra.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
+
+import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
 import it.smartcommunitylabdhub.runs.Run;
@@ -57,6 +59,7 @@ public final class HydraJobRunSpec extends HydraRunSpec {
 
     private Map<String, Serializable> parameters = new HashMap<>();
 
+    @Schema(title = "fields.hydra.workers.title", description = "fields.hydra.workers.description")
     private Integer workers;
 
     public HydraJobRunSpec(Map<String, Serializable> data) {
