@@ -1,6 +1,6 @@
 providers:
   loki:
-    url: ${LOKI_URL:}
+    url: ${LOKI_URL:false}
     org-id: ${LOKI_ORG_ID:}
     username: ${LOKI_USERNAME:}
     password: ${LOKI_PASSWORD:}
