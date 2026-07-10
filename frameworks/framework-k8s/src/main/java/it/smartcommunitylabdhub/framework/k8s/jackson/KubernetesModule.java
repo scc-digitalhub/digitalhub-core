@@ -76,7 +76,7 @@ public class KubernetesModule implements com.github.victools.jsonschema.generato
     }
 
     public Collection<K8sTemplate<K8sRunnable>> getTemplates() {
-        return List.copyOf(templates);
+        return templates != null ? List.copyOf(templates) : null;
     }
 
     @Override
