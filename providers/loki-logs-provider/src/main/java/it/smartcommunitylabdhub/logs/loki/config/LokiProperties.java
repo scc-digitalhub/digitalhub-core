@@ -43,6 +43,7 @@ public class LokiProperties {
     private String orgId;
     private String username;
     private String password;
+    private String namespace;
 
     private Map<String, String> mapping;
     private Boolean mapWithPrefix;

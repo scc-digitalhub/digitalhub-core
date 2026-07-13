@@ -248,6 +248,14 @@ public class LokiLogService implements LogService {
      * Helpers
      */
     private List<Log> fetch(List<Pair<String, String>> filters) {
+        if (
+            StringUtils.hasText(lokiProperties.getNamespace()) &&
+            filters.stream().noneMatch(f -> "namespace".equals(f.getFirst()))
+        ) {
+            //inject namespace filter
+            filters.add(Pair.of("namespace", lokiProperties.getNamespace()));
+        }
+
         StringBuilder query = new StringBuilder();
         query.append("{");
         for (Pair<String, String> f : filters) {
