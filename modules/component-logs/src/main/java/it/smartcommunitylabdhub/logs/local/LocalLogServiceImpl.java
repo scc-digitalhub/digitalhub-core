@@ -40,6 +40,7 @@ import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,6 +50,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
+import org.springframework.security.crypto.keygen.StringKeyGenerator;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.BindException;
@@ -66,6 +68,14 @@ public class LocalLogServiceImpl implements LogService {
     private Converter<LogEntity, Log> entityConverter;
     private Converter<Log, LogEntity> dtoConverter;
     private Converter<SearchFilter<Log>, SearchFilter<LogEntity>> filterConverter;
+
+    private StringKeyGenerator keyGenerator = () -> UUID.randomUUID().toString().replace("-", "");
+
+    @Autowired
+    private EntityRepository<Run> runEntityService;
+
+    @Autowired
+    private EntityRepository<Project> projectService;
 
     public LocalLogServiceImpl(
         LogRepository logRepository,
@@ -86,11 +96,11 @@ public class LocalLogServiceImpl implements LogService {
         this.filterConverter = filterConverter;
     }
 
-    @Autowired
-    private EntityRepository<Run> runEntityService;
-
-    @Autowired
-    private EntityRepository<Project> projectService;
+    @Autowired(required = false)
+    public void setKeyGenerator(StringKeyGenerator keyGenerator) {
+        Assert.notNull(keyGenerator, "key generator can not be null");
+        this.keyGenerator = keyGenerator;
+    }
 
     public Page<Log> listLogs(@NonNull Pageable pageable) {
         log.debug("list logs page {}", pageable);
@@ -239,8 +249,24 @@ public class LocalLogServiceImpl implements LogService {
 
             //create as new
             LogEntity e = dtoConverter.convert(dto);
+            if (e == null) {
+                throw new IllegalArgumentException("invalid log entry");
+            }
+
+            if (e.getId() != null && logRepository.existsById(e.getId())) {
+                throw new DuplicatedEntityException("log already exists with id " + e.getId());
+            }
+            if (e.getId() == null) {
+                e.setId(keyGenerator.generateKey());
+            }
+
             e = logRepository.saveAndFlush(e);
-            return entityConverter.convert(e);
+            Log d = entityConverter.convert(e);
+            if (log.isTraceEnabled()) {
+                log.trace("log: {}", d);
+            }
+
+            return d;
         } catch (StoreException e) {
             log.error("error creating log", e);
             throw new SystemException(e.getMessage());
