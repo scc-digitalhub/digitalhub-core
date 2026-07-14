@@ -8,6 +8,7 @@ ARG USER_ID=1000
 ARG USER_GROUP=builder
 ARG USER_GROUP_ID=1000
 ARG DRAGONFLY_VERSION=1.3.12
+ARG DHCLI_VERSION=0.15.0-beta3
 # --------------------------
 # Install essential dependencies + AWS CLI from Alpine repos
 # --------------------------
@@ -25,6 +26,23 @@ RUN apk add --no-cache \
     && aws --version
 RUN pip3 install --no-cache-dir --break-system-packages "huggingface_hub[cli]" \
     && hf --help > /dev/null
+
+# --------------------------
+# Install digitalhub CLI (dhcli)
+# --------------------------
+RUN ARCH=$(uname -m) && \
+    case "$ARCH" in \
+        x86_64)  DHCLI_ARCH="amd64" ;; \
+        aarch64) DHCLI_ARCH="arm64" ;; \
+        *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
+    esac && \
+    mkdir -p /tmp/dhcli && \
+    wget -O /tmp/dhcli/dhcli.tar.gz \
+        "https://github.com/scc-digitalhub/digitalhub-cli/releases/download/${DHCLI_VERSION}/dhcli-linux-${DHCLI_ARCH}.tar.gz" && \
+    tar -xzf /tmp/dhcli/dhcli.tar.gz -C /tmp/dhcli && \
+    find /tmp/dhcli -name 'dhcli' -type f -exec mv {} /usr/bin/dhcli \; && \
+    chmod +x /usr/bin/dhcli && \
+    rm -rf /tmp/dhcli
 
 # --------------------------
 # Install dragonfly binary

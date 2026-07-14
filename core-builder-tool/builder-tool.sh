@@ -85,6 +85,11 @@ export GIT_CONFIG_VALUE_0="*"
 # Curl: disable .netrc and cookie jar writes (not needed for our use case)
 export CURL_HOME="${destination_dir}"
 
+# dhcli: point config file into destination_dir to avoid writing to a read-only home
+# Users can override by pre-setting DH_CONFIG before invoking this script.
+# DHCORE_ENV can be set to select a specific registered dhcli environment (-e flag).
+export DH_CONFIG="${DH_CONFIG:-${destination_dir}/.dhcore.ini}"
+
 # --------------------------
 # Helper Functions
 # --------------------------
@@ -295,6 +300,50 @@ process_context_ref() {
                 # Write directly to $dest if it's not a directory
                 mkdir -p "$(dirname "$dest")"
                 curl -L -f -o "$dest" "$source"
+            fi
+        ;;
+        "store")
+            # Internal catalog reference: store://<project>/<entity_type>/<kind>/<name>:<id>
+            # id takes priority; if absent, name is used (fetches latest version).
+            # Requires dhcli to be configured via DH_CONFIG (default: $destination_dir/.dhcore.ini).
+            # Set DHCORE_ENV to select a specific registered environment.
+            local stripped_source="${source#store://}"
+
+            # Parse the four path segments
+            local store_project store_entity store_name_id store_name store_id
+            store_project="$(echo "$stripped_source" | cut -d'/' -f1)"
+            store_entity="$(echo "$stripped_source"  | cut -d'/' -f2)"
+            # field 3 is <kind>, field 4 is <name>:<id>
+            store_name_id="$(echo "$stripped_source" | cut -d'/' -f4)"
+
+            # Split name:id on the colon
+            if [[ "$store_name_id" == *":"* ]]; then
+                store_name="${store_name_id%%:*}"
+                store_id="${store_name_id##*:}"
+            else
+                store_name="$store_name_id"
+                store_id=""
+            fi
+
+            if [ -z "$store_project" ] || [ -z "$store_entity" ] || [ -z "$store_name_id" ]; then
+                echo "Error: invalid store:// reference: $source"
+                exit 1
+            fi
+
+            # Optional environment selector
+            local dhcli_env_flag=""
+            [ -n "${DHCORE_ENV:-}" ] && dhcli_env_flag="-e ${DHCORE_ENV}"
+
+            mkdir -p "$dest"
+
+            if [ "$DEBUG" = "true" ]; then
+                echo "DEBUG: store ref=$stripped_source project=$store_project entity=$store_entity name=$store_name id=${store_id:-<none>} dest=$dest"
+            fi
+
+            if [ -n "$store_id" ]; then
+                dhcli download $dhcli_env_flag -p "$store_project" -d "$dest" "$store_entity" "$store_id"
+            else
+                dhcli download $dhcli_env_flag -p "$store_project" -n "$store_name" -d "$dest" "$store_entity"
             fi
         ;;
         "hf")
