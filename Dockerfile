@@ -39,4 +39,4 @@ COPY --from=builder /tmp/spring-boot-loader/ ./
 COPY --from=builder /tmp/dh-dependencies/ ./
 COPY --from=builder /tmp/application/ ./
 EXPOSE 8080
-ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]
+ENTRYPOINT ["java", "-XX:InitialRAMPercentage=75.0", "-XX:MaxRAMPercentage=75.0", "org.springframework.boot.loader.launch.JarLauncher"]
