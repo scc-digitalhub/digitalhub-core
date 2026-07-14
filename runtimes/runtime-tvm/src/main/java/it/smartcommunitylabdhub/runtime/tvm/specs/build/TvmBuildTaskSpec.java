@@ -18,9 +18,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-// Task spec for tvm+build: source ML model -> Relax IR. Beyond the base K8s job
-// settings it carries the frontend conversion knobs; most only apply to the ONNX
-// path and are passed through to the builder script.
+// Task spec for tvm+build: source ONNX -> Relax IR, carrying the frontend conversion knobs.
 @Getter
 @Setter
 @NoArgsConstructor
@@ -39,8 +37,7 @@ public class TvmBuildTaskSpec extends K8sFunctionTaskBaseSpec {
     @Schema(title = "fields.tvm.simplify.title", description = "fields.tvm.simplify.description")
     private Boolean simplify;
 
-    // ONNX only: upgrade/downgrade the model to this opset (onnx.version_converter)
-    // before conversion.
+    // ONNX only: upgrade/downgrade to this opset (onnx.version_converter) before conversion.
     @JsonProperty("target_opset")
     @Schema(title = "fields.tvm.targetOpset.title", description = "fields.tvm.targetOpset.description")
     private Integer targetOpset;
@@ -60,8 +57,7 @@ public class TvmBuildTaskSpec extends K8sFunctionTaskBaseSpec {
     @Schema(title = "fields.tvm.dataProp.title", description = "fields.tvm.dataProp.description")
     private Boolean dataProp;
 
-    // Keep model params as graph inputs rather than folding them into constants
-    // (from_onnx keep_params_in_input).
+    // Keep model params as graph inputs rather than folding to constants (from_onnx keep_params_in_input).
     @JsonProperty("keep_params_in_input")
     @Schema(title = "fields.tvm.keepParamsInInput.title", description = "fields.tvm.keepParamsInInput.description")
     private Boolean keepParamsInInput;

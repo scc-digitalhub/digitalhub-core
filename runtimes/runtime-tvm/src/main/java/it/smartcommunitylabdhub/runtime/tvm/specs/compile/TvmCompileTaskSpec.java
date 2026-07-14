@@ -20,9 +20,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-// Task spec for tvm+compile: Relax IR -> model.so via compiler.py. Fields map
-// directly to compiler arguments; all are optional and fall back to the runner's
-// defaults.
+// Task spec for tvm+compile: Relax IR -> model.so. All fields optional, with runner defaults.
 @Getter
 @Setter
 @NoArgsConstructor
@@ -31,8 +29,7 @@ public class TvmCompileTaskSpec extends K8sFunctionTaskBaseSpec {
 
     public static final String KIND = "tvm+compile";
 
-    // Explicit IR model key (store://) to compile; overrides
-    // function.spec.ir_model.
+    // Explicit IR model key (store://) to compile; overrides function.spec.ir_model.
     @JsonProperty("model_path")
     @Schema(title = "fields.tvm.compile.modelPath.title", description = "fields.tvm.compile.modelPath.description")
     private String modelPath;
@@ -47,9 +44,7 @@ public class TvmCompileTaskSpec extends K8sFunctionTaskBaseSpec {
     @Schema(title = "fields.tvm.compile.optLevel.title", description = "fields.tvm.compile.optLevel.description")
     private Integer optLevel;
 
-    // Cross C++ compiler used by export_library to link the .so when
-    // cross-compiling
-    // (e.g. aarch64-linux-gnu-g++).
+    // Cross C++ compiler export_library links the .so with (e.g. aarch64-linux-gnu-g++).
     @JsonProperty("cross_cc")
     @Schema(title = "fields.tvm.compile.crossCc.title", description = "fields.tvm.compile.crossCc.description")
     private String crossCc;
@@ -74,16 +69,12 @@ public class TvmCompileTaskSpec extends K8sFunctionTaskBaseSpec {
     @Schema(title = "fields.tvm.compile.systemLib.title", description = "fields.tvm.compile.systemLib.description")
     private Boolean systemLib;
 
-    // Explicit params file to bind into the IR; otherwise a sibling params.bin in
-    // the IR dir is auto-detected (the common case). NOTE: this is an IN-POD path
-    // (e.g. /shared/input/myparams.bin) — store:// or s3:// values are NOT resolved
-    // or downloaded for this field, unlike model_path.
+    // Params file to bind (else sibling params.bin auto-detected). IN-POD path only — store:///s3:// NOT resolved here.
     @JsonProperty("params_path")
     @Schema(title = "fields.tvm.compile.paramsPath.title", description = "fields.tvm.compile.paramsPath.description")
     private String paramsPath;
 
-    // Free-form tag recorded in the compiled model metadata and appended to its
-    // name.
+    // Free-form tag recorded in the compiled model metadata and appended to its name.
     @JsonProperty("tag")
     @Schema(title = "fields.tvm.compile.tag.title", description = "fields.tvm.compile.tag.description")
     private String tag;

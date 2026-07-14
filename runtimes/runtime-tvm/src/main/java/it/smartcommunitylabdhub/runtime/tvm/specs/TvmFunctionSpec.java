@@ -37,14 +37,12 @@ public class TvmFunctionSpec extends FunctionBaseSpec {
     @Schema(title = "fields.tvm.format.title", description = "fields.tvm.format.description", defaultValue = "auto")
     private TvmFormat format;
 
-    // store:// key of the built Relax IR model (kind tvm-ir), set on build
-    // completion.
+    // store:// key of the built Relax IR model (tvm-ir), set on build completion.
     @JsonProperty("ir_model")
     @Schema(title = "fields.tvm.irModel.title", description = "fields.tvm.irModel.description")
     private String irModel;
 
-    // store:// key of the compiled model.so (kind tvm-so), set on compile
-    // completion.
+    // store:// key of the compiled model.so (tvm-so), set on compile completion.
     @JsonProperty("so_model")
     @Schema(title = "fields.tvm.soModel.title", description = "fields.tvm.soModel.description")
     private String soModel;

@@ -51,13 +51,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
 
-// DigitalHub runtime that integrates Apache TVM as three K8s tasks:
-//   tvm+build:   source ONNX -> Relax IR Model (Job)
-//   tvm+compile: Relax IR -> model.so Model for a hardware target (Job)
-//   tvm+serve:   deploy the .so Model behind native tvm-serve (OpenInference v2)
-// serve is model-centric: an init container downloads the tvm-so Model into a
-// configurable base serve image. The rust runtime image is the default but is
-// selectable; a native Go serverless runtime is available as an alternative.
+// TVM runtime: three K8s tasks — tvm+build (ONNX->IR), tvm+compile (IR->model.so), tvm+serve.
 @Slf4j
 @RuntimeComponent(runtime = TvmRuntime.RUNTIME)
 public class TvmRuntime
@@ -112,8 +106,7 @@ public class TvmRuntime
             default -> throw new IllegalArgumentException("Unknown task kind: " + task.getKind());
         };
 
-        // Merge precedence: run spec first, task fills only what the run left unset,
-        // then the function spec overrides everything (function is the source of truth).
+        // Merge precedence: run, then task fills gaps, then function overrides (source of truth).
         Map<String, Serializable> map = new LinkedHashMap<>();
         map.putAll(runSpec.toMap());
         taskMap.forEach(map::putIfAbsent);
@@ -125,8 +118,7 @@ public class TvmRuntime
 
     @Override
     public Spec onBuilt(@NotNull Run run) {
-        // Record CONSUMES lineage: each declared run input becomes a relationship so
-        // the platform can trace which artifacts this run consumed.
+        // Record CONSUMES lineage: each declared run input becomes a relationship.
         TvmRunSpec runSpec = new TvmRunSpec(run.getSpec());
         if (runSpec.getInputs() != null && !runSpec.getInputs().isEmpty()) {
             RelationshipsMetadata lineage = RelationshipsMetadata.from(run.getMetadata());
@@ -205,11 +197,7 @@ public class TvmRuntime
         return null;
     }
 
-    // Shared "job finished" handler for build and compile. A finished job publishes
-    // its output Model and reports the key under status.outputs.<outputKey>; write
-    // that key back onto the parent function's spec (via <setter>) so the next task
-    // in the chain can resolve it automatically, and surface it on the run status.
-    // build -> ir_module -> function.spec.ir_model; compile -> compiled_so -> so_model.
+    // Write the job's output model key back onto the parent function's spec so the next task can resolve it.
     private TvmRunStatus writeModelKeyBack(
         Run run,
         String outputKey,
@@ -244,7 +232,6 @@ public class TvmRuntime
         return status;
     }
 
-    // Null-safe read of a single String value out of the run's status.outputs map.
     private String readOutput(Run run, String key) {
         if (run.getStatus() == null)
             return null;

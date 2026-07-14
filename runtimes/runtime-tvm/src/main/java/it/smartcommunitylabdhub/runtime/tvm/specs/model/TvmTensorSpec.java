@@ -13,8 +13,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-// A single input or output tensor of a TVM model: its name plus the element type
-// and shape needed to bind and validate calls to the model.
+// A single input/output tensor of a TVM model: name, element type, and shape.
 @Getter
 @Setter
 @NoArgsConstructor

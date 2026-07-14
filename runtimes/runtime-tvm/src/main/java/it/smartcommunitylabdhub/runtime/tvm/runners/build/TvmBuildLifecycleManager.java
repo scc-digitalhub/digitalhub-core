@@ -14,8 +14,7 @@ import it.smartcommunitylabdhub.runtime.tvm.specs.build.TvmBuildRunSpec;
 import it.smartcommunitylabdhub.runtime.tvm.status.TvmRunStatus;
 import it.smartcommunitylabdhub.runtimes.lifecycle.RunLifecycleManager;
 
-// Registers the tvm+build run kind with the standard run lifecycle (state machine
-// and runnable dispatch); all behavior is inherited from RunLifecycleManager.
+// Registers the tvm+build run kind with the standard RunLifecycleManager.
 @RuntimeComponent(runtime = TvmBuildRunSpec.KIND)
 public class TvmBuildLifecycleManager extends RunLifecycleManager<TvmRunSpec, TvmRunStatus, K8sRunnable> {
 

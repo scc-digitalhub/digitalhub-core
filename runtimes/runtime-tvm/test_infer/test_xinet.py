@@ -1,58 +1,17 @@
 #!/usr/bin/env python3
-"""
-Test di inferenza END-TO-END per il modello "xinet" servito da un serve TVM di CORE.
-
-Gemello di run_infer.py (specifico per YOLOv8-detect): stessa scoperta del serve
-dall'API di CORE, stesso port-forward del Service creato da CORE, stessa API
-OpenInference v2 (REST su :8080 / gRPC su :9000) — plumbing condiviso in
-`_client.py`, qui accanto.
-
-xinet è un modello **YOLOv8-pose** (persona + 17 keypoint COCO): l'output
-[1, 56, 1029] è 56 = 4(box) + 1(conf) + 17*3(keypoint x,y,vis) su 1029 anchor
-(28²+14²+7² per input 224). Il pre/post-processing segue il client di riferimento
-`tvm-edge/plugins/xinet-pose`: input = resize PIENO a 224 (stretch, **no letterbox**),
-RGB, /255, NCHW; output decodificato con NMS e disegnato come **scheletro** (19 limb,
-un colore per limb) sull'immagine **originale a piena risoluzione** (i keypoint sono
-in coord 224 e si riproiettano con w0/224, h0/224). Il box serve solo per l'NMS e non
-viene disegnato. Resta anche un sanity check shape/dtype + statistiche; per output
-non-pose vale solo quello (con salvataggio se l'output ha forma d'immagine).
-
-I/O del modello (letto a runtime dai metadata /v2/models, qui a titolo di esempio):
-  input  : images   FP32  [1, 3, 224, 224]   (immagine, CHW, RGB, /255)
-  output : output0  FP32  [1, 56, 1029]       (YOLOv8-pose: 4+1+17*3 x 1029 anchor)
-
-Uso:
-  python3 test_xinet.py                          # REST, serve xinet RUNNING auto
-  python3 test_xinet.py --mode grpc              # stessa inferenza via gRPC (:9000)
-  python3 test_xinet.py --image /path/foto.jpg   # immagine locale
-  python3 test_xinet.py --run <run-id> --project tvm-rust --out xinet_out.png
-
-Requisiti: minikube (kubectl), python3 + numpy + Pillow; per --mode grpc anche
-grpcio + grpcio-tools (il proto KServe v2 è accanto: grpc_predict_v2.proto).
-"""
+"""Inferenza end-to-end per il modello xinet (YOLOv8-pose, output [1,56,1029]) servito da un serve TVM di CORE (plumbing condiviso in _client.py)."""
 import argparse, json, os, sys, time, urllib.request
 import numpy as np
 
 from _client import NP_DTYPE, discover, port_forward, get_image, infer_rest, infer_grpc
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-# Immagine di test di default (qualsiasi immagine va bene per un test di sanità).
 DEFAULT_IMAGE_URL = "https://ultralytics.com/images/bus.jpg"
-# La function di riferimento: fra i serve RUNNING si preferisce quello di xinet.
 DEFAULT_FUNCTION = "xinet-function"
 
 
-# ---------- preparazione input ----------
 def make_input(meta_input, image_arg, image_url):
-    """Costruisce il tensore d'ingresso a partire dai metadata del modello.
-
-    Se l'input è un'immagine ([1,C,H,W] float, C in {1,3}) fa un resize PIENO a WxH
-    (stretch, NO letterbox) come il client di riferimento xinet-pose, RGB, /255,
-    layout CHW; altrimenti genera un tensore deterministico (seed fisso). Ritorna
-    (name, shape, datatype, data_flat, img_originale_full_res, (W,H)): l'immagine
-    originale e la size del modello servono a riproiettare e disegnare i keypoint a
-    piena risoluzione. Per input non-immagine gli ultimi due sono None.
-    """
+    """Costruisce il tensore d'ingresso dai metadata; per un'immagine ([1,C,H,W] float) fa resize PIENO a WxH (stretch, NO letterbox), RGB, /255, CHW, altrimenti un tensore deterministico (seed 0). Ritorna anche l'immagine originale full-res + (W,H) per riproiettare i keypoint (None per input non-immagine)."""
     name = meta_input["name"]
     shape = [int(x) for x in meta_input["shape"]]
     dt = meta_input.get("datatype", "FP32")
@@ -64,15 +23,13 @@ def make_input(meta_input, image_arg, image_url):
         img_path = get_image(image_arg, image_url)
         from PIL import Image
         orig = Image.open(img_path).convert("L" if C == 1 else "RGB")
-        # xinet: resize PIENO a WxH (stretch, NO letterbox), RGB, /255, CHW — è così
-        # che il modello è stato allenato/servito (vedi tvm-edge/plugins/xinet-pose).
+        # xinet: resize PIENO a WxH (stretch, NO letterbox) come tvm-edge/plugins/xinet-pose.
         rs = orig.resize((W, H), Image.BILINEAR)
         arr = np.asarray(rs, np.float32) / 255.0            # HxW (C=1) oppure HxWxC (RGB)
         arr = arr[None, ...] if C == 1 else np.transpose(arr, (2, 0, 1))  # -> CHW
         data = arr.reshape(-1).astype(np.float32)
         print(f"input:     immagine {img_path} ({orig.size[0]}x{orig.size[1]}) -> resize {W}x{H}, CHW, /255 (RGB)")
-        # ritorniamo l'immagine ORIGINALE full-res + la size del modello (per riproiettare
-        # i keypoint dal 224 al full-res e disegnarci sopra a piena risoluzione).
+        # orig full-res + size modello servono a riproiettare i keypoint (224 -> full-res).
         return name, shape, dt, data, orig.convert("RGB"), (W, H)
 
     # input non-immagine: tensore deterministico riproducibile
@@ -88,7 +45,6 @@ def make_input(meta_input, image_arg, image_url):
     return name, shape, dt, data.reshape(-1), None, None
 
 
-# ---------- validazione / post-processing (sanity, NON task-specific) ----------
 def validate_and_report(out_flat, out_shape, out_dt, meta_out, out_path):
     exp = [int(x) for x in (meta_out.get("shape") or [])] if meta_out else None
     got = [int(x) for x in out_shape]
@@ -124,13 +80,11 @@ def validate_and_report(out_flat, out_shape, out_dt, meta_out, out_path):
         print("output non a forma d'immagine: nessuna immagine salvata (solo statistiche).")
 
 
-# ---------- decode YOLOv8-pose (xinet: [1, 4+1+K*3, N]) ----------
-# Scheletro COCO-17: 19 limb (coppie di keypoint) — identico al client di
-# riferimento xinet-pose (tvm-edge/plugins/xinet-pose/pose_postprocess.py).
+# scheletro COCO-17: 19 limb, come xinet-pose (tvm-edge/plugins/xinet-pose/pose_postprocess.py).
 SKELETON = [(15, 13), (13, 11), (16, 14), (14, 12), (11, 12), (5, 11), (6, 12),
             (5, 6), (5, 7), (6, 8), (7, 9), (8, 10), (1, 2), (0, 1), (0, 2),
             (1, 3), (2, 4), (3, 5), (4, 6)]
-# Un colore per limb (palette "jet", RGB) — come il riferimento (lì in BGR).
+# un colore per limb (palette "jet", RGB; il riferimento è in BGR).
 LIMB_COLORS = [(0, 0, 128), (0, 0, 180), (0, 0, 230), (0, 40, 255), (0, 100, 255),
                (0, 160, 255), (0, 220, 220), (0, 255, 160), (40, 255, 80), (120, 255, 0),
                (200, 255, 0), (255, 220, 0), (255, 160, 0), (255, 100, 0), (255, 40, 0),
@@ -161,15 +115,7 @@ def _nms(xyxy, scores, iou_th=0.45):
 
 
 def decode_pose(out_flat, out_shape, orig_img, in_wh, conf_th, kp_th, out_path):
-    """Decodifica l'output YOLOv8-pose [1, 4+1+K*3, N] e disegna gli scheletri
-    sull'immagine ORIGINALE a piena risoluzione (come il client xinet-pose).
-
-    Il box serve solo per l'NMS (dedup degli anchor della stessa persona), NON si
-    disegna. I keypoint escono in coordinate 224 (WxH del modello): si riproiettano
-    al full-res con (w0/W, h0/H) e si tracciano i 19 segmenti (un colore per limb) +
-    i giunti. `conf`/`vis` sono già probabilità in [0,1] (sigmoide difensiva se, per
-    altri export, arrivassero come logit).
-    """
+    """Decodifica l'output YOLOv8-pose [1,4+1+K*3,N] e disegna gli scheletri sull'immagine full-res. Il box serve solo per l'NMS (non si disegna); i keypoint escono in coord WxH del modello e si riproiettano con (w0/W, h0/H). conf/vis in [0,1] (sigmoide difensiva se logit)."""
     from PIL import ImageDraw
     _, C, N = out_shape
     K = (C - 5) // 3
@@ -244,8 +190,7 @@ def main():
 
     svc, model = discover(a.core, a.project, a.user, a.password, run_id=a.run, want_fn=a.function)
 
-    # metadata via REST (:8080) per shape/dtype di input e output (entrambi i
-    # backend, rust e Go, li espongono via /v2/models leggendo metadata.json)
+    # shape/dtype input e output dai metadata /v2/models (questo test li richiede).
     lp_rest = port_forward(a.ns, svc, 8080, http_probe="/v2/health/ready")
     meta = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{lp_rest}/v2/models/{model}", timeout=30).read())
     if not meta.get("inputs"):
@@ -270,8 +215,7 @@ def main():
 
     validate_and_report(out_flat, out_shape, out_dt, meta_out, a.out)
 
-    # xinet ha output in formato YOLOv8-pose ([1, 4+1+K*3, N]): decodifica le persone
-    # + i keypoint e disegna box/scheletri sull'immagine (riscontro visivo reale).
+    # output YOLOv8-pose [1, 4+1+K*3, N]: decodifica persone + keypoint e disegna gli scheletri.
     got = [int(x) for x in out_shape]
     if orig_img is not None and len(got) == 3 and got[0] == 1 and got[1] >= 6 and (got[1] - 5) % 3 == 0:
         decode_pose(out_flat, got, orig_img, in_wh, a.conf, a.kp_conf, a.out)

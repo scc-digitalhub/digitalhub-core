@@ -18,9 +18,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-// Status shared by the three TVM tasks: build/compile report the key of the Model
-// they produced (Relax IR or model.so), while serve additionally reports the K8s
-// service exposing the deployment.
+// Status for the three TVM tasks: build/compile report the produced Model key; serve reports the K8s service.
 @Getter
 @Setter
 @NoArgsConstructor

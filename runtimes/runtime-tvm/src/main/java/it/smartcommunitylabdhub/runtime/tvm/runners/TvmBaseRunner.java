@@ -30,12 +30,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
-// Base for all TVM runners (build/compile Jobs and the serve Deployment). Resolves
-// the effective pod identity (uid/gid/home) from TvmProperties, falling back to
-// TvmRuntime defaults, loads the pod entrypoint script, and provides the
-// env/secret/volume/label/image helpers plus the common-config applier shared by
-// every TVM runnable. Model publishing (and its S3 destination) is handled entirely
-// by the digitalhub SDK inside the pod, driven by the platform S3 credentials.
+// Base for all TVM runners: resolves pod identity from TvmProperties (TvmRuntime defaults),
+// loads the entrypoint, and provides the shared env/secret/volume/label/image + applyCommon helpers.
 public abstract class TvmBaseRunner {
 
     protected final TvmProperties properties;
@@ -77,9 +73,7 @@ public abstract class TvmBaseRunner {
         }
     }
 
-    // Standard TVM_* env contract read by the pod scripts (entrypoint.sh + builders):
-    // project/run identity plus the home/input/output dirs.
-    // Task-declared envs are appended last so they can override the defaults.
+    // Standard TVM_* env contract read by the pod scripts; task envs appended last so they can override.
     protected List<CoreEnv> createEnvList(Run run, K8sFunctionTaskBaseSpec taskSpec) {
         List<CoreEnv> envs = new ArrayList<>();
         envs.add(new CoreEnv("PROJECT_NAME", run.getProject()));
@@ -97,8 +91,7 @@ public abstract class TvmBaseRunner {
             : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
     }
 
-    // Task-declared volumes plus a shared scratch volume the builder uses to stage
-    // input and output; sized from the task's disk request or the configured default.
+    // Task volumes plus a shared scratch volume for input/output, sized from task disk or the default.
     protected List<CoreVolume> createVolumes(K8sFunctionTaskBaseSpec taskSpec) {
         List<CoreVolume> volumes = new ArrayList<>(
             taskSpec.getVolumes() != null ? taskSpec.getVolumes() : List.of()
@@ -117,16 +110,14 @@ public abstract class TvmBaseRunner {
         return volumes;
     }
 
-    // The single `function=<name>` label placed on every TVM runnable (null when no
-    // K8sBuilderHelper is available, e.g. in unit tests).
+    // The `function=<name>` label on every TVM runnable (null without a K8sBuilderHelper, e.g. in tests).
     protected List<CoreLabel> functionLabels(String funcName) {
         return k8sBuilderHelper != null
             ? List.of(new CoreLabel(k8sBuilderHelper.getLabelName("function"), funcName))
             : null;
     }
 
-    // Picks the effective image: a task-level override wins, otherwise the configured
-    // default; throws with the given message when neither is set.
+    // Effective image: task override wins, else the default; throws missingMessage when neither is set.
     protected String resolveImage(String taskImage, String defaultImage, String missingMessage) {
         String image = StringUtils.hasText(taskImage) ? taskImage : defaultImage;
         if (!StringUtils.hasText(image)) {
@@ -135,11 +126,7 @@ public abstract class TvmBaseRunner {
         return image;
     }
 
-    // Applies the config shared by EVERY TVM runnable — Job (build/compile) and Serve
-    // alike: run identity, task kind, image, function label, envs/secrets, context
-    // refs, resources, volumes and the pod security context. The caller builds the
-    // runnable with only its type-specific fields (Job: command/args/contextSources;
-    // Serve: ports/replicas/service) and passes it here to fill in the rest.
+    // Applies the config shared by every TVM runnable (Job and Serve); caller sets only type-specific fields.
     protected <T extends K8sRunnable> T applyCommon(
         T runnable,
         Run run,

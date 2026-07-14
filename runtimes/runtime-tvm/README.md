@@ -54,7 +54,7 @@ parent **`Function.spec`** (`ir_model`, `so_model`) and through `run.status.outp
 Design principles:
 
 - **Portable IR.** One `tvm+build` → many `tvm+compile` runs, one per target platform
-  (cpu, x86, arm64), without re-parsing the source model.
+  (cpu, x86, arm64, armv7l), without re-parsing the source model.
 - **S3-first via the SDK.** Build and compile Jobs publish their result as a **Model entity**
   on S3 (MinIO) using the `digitalhub` Python SDK, then write the Model key back into the
   run status; CORE copies it onto the function spec on completion.
@@ -146,7 +146,7 @@ Task fields (`TvmCompileTaskSpec`) map directly to `compiler.py` arguments:
 | `model_path`          | string             | → `function.spec.ir_model` | Explicit `store://` IR Model key to compile. |
 | `target_architecture` | enum `TvmTargetArchitecture` | `cpu` | Target arch. **One field is enough**: each enum value expands to a full `tvm.target.Target` string (see §4.5). The JSON key is deliberately `target_architecture`, **not** `target` — a form field literally named `target` breaks the console run-create form. |
 | `opt_level`           | int ≥ 0            | 3       | TVM optimization level (0–3). |
-| `cross_cc`            | string            | —       | Cross C++ compiler used by `export_library` when cross-compiling (e.g. `aarch64-linux-gnu-g++`). |
+| `cross_cc`            | string            | —       | Cross C++ compiler used by `export_library` when cross-compiling (e.g. `aarch64-linux-gnu-g++` for `arm64`, `arm-linux-gnueabihf-g++` for `armv7l`). |
 | `exec_mode`           | string            | `bytecode` | Relax VM execution mode: `bytecode` or `compiled`. |
 | `relax_pipeline`      | string            | `default` | Named Relax optimization pipeline. |
 | `tir_pipeline`        | string            | `default` | Named TIR optimization pipeline. |
@@ -236,6 +236,11 @@ proper select dropdown; the legacy value `llvm` is still accepted as an alias fo
 | `cpu`   | `llvm` |
 | `x86`   | `{"kind":"llvm","mcpu":"x86-64-v2"}` |
 | `arm64` | `{"kind":"llvm","mtriple":"aarch64-linux-gnu"}` |
+| `armv7l`| `{"kind":"llvm","mtriple":"armv7l-linux-gnueabihf","mfloat-abi":"hard","mattr":["+neon"]}` |
+
+`arm64` and `armv7l` are **compile-only** targets: the produced `model.so` runs on a 64-bit
+(aarch64) or 32-bit hard-float (armhf) ARM device respectively. There is no ARM serve image
+or ARM cluster node, so an ARM-compiled model cannot be served in-platform.
 
 ---
 
@@ -532,7 +537,7 @@ spec:
 # 3) tvm+compile task → produces a tvm-so Model, sets function.spec.so_model
 kind: tvm+compile
 spec:
-  target_architecture: cpu      # cpu | x86 | arm64
+  target_architecture: cpu      # cpu | x86 | arm64 | armv7l
   opt_level: 3
   # model_path omitted → uses function.spec.ir_model from the build
   resources: { cpu: "4", mem: "8Gi" }   # compile is memory-hungry

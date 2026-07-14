@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
-# Entrypoint for tvm+build (ONNX -> Relax IR) and tvm+compile
-# (Relax IR -> model.so). Dispatches on TVM_TASK_KIND to the injected task.py
-# (builder_*.py or compiler.py) with the right CLI args; both publish the
-# resulting Model via _dh_publish.py.
+# Entrypoint for tvm+build and tvm+compile; dispatches on TVM_TASK_KIND to task.py with the right CLI args.
 set -euo pipefail
 
 WORK_DIR="${TVM_HOME_DIR:-/shared}"
@@ -66,7 +63,6 @@ esac
 echo "==> Running: python ${SCRIPT} ${ARGS[*]}"
 python "${SCRIPT}" "${ARGS[@]}"
 
-# S3 upload + Model entity creation are done by the Python script via the
-# digitalhub SDK (see _dh_publish.py).
+# S3 upload + Model entity creation happen inside the Python script (_dh_publish.py).
 
 echo "==> Done"

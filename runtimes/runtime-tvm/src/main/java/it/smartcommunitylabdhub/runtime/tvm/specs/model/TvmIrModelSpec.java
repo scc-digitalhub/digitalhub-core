@@ -23,8 +23,7 @@ public class TvmIrModelSpec extends TvmModelSpec {
     @JsonProperty("source_format")
     private TvmFormat sourceFormat;
 
-    // Whether ONNX initializers (weights) were kept as graph inputs instead of
-    // being folded in as constants.
+    // Whether ONNX initializers (weights) were kept as graph inputs instead of folded to constants.
     @JsonProperty("keep_params_in_input")
     private Boolean keepParamsInInput;
 

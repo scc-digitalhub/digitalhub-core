@@ -1,24 +1,18 @@
 #!/usr/bin/env python3
-"""
-Plumbing condiviso da `run_infer.py` e `test_xinet.py`: scoperta del serve
-dall'API di CORE, port-forward del Service creato da CORE, download
-dell'immagine di test e trasporto OpenInference v2 (REST su :8080 / gRPC su
-:9000, con compilazione al volo del proto KServe v2 `grpc_predict_v2.proto`
-qui accanto via grpcio-tools).
-"""
+"""Plumbing condiviso da run_infer.py e test_xinet.py: discovery del serve da CORE, port-forward, immagine di test e trasporto OpenInference v2 (REST/gRPC)."""
 import atexit, json, os, subprocess, sys, tempfile, time, urllib.request
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 KUBECTL = ["minikube", "kubectl", "--"]
 
-# Mappa datatype OpenInference v2 -> dtype numpy (per costruire/leggere i tensori).
+# datatype OpenInference v2 -> dtype numpy.
 NP_DTYPE = {
     "BOOL": np.bool_, "INT8": np.int8, "INT16": np.int16, "INT32": np.int32,
     "INT64": np.int64, "UINT8": np.uint8, "UINT16": np.uint16, "UINT32": np.uint32,
     "UINT64": np.uint64, "FP16": np.float16, "FP32": np.float32, "FP64": np.float64,
 }
-# Datatype -> campo "contents" tipizzato del proto InferTensorContents (per gRPC).
+# datatype -> campo "contents" tipizzato del proto InferTensorContents (gRPC).
 GRPC_FIELD = {
     "BOOL": "bool_contents", "INT8": "int_contents", "INT16": "int_contents",
     "INT32": "int_contents", "INT64": "int64_contents", "UINT8": "uint_contents",
@@ -27,7 +21,6 @@ GRPC_FIELD = {
 }
 
 
-# ---------- CORE discovery ----------
 def core_get(core, path, user, pw):
     import base64
     req = urllib.request.Request(core.rstrip("/") + path)
@@ -42,11 +35,7 @@ def _fn_name(run):
 
 
 def discover(core, project, user, pw, run_id=None, want_fn=None):
-    """Trova il run tvm+serve da testare e ne ricava Service + nome modello servito.
-
-    Con run_id si usa quel run; altrimenti fra i tvm+serve:run RUNNING si preferisce
-    quello della function `want_fn` (se indicata), con fallback al primo RUNNING.
-    """
+    """Trova il run tvm+serve (run_id, o il RUNNING della function want_fn, fallback al primo RUNNING) e ne ricava Service + nome modello servito."""
     runs = core_get(core, f"/api/v1/-/{project}/runs?size=100", user, pw).get("content", [])
     serves = [r for r in runs if r.get("kind") == "tvm+serve:run"]
     if run_id:
@@ -61,7 +50,7 @@ def discover(core, project, user, pw, run_id=None, want_fn=None):
     svc = (run.get("status") or {}).get("service") or {}
     if not svc.get("name"):
         sys.exit(f"il run {run.get('id')} non ha ancora un Service (stato {(run.get('status') or {}).get('state')})")
-    # nome modello servito: spec.served_name se presente, altrimenti clean name della function
+    # nome modello servito: spec.served_name, altrimenti clean name della function (deve combaciare o /v2 dà 404).
     model = (run.get("spec") or {}).get("served_name") or _fn_name(run) or "model"
     ports = {p.get("port"): p for p in svc.get("ports", [])}
     print(f"CORE run:  {run.get('id')}  (function {_fn_name(run)}, state {(run.get('status') or {}).get('state')})")
@@ -70,16 +59,13 @@ def discover(core, project, user, pw, run_id=None, want_fn=None):
     return svc["name"], model
 
 
-# ---------- port-forward del Service creato da CORE ----------
 def port_forward(ns, svc, remote_port, http_probe=None):
     import socket
     local = _free_port()
     proc = subprocess.Popen(KUBECTL + ["port-forward", "-n", ns, f"svc/{svc}", f"{local}:{remote_port}"],
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     atexit.register(lambda: proc.terminate())
-    # Il forward è "pronto" solo quando risponde davvero: per HTTP facciamo un probe
-    # applicativo (il TCP connect a kubectl passa prima che il tunnel al pod sia su,
-    # causando 'Remote end closed connection' sulla prima richiesta).
+    # per HTTP servono un probe applicativo: il TCP connect a kubectl passa prima che il tunnel al pod sia su.
     for _ in range(60):
         try:
             if http_probe:
@@ -99,7 +85,6 @@ def _free_port():
     s = socket.socket(); s.bind(("", 0)); p = s.getsockname()[1]; s.close(); return p
 
 
-# ---------- immagine di test ----------
 def get_image(image_arg, url):
     if image_arg and os.path.isfile(image_arg):
         return image_arg
@@ -110,7 +95,6 @@ def get_image(image_arg, url):
     return dst
 
 
-# ---------- transport (OpenInference v2) ----------
 def infer_rest(local, model, name, shape, datatype, data):
     body = json.dumps({"inputs": [{"name": name, "shape": [int(s) for s in shape],
                                    "datatype": datatype, "data": data.tolist()}]}).encode()
@@ -132,8 +116,7 @@ def infer_grpc(local, model, name, shape, datatype, data):
     sys.path.insert(0, out)
     import grpc_predict_v2_pb2 as pb
     import grpc_predict_v2_pb2_grpc as pbg
-    # Alziamo i limiti client dei messaggi: i tensori v2 superano il default gRPC
-    # di 4MB (una richiesta 1x3x640x640 FP32 è da sola ~4.9MB).
+    # alziamo i limiti messaggi: un tensore v2 supera il default gRPC di 4MB (1x3x640x640 FP32 = ~4.9MB).
     ch = grpc.insecure_channel(f"127.0.0.1:{local}", options=[
         ("grpc.max_send_message_length", 512 * 1024 * 1024),
         ("grpc.max_receive_message_length", 512 * 1024 * 1024),

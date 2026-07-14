@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""ONNX -> Relax IR builder. Exposes from_onnx params + ONNX preprocessing
-(shape_inference, version_converter, onnxsim.simplify) as CLI args.
-
-Outputs in --output: model.relax.ir, metadata.json, params.bin (if
---keep-params-in-input).
-"""
+"""ONNX -> Relax IR builder (from_onnx + ONNX preprocessing, as CLI args)."""
 
 import argparse
 import json
@@ -161,9 +156,7 @@ def main():
             print(f"      detach_params failed: {e}", file=sys.stderr)
             params = None
 
-    # model.relax.json is round-trip safe (preserves constant params); the .ir
-    # TVMScript dump is debug-only and cannot be reloaded via from_source when
-    # constant params are present (it references internal metadata).
+    # model.relax.json is round-trip safe; the .ir TVMScript dump is debug-only (can't reload with const params).
     ir_json = out_dir / "model.relax.json"
     ir_text = out_dir / "model.relax.ir"
     ir_json.write_text(tvm.ir.save_json(mod))

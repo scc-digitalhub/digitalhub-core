@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""Relax IR -> model.so. `--target` is forwarded as-is to tvm.target.Target,
-so any TVM-supported target works. External libs (cuDNN, cuBLAS) must be
-specified inline in the target string (e.g. `-libs=cudnn,cublas`).
-"""
+"""Relax IR -> model.so. --target is forwarded as-is to tvm.target.Target; external libs (cuDNN/cuBLAS) go inline in the target string."""
 
 import argparse
 import json
@@ -22,10 +19,7 @@ def parse_bool(value: str, default: bool) -> bool:
 
 
 def load_ir(ir_dir: Path):
-    """Loads model.relax.json (canonical, round-trip safe). The model.relax.ir
-    TVMScript dump is debug-only and cannot be reloaded when constant params
-    are present (mod.script() references internal metadata not preserved).
-    """
+    """Loads model.relax.json (round-trip safe); the .ir TVMScript dump is debug-only (can't reload with const params)."""
     json_path = ir_dir / "model.relax.json"
     if json_path.exists():
         return tvm.ir.load_json(json_path.read_text())
@@ -37,10 +31,7 @@ def _load_param_file(path: Path) -> dict:
     """Loads a params.bin (save_param_dict format) into {name: Tensor}."""
     from tvm.runtime import load_param_dict
     flat = load_param_dict(path.read_bytes())
-    # TVM 0.25: relax.build binds params as a flat Map<str, Tensor> (name -> tensor),
-    # merged with the module's const_name_to_constant. The old grouped
-    # {fn_name: [v0, v1, ...]} format makes each value an ffi.Array and VMLink
-    # rejects it ("Expected Map<str, ffi.Tensor> but got Map[K, ffi.Array]").
+    # TVM 0.25: params must be a flat Map<str, Tensor>; the old grouped {fn: [v0,v1,...]} makes VMLink reject each value as an ffi.Array.
     return dict(flat.items())
 
 
@@ -53,11 +44,7 @@ def load_params(ir_dir: Path) -> Optional[dict]:
 
 
 def _bind_params(mod, flat):
-    """Bind detached weights (flat: {key: Tensor}) into the entry function as
-    constants. params.bin keys may already be the function's parameter names, OR
-    be positional ("<fn>.<i>") from a keep_params_in_input build — handle both.
-    BindParams matches by the function's actual param names, so positional keys
-    are mapped onto the trailing params (after the real inputs) by order."""
+    """Bind detached weights into the entry fn as constants. Keys are either the fn's param names or positional ("<fn>.<i>"); positional keys map onto the trailing params (after the real inputs) by order."""
     entry, func = "main", None
     for gv, f in mod.functions_items():
         if isinstance(f, relax.Function):
@@ -90,7 +77,7 @@ def main():
                          'the CLI form "llvm -mcpu=...")')
     ap.add_argument("--opt-level", type=int, default=3)
     ap.add_argument("--cross-cc", default=None,
-                    help="cross C++ compiler (e.g. aarch64-linux-gnu-g++)")
+                    help="cross C++ compiler (e.g. aarch64-linux-gnu-g++, arm-linux-gnueabihf-g++)")
     ap.add_argument("--exec-mode", default="bytecode",
                     choices=["bytecode", "compiled"])
     ap.add_argument("--relax-pipeline", default="default")
@@ -138,12 +125,7 @@ def main():
     if system_lib:
         build_kwargs["system_lib"] = True
 
-    # Bind weights into the entry function as constants. The IR was built with
-    # keep_params_in_input=true → main() takes (images, w0, w1, ...) = 128 args.
-    # Passing params to relax.build does NOT fold them (TVM 0.25); the explicit
-    # BindParams transform replaces the named param Vars with constants, so the
-    # served model takes only the real inputs (else inference fails with
-    # "Invoking function main expects N arguments, but 1 were provided").
+    # relax.build does NOT fold params (TVM 0.25); the explicit BindParams below replaces the weight Vars with constants so the served model takes only the real inputs.
     if params:
         entry, n_bound, mod = _bind_params(mod, params)
         print(f"      bound {n_bound} params into '{entry}()'")
@@ -186,8 +168,7 @@ def main():
     from _dh_publish import publish_model_and_register_output
 
     func_name = os.environ.get("TVM_FUNCTION_NAME", "model")
-    # suffix for the compiled Model name: defaults to "so" (mirrors the build's
-    # "<name>-ir"), overridable via the task `tag` field -> "<name>-<tag>".
+    # compiled Model name suffix: "so" by default, overridable via task `tag` -> "<name>-<tag>".
     tag = args.tag or "so"
     source_ir = os.environ.get("TVM_SOURCE_IR_KEY") or None
 

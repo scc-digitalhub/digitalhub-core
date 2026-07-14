@@ -1,32 +1,5 @@
 #!/usr/bin/env python3
-"""
-Test di inferenza END-TO-END contro un serve TVM lanciato da CORE.
-
-Cosa fa:
-  1. interroga l'API di CORE e trova il run `tvm+serve:run` in stato RUNNING
-     (o quello indicato con --run), ricavando il Service creato da CORE e il
-     nome del modello servito (spec.served_name o, in mancanza, il clean name
-     di spec.function);
-  2. scarica un'immagine di test (default: bus.jpg di ultralytics) — o usa
-     quella passata con --image;
-  3. raggiunge il Service (ClusterIP) via `kubectl port-forward` e chiama
-     l'inferenza in **REST** (OpenInference v2 /infer) oppure **gRPC**
-     (GRPCInferenceService.ModelInfer);
-  4. decodifica l'output YOLOv8, applica NMS e salva l'immagine con i
-     bounding box.
-
-Il plumbing (scoperta da CORE, port-forward, trasporto REST/gRPC) è condiviso
-con test_xinet.py in `_client.py`, qui accanto.
-
-Uso:
-  python3 run_infer.py                          # REST, run RUNNING auto, bus.jpg
-  python3 run_infer.py --mode grpc              # via gRPC (:9000)
-  python3 run_infer.py --image /path/foto.jpg   # immagine locale
-  python3 run_infer.py --run <run-id> --project tvm-rust --conf 0.3
-
-Requisiti: minikube (kubectl), python3 + numpy + Pillow; per --mode grpc anche
-grpcio + grpcio-tools (il proto è accanto a questo script).
-"""
+"""Inferenza end-to-end YOLOv8-detect contro un serve TVM di CORE (plumbing condiviso in _client.py)."""
 import argparse, json, os, time, urllib.request
 import numpy as np
 
@@ -43,7 +16,6 @@ COCO = ("person bicycle car motorcycle airplane bus train truck boat trafficligh
         "teddybear hairdrier toothbrush").split()
 
 
-# ---------- preparazione input ----------
 def letterbox(img, size):
     from PIL import Image
     W, H = img.size
@@ -55,7 +27,6 @@ def letterbox(img, size):
     return canvas, r, dx, dy
 
 
-# ---------- YOLOv8 decode ----------
 def decode_and_draw(img_path, out_flat, out_shape, r, dx, dy, conf_thr, out_path):
     from PIL import Image, ImageDraw, ImageFont
     from collections import Counter
@@ -124,9 +95,7 @@ def main():
 
     svc, model = discover(a.core, a.project, a.user, a.password, run_id=a.run)
 
-    # metadata via REST (:8080) per shape input/output; entrambi i backend (rust
-    # e Go) li espongono via /v2/models leggendoli da metadata.json — il fallback
-    # --input-name/--input-shape resta per modelli pubblicati senza metadata.
+    # shape input/output dai metadata /v2/models; fallback --input-name/--input-shape se il modello è pubblicato senza metadata.
     lp_rest = port_forward(a.ns, svc, 8080, http_probe="/v2/health/ready")
     meta = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{lp_rest}/v2/models/{model}", timeout=30).read())
     if meta.get("inputs"):

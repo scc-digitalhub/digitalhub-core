@@ -19,9 +19,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-// Run spec for the tvm+build task. Merges the parent function's spec and the
-// build task spec into one flat document (both @JsonUnwrapped), which is what
-// TvmRuntime.build() assembles and the build runner consumes.
+// Run spec for tvm+build: function spec + build task spec flattened via @JsonUnwrapped.
 @Getter
 @Setter
 @NoArgsConstructor

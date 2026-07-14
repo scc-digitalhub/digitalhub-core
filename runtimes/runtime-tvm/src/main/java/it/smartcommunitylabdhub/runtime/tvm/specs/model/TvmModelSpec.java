@@ -14,8 +14,7 @@ import java.util.Map;
 import lombok.Getter;
 import lombok.Setter;
 
-// Base spec shared by the TVM model kinds (tvm-ir, tvm-so): the Relax entry point
-// and the input/output tensor signatures that describe how to call the model.
+// Base spec for the TVM model kinds (tvm-ir, tvm-so): Relax entry point + input/output tensor signatures.
 @Getter
 @Setter
 public class TvmModelSpec extends ModelBaseSpec {

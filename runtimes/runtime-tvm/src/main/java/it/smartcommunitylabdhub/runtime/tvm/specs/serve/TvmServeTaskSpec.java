@@ -21,12 +21,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-// Task spec for tvm+serve: deploy the compiled .so Model (kind tvm-so) behind the
-// tvm-serve server (OpenInference v2, REST on 8080 + gRPC on 9000). Model-centric:
-// an init container pulls the model.so + metadata.json from the tvm-so Model's S3
-// folder at startup, so there is no per-model baked image. The serving ports are
-// hardcoded in the runner; the Service follows the framework default like the
-// python runtime.
+// Task spec for tvm+serve: deploy the compiled tvm-so Model behind tvm-serve (OpenInference v2).
 @Getter
 @Setter
 @NoArgsConstructor
@@ -43,10 +38,7 @@ public class TvmServeTaskSpec extends K8sFunctionTaskBaseSpec {
     @Schema(title = "fields.tvm.serve.modelPath.title", description = "fields.tvm.serve.modelPath.description")
     private String modelPath;
 
-    // Model name exposed at /v2/models/<served_name> (default: function name).
-    // Constrained to a k8s-label-like charset: the value ends up in URLs and in the
-    // go backend's generated processor.yaml, so free text (quotes, spaces, newlines)
-    // would break the config or allow YAML injection.
+    // Model name at /v2/models/<served_name> (default: function name); charset-constrained — it lands in URLs and generated YAML.
     @JsonProperty("served_name")
     @Pattern(regexp = "^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$")
     @Schema(title = "fields.tvm.serve.servedName.title", description = "fields.tvm.serve.servedName.description")
@@ -61,10 +53,7 @@ public class TvmServeTaskSpec extends K8sFunctionTaskBaseSpec {
     @Min(0)
     private Integer replicas;
 
-    // In-process inference workers per replica (each loads its OWN copy of the
-    // model). Maps to TVM_SERVE_WORKERS, read identically by the rust and go serve
-    // backends: it raises per-pod concurrency at the cost of N model copies in
-    // memory. This is vertical scaling; `replicas` is the horizontal one.
+    // In-process inference workers per replica (each loads its own model copy) -> TVM_SERVE_WORKERS.
     @JsonProperty("workers")
     @Min(1)
     private Integer workers;

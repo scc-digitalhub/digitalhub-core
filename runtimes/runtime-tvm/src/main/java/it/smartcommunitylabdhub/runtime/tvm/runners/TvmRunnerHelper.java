@@ -25,8 +25,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
-// Stateless helpers shared by the TVM runners: assembling the pod ContextSources,
-// resolving model/source paths and S3 output prefixes, and encoding env values.
+// Stateless helpers shared by the TVM runners: ContextSources, model/S3 path resolution, name cleanup.
 public final class TvmRunnerHelper {
 
     public static final String ENTRYPOINT_NAME = "entrypoint.sh";
@@ -39,9 +38,7 @@ public final class TvmRunnerHelper {
 
     private TvmRunnerHelper() {}
 
-    // The files injected into every TVM Job pod: the bash entrypoint, the per-task
-    // python script (builder_*.py or compiler.py, always mounted as task.py), and the
-    // shared publish helper. The publish script is loaded once and cached.
+    // Files injected into every TVM Job pod: entrypoint, per-task script (mounted as task.py), publish helper.
     public static List<ContextSource> createContextSources(
         @NotNull String entrypoint,
         @NotNull String taskScript
@@ -56,8 +53,7 @@ public final class TvmRunnerHelper {
         return sources;
     }
 
-    // A ContextSource whose content is the UTF-8 bytes of `content`, base64-encoded
-    // as the injector expects.
+    // ContextSource with base64-encoded UTF-8 content, as the injector expects.
     private static ContextSource b64Source(String name, String content) {
         return ContextSource
             .builder()
@@ -79,8 +75,7 @@ public final class TvmRunnerHelper {
         }
     }
 
-    // ContextRef telling the init container to pre-download an S3/HTTP source into
-    // the pod's input dir before the builder runs. Null when there is no source.
+    // ContextRef telling the init container to pre-download an S3/HTTP source; null when there is no source.
     public static ContextRef inputContextRef(String s3OrHttpUri, String destination) {
         if (!StringUtils.hasText(s3OrHttpUri)) return null;
         UriComponents uri = UriComponentsBuilder.fromUriString(s3OrHttpUri).build();
@@ -92,8 +87,7 @@ public final class TvmRunnerHelper {
             .build();
     }
 
-    // Resolves a store:// key to the Model entity's S3 path. For direct
-    // s3:// / https:// references, returns the path as-is.
+    // Resolves a store:// key to the Model's S3 path; s3:// / https:// returned as-is.
     @Nullable
     public static String resolveModelPath(String path, ModelManager modelService) {
         if (!StringUtils.hasText(path)) {
@@ -124,9 +118,7 @@ public final class TvmRunnerHelper {
         return (String) p;
     }
 
-    // Resolves a model key to its S3 folder, forcing a trailing slash for plain
-    // folders (anything not ending in / or .zip) so the init container pulls the
-    // whole directory — model.so + metadata.json, or the IR files — not one file.
+    // Resolves a model key to its S3 folder; forces a trailing slash so the init container pulls the whole dir.
     public static String resolveModelDir(String modelKey, ModelManager modelService) {
         String path = resolveModelPath(modelKey, modelService);
         if (!path.endsWith("/") && !path.endsWith(".zip")) {
@@ -142,8 +134,7 @@ public final class TvmRunnerHelper {
         return slash >= 0 ? trimmed.substring(slash + 1) : trimmed;
     }
 
-    // Last segment of function name without `function/tvm/` prefix or `:id`.
-    // Used for servedName (/v2/models/<name>) and k8s Service names.
+    // Last segment of function name (no `function/tvm/` prefix or `:id`); used for servedName and Service names.
     public static String cleanName(String name) {
         if (name == null) return null;
         String n = name;

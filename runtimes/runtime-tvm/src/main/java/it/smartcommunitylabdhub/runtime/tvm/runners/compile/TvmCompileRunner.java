@@ -28,11 +28,7 @@ import java.util.Map;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-// Builds the K8s Job that runs tvm+compile: it takes a Relax IR model
-// (resolved from a store:// key), runs compiler.py to lower it to a native
-// model.so, and publishes the result as a tvm-so Model. Structurally identical
-// to the tvm+build Job (shared entrypoint.sh + _dh_publish.py); only the
-// injected task script (compiler.py) and the env it reads differ.
+// K8s Job for tvm+compile: Relax IR (store:// key) -> model.so via compiler.py, published as a tvm-so Model.
 @Component
 public class TvmCompileRunner extends TvmBaseRunner {
 
@@ -52,14 +48,12 @@ public class TvmCompileRunner extends TvmBaseRunner {
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
         String funcName = taskAccessor.getFunction();
 
-        // Target architecture is optional in the UI form; fall back to llvm (CPU)
-        // so a compile never fails just because it was left unset.
+        // Architecture is optional in the form; default to cpu (llvm).
         TvmTargetArchitecture architecture = taskSpec.getTargetArchitecture() != null
                 ? taskSpec.getTargetArchitecture()
                 : TvmTargetArchitecture.cpu;
 
-        // Pick the IR model to compile: an explicit task.model_path wins,
-        // otherwise use the ir_model a prior tvm+build recorded on the function.
+        // IR model to compile: explicit task.model_path wins, else the function's ir_model.
         String modelKey = StringUtils.hasText(taskSpec.getModelPath())
                 ? taskSpec.getModelPath()
                 : (functionSpec != null ? functionSpec.getIrModel() : null);
@@ -68,8 +62,7 @@ public class TvmCompileRunner extends TvmBaseRunner {
                     "tvm+compile needs an IR model: set task.model_path or run tvm+build first " +
                             "(function.spec.ir_model is empty)");
         }
-        // Resolve store:// to the IR folder's S3 location (trailing slash so the init
-        // container pulls the whole directory: model.relax.json + metadata.json + params).
+        // Resolve store:// to the IR folder's S3 location (whole dir: model.relax.json + metadata + params).
         String s3IrPath = TvmRunnerHelper.resolveModelDir(modelKey, modelService);
 
         List<CoreEnv> envs = createEnvList(run, taskSpec);
@@ -88,19 +81,20 @@ public class TvmCompileRunner extends TvmBaseRunner {
         if (StringUtils.hasText(taskSpec.getTirPipeline())) {
             envs.add(new CoreEnv("TVM_TIR_PIPELINE", taskSpec.getTirPipeline()));
         }
-        // Cross-compiler for export_library. arm64 targets NEED one to link the .so:
-        // default to the aarch64 g++ already present in the toolkit image so an arm64
-        // compile works out of the box; an explicit task.cross_cc always wins.
+        // Cross targets NEED a cross-cc to link the .so; default per arch (explicit task.cross_cc wins).
         String crossCc = taskSpec.getCrossCc();
-        if (!StringUtils.hasText(crossCc) && architecture == TvmTargetArchitecture.arm64) {
-            crossCc = "aarch64-linux-gnu-g++";
+        if (!StringUtils.hasText(crossCc)) {
+            if (architecture == TvmTargetArchitecture.arm64) {
+                crossCc = "aarch64-linux-gnu-g++";
+            } else if (architecture == TvmTargetArchitecture.armv7l) {
+                crossCc = "arm-linux-gnueabihf-g++";
+            }
         }
         if (StringUtils.hasText(crossCc)) {
             envs.add(new CoreEnv("TVM_CROSS_CC", crossCc));
         }
         if (StringUtils.hasText(taskSpec.getParamsPath())) {
-            // entrypoint.sh reads TVM_PARAMS_FILE to build compiler.py's --params-file;
-            // the name must match or the explicit params override is silently dropped.
+            // env name must stay TVM_PARAMS_FILE — entrypoint.sh maps it to --params-file.
             envs.add(new CoreEnv("TVM_PARAMS_FILE", taskSpec.getParamsPath()));
         }
         if (Boolean.TRUE.equals(taskSpec.getSystemLib())) {
@@ -109,8 +103,7 @@ public class TvmCompileRunner extends TvmBaseRunner {
         if (StringUtils.hasText(taskSpec.getTag())) {
             envs.add(new CoreEnv("TVM_TAG", taskSpec.getTag()));
         }
-        // Record lineage so the produced .so model is linked as CONSUMES-ing the
-        // source IR model. Only store:// keys reference a tracked entity.
+        // Lineage: link the .so model as CONSUMES the source IR (only store:// keys are tracked entities).
         if (modelKey.startsWith("store://")) {
             envs.add(new CoreEnv("TVM_SOURCE_IR_KEY", modelKey));
         }

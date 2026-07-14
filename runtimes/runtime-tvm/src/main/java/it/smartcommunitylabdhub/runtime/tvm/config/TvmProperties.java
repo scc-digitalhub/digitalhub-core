@@ -13,8 +13,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-// Binds the runtime.tvm.* configuration: the container images used by each task,
-// the pod scripts injected into build jobs, and the shared pod identity defaults.
+// Binds runtime.tvm.*: task images, injected pod scripts, and pod identity defaults.
 @Getter
 @Setter
 @AllArgsConstructor
@@ -34,8 +33,7 @@ public class TvmProperties {
     // Image running compiler.py for tvm+compile (Relax IR -> model.so).
     private String compiler;
 
-    // Base serving image for tvm+serve. Selectable, defaults to the rust runtime;
-    // an init container downloads the .so Model into it before it starts.
+    // Base serving image for tvm+serve (defaults to the rust runtime); init container injects the .so Model.
     private String serve;
 
     // entrypoint.sh and the per-format builder scripts injected into build pods.
