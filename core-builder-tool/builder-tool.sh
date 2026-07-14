@@ -297,6 +297,90 @@ process_context_ref() {
                 curl -L -f -o "$dest" "$source"
             fi
         ;;
+        "hf")
+            # Hugging Face model download
+            # source format: hf://<owner>/<repo>[/<path_in_repo>]
+            # trailing slash on the path means recursive (whole repo or subfolder)
+            # Result is always placed under $dest/<repo_name>/
+            # e.g. hf://owner/my-model        -> $dest/my-model/
+            #      hf://owner/my-model/a.bin  -> $dest/my-model/a.bin
+            local stripped_source="${source#hf://}"
+            # Remove trailing slash for uniform parsing
+            stripped_source="${stripped_source%/}"
+
+            # parse: <owner>/<repo>[/<path_in_repo>]
+            local repo_id
+            local repo_name
+            local filename_in_repo
+            repo_id="$(echo "$stripped_source" | cut -d'/' -f1-2)"
+            filename_in_repo="$(echo "$stripped_source" | cut -d'/' -f3-)"
+
+            # Determine whether this is a whole-repo download or a single file
+            local is_recursive=false
+            [ -z "$filename_in_repo" ] && is_recursive=true
+
+            # Content always lands directly in $dest (caller controls where via the destination field)
+            mkdir -p "$dest"
+
+            if [ "$DEBUG" = "true" ]; then
+                echo "DEBUG: HF source=$stripped_source repo_id=$repo_id file=${filename_in_repo:-<all>} dest=$dest"
+            fi
+
+            # Try dfget first (DragonFly peer-to-peer download)
+            local dfget_ok=false
+            if command -v dfget &>/dev/null && [ -d "/var/run/dragonfly" ]; then
+                local use_daemon="--transfer-from-dfdaemon"
+                local hf_param=""
+                local recursive=""
+                [ "$is_recursive" = true ] && recursive="--recursive"
+                [ -n "${HF_TOKEN:-}" ] && hf_param="--hf-token $HF_TOKEN"
+
+                if [ "$DEBUG" = "true" ]; then
+                    echo "DEBUG: Trying dfget for $stripped_source -> $dest"
+                fi
+
+                # For recursive download dfget expects a trailing slash on the output path
+                local dfget_dest="$dest"
+                [ "$is_recursive" = true ] && dfget_dest="${dest}/"
+
+                if dfget $use_daemon "${source}" -O "$dfget_dest" $recursive $hf_param; then
+                    dfget_ok=true
+                else
+                    echo "Warning: dfget failed, falling back to huggingface-cli"
+                fi
+            else
+                echo "DragonFly daemon not available, using huggingface-cli"
+            fi
+
+            # Fallback: huggingface-cli download
+            if [ "$dfget_ok" = false ]; then
+                local hf_token_param=""
+                [ -n "${HF_TOKEN:-}" ] && hf_token_param="--token $HF_TOKEN"
+
+                if [ "$DEBUG" = "true" ]; then
+                    echo "DEBUG: huggingface-cli download repo=$repo_id file=${filename_in_repo:-<all>} -> $dest"
+                fi
+
+                # local hf_quiet="--quiet"
+                local hf_quiet=""
+                [ "$DEBUG" = "true" ] && hf_quiet=""
+
+                if [ "$is_recursive" = true ]; then
+                    # Download entire repo content directly into $dest
+                    hf download $hf_token_param \
+                        --local-dir "$dest" \
+                        $hf_quiet \
+                        "$repo_id"
+                else
+                    # Download a single file, preserving its in-repo path under $dest
+                    mkdir -p "$dest/$(dirname "$filename_in_repo")"
+                    hf download $hf_token_param \
+                        --local-dir "$dest" \
+                        $hf_quiet \
+                        "$repo_id" "$filename_in_repo"
+                fi
+            fi
+        ;;
         *)
             echo "Unknown protocol: $protocol"
             exit 1
@@ -385,13 +469,18 @@ done
 file_count=$(find "$destination_dir" -type f ! -path "$destination_dir/lost+found/*" | wc -l)
 total_size=$(du -sh "$destination_dir" | awk '{print $1}')
 
-echo "================ Recap ================="
+echo "================ RECAP ================="
+echo "Destination dir: $destination_dir"
 echo "Total files downloaded/copied: $file_count"
 echo "Total size: $total_size"
 echo "======================================="
 
 # Optional debug listing
 if [ "$DEBUG" = "true" ]; then
-    echo "Listing all files in $destination_dir:"
-    ls -1l "$destination_dir"
+    echo "Listing files in $destination_dir (2 levels deep):"
+    find "$destination_dir" -maxdepth 2 ! -path "$destination_dir/lost+found/*" \
+        | sort \
+        | while read -r entry; do
+            ls -ld "$entry"
+        done
 fi
