@@ -33,13 +33,17 @@ Output: elenco rilevamenti in console + immagine annotata (`detections.jpg`).
 | `--run` | (auto) | id di un `tvm+serve:run` specifico; default = il primo RUNNING |
 | `--image` | (bus.jpg) | path locale o URL; se omesso scarica `--image-url` |
 | `--core` / `--user` / `--password` | localhost:8080 / admin / admin | endpoint e credenziali CORE |
-| `--input-name` / `--input-shape` | `images` / `1,3,640,640` | usati solo se il serve non espone i metadata (es. backend Go) |
+| `--input-name` / `--input-shape` | `images` / `1,3,640,640` | usati solo se il serve non espone i metadata |
 | `--conf` | `0.25` | soglia di confidenza per i box |
 
 ## Note
-- Il backend **rust** espone i metadata del modello (input/output) via `/v2/models/<name>`;
-  il backend **go** no → in quel caso si usano `--input-name`/`--input-shape` (default YOLOv8).
+- Entrambi i backend (**rust** e **go**) espongono i metadata del modello (input/output)
+  via `/v2/models/<name>`, letti da `metadata.json`; `--input-name`/`--input-shape`
+  restano come fallback per modelli pubblicati senza metadata (default YOLOv8).
 - Funziona identico per entrambi i backend: stessa API OpenInference v2.
+- Il plumbing comune (scoperta del run dall'API di CORE, port-forward, trasporto
+  REST/gRPC con compilazione al volo del proto) è in `_client.py`, condiviso da
+  `run_infer.py` e `test_xinet.py` — i due script vanno lanciati da questa directory.
 
 ## test_xinet.py — pose estimation per il modello `xinet`
 `xinet` è un modello **YOLOv8-pose** (persona + 17 keypoint COCO): output

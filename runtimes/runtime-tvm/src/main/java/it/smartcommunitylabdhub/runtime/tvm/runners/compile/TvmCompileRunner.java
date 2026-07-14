@@ -22,7 +22,6 @@ import it.smartcommunitylabdhub.runtime.tvm.specs.TvmFunctionSpec;
 import it.smartcommunitylabdhub.runtime.tvm.specs.compile.TvmCompileRunSpec;
 import it.smartcommunitylabdhub.runtime.tvm.specs.compile.TvmCompileTaskSpec;
 import it.smartcommunitylabdhub.runtime.tvm.specs.model.TvmTargetArchitecture;
-import it.smartcommunitylabdhub.runtime.tvm.util.TvmModelKeys;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -77,7 +76,6 @@ public class TvmCompileRunner extends TvmBaseRunner {
         envs.add(new CoreEnv("TVM_TASK_KIND", TvmCompileTaskSpec.KIND));
         envs.add(new CoreEnv("TVM_FUNCTION_NAME", TvmRunnerHelper.cleanName(funcName)));
         envs.add(new CoreEnv("TVM_TARGET", architecture.getValue()));
-        envs.add(new CoreEnv("TVM_ALGORITHM", TvmModelKeys.ALGORITHM_SO));
         if (taskSpec.getOptLevel() != null) {
             envs.add(new CoreEnv("TVM_OPT_LEVEL", String.valueOf(taskSpec.getOptLevel())));
         }

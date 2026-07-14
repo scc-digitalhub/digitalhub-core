@@ -33,8 +33,6 @@ case "${TVM_TASK_KIND:-}" in
             --name "${TVM_FUNCTION_NAME:-model}"
         )
         # from_onnx parameters
-        [[ -n "${TVM_SHAPE_DICT:-}" ]]            && ARGS+=(--shape-dict "${TVM_SHAPE_DICT}")
-        [[ -n "${TVM_DTYPE_DICT:-}" ]]            && ARGS+=(--dtype-dict "${TVM_DTYPE_DICT}")
         [[ -n "${TVM_OPSET_OVERRIDE:-}" ]]        && ARGS+=(--opset "${TVM_OPSET_OVERRIDE}")
         [[ -n "${TVM_KEEP_PARAMS_IN_INPUT:-}" ]]  && ARGS+=(--keep-params-in-input "${TVM_KEEP_PARAMS_IN_INPUT}")
         [[ -n "${TVM_SANITIZE_INPUT_NAMES:-}" ]]  && ARGS+=(--sanitize-input-names "${TVM_SANITIZE_INPUT_NAMES}")
@@ -50,7 +48,6 @@ case "${TVM_TASK_KIND:-}" in
             --output "${OUTPUT_DIR}"
             --target "${TVM_TARGET:?TVM_TARGET required for tvm+compile}"
         )
-        [[ -n "${TVM_HOST_TARGET:-}" ]]    && ARGS+=(--host-target "${TVM_HOST_TARGET}")
         [[ -n "${TVM_OPT_LEVEL:-}" ]]      && ARGS+=(--opt-level "${TVM_OPT_LEVEL}")
         [[ -n "${TVM_EXEC_MODE:-}" ]]      && ARGS+=(--exec-mode "${TVM_EXEC_MODE}")
         [[ -n "${TVM_RELAX_PIPELINE:-}" ]] && ARGS+=(--relax-pipeline "${TVM_RELAX_PIPELINE}")

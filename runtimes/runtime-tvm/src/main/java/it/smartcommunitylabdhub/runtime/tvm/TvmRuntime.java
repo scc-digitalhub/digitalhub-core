@@ -23,14 +23,11 @@ import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.functions.FunctionManager;
-import it.smartcommunitylabdhub.models.ModelManager;
 import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipName;
 import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
 import it.smartcommunitylabdhub.runs.Run;
-import it.smartcommunitylabdhub.runtime.tvm.config.TvmProperties;
 import it.smartcommunitylabdhub.runtime.tvm.runners.build.TvmBuildRunner;
-import it.smartcommunitylabdhub.runtime.tvm.runners.build.TvmFrontend;
 import it.smartcommunitylabdhub.runtime.tvm.runners.compile.TvmCompileRunner;
 import it.smartcommunitylabdhub.runtime.tvm.runners.serve.TvmServeRunner;
 import it.smartcommunitylabdhub.runtime.tvm.specs.TvmFunctionSpec;
@@ -51,10 +48,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 // DigitalHub runtime that integrates Apache TVM as three K8s tasks:
@@ -67,8 +61,7 @@ import org.springframework.util.StringUtils;
 @Slf4j
 @RuntimeComponent(runtime = TvmRuntime.RUNTIME)
 public class TvmRuntime
-        extends K8sFunctionBaseRuntime<TvmFunctionSpec, TvmRunSpec, TvmRunStatus, K8sRunnable>
-        implements InitializingBean {
+        extends K8sFunctionBaseRuntime<TvmFunctionSpec, TvmRunSpec, TvmRunStatus, K8sRunnable> {
 
     public static final String RUNTIME = "tvm";
     public static final String[] KINDS = { TvmBuildRunSpec.KIND, TvmCompileRunSpec.KIND, TvmServeRunSpec.KIND };
@@ -77,11 +70,8 @@ public class TvmRuntime
     public static final int GID = 1000;
     public static final String HOME_DIR = "/shared";
 
-    private final TvmProperties properties;
-
+    @Autowired
     private TvmBuildRunner buildRunner;
-
-    private final List<TvmFrontend> frontends;
 
     @Autowired
     private TvmCompileRunner compileRunner;
@@ -93,9 +83,6 @@ public class TvmRuntime
     private SecretService secretService;
 
     @Autowired
-    private ModelManager modelService;
-
-    @Autowired
     private CredentialsService credentialsService;
 
     @Autowired
@@ -103,19 +90,6 @@ public class TvmRuntime
 
     @Autowired
     private FunctionManager functionService;
-
-    public TvmRuntime(
-            @Qualifier("tvmProperties") TvmProperties properties,
-            List<TvmFrontend> frontends) {
-        Assert.notNull(properties, "properties are required");
-        this.properties = properties;
-        this.frontends = frontends;
-    }
-
-    @Override
-    public void afterPropertiesSet() throws Exception {
-        this.buildRunner = new TvmBuildRunner(frontends, modelService);
-    }
 
     @Override
     public TvmRunSpec build(@NotNull Function function, @NotNull Task task, @NotNull Run run) {

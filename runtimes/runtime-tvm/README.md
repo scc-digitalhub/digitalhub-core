@@ -90,7 +90,7 @@ Design principles:
 | Field (JSON) | Type | User input? | Meaning |
 |---|---|---|---|
 | `model`      | string (`@NotNull`) | yes | Source model reference: an `s3://` / `https://` path, a `store://` model key, or a bare file path (`.onnx`). |
-| `format`     | enum `TvmFormat`    | yes | `auto` (default) or `onnx`. `auto` lets the build task infer the frontend from the `.onnx` file extension. |
+| `format`     | enum `TvmFormat`    | yes | `auto` (default) or `onnx`. `auto` lets the build task detect ONNX from the `.onnx` file extension. |
 | `ir_model`   | string              | **no — set by build**   | `store://` key of the built Relax IR Model (kind `tvm-ir`). Consumed by `tvm+compile`. |
 | `so_model`   | string              | **no — set by compile** | `store://` key of the compiled Model (kind `tvm-so`). Consumed by `tvm+serve`. |
 
@@ -115,8 +115,8 @@ run kind of the form `<task>:run`.
 ### 3.1 `tvm+build` — source → Relax IR
 
 Converts the source model to TVM Relax IR and publishes it as a `tvm-ir` Model. A single
-K8s Job runs on the `tvm-toolkit` image; the frontend (and therefore the injected
-`builder_*.py`) is chosen by format.
+K8s Job runs on the `tvm-toolkit` image; ONNX is the only supported source format, so the
+injected script is always `builder_onnx.py`.
 
 Task fields (`TvmBuildTaskSpec`) — forwarded to the ONNX builder script as env vars:
 
@@ -190,7 +190,7 @@ that captures the model's call signature.
 | `entry`      | string | Relax entry function to invoke, e.g. `main`. |
 | `inputs`     | `List<TvmTensorSpec>`  | Input tensor signatures. |
 | `outputs`    | `List<TvmTensorSpec>`  | Output tensor signatures. |
-| `parameters` | `Map<String,Serializable>` | Free-form extra metadata (opset, model_name, shape/dtype overrides…). |
+| `parameters` | `Map<String,Serializable>` | Free-form extra metadata (opset, model_name…). |
 
 ### 4.2 `TvmTensorSpec`
 
@@ -250,15 +250,15 @@ POST run  tvm+build:run
 TvmRuntime.build()   merge function spec + task spec  →  TvmBuildRunSpec
 TvmRuntime.run()     → TvmBuildRunner.produce()
    │                    • resolveModelPath(store:// → s3://)
-   │                    • pick frontend by format (or auto-detect by extension)
-   │                    • Frontend.produce() → TvmBuildFrontendRunner.buildJobRunnable()
+   │                    • format check: explicit onnx, or auto-detect by .onnx extension
+   │                    • assembles the build Job (envs, contextRefs, image)
    ▼
 K8sJobRunnable   (image = tvm-toolkit, args = /bin/bash <home>/entrypoint.sh)
    │
    ▼  ── Pod ──────────────────────────────────────────────────────────────────
    init container   downloads source (s3/https) into  <home>/input/
    entrypoint.sh    reads TVM_TASK_KIND=tvm+build → builds CLI args → python task.py
-   builder_<fmt>.py load → convert → model.relax.json + metadata.json [+ params.bin]
+   builder_onnx.py  load → convert → model.relax.json + metadata.json [+ params.bin]
    _dh_publish.py   dh.log_tvm_ir(...)  → creates tvm-ir Model + S3 upload
                     → PATCH run.status.outputs.ir_module = <model.key>
    ── /Pod ─────────────────────────────────────────────────────────────────────
@@ -329,8 +329,8 @@ Serve does **not** update the function spec (`onComplete` returns null for serve
 - **`RUNTIME = "tvm"`**, **`KINDS = { tvm+build:run, tvm+compile:run, tvm+serve:run }`**.
 - Pod identity defaults: `UID = 1000`, `GID = 1000`, `HOME_DIR = "/shared"` (overridable via
   `TvmProperties`).
-- **`afterPropertiesSet()`** builds the `TvmBuildRunner` from the injected list of
-  `TvmFrontend` beans (the compile/serve runners are `@Autowired` components).
+- All three runners (`TvmBuildRunner`, `TvmCompileRunner`, `TvmServeRunner`) are
+  `@Component` beans, `@Autowired` into the runtime — no manual wiring.
 
 Lifecycle methods:
 
@@ -368,37 +368,33 @@ TvmBaseRunner  (abstract)
  ├─ createSecrets()  → secret data as CoreEnv list
  └─ createVolumes()  → task volumes + a shared scratch volume (sized from task disk or default)
      │
-     ├── TvmBuildFrontendRunner  (abstract; buildJobRunnable() assembles the build Job)
-     │     └── OnnxFrontend       (@Component; format "onnx", default input model.onnx)
+     ├── TvmBuildRunner    (@Component; assembles the build Job — ONNX only,
+     │                      script builder_onnx.py, default input model.onnx)
      ├── TvmCompileRunner  (@Component; assembles the compile Job)
      └── TvmServeRunner    (@Component; assembles the serve Deployment)
-
-TvmBuildRunner   (plain class, built in afterPropertiesSet)
-   dispatches tvm+build to a TvmFrontend by explicit format or extension auto-detect
 ```
 
-**`TvmFrontend`** is a strategy interface (`getFormat`, `canHandle`, `produce`). To add a
-format: implement it as a `@Component` and add a `builders` entry in `runtime-tvm.yml` — **no
-changes to `TvmRuntime`**. Today the only frontend is `OnnxFrontend`; it delegates Job assembly
-to `TvmBuildFrontendRunner.buildJobRunnable`, contributing its format name, default input
-filename, and format-specific env vars.
+**ONNX only.** `TvmBuildRunner` is a single concrete runner: since ONNX is the only
+supported source format, the former frontend strategy layer (`TvmFrontend` /
+`TvmBuildFrontendRunner` / `OnnxFrontend`) has been folded into it. It contributes the
+format-specific env vars (`TVM_SIMPLIFY`, `TVM_OPSET_OVERRIDE`, …) and resolves the
+builder image and script via the `onnx` keys of `runtime-tvm.yml` (`builders.onnx`,
+`builder-scripts.onnx`).
 
-**Auto-detect.** `TvmBuildRunner.resolveFormat` uses the explicit `format` if set and not
-`auto`; otherwise it asks each frontend `canHandle(path, null)`. ONNX auto-detects by the
-`.onnx` extension.
+**Format check.** An explicit `format: onnx` always proceeds; `auto` (or unset) requires
+the resolved source path to end in `.onnx`, otherwise the build fails asking for an
+explicit `format` (e.g. a `store://` or folder path with no recognizable extension).
 
 **`TvmRunnerHelper`** (stateless utilities):
 
 | Method | Purpose |
 |---|---|
 | `resolveModelPath(path, modelService)` | `store://` model key → the Model entity's concrete `spec.path` (`s3://…`); direct `s3://`/`https://` pass through. |
-| `resolveSourcePath(path)` | Returns the path as-is (already-resolved concrete URI; the init container has no `store` protocol). |
-| `buildOutputPrefix(...)` | `s3://<bucket>/<project>/model/<algorithm>/<funcName>-<suffix>/<runId>/`. |
+| `resolveModelDir(modelKey, modelService)` | `resolveModelPath` + forced trailing `/` (folder download for compile/serve inputs). |
 | `inputContextRef(uri, dest)` | `ContextRef` telling the init container to pre-download an S3/HTTP source into the pod. |
 | `createContextSources(entrypoint, taskScript)` | The files injected into every Job pod (see §8). |
 | `cleanName(name)` | Last segment of a function name without the `function/tvm/` prefix or `:id` — used for `served_name` and Service names. |
-| `extractFileName(uri)` | Last path segment (falls back to the format's default input filename). |
-| `jsonEnv(name, value)` | Serialize a structured value to a single JSON-valued env var. |
+| `extractFileName(uri)` | Last path segment of a URI (the build runner detects trailing-slash folder paths before calling it and falls back to `model.onnx`). |
 
 ---
 

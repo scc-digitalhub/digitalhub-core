@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ONNX -> Relax IR builder. Exposes all from_onnx params + ONNX preprocessing
+"""ONNX -> Relax IR builder. Exposes from_onnx params + ONNX preprocessing
 (shape_inference, version_converter, onnxsim.simplify) as CLI args.
 
 Outputs in --output: model.relax.ir, metadata.json, params.bin (if
@@ -36,8 +36,7 @@ def _tensor_spec(value_info):
     return {"name": value_info.name, "shape": shape, "dtype": dtype}
 
 
-def extract_input_specs(model, shape_dict: Optional[Dict[str, list]] = None,
-                        dtype_dict: Optional[Any] = None):
+def extract_input_specs(model):
     """Real inputs (excludes weights that ONNX also lists in graph.input).
     Relax requires static shapes at build time, so unknown dims default to 1.
     """
@@ -47,30 +46,13 @@ def extract_input_specs(model, shape_dict: Optional[Dict[str, list]] = None,
         if inp.name in weight_names:
             continue
         spec = _tensor_spec(inp)
-        if shape_dict and inp.name in shape_dict:
-            spec["shape"] = list(shape_dict[inp.name])
-        else:
-            spec["shape"] = [d if d > 0 else 1 for d in spec["shape"]]
-        if dtype_dict:
-            if isinstance(dtype_dict, dict) and inp.name in dtype_dict:
-                spec["dtype"] = dtype_dict[inp.name]
-            elif isinstance(dtype_dict, str):
-                spec["dtype"] = dtype_dict
+        spec["shape"] = [d if d > 0 else 1 for d in spec["shape"]]
         inputs.append(spec)
     return inputs
 
 
 def extract_output_specs(model):
     return [_tensor_spec(out) for out in model.graph.output]
-
-
-def parse_json_arg(value: Optional[str], name: str):
-    if not value:
-        return None
-    try:
-        return json.loads(value)
-    except json.JSONDecodeError as e:
-        sys.exit(f"ERROR: {name} is not valid JSON: {e}")
 
 
 def parse_bool(value: str, default: bool) -> bool:
@@ -86,10 +68,6 @@ def main():
     ap.add_argument("--name", default="model")
 
     # from_onnx parameters
-    ap.add_argument("--shape-dict", default=None,
-                    help='JSON per-input shape override, e.g. \'{"images":[1,3,640,640]}\'')
-    ap.add_argument("--dtype-dict", default=None,
-                    help='JSON per-input dict or a single dtype string e.g. "float32"')
     ap.add_argument("--opset", type=int, default=None,
                     help="opset override forwarded to from_onnx")
     ap.add_argument("--keep-params-in-input", type=str, default="false",
@@ -114,15 +92,6 @@ def main():
         print(f"ERROR: {in_path} not found", file=sys.stderr)
         sys.exit(2)
 
-    shape_dict = parse_json_arg(args.shape_dict, "--shape-dict")
-    dtype_dict_raw = args.dtype_dict
-    dtype_dict: Any = None
-    if dtype_dict_raw:
-        # JSON dict or single dtype string
-        try:
-            dtype_dict = json.loads(dtype_dict_raw)
-        except json.JSONDecodeError:
-            dtype_dict = dtype_dict_raw
     keep_params = parse_bool(args.keep_params_in_input, False)
     sanitize_names = parse_bool(args.sanitize_input_names, True)
     do_simplify = parse_bool(args.simplify, False)
@@ -175,8 +144,8 @@ def main():
           f"keep_params_in_input={keep_params}, sanitize_input_names={sanitize_names})")
     mod: Any = from_onnx(
         model,
-        shape_dict=shape_dict,
-        dtype_dict=dtype_dict if dtype_dict is not None else "float32",
+        shape_dict=None,
+        dtype_dict="float32",
         opset=args.opset,
         keep_params_in_input=keep_params,
         sanitize_input_names=sanitize_names,
@@ -219,7 +188,7 @@ def main():
             print(f"      save_param_dict failed: {e}", file=sys.stderr)
 
     print("[6/7] Extracting metadata")
-    inputs = extract_input_specs(model, shape_dict, dtype_dict)
+    inputs = extract_input_specs(model)
     outputs = extract_output_specs(model)
     meta = {
         "entry": "main",
@@ -231,10 +200,6 @@ def main():
         "inputs": inputs,
         "outputs": outputs,
     }
-    if shape_dict:
-        meta["shape_overrides"] = shape_dict
-    if dtype_dict:
-        meta["dtype_overrides"] = dtype_dict
     (out_dir / "metadata.json").write_text(json.dumps(meta, indent=2))
     for i in inputs:
         print(f"      in  '{i['name']}': {i['dtype']} {i['shape']}")
@@ -262,8 +227,6 @@ def main():
             "parameters": {
                 "opset": meta["opset"],
                 "model_name": meta["model_name"],
-                **({"shape_overrides": shape_dict} if shape_dict else {}),
-                **({"dtype_overrides": dtype_dict} if dtype_dict else {}),
             },
         },
     )

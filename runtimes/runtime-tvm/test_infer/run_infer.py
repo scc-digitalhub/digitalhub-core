@@ -5,7 +5,8 @@ Test di inferenza END-TO-END contro un serve TVM lanciato da CORE.
 Cosa fa:
   1. interroga l'API di CORE e trova il run `tvm+serve:run` in stato RUNNING
      (o quello indicato con --run), ricavando il Service creato da CORE e il
-     nome del modello servito (da spec.function);
+     nome del modello servito (spec.served_name o, in mancanza, il clean name
+     di spec.function);
   2. scarica un'immagine di test (default: bus.jpg di ultralytics) — o usa
      quella passata con --image;
   3. raggiunge il Service (ClusterIP) via `kubectl port-forward` e chiama
@@ -13,6 +14,9 @@ Cosa fa:
      (GRPCInferenceService.ModelInfer);
   4. decodifica l'output YOLOv8, applica NMS e salva l'immagine con i
      bounding box.
+
+Il plumbing (scoperta da CORE, port-forward, trasporto REST/gRPC) è condiviso
+con test_xinet.py in `_client.py`, qui accanto.
 
 Uso:
   python3 run_infer.py                          # REST, run RUNNING auto, bus.jpg
@@ -23,11 +27,12 @@ Uso:
 Requisiti: minikube (kubectl), python3 + numpy + Pillow; per --mode grpc anche
 grpcio + grpcio-tools (il proto è accanto a questo script).
 """
-import argparse, atexit, json, os, subprocess, sys, tempfile, time, urllib.request
+import argparse, json, os, time, urllib.request
 import numpy as np
 
+from _client import discover, port_forward, get_image, infer_rest, infer_grpc
+
 HERE = os.path.dirname(os.path.abspath(__file__))
-KUBECTL = ["minikube", "kubectl", "--"]
 DEFAULT_IMAGE_URL = "https://ultralytics.com/images/bus.jpg"
 COCO = ("person bicycle car motorcycle airplane bus train truck boat trafficlight firehydrant stopsign "
         "parkingmeter bench bird cat dog horse sheep cow elephant bear zebra giraffe backpack umbrella "
@@ -38,78 +43,7 @@ COCO = ("person bicycle car motorcycle airplane bus train truck boat trafficligh
         "teddybear hairdrier toothbrush").split()
 
 
-# ---------- CORE discovery ----------
-def core_get(core, path, user, pw):
-    import base64
-    req = urllib.request.Request(core.rstrip("/") + path)
-    req.add_header("Authorization", "Basic " + base64.b64encode(f"{user}:{pw}".encode()).decode())
-    return json.loads(urllib.request.urlopen(req, timeout=30).read())
-
-
-def discover(core, project, user, pw, run_id):
-    runs = core_get(core, f"/api/v1/-/{project}/runs?size=100", user, pw).get("content", [])
-    serves = [r for r in runs if r.get("kind") == "tvm+serve:run"]
-    if run_id:
-        run = next((r for r in serves if r.get("id") == run_id), None)
-        if not run:
-            sys.exit(f"run {run_id} non trovato tra i tvm+serve:run del progetto {project}")
-    else:
-        run = next((r for r in serves if (r.get("status") or {}).get("state") == "RUNNING"), None)
-        if not run:
-            sys.exit("nessun tvm+serve:run in stato RUNNING (lancialo dalla console, poi riprova)")
-    svc = (run.get("status") or {}).get("service") or {}
-    if not svc.get("name"):
-        sys.exit(f"il run {run.get('id')} non ha ancora un Service (stato {(run.get('status') or {}).get('state')})")
-    # modello servito = clean name della function (spec.function = tvm://<proj>/<name>:<id>)
-    fn = (run.get("spec") or {}).get("function", "")
-    model = fn.split("/")[-1].split(":")[0] if fn else "model"
-    ports = {p.get("port"): p for p in svc.get("ports", [])}
-    print(f"CORE run:  {run.get('id')}  (state RUNNING)")
-    print(f"service:   {svc['name']}  ({svc.get('type')})  porte {list(ports)}")
-    print(f"modello:   {model}")
-    return svc["name"], model
-
-
-# ---------- port-forward del Service creato da CORE ----------
-def port_forward(ns, svc, remote_port, http_probe=None):
-    import socket
-    local = _free_port()
-    proc = subprocess.Popen(KUBECTL + ["port-forward", "-n", ns, f"svc/{svc}", f"{local}:{remote_port}"],
-                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    atexit.register(lambda: proc.terminate())
-    # Il forward è "pronto" solo quando risponde davvero: per HTTP facciamo un
-    # probe applicativo (il TCP connect a kubectl passa prima che il tunnel al pod
-    # sia stabilito, causando 'Remote end closed connection' sulla prima richiesta).
-    for _ in range(60):
-        try:
-            if http_probe:
-                if urllib.request.urlopen(f"http://127.0.0.1:{local}{http_probe}", timeout=2).status == 200:
-                    return local
-            else:
-                with socket.create_connection(("127.0.0.1", local), timeout=1):
-                    time.sleep(0.5)
-                    return local
-        except Exception:
-            time.sleep(0.5)
-    sys.exit(f"port-forward su svc/{svc}:{remote_port} non pronto")
-
-
-def _free_port():
-    import socket
-    s = socket.socket(); s.bind(("", 0)); p = s.getsockname()[1]; s.close(); return p
-
-
-# ---------- immagine ----------
-def get_image(image_arg, url):
-    if image_arg and os.path.isfile(image_arg):
-        return image_arg
-    src = image_arg if (image_arg and image_arg.startswith("http")) else url
-    dst = os.path.join(HERE, "input.jpg")
-    print(f"scarico immagine: {src}")
-    urllib.request.urlretrieve(src, dst)
-    return dst
-
-
+# ---------- preparazione input ----------
 def letterbox(img, size):
     from PIL import Image
     W, H = img.size
@@ -119,46 +53,6 @@ def letterbox(img, size):
     dx, dy = (size - nw) // 2, (size - nh) // 2
     canvas.paste(img.resize((nw, nh), Image.BILINEAR), (dx, dy))
     return canvas, r, dx, dy
-
-
-# ---------- transport ----------
-def infer_rest(local, model, input_name, shape, data):
-    body = json.dumps({"inputs": [{"name": input_name, "shape": shape, "datatype": "FP32",
-                                   "data": data.tolist()}]}).encode()
-    req = urllib.request.Request(f"http://127.0.0.1:{local}/v2/models/{model}/infer",
-                                 data=body, headers={"Content-Type": "application/json"})
-    res = json.loads(urllib.request.urlopen(req, timeout=300).read())
-    o = res["outputs"][0]
-    return np.array(o["data"], np.float32), o["shape"], res.get("parameters")
-
-
-def infer_grpc(local, model, input_name, shape, data):
-    import grpc
-    from grpc_tools import protoc
-    out = tempfile.mkdtemp()
-    if protoc.main(["", f"-I{HERE}", f"--python_out={out}", f"--grpc_python_out={out}",
-                    "grpc_predict_v2.proto"]) != 0:
-        sys.exit("compilazione proto (grpc_tools) fallita")
-    sys.path.insert(0, out)
-    import grpc_predict_v2_pb2 as pb
-    import grpc_predict_v2_pb2_grpc as pbg
-    # Raise the client-side message limits: v2 tensors exceed the 4MB gRPC default
-    # (the request alone is ~4.9MB for a 1x3x640x640 FP32 input).
-    ch = grpc.insecure_channel(f"127.0.0.1:{local}", options=[
-        ("grpc.max_send_message_length", 512 * 1024 * 1024),
-        ("grpc.max_receive_message_length", 512 * 1024 * 1024),
-    ])
-    stub = pbg.GRPCInferenceServiceStub(ch)
-    req = pb.ModelInferRequest(model_name=model)
-    t = req.inputs.add(); t.name = input_name; t.datatype = "FP32"
-    t.shape.extend([int(s) for s in shape]); t.contents.fp32_contents.extend(data.tolist())
-    resp = stub.ModelInfer(req, timeout=300)
-    o = resp.outputs[0]
-    if resp.raw_output_contents:
-        arr = np.frombuffer(resp.raw_output_contents[0], np.float32)
-    else:
-        arr = np.array(o.contents.fp32_contents, np.float32)
-    return arr, list(o.shape), None
 
 
 # ---------- YOLOv8 decode ----------
@@ -228,10 +122,11 @@ def main():
     ap.add_argument("--out", default=os.path.join(HERE, "detections.jpg"))
     a = ap.parse_args()
 
-    svc, model = discover(a.core, a.project, a.user, a.password, a.run)
+    svc, model = discover(a.core, a.project, a.user, a.password, run_id=a.run)
 
-    # metadata via REST (:8080) per shape input/output; alcuni backend (es. Go)
-    # non espongono inputs/outputs -> fallback su --input-name/--input-shape.
+    # metadata via REST (:8080) per shape input/output; entrambi i backend (rust
+    # e Go) li espongono via /v2/models leggendoli da metadata.json — il fallback
+    # --input-name/--input-shape resta per modelli pubblicati senza metadata.
     lp_rest = port_forward(a.ns, svc, 8080, http_probe="/v2/health/ready")
     meta = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{lp_rest}/v2/models/{model}", timeout=30).read())
     if meta.get("inputs"):
@@ -255,10 +150,10 @@ def main():
     print(f"\n== inferenza via {a.mode.upper()} ==")
     t = time.time()
     if a.mode == "rest":
-        out_flat, out_shape, params = infer_rest(lp_rest, model, input_name, input_shape, data)
+        out_flat, out_shape, _, params = infer_rest(lp_rest, model, input_name, input_shape, "FP32", data)
     else:
         lp_grpc = port_forward(a.ns, svc, 9000)
-        out_flat, out_shape, params = infer_grpc(lp_grpc, model, input_name, input_shape, data)
+        out_flat, out_shape, _, params = infer_grpc(lp_grpc, model, input_name, input_shape, "FP32", data)
     print(f"infer: {(time.time()-t)*1000:.0f} ms roundtrip ({params})  output shape {out_shape}")
 
     if len(out_shape) == 3 and out_shape[1] == 84:
