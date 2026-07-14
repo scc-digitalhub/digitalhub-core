@@ -35,7 +35,7 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreLog;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreMetric;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.logs.Log;
-import it.smartcommunitylabdhub.logs.LogService;
+import it.smartcommunitylabdhub.logs.LogStore;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
 import java.io.Serializable;
@@ -46,6 +46,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -57,14 +58,15 @@ import org.springframework.validation.BindException;
     spec = Status.class
 )
 @Component
+@ConditionalOnBean(LogStore.class)
 public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
 
     //TODO make configurable
     public static final int MAX_METRICS = 300;
 
-    private final LogService logService;
+    private final LogStore logService;
 
-    public K8sLogProcessor(LogService logService) {
+    public K8sLogProcessor(LogStore logService) {
         Assert.notNull(logService, "log service is required to persist logs");
         this.logService = logService;
     }

@@ -33,6 +33,7 @@ import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
 import it.smartcommunitylabdhub.logs.Log;
 import it.smartcommunitylabdhub.logs.LogService;
+import it.smartcommunitylabdhub.logs.LogStore;
 import it.smartcommunitylabdhub.logs.local.persistence.LogEntity;
 import it.smartcommunitylabdhub.logs.local.persistence.LogRepository;
 import it.smartcommunitylabdhub.runs.Run;
@@ -57,7 +58,7 @@ import org.springframework.validation.BindException;
 
 @Transactional
 @Slf4j
-public class LocalLogServiceImpl implements LogService {
+public class LocalLogServiceImpl implements LogService, LogStore {
 
     public static final int MAX_LENGTH = 2 * 1024 * 1024; //2MB
 

@@ -18,7 +18,7 @@ package it.smartcommunitylabdhub.core.runs.service;
 
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.core.services.EntityFinalizer;
-import it.smartcommunitylabdhub.logs.LogService;
+import it.smartcommunitylabdhub.logs.LogStore;
 import it.smartcommunitylabdhub.runs.Run;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
@@ -30,13 +30,13 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class RunEntityFinalizer implements EntityFinalizer<Run>, InitializingBean {
 
-    private LogService logService;
+    private LogStore logStore;
 
     //TODO remove metrics
 
     @Autowired(required = false)
-    public void setLogService(LogService logService) {
-        this.logService = logService;
+    public void setLogStore(LogStore logStore) {
+        this.logStore = logStore;
     }
 
     @Override
@@ -48,9 +48,9 @@ public class RunEntityFinalizer implements EntityFinalizer<Run>, InitializingBea
 
         String id = run.getId();
 
-        if (logService != null) {
+        if (logStore != null) {
             log.debug("cascade delete logs for run with id {}", String.valueOf(id));
-            logService.deleteLogsByRunId(id);
+            logStore.deleteLogsByRunId(id);
         }
     }
 }

@@ -27,9 +27,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.logs.Log;
 import it.smartcommunitylabdhub.logs.LogService;
+import it.smartcommunitylabdhub.logs.LogStore;
 import it.smartcommunitylabdhub.logs.filter.LogEntityFilter;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
@@ -65,6 +67,9 @@ public class LogController {
     @Autowired
     LogService logService;
 
+    @Autowired(required = false)
+    LogStore logStore;
+
     @Operation(summary = "List logs", description = "Return a list of all logs")
     @GetMapping(path = "", produces = "application/json; charset=UTF-8")
     public Page<Log> getLogs(
@@ -85,12 +90,18 @@ public class LogController {
     @GetMapping(path = "/{id}", produces = "application/json; charset=UTF-8")
     public Log getLog(@PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id)
         throws NoSuchEntityException {
-        return logService.getLog(id);
+        if (logStore == null) {
+            throw new SystemException("log store not available");
+        }
+        return logStore.getLog(id);
     }
 
     @Operation(summary = "Delete a log", description = "Delete a specific log")
     @DeleteMapping(path = "/{id}")
     public void deleteLog(@PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id) {
-        logService.deleteLog(id);
+        if (logStore == null) {
+            throw new SystemException("log store not available");
+        }
+        logStore.deleteLog(id);
     }
 }

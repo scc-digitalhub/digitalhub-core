@@ -24,8 +24,6 @@
 package it.smartcommunitylabdhub.logs.loki;
 
 import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
-import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
-import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
@@ -58,7 +56,6 @@ import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
-import org.springframework.validation.BindException;
 
 @Slf4j
 public class LokiLogService implements LogService {
@@ -253,51 +250,6 @@ public class LokiLogService implements LogService {
             log.error("Error fetching run {}: {}", runId, se.getMessage());
             throw new SystemException(se.getMessage());
         }
-    }
-
-    /*
-     * Write operations are not supported.
-     */
-    @Override
-    @Nullable
-    public Log findLog(@NotNull String id) throws SystemException {
-        //NOT SUPPORTED
-        throw new UnsupportedOperationException("Unimplemented method 'findLog'");
-    }
-
-    @Override
-    public Log getLog(@NotNull String id) throws NoSuchEntityException, SystemException {
-        //NOT SUPPORTED
-        throw new UnsupportedOperationException("Unimplemented method 'getLog'");
-    }
-
-    @Override
-    public Log createLog(@NotNull Log logDTO)
-        throws DuplicatedEntityException, BindException, IllegalArgumentException, SystemException {
-        //NOT SUPPORTED
-        throw new UnsupportedOperationException("Unimplemented method 'createLog'");
-    }
-
-    @Override
-    public Log updateLog(@NotNull String id, @NotNull Log logDTO)
-        throws NoSuchEntityException, BindException, IllegalArgumentException, SystemException {
-        //NOT SUPPORTED
-        throw new UnsupportedOperationException("Unimplemented method 'updateLog'");
-    }
-
-    @Override
-    public void deleteLog(@NotNull String id) throws SystemException {
-        //NOT SUPPORTED
-    }
-
-    @Override
-    public void deleteLogsByProject(@NotNull String project) throws SystemException {
-        //NOT SUPPORTED
-    }
-
-    @Override
-    public void deleteLogsByRunId(@NotNull String runId) throws SystemException {
-        // NOT SUPPORTED
     }
 
     /*

@@ -27,9 +27,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.logs.Log;
 import it.smartcommunitylabdhub.logs.LogService;
+import it.smartcommunitylabdhub.logs.LogStore;
 import it.smartcommunitylabdhub.logs.filter.LogEntityFilter;
 import it.smartcommunitylabdhub.runs.RunManager;
 import jakarta.annotation.Nullable;
@@ -67,6 +69,9 @@ public class LogContextController {
     @Autowired
     LogService logService;
 
+    @Autowired(required = false)
+    LogStore logStore;
+
     @Autowired
     RunManager runService;
 
@@ -93,7 +98,11 @@ public class LogContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Log log = logService.getLog(id);
+        if (logStore == null) {
+            throw new SystemException("log store not available");
+        }
+
+        Log log = logStore.getLog(id);
 
         //check for project match
         if (!log.getProject().equals(project)) {
@@ -109,13 +118,17 @@ public class LogContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
-        Log log = logService.getLog(id);
+        if (logStore == null) {
+            throw new SystemException("log store not available");
+        }
+
+        Log log = logStore.getLog(id);
 
         //check for project  match
         if (!log.getProject().equals(project)) {
             throw new IllegalArgumentException("invalid project");
         }
 
-        logService.deleteLog(id);
+        logStore.deleteLog(id);
     }
 }
