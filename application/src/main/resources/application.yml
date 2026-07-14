@@ -72,6 +72,8 @@ management:
       access: read-only
     health:
       access: read-only
+    metrics:
+      access: read-only
 
 # Spring Docs
 springdoc:
