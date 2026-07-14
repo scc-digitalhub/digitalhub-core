@@ -26,9 +26,11 @@ package it.smartcommunitylabdhub.logs.loki;
 import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
+import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.logs.Log;
 import it.smartcommunitylabdhub.logs.LogService;
 import it.smartcommunitylabdhub.logs.loki.client.LogEntry;
@@ -37,6 +39,7 @@ import it.smartcommunitylabdhub.logs.loki.client.LokiException;
 import it.smartcommunitylabdhub.logs.loki.client.QueryResult;
 import it.smartcommunitylabdhub.logs.loki.client.Streams;
 import it.smartcommunitylabdhub.logs.loki.config.LokiProperties;
+import it.smartcommunitylabdhub.runs.Run;
 import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -60,8 +63,11 @@ import org.springframework.validation.BindException;
 @Slf4j
 public class LokiLogService implements LogService {
 
+    private static final long END_OFFSET = 300L; //5 minutes offset for end time if not available
     private final LokiProperties lokiProperties;
     private final LokiClient lokiClient;
+
+    private EntityRepository<Run> runRepository;
 
     @Autowired
     ApplicationProperties applicationProperties;
@@ -73,6 +79,11 @@ public class LokiLogService implements LogService {
         //build client
         log.debug("Initializing LokiClient for {}", lokiProperties.getUrl());
         this.lokiClient = new LokiClient(lokiProperties);
+    }
+
+    @Autowired(required = false)
+    public void setRunRepository(EntityRepository<Run> runRepository) {
+        this.runRepository = runRepository;
     }
 
     @Override
@@ -88,7 +99,7 @@ public class LokiLogService implements LogService {
             )
         );
 
-        List<Log> logs = fetch(filters);
+        List<Log> logs = fetch(filters, null, null);
         if (log.isTraceEnabled()) {
             log.trace("logs: {}", logs);
         }
@@ -129,7 +140,7 @@ public class LokiLogService implements LogService {
                 }
             });
 
-        List<Log> logs = fetch(filters);
+        List<Log> logs = fetch(filters, null, null);
         if (log.isTraceEnabled()) {
             log.trace("logs: {}", logs);
         }
@@ -143,60 +154,105 @@ public class LokiLogService implements LogService {
         @Nullable SearchFilter<Log> filter
     ) throws SystemException {
         log.debug("search logs for project {} with {} page {}", project, String.valueOf(filter), pageable);
+        try {
+            //build queryQL from filter
+            List<Pair<String, String>> filters = new ArrayList<>();
 
-        //build queryQL from filter
-        List<Pair<String, String>> filters = new ArrayList<>();
+            //we support only run+user filtering by default
+            filter
+                .getCriteria()
+                .stream()
+                .filter(c -> c.getField().equals("run") || c.getField().equals("user"))
+                .map(c -> Pair.of(c.getField(), c.getValue()))
+                .forEach(c -> {
+                    if (c.getFirst() != null && c.getSecond() != null) {
+                        filters.add(
+                            Pair.of(
+                                c.getFirst(),
+                                lokiProperties.usePrefixForValues()
+                                    ? applicationProperties.getName() + "-" + c.getSecond().toString()
+                                    : c.getSecond().toString()
+                            )
+                        );
+                    }
+                });
 
-        //we support only run+user filtering by default
-        filter
-            .getCriteria()
-            .stream()
-            .filter(c -> c.getField().equals("run") || c.getField().equals("user"))
-            .map(c -> Pair.of(c.getField(), c.getValue()))
-            .forEach(c -> {
-                if (c.getFirst() != null && c.getSecond() != null) {
-                    filters.add(
-                        Pair.of(
-                            c.getFirst(),
-                            lokiProperties.usePrefixForValues()
-                                ? applicationProperties.getName() + "-" + c.getSecond().toString()
-                                : c.getSecond().toString()
-                        )
-                    );
+            //project is statically added to the filters
+            filters.add(
+                Pair.of(
+                    "project",
+                    lokiProperties.usePrefixForValues() ? applicationProperties.getName() + "-" + project : project
+                )
+            );
+
+            Long start = null;
+            Long end = null;
+            String runId = filter
+                .getCriteria()
+                .stream()
+                .filter(c -> c.getField().equals("run"))
+                .findFirst()
+                .map(c -> c.getValue().toString())
+                .orElse(null);
+            if (runRepository != null && StringUtils.hasText(runId)) {
+                Run run = runRepository.find(runId);
+                if (run != null) {
+                    //use creation date for start
+                    BaseMetadata metadata = BaseMetadata.from(run.getMetadata());
+                    start = metadata.getCreated() != null ? metadata.getCreated().toEpochSecond() : null;
+                    end = metadata.getUpdated() != null ? metadata.getUpdated().toEpochSecond() + END_OFFSET : null;
                 }
-            });
+            }
 
-        //project is statically added to the filters
-        filters.add(
-            Pair.of(
-                "project",
-                lokiProperties.usePrefixForValues() ? applicationProperties.getName() + "-" + project : project
-            )
-        );
-
-        List<Log> logs = fetch(filters);
-        if (log.isTraceEnabled()) {
-            log.trace("logs: {}", logs);
+            List<Log> logs = fetch(filters, start, end);
+            if (log.isTraceEnabled()) {
+                log.trace("logs: {}", logs);
+            }
+            return new PageImpl<>(logs, pageable, logs.size());
+        } catch (StoreException se) {
+            log.error("Error fetching from store: {}", se.getMessage());
+            throw new SystemException(se.getMessage());
         }
-        return new PageImpl<>(logs, pageable, logs.size());
     }
 
     @Override
     public List<Log> getLogsByRunId(@NotNull String runId) throws SystemException {
         log.debug("list logs by run {}", runId);
 
-        //build queryQL from filter
-        List<Pair<String, String>> filters = new ArrayList<>();
-        filters.add(
-            Pair.of("run", lokiProperties.usePrefixForValues() ? applicationProperties.getName() + "-" + runId : runId)
-        );
+        try {
+            Long start = null;
+            Long end = null;
+            if (runRepository != null) {
+                Run run = runRepository.find(runId);
+                if (run == null) {
+                    return List.of();
+                }
 
-        List<Log> logs = fetch(filters);
-        if (log.isTraceEnabled()) {
-            log.trace("logs: {}", logs);
+                //use creation date for start
+                BaseMetadata metadata = BaseMetadata.from(run.getMetadata());
+                start = metadata.getCreated() != null ? metadata.getCreated().toEpochSecond() : null;
+                end = metadata.getUpdated() != null ? metadata.getUpdated().toEpochSecond() + END_OFFSET : null;
+            }
+
+            //build queryQL from filter
+            List<Pair<String, String>> filters = new ArrayList<>();
+            filters.add(
+                Pair.of(
+                    "run",
+                    lokiProperties.usePrefixForValues() ? applicationProperties.getName() + "-" + runId : runId
+                )
+            );
+
+            List<Log> logs = fetch(filters, start, end);
+            if (log.isTraceEnabled()) {
+                log.trace("logs: {}", logs);
+            }
+
+            return logs;
+        } catch (StoreException se) {
+            log.error("Error fetching run {}: {}", runId, se.getMessage());
+            throw new SystemException(se.getMessage());
         }
-
-        return logs;
     }
 
     /*
@@ -247,7 +303,7 @@ public class LokiLogService implements LogService {
     /*
      * Helpers
      */
-    private List<Log> fetch(List<Pair<String, String>> filters) {
+    private List<Log> fetch(@NotNull List<Pair<String, String>> filters, @Nullable Long start, @Nullable Long end) {
         if (
             StringUtils.hasText(lokiProperties.getNamespace()) &&
             filters.stream().noneMatch(f -> "namespace".equals(f.getFirst()))
@@ -281,9 +337,10 @@ public class LokiLogService implements LogService {
 
         try {
             //query loki with default params
-            //NOTE: we lack a proper logic for pagination and for start/end time filtering
-            long start = (System.currentTimeMillis() / 1000) - (30L * 24 * 3600);
-            QueryResult result = lokiClient.query(query.toString(), start, null, "forward");
+            //NOTE: we lack a proper logic for pagination
+            long startEpoch = start != null ? start : (System.currentTimeMillis() / 1000) - (30L * 24 * 3600);
+            long endEpoch = end != null ? end : System.currentTimeMillis() / 1000;
+            QueryResult result = lokiClient.query(query.toString(), startEpoch, endEpoch, "forward");
 
             // fetch and convert log entries when available
             if (
@@ -356,18 +413,14 @@ public class LokiLogService implements LogService {
         BaseMetadata metadata = new BaseMetadata();
         // we can set created/updated from the first and last entry timestamps
         if (!entry.getValues().isEmpty()) {
-            String firstTimestamp = entry.getValues().get(0).getTimestamp();
+            Long firstTimestamp = entry.getValues().get(0).getTimestamp();
             if (firstTimestamp != null) {
-                metadata.setCreated(
-                    Instant.ofEpochMilli(Long.parseLong(firstTimestamp) / 1_000_000).atOffset(ZoneOffset.UTC)
-                );
+                metadata.setCreated(Instant.ofEpochMilli(firstTimestamp / 1_000_000).atOffset(ZoneOffset.UTC));
             }
 
-            String lastTimestamp = entry.getValues().get(entry.getValues().size() - 1).getTimestamp();
+            Long lastTimestamp = entry.getValues().get(entry.getValues().size() - 1).getTimestamp();
             if (lastTimestamp != null) {
-                metadata.setUpdated(
-                    Instant.ofEpochMilli(Long.parseLong(lastTimestamp) / 1_000_000).atOffset(ZoneOffset.UTC)
-                );
+                metadata.setUpdated(Instant.ofEpochMilli(lastTimestamp / 1_000_000).atOffset(ZoneOffset.UTC));
             }
         }
         //export labels as metadata

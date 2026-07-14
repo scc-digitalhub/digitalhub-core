@@ -18,7 +18,8 @@ import lombok.ToString;
 @ToString
 public class LogEntry {
 
-    private String timestamp;
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
+    private Long timestamp;
 
     private String line;
 }

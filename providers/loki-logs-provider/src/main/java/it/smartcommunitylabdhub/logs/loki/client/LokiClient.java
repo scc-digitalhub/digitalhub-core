@@ -3,6 +3,8 @@ package it.smartcommunitylabdhub.logs.loki.client;
 import it.smartcommunitylabdhub.logs.loki.config.LokiProperties;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
@@ -12,8 +14,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import org.springframework.util.Assert;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
@@ -72,7 +72,7 @@ public class LokiClient {
         @Nullable Long end,
         @Nullable String direction
     ) {
-        log.debug("query loki for {}", query);
+        log.debug("query loki for {} interval {} - {}", query, String.valueOf(start), String.valueOf(end));
         // parameters are unix seconds; convert to nanoseconds for Loki
         long nowNs = System.currentTimeMillis() * NS_CONVERSION_FACTOR;
         long endNs = end != null ? end * S_CONVERSION_FACTOR : nowNs;
@@ -110,9 +110,11 @@ public class LokiClient {
             return response.getBody();
         } catch (ResourceAccessException e) {
             // Connection refused, timeout, or other I/O errors
+            log.error("Error connecting to loki at {}: {}", lokiUrl, e.getMessage());
             throw new LokiException("Cannot connect to Loki at " + lokiUrl + ": " + e.getMessage(), e);
         } catch (HttpClientErrorException e) {
             // 4xx errors (e.g. 401, 403, 404)
+            log.error("`Error response from loki at {}: {} - {}", lokiUrl, e.getStatusCode().value(), e.getMessage());
             throw new LokiException(
                 "Loki request failed with client error " + e.getStatusCode().value() + ": " + e.getMessage(),
                 e.getStatusCode().value(),
@@ -120,12 +122,14 @@ public class LokiClient {
             );
         } catch (HttpServerErrorException e) {
             // 5xx errors
+            log.error("Error response from loki at {}: {} - {}", lokiUrl, e.getStatusCode().value(), e.getMessage());
             throw new LokiException(
                 "Loki request failed with server error " + e.getStatusCode().value() + ": " + e.getMessage(),
                 e.getStatusCode().value(),
                 e
             );
         } catch (RestClientException e) {
+            log.error("Error during loki request to {}: {}", lokiUrl, e.getMessage());
             throw new LokiException("Loki request failed: " + e.getMessage(), e);
         }
     }
