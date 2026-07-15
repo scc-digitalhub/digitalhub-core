@@ -21,47 +21,21 @@
  *
  */
 
-package it.smartcommunitylabdhub.framework.k8s.objects;
+package it.smartcommunitylabdhub.runtime.python.hydra.specs;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
 import java.io.Serializable;
 import java.util.Map;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@AllArgsConstructor
-@NoArgsConstructor
 @Getter
 @Setter
-@Builder
-public class CoreVolume implements Serializable {
+@NoArgsConstructor
+public class HydraRunSpec extends RunBaseSpec {
 
-    @JsonProperty("volume_type")
-    @NotNull
-    private VolumeType volumeType;
-
-    @JsonProperty("mount_path")
-    @NotBlank
-    private String mountPath;
-
-    @NotBlank
-    private String name;
-
-    private Map<String, String> spec;
-
-    public enum VolumeType {
-        // config_map,
-        // secret,
-        shared_volume,
-        persistent_volume_claim,
-        ephemeral,
-        empty_dir,
-        image,
-        workflow_volume
+    public HydraRunSpec(Map<String, Serializable> data) {
+        configure(data);
     }
 }

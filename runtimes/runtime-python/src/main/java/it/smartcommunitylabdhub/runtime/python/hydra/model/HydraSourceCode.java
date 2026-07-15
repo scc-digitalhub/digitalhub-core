@@ -21,47 +21,32 @@
  *
  */
 
-package it.smartcommunitylabdhub.framework.k8s.objects;
+package it.smartcommunitylabdhub.runtime.python.hydra.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import java.io.Serializable;
-import java.util.Map;
+import io.swagger.v3.oas.annotations.media.Schema;
+import it.smartcommunitylabdhub.runtime.python.model.PythonSourceCode;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.lang.Nullable;
 
-@AllArgsConstructor
-@NoArgsConstructor
 @Getter
 @Setter
-@Builder
-public class CoreVolume implements Serializable {
-
-    @JsonProperty("volume_type")
-    @NotNull
-    private VolumeType volumeType;
-
-    @JsonProperty("mount_path")
-    @NotBlank
-    private String mountPath;
-
-    @NotBlank
-    private String name;
-
-    private Map<String, String> spec;
-
-    public enum VolumeType {
-        // config_map,
-        // secret,
-        shared_volume,
-        persistent_volume_claim,
-        ephemeral,
-        empty_dir,
-        image,
-        workflow_volume
-    }
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class HydraSourceCode
+    extends PythonSourceCode {
+        
+    @Nullable
+    @Schema(
+        title = "fields.sourceCode.complete_function.title",
+        description = "fields.sourceCode.complete_function.description"
+    )
+    @JsonProperty("complete_function")
+    private String completeFunction;
+    
 }

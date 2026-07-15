@@ -148,6 +148,8 @@ public abstract class K8sBaseFramework<
     protected CoreResourceDefinition pvcRequestResourceDefinition = new CoreResourceDefinition("storage", null);
     protected CoreResourceDefinition pvcLimitResourceDefinition = new CoreResourceDefinition("storage", null);
     protected String pvcStorageClass;
+    protected String workflowPvcStorageClass;
+    protected String workflowPvcAccessMode;
     protected CoreResourceDefinition ephemeralRequestResourceDefinition = new CoreResourceDefinition(
         "ephemeral-storage",
         null
@@ -329,6 +331,19 @@ public abstract class K8sBaseFramework<
             this.pvcStorageClass = pvcStorageClass;
         }
     }
+
+    @Autowired
+    public void setWorkflowPvcStorageClass(@Value("${kubernetes.resources.workflow.storage-class}") String pvcStorageClass) {
+        if (StringUtils.hasText(pvcStorageClass)) {
+            this.workflowPvcStorageClass = pvcStorageClass;
+        }
+    }
+
+    @Autowired
+    public void setWorkflowPvcAccessMode(@Value("${kubernetes.resources.workflow.access-mode}") String pvcAccessMode) {
+        this.workflowPvcAccessMode = pvcAccessMode;
+    }
+
 
     public void setEphemeralRequestResourceDefinition(CoreResourceDefinition ephemeralResourceDefinition) {
         this.ephemeralRequestResourceDefinition = ephemeralResourceDefinition;
@@ -1626,7 +1641,8 @@ public abstract class K8sBaseFramework<
             runnable
                 .getVolumes()
                 .stream()
-                .filter(v -> v.getVolumeType() == CoreVolume.VolumeType.persistent_volume_claim)
+                // PVC or worklfow volumes should be prepared for creation
+                .filter(v -> CoreVolume.VolumeType.persistent_volume_claim.equals(v.getVolumeType()) || CoreVolume.VolumeType.workflow_volume.equals(v.getVolumeType()))
                 .forEach(v -> {
                     //build claim
                     Map<String, String> spec = Optional.ofNullable(v.getSpec()).orElse(Collections.emptyMap());
@@ -1644,17 +1660,20 @@ public abstract class K8sBaseFramework<
                         req.setLimits(Map.of("storage", limit));
                     }
 
+                    boolean isWf = CoreVolume.VolumeType.workflow_volume.equals(v.getVolumeType());
+                    String name = isWf ? spec.getOrDefault("claimName", v.getName()) : k8sBuilderHelper.getVolumeName(runnable.getId(), v.getName());
+
                     V1PersistentVolumeClaim claim = new V1PersistentVolumeClaim()
                         .metadata(
                             new V1ObjectMeta()
-                                .name(k8sBuilderHelper.getVolumeName(runnable.getId(), v.getName()))
+                                .name(name)
                                 .labels(buildLabels(runnable))
                         )
                         .spec(
                             new V1PersistentVolumeClaimSpec()
-                                .accessModes(Collections.singletonList("ReadWriteOnce"))
+                                .accessModes(Collections.singletonList(isWf ? workflowPvcAccessMode : "ReadWriteOnce"))
                                 .volumeMode("Filesystem")
-                                .storageClassName(spec.getOrDefault("storage_class", pvcStorageClass))
+                                .storageClassName(spec.getOrDefault("storage_class", isWf ? workflowPvcStorageClass : pvcStorageClass))
                                 .resources(req)
                         );
 

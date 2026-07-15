@@ -175,9 +175,17 @@ public abstract class PythonBaseRunner {
         );
     }
 
-    protected String buildNuclioFunction(
+     protected String buildNuclioFunction(
         @Nullable Map<String, Serializable> triggers,
         @Nullable Map<String, Serializable> event
+    ) {
+        return buildNuclioFunction(triggers, event, "handler:handler");
+    }
+
+    protected String buildNuclioFunction(
+        @Nullable Map<String, Serializable> triggers,
+        @Nullable Map<String, Serializable> event,
+        String handler
     ) {
         HashMap<String, Serializable> httpTrigger = new HashMap<>(Map.of("kind", "http", "maxWorkers", 2));
         HashMap<String, Serializable> fnTrigger = triggers != null ? new HashMap<>(triggers) : new HashMap<>();
@@ -194,7 +202,7 @@ public abstract class PythonBaseRunner {
             .builder()
             .runtime("python")
             //invoke user code wrapped via default handler
-            .handler("handler:handler")
+            .handler(handler)
             //directly invoke user code
             // .handler("main:" + runSpec.getFunctionSpec().getSource().getHandler())
             .triggers(fnTrigger)
@@ -231,13 +239,14 @@ public abstract class PythonBaseRunner {
                 PythonRunnerHelper.buildEntrypointArgs(
                     homeDir,
                     command,
+                    "function.yaml",
                     "/opt/nuclio/uv/uv",
                     List.of("/opt/nuclio/requirements/nuclio.txt", "/opt/nuclio/requirements/common.txt"),
                     "/opt/nuclio/whl"
                 )
             );
         } else {
-            args.addAll(PythonRunnerHelper.buildEntrypointArgs(homeDir, command, null, null, null));
+            args.addAll(PythonRunnerHelper.buildEntrypointArgs(homeDir, command, "function.yaml", null, null, null));
         }
 
         return args;
