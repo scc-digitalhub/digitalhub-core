@@ -1,0 +1,21 @@
+runtime:
+  tvm:
+    user-id: ${RUNTIME_TVM_USER_ID:${kubernetes.security.user}}
+    group-id: ${RUNTIME_TVM_GROUP_ID:${kubernetes.security.group}}
+    home-dir: ${RUNTIME_TVM_HOME_DIR:/shared}
+    volume-size: ${RUNTIME_TVM_VOLUME_SIZE:4Gi}
+
+    # format -> builder image for tvm+build (ONNX only).
+    builders:
+      onnx:      ${RUNTIME_TVM_BUILDER_ONNX:ghcr.io/scc-digitalhub/tvm-toolkit:0.25}
+
+    # image running compiler.py for tvm+compile (IR -> model.so)
+    compiler: ${RUNTIME_TVM_COMPILER:ghcr.io/scc-digitalhub/tvm-toolkit:0.25}
+
+    # base serving image for tvm+serve (native tvm-serve; selectable). The .so
+    # Model is downloaded into it by an init container at deploy time.
+    serve: ${RUNTIME_TVM_SERVE:ghcr.io/scc-digitalhub/tvm-runtime-rust:0.25}
+
+    entrypoint: classpath:/runtime-tvm/docker/entrypoint.sh
+    builder-scripts:
+      onnx:      classpath:/runtime-tvm/docker/builder_onnx.py

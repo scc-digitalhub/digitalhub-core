@@ -74,6 +74,7 @@
         <module>runtimes/runtime-model-serve</module>
         <module>runtimes/runtime-kubeai</module>
         <module>runtimes/runtime-servicegraph</module>
+        <module>runtimes/runtime-tvm</module>
         <module>modules/openmetadata-integration</module>
         <module>modules/proxy</module>
         <module>modules/component-run-initializer</module>
