@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
@@ -98,8 +99,7 @@ public class TemplateServiceImpl implements SearchableTemplateService, Initializ
     private ApplicationContext applicationContext;
 
     //loading cache as map type+list
-    LoadingCache<String, List<Template>> templateCache = CacheBuilder
-        .newBuilder()
+    LoadingCache<String, List<Template>> templateCache = CacheBuilder.newBuilder()
         .expireAfterWrite(CACHE_TIMEOUT, TimeUnit.MINUTES)
         .build(
             new CacheLoader<String, List<Template>>() {
@@ -119,21 +119,20 @@ public class TemplateServiceImpl implements SearchableTemplateService, Initializ
     @Autowired
     public void setSpecRegistries(List<SpecRegistry<?>> specRegistries) {
         Assert.notNull(specRegistries, "spec registries can not be null");
-        this.specRegistries =
-            specRegistries
-                .stream()
-                .collect(
-                    Collectors.toMap(
-                        r -> {
-                            if (BaseDTO.class.isAssignableFrom(r.getType())) {
-                                return EntityUtils.getEntityName((Class<? extends BaseDTO>) r.getType()).toLowerCase();
-                            }
+        this.specRegistries = specRegistries
+            .stream()
+            .collect(
+                Collectors.toMap(
+                    r -> {
+                        if (BaseDTO.class.isAssignableFrom(r.getType())) {
+                            return EntityUtils.getEntityName((Class<? extends BaseDTO>) r.getType()).toLowerCase();
+                        }
 
-                            return r.getType().getSimpleName().toLowerCase();
-                        },
-                        r -> r
-                    )
-                );
+                        return r.getType().getSimpleName().toLowerCase();
+                    },
+                    r -> r
+                )
+            );
     }
 
     @PostConstruct
@@ -141,8 +140,7 @@ public class TemplateServiceImpl implements SearchableTemplateService, Initializ
         // Detect the base packages based on ComponentScan annotation in CoreApplication.
         List<String> basePackages = ClassPathUtils.getBasePackages(applicationContext);
         log.info("Scanning for specDTOs under packages {}", basePackages);
-        Set<Class<? extends BaseDTO>> classes = EntityUtils
-            .scanForEntities(basePackages)
+        Set<Class<? extends BaseDTO>> classes = EntityUtils.scanForEntities(basePackages)
             .stream()
             .filter(c -> {
                 //only dto with spec can have a template
@@ -151,10 +149,12 @@ public class TemplateServiceImpl implements SearchableTemplateService, Initializ
             .collect(Collectors.toSet());
 
         //persist unmodifiable
-        this.types =
-            Collections.unmodifiableList(
-                classes.stream().map(s -> EntityUtils.getEntityName(s).toLowerCase()).toList()
-            );
+        this.types = Collections.unmodifiableList(
+            classes
+                .stream()
+                .map(s -> EntityUtils.getEntityName(s).toLowerCase())
+                .toList()
+        );
     }
 
     @Override
@@ -203,7 +203,7 @@ public class TemplateServiceImpl implements SearchableTemplateService, Initializ
                     validate(template);
 
                     result.add(template);
-                } catch (IllegalArgumentException | IOException e1) {
+                } catch (IllegalArgumentException | IOException | NoSuchEntityException e1) {
                     log.error("Error reading template from {}: {}", resource.getFilename(), e1.getMessage());
                 }
             }
@@ -342,7 +342,11 @@ public class TemplateServiceImpl implements SearchableTemplateService, Initializ
     public Template getTemplate(@NotNull String type, @NotNull String id) throws SystemException {
         try {
             List<Template> list = templateCache.get(type);
-            return list.stream().filter(t -> t.getId().equals(id)).findFirst().orElse(null);
+            return list
+                .stream()
+                .filter(t -> t.getId().equals(id))
+                .findFirst()
+                .orElse(null);
         } catch (ExecutionException e) {
             throw new SystemException("error retrieving templates:" + e.getMessage(), e);
         }
