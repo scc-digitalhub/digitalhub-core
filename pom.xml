@@ -56,7 +56,6 @@
         <module>entities/entity-task</module>
         <module>entities/entity-model</module>
         <module>entities/entity-trigger</module>
-        <module>entities/entity-log</module>
         <module>entities/entity-workflow</module>
         <module>entities/entity-container-image</module>
         <module>frameworks/framework-k8s</module>

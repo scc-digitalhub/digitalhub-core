@@ -25,11 +25,9 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-entity-log</artifactId>
+            <artifactId>dh-logs</artifactId>
             <version>${revision}</version>
         </dependency>
-
-
 
         <dependency>
             <groupId>org.projectlombok</groupId>

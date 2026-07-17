@@ -30,6 +30,11 @@
             <version>${revision}</version>
         </dependency>
         <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-logs</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
             <groupId>io.kubernetes</groupId>
             <artifactId>client-java</artifactId>
             <version>${kubernetes.version}</version>
