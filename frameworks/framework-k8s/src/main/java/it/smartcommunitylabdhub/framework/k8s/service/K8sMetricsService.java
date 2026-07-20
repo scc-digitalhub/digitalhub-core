@@ -14,15 +14,22 @@ import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1PersistentVolumeClaim;
 import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
+import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
+import it.smartcommunitylabdhub.metrics.ResourceMetrics;
+import it.smartcommunitylabdhub.metrics.ResourceMetricsService;
+import it.smartcommunitylabdhub.metrics.ResourceMetricsStore;
 import jakarta.annotation.Nonnull;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +38,7 @@ import org.springframework.data.util.Pair;
 import org.springframework.util.Assert;
 
 @Slf4j
-public class K8sMetricsService implements InitializingBean {
+public class K8sMetricsService implements ResourceMetricsService, InitializingBean {
 
     public static final long CACHE_TIMEOUT = 30; //seconds
 
@@ -43,14 +50,28 @@ public class K8sMetricsService implements InitializingBean {
     protected Boolean collectMetrics;
     protected String namespace;
 
-    //loading cache for project metrics
-    LoadingCache<Pair<String, String>, ContainerMetrics> cache = CacheBuilder.newBuilder()
+    private ResourceMetricsStore store;
+
+    //loading cache for pod metrics
+    LoadingCache<Pair<String, String>, List<PodMetrics>> podCache = CacheBuilder.newBuilder()
         .expireAfterWrite(CACHE_TIMEOUT, TimeUnit.SECONDS)
         .build(
-            new CacheLoader<Pair<String, String>, ContainerMetrics>() {
+            new CacheLoader<Pair<String, String>, List<PodMetrics>>() {
                 @Override
-                public ContainerMetrics load(@Nonnull Pair<String, String> key) throws Exception {
-                    return metrics(key.getFirst(), key.getSecond());
+                public List<PodMetrics> load(@Nonnull Pair<String, String> key) throws Exception {
+                    return fetchPodMetrics(key.getFirst(), key.getSecond());
+                }
+            }
+        );
+
+    //loading cache for pvc metrics
+    LoadingCache<Pair<String, String>, List<V1PersistentVolumeClaim>> pvcCache = CacheBuilder.newBuilder()
+        .expireAfterWrite(CACHE_TIMEOUT, TimeUnit.SECONDS)
+        .build(
+            new CacheLoader<Pair<String, String>, List<V1PersistentVolumeClaim>>() {
+                @Override
+                public List<V1PersistentVolumeClaim> load(@Nonnull Pair<String, String> key) throws Exception {
+                    return fetchPvcs(key.getFirst(), key.getSecond());
                 }
             }
         );
@@ -59,6 +80,11 @@ public class K8sMetricsService implements InitializingBean {
         Assert.notNull(apiClient, "k8s api client is required");
         coreV1Api = new CoreV1Api(apiClient);
         metricsApi = new Metrics(apiClient);
+    }
+
+    @Autowired(required = false)
+    public void setStore(ResourceMetricsStore store) {
+        this.store = store;
     }
 
     @Autowired
@@ -88,28 +114,14 @@ public class K8sMetricsService implements InitializingBean {
         Assert.notNull(applicationProperties, "application properties required");
     }
 
-    public ContainerMetrics getMetrics(String key, String value) throws StoreException {
-        try {
-            return cache.get(Pair.of(key, value));
-        } catch (Exception e) {
-            throw new StoreException("Error getting metrics for " + key + " " + value, e);
-        }
-    }
-
-    private ContainerMetrics metrics(@Nonnull String key, @Nonnull String value) throws StoreException {
+    private List<PodMetrics> fetchPodMetrics(@Nonnull String key, @Nonnull String value) throws StoreException {
         if (Boolean.TRUE != collectMetrics) {
-            return null;
+            return List.of();
         }
 
         Entry<String, String> label = k8sLabelHelper.buildCoreLabel(key, value);
-
         try {
-            ContainerMetrics metrics = new ContainerMetrics();
-            metrics.setName(key);
-            metrics.setUsage(new HashMap<>());
-            BigDecimal big1 = new BigDecimal(1);
-
-            //aggregate metrics for all pods matching
+            //return metrics for all pods matching
             List<PodMetrics> podMetrics = metricsApi
                 .getPodMetrics(namespace)
                 .getItems()
@@ -126,159 +138,634 @@ public class K8sMetricsService implements InitializingBean {
                 })
                 .toList();
 
-            podMetrics.forEach(pm -> {
-                //count pods
-                if (metrics.getUsage().containsKey("pods")) {
-                    Quantity existing = metrics.getUsage().get("pods");
-                    metrics.getUsage().put("pods", new Quantity(existing.getNumber().add(big1), Format.DECIMAL_SI));
-                } else {
-                    metrics.getUsage().put("pods", new Quantity(big1, Format.DECIMAL_SI));
-                }
-
-                if (pm.getContainers() != null) {
-                    pm
-                        .getContainers()
-                        .forEach(cm -> {
-                            //count containers
-                            if (metrics.getUsage().containsKey("containers")) {
-                                Quantity existing = metrics.getUsage().get("containers");
-                                metrics
-                                    .getUsage()
-                                    .put("containers", new Quantity(existing.getNumber().add(big1), Format.DECIMAL_SI));
-                            } else {
-                                metrics.getUsage().put("containers", new Quantity(big1, Format.DECIMAL_SI));
-                            }
-
-                            if (cm.getUsage() != null) {
-                                log.trace(
-                                    "Adding metrics for {} {} pod {} container {}: {}",
-                                    key,
-                                    value,
-                                    pm.getMetadata().getName(),
-                                    cm.getName(),
-                                    cm.getUsage()
-                                );
-
-                                cm
-                                    .getUsage()
-                                    .forEach((k, v) -> {
-                                        if (metrics.getUsage().containsKey(k)) {
-                                            //we expect format to match, or skip
-                                            try {
-                                                Quantity existing = metrics.getUsage().get(k);
-                                                if (existing.getFormat().equals(v.getFormat())) {
-                                                    metrics
-                                                        .getUsage()
-                                                        .put(
-                                                            k,
-                                                            new Quantity(
-                                                                existing.getNumber().add(v.getNumber()),
-                                                                v.getFormat()
-                                                            )
-                                                        );
-                                                }
-                                            } catch (NumberFormatException e) {
-                                                log.warn(
-                                                    "Error parsing metric for {} {} pod {} container {}: {}",
-                                                    key,
-                                                    value,
-                                                    pm.getMetadata().getName(),
-                                                    cm.getName(),
-                                                    e.getMessage()
-                                                );
-                                            }
-                                        } else {
-                                            metrics.getUsage().put(k, v);
-                                        }
-                                    });
-                            } else {
-                                log.trace(
-                                    "No usage metrics for {} {} pod {} container {}",
-                                    key,
-                                    value,
-                                    pm.getMetadata().getName(),
-                                    cm.getName()
-                                );
-                            }
-                        });
-                }
-            });
-
-            //fetch pvc metrics for matching pods
-
-            try {
-                String labelSelector = label.getKey() + "=" + label.getValue();
-                List<V1PersistentVolumeClaim> pvcs = coreV1Api
-                    .listNamespacedPersistentVolumeClaim(
-                        namespace,
-                        null,
-                        null,
-                        null,
-                        null,
-                        labelSelector,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null
-                    )
-                    .getItems();
-
-                pvcs.forEach(pvc -> {
-                    Optional.ofNullable(pvc.getStatus())
-                        .map(s -> s.getCapacity())
-                        .map(m -> m.get("storage"))
-                        .ifPresent(c -> {
-                            log.trace(
-                                "Adding PVC metrics for {} {} pvc {}: {}",
-                                key,
-                                value,
-                                pvc.getMetadata().getName(),
-                                c
-                            );
-
-                            if (metrics.getUsage().containsKey("disk")) {
-                                //we expect format to match, or skip
-                                try {
-                                    Quantity existing = metrics.getUsage().get("disk");
-                                    if (existing.getFormat().equals(c.getFormat())) {
-                                        metrics
-                                            .getUsage()
-                                            .put(
-                                                "disk",
-                                                new Quantity(existing.getNumber().add(c.getNumber()), c.getFormat())
-                                            );
-                                    }
-                                } catch (NumberFormatException e) {
-                                    log.warn(
-                                        "Error parsing disk metric for {} {} pvc {}: {}",
-                                        key,
-                                        value,
-                                        pvc.getMetadata().getName(),
-                                        e.getMessage()
-                                    );
-                                }
-                            } else {
-                                metrics.getUsage().put("disk", c);
-                            }
-                        });
-                });
-            } catch (ApiException e) {
-                log.error("Error fetching pod details for metrics: {}", e.getMessage());
-                if (log.isTraceEnabled()) {
-                    log.trace("k8s api response: {}", e.getResponseBody());
-                }
-            }
-
-            return metrics;
+            return podMetrics;
         } catch (ApiException e) {
             log.error("Error with k8s: {}", e.getMessage());
             if (log.isTraceEnabled()) {
                 log.trace("k8s api response: {}", e.getResponseBody());
             }
 
+            return List.of();
+        }
+    }
+
+    private List<V1PersistentVolumeClaim> fetchPvcs(@Nonnull String key, @Nonnull String value) throws StoreException {
+        if (Boolean.TRUE != collectMetrics) {
+            return List.of();
+        }
+
+        Entry<String, String> label = k8sLabelHelper.buildCoreLabel(key, value);
+        try {
+            String labelSelector = label.getKey() + "=" + label.getValue();
+            List<V1PersistentVolumeClaim> pvcs = coreV1Api
+                .listNamespacedPersistentVolumeClaim(
+                    namespace,
+                    null,
+                    null,
+                    null,
+                    null,
+                    labelSelector,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+                )
+                .getItems();
+
+            return pvcs;
+        } catch (ApiException e) {
+            log.error("Error with k8s: {}", e.getMessage());
+            if (log.isTraceEnabled()) {
+                log.trace("k8s api response: {}", e.getResponseBody());
+            }
+
+            return List.of();
+        }
+    }
+
+    /* API */
+    public List<PodMetrics> listPodMetrics(String key, String value) throws StoreException {
+        try {
+            List<PodMetrics> mv = podCache.get(Pair.of(key, value));
+            if (log.isTraceEnabled()) {
+                log.trace("Metrics for {} {}: {}", key, value, mv);
+            }
+
+            return mv;
+        } catch (Exception e) {
+            throw new StoreException("Error getting metrics for " + key + " " + value, e);
+        }
+    }
+
+    public List<V1PersistentVolumeClaim> listPvcs(String key, String value) throws StoreException {
+        try {
+            List<V1PersistentVolumeClaim> mv = pvcCache.get(Pair.of(key, value));
+            if (log.isTraceEnabled()) {
+                log.trace("PVCs for {} {}: {}", key, value, mv);
+            }
+
+            return mv;
+        } catch (Exception e) {
+            throw new StoreException("Error getting pvcs for " + key + " " + value, e);
+        }
+    }
+
+    public ContainerMetrics getContainerMetrics(@Nonnull String key, @Nonnull String value) throws StoreException {
+        if (Boolean.TRUE != collectMetrics) {
             return null;
+        }
+
+        Entry<String, String> label = k8sLabelHelper.buildCoreLabel(key, value);
+
+        ContainerMetrics metrics = new ContainerMetrics();
+        metrics.setName(key);
+        metrics.setUsage(new HashMap<>());
+        BigDecimal big1 = new BigDecimal(1);
+
+        //aggregate metrics for all pods matching
+        List<PodMetrics> podMetrics = listPodMetrics(key, value);
+
+        podMetrics.forEach(pm -> {
+            //count pods
+            if (metrics.getUsage().containsKey("pods")) {
+                Quantity existing = metrics.getUsage().get("pods");
+                metrics.getUsage().put("pods", new Quantity(existing.getNumber().add(big1), Format.DECIMAL_SI));
+            } else {
+                metrics.getUsage().put("pods", new Quantity(big1, Format.DECIMAL_SI));
+            }
+
+            if (pm.getContainers() != null) {
+                pm
+                    .getContainers()
+                    .forEach(cm -> {
+                        //count containers
+                        if (metrics.getUsage().containsKey("containers")) {
+                            Quantity existing = metrics.getUsage().get("containers");
+                            metrics
+                                .getUsage()
+                                .put("containers", new Quantity(existing.getNumber().add(big1), Format.DECIMAL_SI));
+                        } else {
+                            metrics.getUsage().put("containers", new Quantity(big1, Format.DECIMAL_SI));
+                        }
+
+                        if (cm.getUsage() != null) {
+                            log.trace(
+                                "Adding metrics for {} {} pod {} container {}: {}",
+                                key,
+                                value,
+                                pm.getMetadata().getName(),
+                                cm.getName(),
+                                cm.getUsage()
+                            );
+
+                            cm
+                                .getUsage()
+                                .forEach((k, v) -> {
+                                    if (metrics.getUsage().containsKey(k)) {
+                                        //we expect format to match, or skip
+                                        try {
+                                            Quantity existing = metrics.getUsage().get(k);
+                                            if (existing.getFormat().equals(v.getFormat())) {
+                                                metrics
+                                                    .getUsage()
+                                                    .put(
+                                                        k,
+                                                        new Quantity(
+                                                            existing.getNumber().add(v.getNumber()),
+                                                            v.getFormat()
+                                                        )
+                                                    );
+                                            }
+                                        } catch (NumberFormatException e) {
+                                            log.warn(
+                                                "Error parsing metric for {} {} pod {} container {}: {}",
+                                                key,
+                                                value,
+                                                pm.getMetadata().getName(),
+                                                cm.getName(),
+                                                e.getMessage()
+                                            );
+                                        }
+                                    } else {
+                                        metrics.getUsage().put(k, v);
+                                    }
+                                });
+                        } else {
+                            log.trace(
+                                "No usage metrics for {} {} pod {} container {}",
+                                key,
+                                value,
+                                pm.getMetadata().getName(),
+                                cm.getName()
+                            );
+                        }
+                    });
+            }
+        });
+
+        //fetch pvc metrics for matching pods
+
+        String labelSelector = label.getKey() + "=" + label.getValue();
+        List<V1PersistentVolumeClaim> pvcs = listPvcs(key, value);
+
+        pvcs.forEach(pvc -> {
+            Optional.ofNullable(pvc.getStatus())
+                .map(s -> s.getCapacity())
+                .map(m -> m.get("storage"))
+                .ifPresent(c -> {
+                    log.trace("Adding PVC metrics for {} {} pvc {}: {}", key, value, pvc.getMetadata().getName(), c);
+
+                    if (metrics.getUsage().containsKey("disk")) {
+                        //we expect format to match, or skip
+                        try {
+                            Quantity existing = metrics.getUsage().get("disk");
+                            if (existing.getFormat().equals(c.getFormat())) {
+                                metrics
+                                    .getUsage()
+                                    .put("disk", new Quantity(existing.getNumber().add(c.getNumber()), c.getFormat()));
+                            }
+                        } catch (NumberFormatException e) {
+                            log.warn(
+                                "Error parsing disk metric for {} {} pvc {}: {}",
+                                key,
+                                value,
+                                pvc.getMetadata().getName(),
+                                e.getMessage()
+                            );
+                        }
+                    } else {
+                        metrics.getUsage().put("disk", c);
+                    }
+                });
+        });
+
+        return metrics;
+    }
+
+    @Override
+    public ResourceMetrics getResourceMetricsByProject(@NotNull String project) throws SystemException {
+        log.debug("fetch metrics from k8s for project {}: ", project);
+
+        try {
+            //fetch now from service
+            ContainerMetrics metrics = getContainerMetrics("project", project);
+            if (metrics == null) {
+                return null;
+            }
+
+            Map<String, List<ResourceMetrics.Metric>> metricsMap = new HashMap<>();
+            metrics
+                .getUsage()
+                .forEach((k, v) -> {
+                    ResourceMetrics.Metric metric = new ResourceMetrics.Metric(
+                        System.currentTimeMillis(),
+                        v.getNumber().doubleValue()
+                    );
+                    metricsMap.put(k, List.of(metric));
+                });
+
+            //build summary as well
+            Map<String, List<ResourceMetrics.Summary>> summaryMap = summarize(metricsMap);
+
+            return ResourceMetrics.builder()
+                .id("m_p-" + project)
+                .project(project)
+                .metrics(metricsMap)
+                .summary(summaryMap)
+                .build();
+        } catch (StoreException e) {
+            throw new SystemException("Error fetching metrics for project " + project, e);
+        }
+    }
+
+    @Override
+    public ResourceMetrics getResourceMetricsByUser(@NotNull String user) throws SystemException {
+        log.debug("fetch metrics from k8s for user {}: ", user);
+
+        try {
+            //fetch now from service
+            ContainerMetrics metrics = getContainerMetrics("user", user);
+            if (metrics == null) {
+                return null;
+            }
+
+            Map<String, List<ResourceMetrics.Metric>> metricsMap = new HashMap<>();
+            metrics
+                .getUsage()
+                .forEach((k, v) -> {
+                    ResourceMetrics.Metric metric = new ResourceMetrics.Metric(
+                        System.currentTimeMillis(),
+                        v.getNumber().doubleValue()
+                    );
+                    metricsMap.put(k, List.of(metric));
+                });
+
+            //build summary as well
+            Map<String, List<ResourceMetrics.Summary>> summaryMap = summarize(metricsMap);
+
+            return ResourceMetrics.builder()
+                .id("m_u-" + user)
+                .user(user)
+                .metrics(metricsMap)
+                .summary(summaryMap)
+                .build();
+        } catch (StoreException e) {
+            throw new SystemException("Error fetching metrics for user " + user, e);
+        }
+    }
+
+    @Override
+    public ResourceMetrics getResourceMetricsByRun(@NotNull String runId) throws SystemException {
+        log.debug("fetch metrics from k8s for run {}: ", runId);
+
+        try {
+            //we keep id consistent to enable lookups
+            String id = "m_r-" + runId;
+            Map<String, List<ResourceMetrics.Metric>> metricsMap = new HashMap<>();
+
+            //fetch now from service
+            ContainerMetrics metrics = getContainerMetrics("run", runId);
+            if (metrics != null) {
+                metrics
+                    .getUsage()
+                    .forEach((k, v) -> {
+                        ResourceMetrics.Metric metric = new ResourceMetrics.Metric(
+                            System.currentTimeMillis(),
+                            v.getNumber().doubleValue()
+                        );
+                        metricsMap.put(k, List.of(metric));
+                    });
+            }
+
+            //fetch from store as well, if available
+            if (store != null) {
+                ResourceMetrics storedMetrics = store.findResourceMetrics(id);
+                if (storedMetrics != null && storedMetrics.getMetrics() != null) {
+                    storedMetrics
+                        .getMetrics()
+                        .forEach((k, v) -> {
+                            //merge with existing metrics
+                            if (metricsMap.containsKey(k)) {
+                                List<ResourceMetrics.Metric> existing = metricsMap.get(k);
+                                List<ResourceMetrics.Metric> merged = existing.stream().collect(Collectors.toList());
+                                merged.addAll(v);
+                                metricsMap.put(k, merged);
+                            } else {
+                                metricsMap.put(k, v);
+                            }
+                        });
+                }
+            }
+
+            //make sure metrics lists are sorted by timestamp
+            metricsMap.forEach((k, v) -> {
+                List<ResourceMetrics.Metric> sorted = v
+                    .stream()
+                    .sorted((m1, m2) -> Long.compare(m1.timestamp(), m2.timestamp()))
+                    .toList();
+                metricsMap.put(k, sorted);
+            });
+
+            //build summary as well
+            Map<String, List<ResourceMetrics.Summary>> summaryMap = summarize(metricsMap);
+
+            return ResourceMetrics.builder().id(id).run(runId).metrics(metricsMap).summary(summaryMap).build();
+        } catch (StoreException e) {
+            throw new SystemException("Error fetching metrics for run " + runId, e);
+        }
+    }
+
+    private Map<String, List<ResourceMetrics.Summary>> summarize(Map<String, List<ResourceMetrics.Metric>> metricsMap) {
+        Map<String, List<ResourceMetrics.Summary>> summaryMap = new HashMap<>();
+        if (metricsMap != null) {
+            metricsMap.forEach((k, v) -> {
+                Double sum = v.stream().mapToDouble(ResourceMetrics.Metric::value).sum();
+                Double avg = v.stream().mapToDouble(ResourceMetrics.Metric::value).average().orElse(0.0);
+                Double max = v.stream().mapToDouble(ResourceMetrics.Metric::value).max().orElse(0.0);
+                Double min = v.stream().mapToDouble(ResourceMetrics.Metric::value).min().orElse(0.0);
+                summaryMap.put(
+                    k,
+                    List.of(
+                        new ResourceMetrics.Summary("sum", sum),
+                        new ResourceMetrics.Summary("avg", avg),
+                        new ResourceMetrics.Summary("max", max),
+                        new ResourceMetrics.Summary("min", min)
+                    )
+                );
+            });
+        }
+        return summaryMap;
+    }
+
+    @Override
+    public List<ResourceMetrics> listResourceMetricsByProject(@NotNull String project) throws SystemException {
+        log.debug("fetch metrics from k8s for project {}: ", project);
+
+        try {
+            //fetch all from service
+            List<PodMetrics> podMetrics = listPodMetrics("project", project);
+            if (podMetrics == null || podMetrics.isEmpty()) {
+                return List.of();
+            }
+
+            //explode by pod and container
+            List<ResourceMetrics> metricsList = podMetrics
+                .stream()
+                .flatMap(pm -> {
+                    String podName = pm.getMetadata().getName();
+
+                    return pm
+                        .getContainers()
+                        .stream()
+                        .map(cm -> {
+                            Map<String, List<ResourceMetrics.Metric>> metricsMap = new HashMap<>();
+                            cm
+                                .getUsage()
+                                .forEach((k, v) -> {
+                                    ResourceMetrics.Metric metric = new ResourceMetrics.Metric(
+                                        Instant.parse(pm.getTimestamp()).toEpochMilli(),
+                                        v.getNumber().doubleValue()
+                                    );
+                                    metricsMap.put(k, List.of(metric));
+                                });
+
+                            return ResourceMetrics.builder()
+                                .id("m_p-" + project + "-" + podName + "-" + cm.getName())
+                                .project(project)
+                                .metadata(Map.of("pod", podName, "container", cm.getName()))
+                                .metrics(metricsMap)
+                                .build();
+                        });
+                })
+                .toList();
+
+            //for every metric check store and merge
+            if (store != null) {
+                metricsList.forEach(rm -> {
+                    ResourceMetrics storedMetrics = store.findResourceMetrics(rm.getId());
+                    if (storedMetrics != null && storedMetrics.getMetrics() != null) {
+                        //merge with existing metrics
+                        Map<String, List<ResourceMetrics.Metric>> mergedMap = new HashMap<>(rm.getMetrics());
+                        storedMetrics
+                            .getMetrics()
+                            .forEach((k, v) -> {
+                                if (mergedMap.containsKey(k)) {
+                                    List<ResourceMetrics.Metric> existing = mergedMap.get(k);
+                                    List<ResourceMetrics.Metric> merged = existing
+                                        .stream()
+                                        .collect(Collectors.toList());
+                                    merged.addAll(v);
+                                    mergedMap.put(k, merged);
+                                } else {
+                                    mergedMap.put(k, v);
+                                }
+                            });
+
+                        //make sure metrics lists are sorted by timestamp
+                        mergedMap.forEach((k, v) -> {
+                            List<ResourceMetrics.Metric> sorted = v
+                                .stream()
+                                .sorted((m1, m2) -> Long.compare(m1.timestamp(), m2.timestamp()))
+                                .toList();
+                            mergedMap.put(k, sorted);
+                        });
+
+                        rm.setMetrics(mergedMap);
+                    }
+                });
+            }
+
+            //build summaries
+            metricsList.forEach(rm -> {
+                Map<String, List<ResourceMetrics.Summary>> summaryMap = summarize(rm.getMetrics());
+                rm.setSummary(summaryMap);
+            });
+
+            return metricsList;
+        } catch (StoreException e) {
+            throw new SystemException("Error fetching metrics for project " + project, e);
+        }
+    }
+
+    @Override
+    public List<ResourceMetrics> listResourceMetricsByUser(@NotNull String user) throws SystemException {
+        log.debug("fetch metrics from k8s for user {}: ", user);
+
+        try {
+            //fetch all from service
+            List<PodMetrics> podMetrics = listPodMetrics("user", user);
+            if (podMetrics == null || podMetrics.isEmpty()) {
+                return List.of();
+            }
+
+            //explode by pod and container
+            List<ResourceMetrics> metricsList = podMetrics
+                .stream()
+                .flatMap(pm -> {
+                    String podName = pm.getMetadata().getName();
+
+                    return pm
+                        .getContainers()
+                        .stream()
+                        .map(cm -> {
+                            Map<String, List<ResourceMetrics.Metric>> metricsMap = new HashMap<>();
+                            cm
+                                .getUsage()
+                                .forEach((k, v) -> {
+                                    ResourceMetrics.Metric metric = new ResourceMetrics.Metric(
+                                        Instant.parse(pm.getTimestamp()).toEpochMilli(),
+                                        v.getNumber().doubleValue()
+                                    );
+                                    metricsMap.put(k, List.of(metric));
+                                });
+
+                            return ResourceMetrics.builder()
+                                .id("m_u-" + user + "-" + podName + "-" + cm.getName())
+                                .project(user)
+                                .metadata(Map.of("pod", podName, "container", cm.getName()))
+                                .metrics(metricsMap)
+                                .build();
+                        });
+                })
+                .toList();
+
+            //for every metric check store and merge
+            if (store != null) {
+                metricsList.forEach(rm -> {
+                    ResourceMetrics storedMetrics = store.findResourceMetrics(rm.getId());
+                    if (storedMetrics != null && storedMetrics.getMetrics() != null) {
+                        //merge with existing metrics
+                        Map<String, List<ResourceMetrics.Metric>> mergedMap = new HashMap<>(rm.getMetrics());
+                        storedMetrics
+                            .getMetrics()
+                            .forEach((k, v) -> {
+                                if (mergedMap.containsKey(k)) {
+                                    List<ResourceMetrics.Metric> existing = mergedMap.get(k);
+                                    List<ResourceMetrics.Metric> merged = existing
+                                        .stream()
+                                        .collect(Collectors.toList());
+                                    merged.addAll(v);
+                                    mergedMap.put(k, merged);
+                                } else {
+                                    mergedMap.put(k, v);
+                                }
+                            });
+
+                        //make sure metrics lists are sorted by timestamp
+                        mergedMap.forEach((k, v) -> {
+                            List<ResourceMetrics.Metric> sorted = v
+                                .stream()
+                                .sorted((m1, m2) -> Long.compare(m1.timestamp(), m2.timestamp()))
+                                .toList();
+                            mergedMap.put(k, sorted);
+                        });
+
+                        rm.setMetrics(mergedMap);
+                    }
+                });
+            }
+
+            //build summaries
+            metricsList.forEach(rm -> {
+                Map<String, List<ResourceMetrics.Summary>> summaryMap = summarize(rm.getMetrics());
+                rm.setSummary(summaryMap);
+            });
+
+            return metricsList;
+        } catch (StoreException e) {
+            throw new SystemException("Error fetching metrics for user " + user, e);
+        }
+    }
+
+    @Override
+    public List<ResourceMetrics> listResourceMetricsByRun(@NotNull String runId) throws SystemException {
+        log.debug("fetch metrics from k8s for run {}: ", runId);
+
+        try {
+            //fetch all from service
+            List<PodMetrics> podMetrics = listPodMetrics("run", runId);
+            if (podMetrics == null || podMetrics.isEmpty()) {
+                return List.of();
+            }
+
+            //explode by pod and container
+            List<ResourceMetrics> metricsList = podMetrics
+                .stream()
+                .flatMap(pm -> {
+                    String podName = pm.getMetadata().getName();
+
+                    return pm
+                        .getContainers()
+                        .stream()
+                        .map(cm -> {
+                            Map<String, List<ResourceMetrics.Metric>> metricsMap = new HashMap<>();
+                            cm
+                                .getUsage()
+                                .forEach((k, v) -> {
+                                    ResourceMetrics.Metric metric = new ResourceMetrics.Metric(
+                                        Instant.parse(pm.getTimestamp()).toEpochMilli(),
+                                        v.getNumber().doubleValue()
+                                    );
+                                    metricsMap.put(k, List.of(metric));
+                                });
+
+                            return ResourceMetrics.builder()
+                                .id("m_r-" + runId + "-" + podName + "-" + cm.getName())
+                                .project(runId)
+                                .metadata(Map.of("pod", podName, "container", cm.getName()))
+                                .metrics(metricsMap)
+                                .build();
+                        });
+                })
+                .toList();
+
+            //for every metric check store and merge
+            if (store != null) {
+                metricsList.forEach(rm -> {
+                    ResourceMetrics storedMetrics = store.findResourceMetrics(rm.getId());
+                    if (storedMetrics != null && storedMetrics.getMetrics() != null) {
+                        //merge with existing metrics
+                        Map<String, List<ResourceMetrics.Metric>> mergedMap = new HashMap<>(rm.getMetrics());
+                        storedMetrics
+                            .getMetrics()
+                            .forEach((k, v) -> {
+                                if (mergedMap.containsKey(k)) {
+                                    List<ResourceMetrics.Metric> existing = mergedMap.get(k);
+                                    List<ResourceMetrics.Metric> merged = existing
+                                        .stream()
+                                        .collect(Collectors.toList());
+                                    merged.addAll(v);
+                                    mergedMap.put(k, merged);
+                                } else {
+                                    mergedMap.put(k, v);
+                                }
+                            });
+
+                        //make sure metrics lists are sorted by timestamp
+                        mergedMap.forEach((k, v) -> {
+                            List<ResourceMetrics.Metric> sorted = v
+                                .stream()
+                                .sorted((m1, m2) -> Long.compare(m1.timestamp(), m2.timestamp()))
+                                .toList();
+                            mergedMap.put(k, sorted);
+                        });
+
+                        rm.setMetrics(mergedMap);
+                    }
+                });
+            }
+
+            //build summaries
+            metricsList.forEach(rm -> {
+                Map<String, List<ResourceMetrics.Summary>> summaryMap = summarize(rm.getMetrics());
+                rm.setSummary(summaryMap);
+            });
+
+            return metricsList;
+        } catch (StoreException e) {
+            throw new SystemException("Error fetching metrics for run " + runId, e);
         }
     }
 }

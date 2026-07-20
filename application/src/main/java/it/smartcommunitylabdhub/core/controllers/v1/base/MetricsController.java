@@ -64,6 +64,6 @@ public class MetricsController {
         if (k8sMetricsService == null) {
             throw new StoreException("metrics service not available");
         }
-        return k8sMetricsService.getMetrics("instance", applicationProperties.getName());
+        return k8sMetricsService.getContainerMetrics("instance", applicationProperties.getName());
     }
 }

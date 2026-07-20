@@ -16,7 +16,6 @@
 
 package it.smartcommunitylabdhub.core.controllers.v1.base;
 
-import io.kubernetes.client.custom.ContainerMetrics;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
@@ -25,7 +24,8 @@ import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.core.user.MyUserManager;
-import it.smartcommunitylabdhub.framework.k8s.service.K8sMetricsService;
+import it.smartcommunitylabdhub.metrics.ResourceMetrics;
+import it.smartcommunitylabdhub.metrics.ResourceMetricsService;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,7 +51,7 @@ public class UserController {
     private MyUserManager userManager;
 
     @Autowired(required = false)
-    private K8sMetricsService k8sMetricsService;
+    private ResourceMetricsService k8sMetricsService;
 
     @Operation(summary = "List my projects")
     @GetMapping(path = "/me/projects", produces = "application/json; charset=UTF-8")
@@ -88,11 +88,11 @@ public class UserController {
         description = "Get metrics all user resources, including all projects and resources owned by the user"
     )
     @GetMapping(path = "/me/metrics/k8s", produces = "application/json; charset=UTF-8")
-    public ContainerMetrics getMetrics(Authentication auth) throws NoSuchEntityException, StoreException {
+    public ResourceMetrics getMetrics(Authentication auth) throws NoSuchEntityException, StoreException {
         if (k8sMetricsService == null) {
             throw new StoreException("metrics service not available");
         }
 
-        return k8sMetricsService.getMetrics("user", auth.getName());
+        return k8sMetricsService.getResourceMetricsByUser(auth.getName());
     }
 }
