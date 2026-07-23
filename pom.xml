@@ -83,6 +83,7 @@
         <module>providers/search-solr</module>
         <module>providers/cloud-rabbitmq</module>
         <module>providers/loki-logs-provider</module>
+        <module>providers/prometheus-metrics-provider</module>
         <module>frontend</module>
         <module>application</module>
     </modules>

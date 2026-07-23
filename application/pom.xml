@@ -427,7 +427,12 @@
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-loki-logs-provider</artifactId>
             <version>${revision}</version>
-        </dependency>        
+        </dependency>      
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-prometheus-metrics-provider</artifactId>
+            <version>${revision}</version>
+        </dependency>
         <!-- <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-search-solr</artifactId>

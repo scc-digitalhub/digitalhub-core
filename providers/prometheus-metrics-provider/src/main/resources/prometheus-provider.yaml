@@ -1,0 +1,63 @@
+providers:
+  prometheus:
+    url: ${PROMETHEUS_URL:false}
+    username: ${PROMETHEUS_USERNAME:}
+    password: ${PROMETHEUS_PASSWORD:}
+    namespace: ${PROMETHEUS_NAMESPACE:}
+    lazy-filter: ${PROMETHEUS_LAZY_FILTER:true}
+    rate-interval: ${PROMETHEUS_RATE_INTERVAL_SECONDS:120}
+    metrics: 
+      cpu: 
+        name: ${PROMETHEUS_METRICS_CPU:container_cpu_usage_seconds_total}
+        unit: ${PROMETHEUS_METRICS_CPU_UNIT:seconds}
+        label: ${PROMETHEUS_METRICS_CPU_LABEL:cpu}
+        group-by: ${PROMETHEUS_METRICS_CPU_GROUP_BY:container}
+        operation: ${PROMETHEUS_METRICS_CPU_OPERATION:rate}
+        window: ${PROMETHEUS_METRICS_CPU_WINDOW:2m}
+      memory: 
+        name: ${PROMETHEUS_METRICS_MEMORY:container_memory_working_set_bytes}
+        unit: ${PROMETHEUS_METRICS_MEMORY_UNIT:bytes}
+        label: ${PROMETHEUS_METRICS_MEMORY_LABEL:memory}
+        group-by: ${PROMETHEUS_METRICS_MEMORY_GROUP_BY:container}
+        operation: ${PROMETHEUS_METRICS_MEMORY_OPERATION:}
+        window: ${PROMETHEUS_METRICS_MEMORY_WINDOW:}
+      disk: 
+        name: ${PROMETHEUS_METRICS_DISK:container_fs_writes_bytes_total}
+        unit: ${PROMETHEUS_METRICS_DISK_UNIT:bytes}
+        label: ${PROMETHEUS_METRICS_DISK_LABEL:disk-{device}}
+        group-by: ${PROMETHEUS_METRICS_DISK_GROUP_BY:container}
+        operation: ${PROMETHEUS_METRICS_DISK_OPERATION:}
+        window: ${PROMETHEUS_METRICS_DISK_WINDOW:}
+      gpu: 
+        name: ${PROMETHEUS_METRICS_GPU:}
+        unit: ${PROMETHEUS_METRICS_GPU_UNIT:}
+        label: ${PROMETHEUS_METRICS_GPU_LABEL:gpu-utilization}
+        group-by: ${PROMETHEUS_METRICS_GPU_GROUP_BY:}
+        operation: ${PROMETHEUS_METRICS_GPU_OPERATION:}
+        window: ${PROMETHEUS_METRICS_GPU_WINDOW:}
+      gpu-memory: 
+        name: ${PROMETHEUS_METRICS_GPU_MEMORY:}
+        unit: ${PROMETHEUS_METRICS_GPU_MEMORY_UNIT:bytes}
+        label: ${PROMETHEUS_METRICS_GPU_MEMORY_LABEL:gpu-memory}
+        group-by: ${PROMETHEUS_METRICS_GPU_MEMORY_GROUP_BY:}
+        operation: ${PROMETHEUS_METRICS_GPU_MEMORY_OPERATION:}
+        window: ${PROMETHEUS_METRICS_GPU_MEMORY_WINDOW:}
+      network-send: 
+        name: ${PROMETHEUS_METRICS_NETWORK_SEND:container_network_transmit_bytes_total}
+        unit: ${PROMETHEUS_METRICS_NETWORK_SEND_UNIT:bytes}
+        label: ${PROMETHEUS_METRICS_NETWORK_SEND_LABEL:{interface}-send}
+        group-by: ${PROMETHEUS_METRICS_NETWORK_SEND_GROUP_BY:pod}
+        operation: ${PROMETHEUS_METRICS_NETWORK_SEND_OPERATION:rate}
+        window: ${PROMETHEUS_METRICS_NETWORK_SEND_WINDOW:2m}
+      network-receive: 
+        name: ${PROMETHEUS_METRICS_NETWORK_RECEIVE:container_network_receive_bytes_total}
+        unit: ${PROMETHEUS_METRICS_NETWORK_RECEIVE_UNIT:bytes}
+        label: ${PROMETHEUS_METRICS_NETWORK_RECEIVE_LABEL:{interface}-receive}
+        group-by: ${PROMETHEUS_METRICS_NETWORK_RECEIVE_GROUP_BY:pod}
+        operation: ${PROMETHEUS_METRICS_NETWORK_RECEIVE_OPERATION:rate}
+        window: ${PROMETHEUS_METRICS_NETWORK_RECEIVE_WINDOW:2m}
+    mapping:
+      run: ${PROMETHEUS_MAPPING_RUN:pod}
+      project: ${PROMETHEUS_MAPPING_PROJECT:}
+      user: ${PROMETHEUS_MAPPING_USER:}
+      namespace: ${PROMETHEUS_MAPPING_NAMESPACE:namespace}
