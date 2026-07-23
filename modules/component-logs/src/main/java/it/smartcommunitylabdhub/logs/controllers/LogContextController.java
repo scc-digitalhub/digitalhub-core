@@ -33,7 +33,6 @@ import it.smartcommunitylabdhub.logs.Log;
 import it.smartcommunitylabdhub.logs.LogService;
 import it.smartcommunitylabdhub.logs.LogStore;
 import it.smartcommunitylabdhub.logs.filter.LogEntityFilter;
-import it.smartcommunitylabdhub.runs.RunManager;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -71,9 +70,6 @@ public class LogContextController {
 
     @Autowired(required = false)
     LogStore logStore;
-
-    @Autowired
-    RunManager runService;
 
     @Operation(summary = "Search logs, with optional filter")
     @GetMapping(path = "", produces = "application/json; charset=UTF-8")

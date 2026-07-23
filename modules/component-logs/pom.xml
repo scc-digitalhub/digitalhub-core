@@ -25,7 +25,7 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-entity-log</artifactId>
+            <artifactId>dh-entity-run</artifactId>
             <version>${revision}</version>
         </dependency>
         <dependency>
@@ -33,7 +33,22 @@
             <artifactId>spring-security-crypto</artifactId>
             <version>${spring-security.version}</version>
         </dependency>
-
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <version>${spring-boot.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <version>${spring-boot.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+            <version>${spring-boot.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>org.projectlombok</groupId>
