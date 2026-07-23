@@ -45,10 +45,12 @@ public interface ResourceMetricsStore {
         throws NoSuchEntityException, BindException, IllegalArgumentException, SystemException;
     void deleteResourceMetrics(@NotNull String id) throws SystemException;
 
+    List<ResourceMetrics> findResourceMetrics() throws SystemException;
     List<ResourceMetrics> findResourceMetricsByProject(@NotNull String project) throws SystemException;
     List<ResourceMetrics> findResourceMetricsByRun(@NotNull String runId) throws SystemException;
     List<ResourceMetrics> findResourceMetricsByUser(@NotNull String user) throws SystemException;
 
+    void deleteResourceMetrics() throws SystemException;
     void deleteResourceMetricsByProject(@NotNull String project) throws SystemException;
     void deleteResourceMetricsByUser(@NotNull String user) throws SystemException;
     void deleteResourceMetricsByRun(@NotNull String runId) throws SystemException;

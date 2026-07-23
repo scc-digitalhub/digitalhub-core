@@ -35,12 +35,16 @@ import java.util.List;
  * - a summary of the metrics, such as average, min, max, and total
  */
 public interface ResourceMetricsService {
+    ResourceMetrics getResourceMetrics() throws SystemException;
+    List<ResourceMetrics> listResourceMetrics() throws SystemException;
+
     ResourceMetrics getResourceMetricsByProject(@NotNull String project) throws SystemException;
     List<ResourceMetrics> listResourceMetricsByProject(@NotNull String project) throws SystemException;
 
     ResourceMetrics getResourceMetricsByUser(@NotNull String user) throws SystemException;
     List<ResourceMetrics> listResourceMetricsByUser(@NotNull String user) throws SystemException;
 
-    ResourceMetrics getResourceMetricsByRun(@NotNull String runId) throws SystemException;
-    List<ResourceMetrics> listResourceMetricsByRun(@NotNull String runId) throws SystemException;
+    ResourceMetrics getResourceMetricsByRun(@NotNull String project, @NotNull String runId) throws SystemException;
+    List<ResourceMetrics> listResourceMetricsByRun(@NotNull String project, @NotNull String runId)
+        throws SystemException;
 }

@@ -40,7 +40,6 @@ import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -99,18 +98,31 @@ public class K8sMetricsProcessor implements Processor<Run, RunBaseStatus> {
                     .forEach(cm -> {
                         String id = "m_r-" + runId + "-" + m.pod() + "-" + cm.getName();
                         if (cm.getUsage() != null) {
-                            Map<String, List<ResourceMetrics.Metric>> usage = cm
+                            List<ResourceMetrics.Metrics> usage = cm
                                 .getUsage()
                                 .entrySet()
                                 .stream()
-                                .collect(
-                                    Collectors.toMap(Map.Entry::getKey, e -> {
-                                        BigDecimal value = e.getValue().getNumber();
-                                        return List.of(
+                                .map(e -> {
+                                    BigDecimal value = e.getValue().getNumber();
+                                    return new ResourceMetrics.Metrics(
+                                        e.getKey(),
+                                        null,
+                                        List.of(
                                             new ResourceMetrics.Metric(timestamp.toEpochMilli(), value.doubleValue())
-                                        );
-                                    })
-                                );
+                                        ),
+                                        null
+                                    );
+                                })
+                                .toList();
+
+                            Map<String, Serializable> metadata = Map.of(
+                                "name",
+                                cm.getName(),
+                                "pod",
+                                m.pod(),
+                                "container",
+                                cm.getName()
+                            );
 
                             ResourceMetrics rm = store.findResourceMetrics(id);
                             if (rm == null) {
@@ -119,6 +131,7 @@ public class K8sMetricsProcessor implements Processor<Run, RunBaseStatus> {
                                     .id(id)
                                     .project(run.getProject())
                                     .run(runId)
+                                    .metadata(metadata)
                                     .metrics(usage)
                                     .build();
                                 try {
@@ -133,19 +146,31 @@ public class K8sMetricsProcessor implements Processor<Run, RunBaseStatus> {
                                 }
                             } else {
                                 //append new values and update
-                                Map<String, List<ResourceMetrics.Metric>> existing = rm.getMetrics();
-                                usage.forEach((k, v) -> {
-                                    List<ResourceMetrics.Metric> list = existing.getOrDefault(k, new ArrayList<>());
-                                    list.addAll(v);
-                                    existing.put(k, list);
+                                Map<String, ResourceMetrics.Metrics> existing =
+                                    rm.getMetrics() != null
+                                        ? rm
+                                              .getMetrics()
+                                              .stream()
+                                              .collect(Collectors.toMap(ResourceMetrics.Metrics::name, e -> e))
+                                        : Map.of();
+
+                                usage.forEach(u -> {
+                                    ResourceMetrics.Metrics existingMetrics = existing.get(u.name());
+                                    if (existingMetrics == null) {
+                                        existing.put(u.name(), u);
+                                    } else {
+                                        existingMetrics.metrics().addAll(u.metrics());
+                                    }
                                 });
 
                                 //make sure usage list are sorted by timestamp
                                 existing.forEach((k, v) -> {
-                                    v.sort((m1, m2) -> Long.compare(m1.timestamp(), m2.timestamp()));
+                                    if (v.metrics() != null) {
+                                        v.metrics().sort((m1, m2) -> Long.compare(m1.timestamp(), m2.timestamp()));
+                                    }
                                 });
 
-                                rm.setMetrics(existing);
+                                rm.setMetrics(existing.values().stream().toList());
                                 try {
                                     rm = store.updateResourceMetrics(rm.getId(), rm);
                                 } catch (

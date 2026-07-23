@@ -24,6 +24,7 @@
 package it.smartcommunitylabdhub.metrics.persistence;
 
 import it.smartcommunitylabdhub.metrics.ResourceMetrics;
+import it.smartcommunitylabdhub.metrics.ResourceMetrics.Metrics;
 import jakarta.persistence.AttributeConverter;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -47,14 +48,19 @@ public class ResourceMetricsEntityBuilder implements Converter<ResourceMetrics, 
 
     @Override
     public ResourceMetricsEntity convert(@NonNull ResourceMetrics dto) {
+        //convert metrics to map and drop summaries
         Map<String, Serializable> data =
             dto.getMetrics() == null
                 ? null
                 : dto
                       .getMetrics()
-                      .entrySet()
                       .stream()
-                      .collect(Collectors.toMap(e -> e.getKey(), e -> new ArrayList<>(e.getValue())));
+                      .map(e ->
+                          e.metrics() == null
+                              ? new Metrics(e.name(), e.unit(), new ArrayList<>(), null)
+                              : new Metrics(e.name(), e.unit(), new ArrayList<>(e.metrics()), null)
+                      )
+                      .collect(Collectors.toMap(e -> e.name(), e -> e));
 
         return ResourceMetricsEntity.builder()
             .id(dto.getId())

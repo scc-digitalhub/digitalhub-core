@@ -36,7 +36,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.convert.converter.Converter;
@@ -47,8 +46,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class ResourceMetricsDTOBuilder implements Converter<ResourceMetricsEntity, ResourceMetrics> {
 
-    private static final TypeReference<HashMap<String, ArrayList<ResourceMetrics.Metric>>> typeRef =
-        new TypeReference<>() {};
+    private static final TypeReference<HashMap<String, ResourceMetrics.Metrics>> typeRef = new TypeReference<>() {};
 
     private static final ObjectMapper mapper = JacksonMapper.CBOR_OBJECT_MAPPER;
 
@@ -89,10 +87,12 @@ public class ResourceMetricsDTOBuilder implements Converter<ResourceMetricsEntit
         //metrics data
         Map<String, Serializable> data =
             entity.getData() != null ? converter.convertToEntityAttribute(entity.getData()) : Map.of();
-        Map<String, List<ResourceMetrics.Metric>> metrics = null;
+        List<ResourceMetrics.Metrics> metrics = null;
         try {
-            Map<String, ArrayList<ResourceMetrics.Metric>> map = mapper.convertValue(data, typeRef);
-            metrics = map.entrySet().stream().collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
+            Map<String, ResourceMetrics.Metrics> map = mapper.convertValue(data, typeRef);
+            if (map != null) {
+                metrics = new ArrayList<>(map.values());
+            }
         } catch (IllegalArgumentException e) {
             log.error("Metrics build error: {}", e.getMessage());
         }

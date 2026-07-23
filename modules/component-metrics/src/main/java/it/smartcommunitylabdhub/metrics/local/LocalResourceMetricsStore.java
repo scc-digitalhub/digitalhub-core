@@ -133,6 +133,17 @@ public class LocalResourceMetricsStore implements ResourceMetricsStore {
     }
 
     @Override
+    public List<ResourceMetrics> findResourceMetrics() throws SystemException {
+        log.debug("find all resource metrics");
+        List<ResourceMetricsEntity> entities = repository.findAll();
+        if (entities.isEmpty()) {
+            return List.of();
+        }
+
+        return entities.stream().map(dtoBuilder::convert).toList();
+    }
+
+    @Override
     public List<ResourceMetrics> findResourceMetricsByProject(@NotNull String project) throws SystemException {
         log.debug("find resource metrics for project {}", project);
         List<ResourceMetricsEntity> entities = repository.findByProject(project);
@@ -191,6 +202,17 @@ public class LocalResourceMetricsStore implements ResourceMetricsStore {
     public void deleteResourceMetricsByRun(@NotNull String runId) throws SystemException {
         log.debug("delete resource metrics for run {}", runId);
         List<ResourceMetricsEntity> entities = repository.findByRun(runId);
+        if (entities.isEmpty()) {
+            return;
+        }
+
+        repository.deleteAllInBatch(entities);
+    }
+
+    @Override
+    public void deleteResourceMetrics() throws SystemException {
+        log.debug("delete all resource metrics");
+        List<ResourceMetricsEntity> entities = repository.findAll();
         if (entities.isEmpty()) {
             return;
         }

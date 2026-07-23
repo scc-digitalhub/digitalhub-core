@@ -95,7 +95,7 @@ public class ProjectController {
     private AuditorAware<String> auditor;
 
     @Autowired(required = false)
-    private ResourceMetricsService k8sMetricsService;
+    private ResourceMetricsService resourceMetricsService;
 
     @Autowired
     SecurityProperties securityProperties;
@@ -305,14 +305,14 @@ public class ProjectController {
     }
 
     @Operation(summary = "Get project metrics", description = "Get metrics for a project")
-    @GetMapping(path = "/{id}/metrics/k8s", produces = "application/json; charset=UTF-8")
+    @GetMapping(path = "/{id}/resource_metrics", produces = "application/json; charset=UTF-8")
     public ResourceMetrics getMetrics(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         Authentication auth
     ) throws NoSuchEntityException, StoreException {
-        if (k8sMetricsService == null) {
+        if (resourceMetricsService == null) {
             throw new StoreException("metrics service not available");
         }
-        return k8sMetricsService.getResourceMetricsByProject(id);
+        return resourceMetricsService.getResourceMetricsByProject(id);
     }
 }

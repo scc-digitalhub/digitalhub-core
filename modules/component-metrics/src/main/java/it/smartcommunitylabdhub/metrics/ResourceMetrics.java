@@ -65,8 +65,14 @@ public class ResourceMetrics {
     @Builder.Default
     private Map<String, Serializable> metadata = new HashMap<>();
 
-    private Map<String, List<Metric>> metrics;
-    private Map<String, List<Summary>> summary;
+    private List<Metrics> metrics;
+
+    public record Metrics(
+        String name,
+        @Nullable String unit,
+        @Nullable List<Metric> metrics,
+        @Nullable List<Summary> summary
+    ) implements Serializable {}
 
     public record Metric(Long timestamp, Double value) implements Serializable {}
 

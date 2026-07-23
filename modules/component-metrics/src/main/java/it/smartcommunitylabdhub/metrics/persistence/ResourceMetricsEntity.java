@@ -25,6 +25,7 @@ package it.smartcommunitylabdhub.metrics.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
@@ -41,6 +42,7 @@ import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -49,6 +51,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 @Builder
 @Entity
 @Table(name = "resource_metrics")
+@EntityListeners({ AuditingEntityListener.class })
 public class ResourceMetricsEntity {
 
     public static final int MAX_LENGTH = 2 * 1024 * 1024; // 2MB

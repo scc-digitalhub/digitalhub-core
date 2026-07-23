@@ -23,6 +23,7 @@ import jakarta.annotation.Nonnull;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -366,15 +367,14 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                     metricsMap.put(k, List.of(metric));
                 });
 
-            //build summary as well
-            Map<String, List<ResourceMetrics.Summary>> summaryMap = summarize(metricsMap);
+            //build
+            List<ResourceMetrics.Metrics> metricsList = metricsMap
+                .entrySet()
+                .stream()
+                .map(e -> new ResourceMetrics.Metrics(e.getKey(), null, e.getValue(), summarize(e.getValue())))
+                .toList();
 
-            return ResourceMetrics.builder()
-                .id("m_p-" + project)
-                .project(project)
-                .metrics(metricsMap)
-                .summary(summaryMap)
-                .build();
+            return ResourceMetrics.builder().id("m_p-" + project).project(project).metrics(metricsList).build();
         } catch (StoreException e) {
             throw new SystemException("Error fetching metrics for project " + project, e);
         }
@@ -402,23 +402,23 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                     metricsMap.put(k, List.of(metric));
                 });
 
-            //build summary as well
-            Map<String, List<ResourceMetrics.Summary>> summaryMap = summarize(metricsMap);
+            //build
+            List<ResourceMetrics.Metrics> metricsList = metricsMap
+                .entrySet()
+                .stream()
+                .map(e -> new ResourceMetrics.Metrics(e.getKey(), null, e.getValue(), summarize(e.getValue())))
+                .toList();
 
-            return ResourceMetrics.builder()
-                .id("m_u-" + user)
-                .user(user)
-                .metrics(metricsMap)
-                .summary(summaryMap)
-                .build();
+            return ResourceMetrics.builder().id("m_u-" + user).user(user).metrics(metricsList).build();
         } catch (StoreException e) {
             throw new SystemException("Error fetching metrics for user " + user, e);
         }
     }
 
     @Override
-    public ResourceMetrics getResourceMetricsByRun(@NotNull String runId) throws SystemException {
-        log.debug("fetch metrics from k8s for run {}: ", runId);
+    public ResourceMetrics getResourceMetricsByRun(@NotNull String project, @NotNull String runId)
+        throws SystemException {
+        log.debug("fetch metrics from k8s for run {} in project {}: ", runId, project);
 
         try {
             //we keep id consistent to enable lookups
@@ -445,15 +445,15 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                 if (storedMetrics != null && storedMetrics.getMetrics() != null) {
                     storedMetrics
                         .getMetrics()
-                        .forEach((k, v) -> {
+                        .forEach(m -> {
                             //merge with existing metrics
-                            if (metricsMap.containsKey(k)) {
-                                List<ResourceMetrics.Metric> existing = metricsMap.get(k);
+                            if (metricsMap.containsKey(m.name())) {
+                                List<ResourceMetrics.Metric> existing = metricsMap.get(m.name());
                                 List<ResourceMetrics.Metric> merged = existing.stream().collect(Collectors.toList());
-                                merged.addAll(v);
-                                metricsMap.put(k, merged);
+                                merged.addAll(m.metrics());
+                                metricsMap.put(m.name(), merged);
                             } else {
-                                metricsMap.put(k, v);
+                                metricsMap.put(m.name(), m.metrics());
                             }
                         });
                 }
@@ -468,35 +468,17 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                 metricsMap.put(k, sorted);
             });
 
-            //build summary as well
-            Map<String, List<ResourceMetrics.Summary>> summaryMap = summarize(metricsMap);
+            //build
+            List<ResourceMetrics.Metrics> metricsList = metricsMap
+                .entrySet()
+                .stream()
+                .map(e -> new ResourceMetrics.Metrics(e.getKey(), null, e.getValue(), summarize(e.getValue())))
+                .toList();
 
-            return ResourceMetrics.builder().id(id).run(runId).metrics(metricsMap).summary(summaryMap).build();
+            return ResourceMetrics.builder().id(id).run(runId).metrics(metricsList).build();
         } catch (StoreException e) {
             throw new SystemException("Error fetching metrics for run " + runId, e);
         }
-    }
-
-    private Map<String, List<ResourceMetrics.Summary>> summarize(Map<String, List<ResourceMetrics.Metric>> metricsMap) {
-        Map<String, List<ResourceMetrics.Summary>> summaryMap = new HashMap<>();
-        if (metricsMap != null) {
-            metricsMap.forEach((k, v) -> {
-                Double sum = v.stream().mapToDouble(ResourceMetrics.Metric::value).sum();
-                Double avg = v.stream().mapToDouble(ResourceMetrics.Metric::value).average().orElse(0.0);
-                Double max = v.stream().mapToDouble(ResourceMetrics.Metric::value).max().orElse(0.0);
-                Double min = v.stream().mapToDouble(ResourceMetrics.Metric::value).min().orElse(0.0);
-                summaryMap.put(
-                    k,
-                    List.of(
-                        new ResourceMetrics.Summary("sum", sum),
-                        new ResourceMetrics.Summary("avg", avg),
-                        new ResourceMetrics.Summary("max", max),
-                        new ResourceMetrics.Summary("min", min)
-                    )
-                );
-            });
-        }
-        return summaryMap;
     }
 
     @Override
@@ -520,7 +502,7 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                         .getContainers()
                         .stream()
                         .map(cm -> {
-                            Map<String, List<ResourceMetrics.Metric>> metricsMap = new HashMap<>();
+                            List<ResourceMetrics.Metrics> ml = new ArrayList<>();
                             cm
                                 .getUsage()
                                 .forEach((k, v) -> {
@@ -528,14 +510,14 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                                         Instant.parse(pm.getTimestamp()).toEpochMilli(),
                                         v.getNumber().doubleValue()
                                     );
-                                    metricsMap.put(k, List.of(metric));
+                                    ml.add(new ResourceMetrics.Metrics(k, null, List.of(metric), null));
                                 });
 
                             return ResourceMetrics.builder()
                                 .id("m_p-" + project + "-" + podName + "-" + cm.getName())
                                 .project(project)
-                                .metadata(Map.of("pod", podName, "container", cm.getName()))
-                                .metrics(metricsMap)
+                                .metadata(Map.of("name", cm.getName(), "pod", podName, "container", cm.getName()))
+                                .metrics(ml)
                                 .build();
                         });
                 })
@@ -547,40 +529,59 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                     ResourceMetrics storedMetrics = store.findResourceMetrics(rm.getId());
                     if (storedMetrics != null && storedMetrics.getMetrics() != null) {
                         //merge with existing metrics
-                        Map<String, List<ResourceMetrics.Metric>> mergedMap = new HashMap<>(rm.getMetrics());
+                        Map<String, ResourceMetrics.Metrics> existing =
+                            rm.getMetrics() != null
+                                ? rm
+                                      .getMetrics()
+                                      .stream()
+                                      .collect(Collectors.toMap(ResourceMetrics.Metrics::name, e -> e))
+                                : Map.of();
+
                         storedMetrics
                             .getMetrics()
-                            .forEach((k, v) -> {
-                                if (mergedMap.containsKey(k)) {
-                                    List<ResourceMetrics.Metric> existing = mergedMap.get(k);
-                                    List<ResourceMetrics.Metric> merged = existing
+                            .forEach(mm -> {
+                                String k = mm.name();
+                                List<ResourceMetrics.Metric> v = mm.metrics() != null ? mm.metrics() : List.of();
+                                if (existing.containsKey(k)) {
+                                    List<ResourceMetrics.Metric> existingMetrics = existing.get(k).metrics();
+                                    List<ResourceMetrics.Metric> merged = existingMetrics
                                         .stream()
                                         .collect(Collectors.toList());
                                     merged.addAll(v);
-                                    mergedMap.put(k, merged);
+                                    existing.put(k, new ResourceMetrics.Metrics(k, null, merged, null));
                                 } else {
-                                    mergedMap.put(k, v);
+                                    existing.put(k, new ResourceMetrics.Metrics(k, null, v, null));
                                 }
                             });
 
                         //make sure metrics lists are sorted by timestamp
-                        mergedMap.forEach((k, v) -> {
-                            List<ResourceMetrics.Metric> sorted = v
+                        existing.forEach((k, mm) -> {
+                            List<ResourceMetrics.Metric> sorted = mm
+                                .metrics()
                                 .stream()
                                 .sorted((m1, m2) -> Long.compare(m1.timestamp(), m2.timestamp()))
                                 .toList();
-                            mergedMap.put(k, sorted);
+                            existing.put(k, new ResourceMetrics.Metrics(k, null, sorted, null));
                         });
 
-                        rm.setMetrics(mergedMap);
+                        rm.setMetrics(new ArrayList<>(existing.values()));
                     }
                 });
             }
 
             //build summaries
             metricsList.forEach(rm -> {
-                Map<String, List<ResourceMetrics.Summary>> summaryMap = summarize(rm.getMetrics());
-                rm.setSummary(summaryMap);
+                if (rm.getMetrics() != null) {
+                    rm.setMetrics(
+                        rm
+                            .getMetrics()
+                            .stream()
+                            .map(m ->
+                                new ResourceMetrics.Metrics(m.name(), m.unit(), m.metrics(), summarize(m.metrics()))
+                            )
+                            .toList()
+                    );
+                }
             });
 
             return metricsList;
@@ -610,7 +611,7 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                         .getContainers()
                         .stream()
                         .map(cm -> {
-                            Map<String, List<ResourceMetrics.Metric>> metricsMap = new HashMap<>();
+                            List<ResourceMetrics.Metrics> ml = new ArrayList<>();
                             cm
                                 .getUsage()
                                 .forEach((k, v) -> {
@@ -618,14 +619,14 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                                         Instant.parse(pm.getTimestamp()).toEpochMilli(),
                                         v.getNumber().doubleValue()
                                     );
-                                    metricsMap.put(k, List.of(metric));
+                                    ml.add(new ResourceMetrics.Metrics(k, null, List.of(metric), null));
                                 });
 
                             return ResourceMetrics.builder()
                                 .id("m_u-" + user + "-" + podName + "-" + cm.getName())
-                                .project(user)
-                                .metadata(Map.of("pod", podName, "container", cm.getName()))
-                                .metrics(metricsMap)
+                                .user(user)
+                                .metadata(Map.of("name", cm.getName(), "pod", podName, "container", cm.getName()))
+                                .metrics(ml)
                                 .build();
                         });
                 })
@@ -637,40 +638,59 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                     ResourceMetrics storedMetrics = store.findResourceMetrics(rm.getId());
                     if (storedMetrics != null && storedMetrics.getMetrics() != null) {
                         //merge with existing metrics
-                        Map<String, List<ResourceMetrics.Metric>> mergedMap = new HashMap<>(rm.getMetrics());
+                        Map<String, ResourceMetrics.Metrics> existing =
+                            rm.getMetrics() != null
+                                ? rm
+                                      .getMetrics()
+                                      .stream()
+                                      .collect(Collectors.toMap(ResourceMetrics.Metrics::name, e -> e))
+                                : Map.of();
+
                         storedMetrics
                             .getMetrics()
-                            .forEach((k, v) -> {
-                                if (mergedMap.containsKey(k)) {
-                                    List<ResourceMetrics.Metric> existing = mergedMap.get(k);
-                                    List<ResourceMetrics.Metric> merged = existing
+                            .forEach(mm -> {
+                                String k = mm.name();
+                                List<ResourceMetrics.Metric> v = mm.metrics() != null ? mm.metrics() : List.of();
+                                if (existing.containsKey(k)) {
+                                    List<ResourceMetrics.Metric> existingMetrics = existing.get(k).metrics();
+                                    List<ResourceMetrics.Metric> merged = existingMetrics
                                         .stream()
                                         .collect(Collectors.toList());
                                     merged.addAll(v);
-                                    mergedMap.put(k, merged);
+                                    existing.put(k, new ResourceMetrics.Metrics(k, null, merged, null));
                                 } else {
-                                    mergedMap.put(k, v);
+                                    existing.put(k, new ResourceMetrics.Metrics(k, null, v, null));
                                 }
                             });
 
                         //make sure metrics lists are sorted by timestamp
-                        mergedMap.forEach((k, v) -> {
-                            List<ResourceMetrics.Metric> sorted = v
+                        existing.forEach((k, mm) -> {
+                            List<ResourceMetrics.Metric> sorted = mm
+                                .metrics()
                                 .stream()
                                 .sorted((m1, m2) -> Long.compare(m1.timestamp(), m2.timestamp()))
                                 .toList();
-                            mergedMap.put(k, sorted);
+                            existing.put(k, new ResourceMetrics.Metrics(k, null, sorted, null));
                         });
 
-                        rm.setMetrics(mergedMap);
+                        rm.setMetrics(new ArrayList<>(existing.values()));
                     }
                 });
             }
 
             //build summaries
             metricsList.forEach(rm -> {
-                Map<String, List<ResourceMetrics.Summary>> summaryMap = summarize(rm.getMetrics());
-                rm.setSummary(summaryMap);
+                if (rm.getMetrics() != null) {
+                    rm.setMetrics(
+                        rm
+                            .getMetrics()
+                            .stream()
+                            .map(m ->
+                                new ResourceMetrics.Metrics(m.name(), m.unit(), m.metrics(), summarize(m.metrics()))
+                            )
+                            .toList()
+                    );
+                }
             });
 
             return metricsList;
@@ -680,92 +700,186 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
     }
 
     @Override
-    public List<ResourceMetrics> listResourceMetricsByRun(@NotNull String runId) throws SystemException {
-        log.debug("fetch metrics from k8s for run {}: ", runId);
+    public List<ResourceMetrics> listResourceMetricsByRun(@NotNull String project, @NotNull String runId)
+        throws SystemException {
+        log.debug("fetch metrics from k8s for run {} in project {}: ", runId, project);
 
         try {
+            List<ResourceMetrics> result = new ArrayList<>();
             //fetch all from service
             List<PodMetrics> podMetrics = listPodMetrics("run", runId);
-            if (podMetrics == null || podMetrics.isEmpty()) {
-                return List.of();
+            if (podMetrics != null && !podMetrics.isEmpty()) {
+                //explode by pod and container
+                List<ResourceMetrics> metricsList = podMetrics
+                    .stream()
+                    .flatMap(pm -> {
+                        String podName = pm.getMetadata().getName();
+
+                        return pm
+                            .getContainers()
+                            .stream()
+                            .map(cm -> {
+                                List<ResourceMetrics.Metrics> ml = new ArrayList<>();
+                                cm
+                                    .getUsage()
+                                    .forEach((k, v) -> {
+                                        ResourceMetrics.Metric metric = new ResourceMetrics.Metric(
+                                            Instant.parse(pm.getTimestamp()).toEpochMilli(),
+                                            v.getNumber().doubleValue()
+                                        );
+                                        ml.add(new ResourceMetrics.Metrics(k, null, List.of(metric), null));
+                                    });
+
+                                return ResourceMetrics.builder()
+                                    .id("m_r-" + runId + "-" + podName + "-" + cm.getName())
+                                    .run(runId)
+                                    .metadata(Map.of("name", cm.getName(), "pod", podName, "container", cm.getName()))
+                                    .metrics(ml)
+                                    .build();
+                            });
+                    })
+                    .toList();
+
+                result.addAll(metricsList);
             }
 
-            //explode by pod and container
-            List<ResourceMetrics> metricsList = podMetrics
-                .stream()
-                .flatMap(pm -> {
-                    String podName = pm.getMetadata().getName();
-
-                    return pm
-                        .getContainers()
-                        .stream()
-                        .map(cm -> {
-                            Map<String, List<ResourceMetrics.Metric>> metricsMap = new HashMap<>();
-                            cm
-                                .getUsage()
-                                .forEach((k, v) -> {
-                                    ResourceMetrics.Metric metric = new ResourceMetrics.Metric(
-                                        Instant.parse(pm.getTimestamp()).toEpochMilli(),
-                                        v.getNumber().doubleValue()
-                                    );
-                                    metricsMap.put(k, List.of(metric));
-                                });
-
-                            return ResourceMetrics.builder()
-                                .id("m_r-" + runId + "-" + podName + "-" + cm.getName())
-                                .project(runId)
-                                .metadata(Map.of("pod", podName, "container", cm.getName()))
-                                .metrics(metricsMap)
-                                .build();
-                        });
-                })
-                .toList();
-
-            //for every metric check store and merge
+            //also pick all historical metrics for the run from store, if available
             if (store != null) {
-                metricsList.forEach(rm -> {
-                    ResourceMetrics storedMetrics = store.findResourceMetrics(rm.getId());
+                List<ResourceMetrics> storedMetricsList = store.findResourceMetricsByRun(runId);
+
+                //for every metric check store and merge
+                storedMetricsList.forEach(rm -> {
+                    ResourceMetrics storedMetrics = result
+                        .stream()
+                        .filter(sm -> sm.getId().equals(rm.getId()))
+                        .findFirst()
+                        .orElse(null);
                     if (storedMetrics != null && storedMetrics.getMetrics() != null) {
                         //merge with existing metrics
-                        Map<String, List<ResourceMetrics.Metric>> mergedMap = new HashMap<>(rm.getMetrics());
+                        Map<String, ResourceMetrics.Metrics> existing =
+                            rm.getMetrics() != null
+                                ? rm
+                                      .getMetrics()
+                                      .stream()
+                                      .collect(Collectors.toMap(ResourceMetrics.Metrics::name, e -> e))
+                                : Map.of();
+
                         storedMetrics
                             .getMetrics()
-                            .forEach((k, v) -> {
-                                if (mergedMap.containsKey(k)) {
-                                    List<ResourceMetrics.Metric> existing = mergedMap.get(k);
-                                    List<ResourceMetrics.Metric> merged = existing
+                            .forEach(mm -> {
+                                String k = mm.name();
+                                List<ResourceMetrics.Metric> v = mm.metrics() != null ? mm.metrics() : List.of();
+                                if (existing.containsKey(k)) {
+                                    List<ResourceMetrics.Metric> existingMetrics = existing.get(k).metrics();
+                                    List<ResourceMetrics.Metric> merged = existingMetrics
                                         .stream()
                                         .collect(Collectors.toList());
                                     merged.addAll(v);
-                                    mergedMap.put(k, merged);
+                                    existing.put(k, new ResourceMetrics.Metrics(k, null, merged, null));
                                 } else {
-                                    mergedMap.put(k, v);
+                                    existing.put(k, new ResourceMetrics.Metrics(k, null, v, null));
                                 }
                             });
 
                         //make sure metrics lists are sorted by timestamp
-                        mergedMap.forEach((k, v) -> {
-                            List<ResourceMetrics.Metric> sorted = v
+                        existing.forEach((k, mm) -> {
+                            List<ResourceMetrics.Metric> sorted = mm
+                                .metrics()
                                 .stream()
                                 .sorted((m1, m2) -> Long.compare(m1.timestamp(), m2.timestamp()))
                                 .toList();
-                            mergedMap.put(k, sorted);
+                            existing.put(k, new ResourceMetrics.Metrics(k, null, sorted, null));
                         });
 
-                        rm.setMetrics(mergedMap);
+                        storedMetrics.setMetrics(new ArrayList<>(existing.values()));
+                    } else {
+                        //no existing metrics, just add the stored one
+                        result.add(rm);
                     }
                 });
             }
 
             //build summaries
-            metricsList.forEach(rm -> {
-                Map<String, List<ResourceMetrics.Summary>> summaryMap = summarize(rm.getMetrics());
-                rm.setSummary(summaryMap);
+            result.forEach(rm -> {
+                if (rm.getMetrics() != null) {
+                    rm.setMetrics(
+                        rm
+                            .getMetrics()
+                            .stream()
+                            .map(m ->
+                                new ResourceMetrics.Metrics(m.name(), m.unit(), m.metrics(), summarize(m.metrics()))
+                            )
+                            .toList()
+                    );
+                }
             });
 
-            return metricsList;
+            return result;
         } catch (StoreException e) {
             throw new SystemException("Error fetching metrics for run " + runId, e);
         }
+    }
+
+    @Override
+    public ResourceMetrics getResourceMetrics() throws SystemException {
+        log.debug("fetch metrics from k8s for instance");
+
+        try {
+            //fetch now from service
+            ContainerMetrics metrics = getContainerMetrics("instance", applicationProperties.getName());
+            if (metrics == null) {
+                return null;
+            }
+
+            Map<String, List<ResourceMetrics.Metric>> metricsMap = new HashMap<>();
+            metrics
+                .getUsage()
+                .forEach((k, v) -> {
+                    ResourceMetrics.Metric metric = new ResourceMetrics.Metric(
+                        System.currentTimeMillis(),
+                        v.getNumber().doubleValue()
+                    );
+                    metricsMap.put(k, List.of(metric));
+                });
+
+            //build
+            List<ResourceMetrics.Metrics> metricsList = metricsMap
+                .entrySet()
+                .stream()
+                .map(e -> new ResourceMetrics.Metrics(e.getKey(), null, e.getValue(), summarize(e.getValue())))
+                .toList();
+
+            return ResourceMetrics.builder().id("m_i-" + applicationProperties.getName()).metrics(metricsList).build();
+        } catch (StoreException e) {
+            throw new SystemException("Error fetching metrics for instance " + applicationProperties.getName(), e);
+        }
+    }
+
+    @Override
+    public List<ResourceMetrics> listResourceMetrics() throws SystemException {
+        //return every metrics saved in store, if available
+        if (store != null) {
+            return store.findResourceMetrics();
+        }
+
+        return List.of();
+    }
+
+    private List<ResourceMetrics.Summary> summarize(List<ResourceMetrics.Metric> metrics) {
+        if (metrics != null) {
+            Double sum = metrics.stream().mapToDouble(ResourceMetrics.Metric::value).sum();
+            Double avg = metrics.stream().mapToDouble(ResourceMetrics.Metric::value).average().orElse(0.0);
+            Double max = metrics.stream().mapToDouble(ResourceMetrics.Metric::value).max().orElse(0.0);
+            Double min = metrics.stream().mapToDouble(ResourceMetrics.Metric::value).min().orElse(0.0);
+
+            return List.of(
+                new ResourceMetrics.Summary("sum", sum),
+                new ResourceMetrics.Summary("avg", avg),
+                new ResourceMetrics.Summary("max", max),
+                new ResourceMetrics.Summary("min", min)
+            );
+        }
+
+        return List.of();
     }
 }

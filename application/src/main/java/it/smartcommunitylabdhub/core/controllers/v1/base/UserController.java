@@ -51,7 +51,7 @@ public class UserController {
     private MyUserManager userManager;
 
     @Autowired(required = false)
-    private ResourceMetricsService k8sMetricsService;
+    private ResourceMetricsService resourceMetricsService;
 
     @Operation(summary = "List my projects")
     @GetMapping(path = "/me/projects", produces = "application/json; charset=UTF-8")
@@ -87,12 +87,12 @@ public class UserController {
         summary = "Get user metrics",
         description = "Get metrics all user resources, including all projects and resources owned by the user"
     )
-    @GetMapping(path = "/me/metrics/k8s", produces = "application/json; charset=UTF-8")
+    @GetMapping(path = "/me/resource_metrics", produces = "application/json; charset=UTF-8")
     public ResourceMetrics getMetrics(Authentication auth) throws NoSuchEntityException, StoreException {
-        if (k8sMetricsService == null) {
+        if (resourceMetricsService == null) {
             throw new StoreException("metrics service not available");
         }
 
-        return k8sMetricsService.getResourceMetricsByUser(auth.getName());
+        return resourceMetricsService.getResourceMetricsByUser(auth.getName());
     }
 }
