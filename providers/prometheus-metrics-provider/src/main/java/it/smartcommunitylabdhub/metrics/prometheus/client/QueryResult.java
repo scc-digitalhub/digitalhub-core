@@ -1,5 +1,6 @@
 package it.smartcommunitylabdhub.metrics.prometheus.client;
 
+import java.util.List;
 import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -19,9 +20,11 @@ public class QueryResult {
 
     public enum ResultType {
         matrix,
+        vector,
     }
 
     public static interface Result {
         Map<String, String> getLabels();
+        List<MetricPoint> getValues();
     }
 }

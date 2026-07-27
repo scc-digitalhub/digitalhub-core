@@ -9,7 +9,12 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "resultType", include = JsonTypeInfo.As.EXISTING_PROPERTY)
-@JsonSubTypes(value = { @JsonSubTypes.Type(value = Matrix.class, name = "matrix") })
+@JsonSubTypes(
+    value = {
+        @JsonSubTypes.Type(value = Matrix.class, name = "matrix"),
+        @JsonSubTypes.Type(value = Vector.class, name = "vector"),
+    }
+)
 @Getter
 @Setter
 @AllArgsConstructor

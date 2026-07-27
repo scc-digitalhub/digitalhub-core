@@ -14,7 +14,7 @@ import lombok.ToString;
 @AllArgsConstructor
 @NoArgsConstructor
 @ToString
-public class Matrix extends Data {
+public class Vector extends Data {
 
     @JsonProperty("result")
     private List<Metric> result;
@@ -26,7 +26,7 @@ public class Matrix extends Data {
 
     public record Metric(
         @JsonProperty("metric") Map<String, String> labels,
-        List<MetricPoint> values
+        MetricPoint value
     ) implements QueryResult.Result {
         @Override
         public Map<String, String> getLabels() {
@@ -35,7 +35,7 @@ public class Matrix extends Data {
 
         @Override
         public List<MetricPoint> getValues() {
-            return values;
+            return value != null ? List.of(value) : List.of();
         }
     }
 }

@@ -6,15 +6,18 @@ import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.metrics.ResourceMetrics;
+import it.smartcommunitylabdhub.metrics.ResourceMetrics.Metric;
 import it.smartcommunitylabdhub.metrics.ResourceMetricsService;
 import it.smartcommunitylabdhub.metrics.config.PrometheusProperties;
 import it.smartcommunitylabdhub.metrics.prometheus.client.Matrix;
 import it.smartcommunitylabdhub.metrics.prometheus.client.PrometheusClient;
 import it.smartcommunitylabdhub.metrics.prometheus.client.PrometheusException;
 import it.smartcommunitylabdhub.metrics.prometheus.client.QueryResult;
+import it.smartcommunitylabdhub.metrics.prometheus.client.Vector;
 import it.smartcommunitylabdhub.runs.Run;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -33,7 +36,10 @@ import org.springframework.util.StringUtils;
 public class PrometheusMetricsService implements ResourceMetricsService {
 
     private static final long END_OFFSET = 300L; //5 minutes offset for end time if not available
+    private static final int DEFAULT_INTERVAL = 300; //default interval for current metrics
     private static final String LAZY_MODIFIER = ".*"; //lazy filter modifier for regex matching
+    private static final PropertyPlaceholderHelper PLACEHOLDER_HELPER = new PropertyPlaceholderHelper("{", "}");
+
     private final PrometheusProperties properties;
     private final PrometheusClient client;
 
@@ -57,45 +63,290 @@ public class PrometheusMetricsService implements ResourceMetricsService {
 
     @Override
     public ResourceMetrics getResourceMetrics() throws SystemException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getResourceMetrics'");
+        log.debug("get current metrics by instance {}", applicationProperties.getName());
+
+        if (map("instance") == null) {
+            //not supported, return empty list
+            log.warn("instance label mapping is not configured, returning empty list");
+            return new ResourceMetrics();
+        }
+
+        //default time interval
+        Long end = Instant.now().getEpochSecond();
+        Long start = end - DEFAULT_INTERVAL; //last 5 minutes
+
+        //build promQL from filter
+        List<Pair<String, String>> filters = new ArrayList<>();
+        filters.add(
+            Pair.of(
+                "instance",
+                properties.useLazyFilter()
+                    ? LAZY_MODIFIER + applicationProperties.getName() + LAZY_MODIFIER
+                    : applicationProperties.getName()
+            )
+        );
+
+        List<ResourceMetrics> list = get(filters, start, end);
+        //assemble a single result, results come as vectors from prometheus
+        List<ResourceMetrics.Metrics> metrics = new ArrayList<>();
+
+        ResourceMetrics rm = new ResourceMetrics();
+        rm.setId("m_i-" + applicationProperties.getName());
+        list.forEach(mm -> {
+            //metric should have a single value, put into collector
+            mm
+                .getMetrics()
+                .stream()
+                .filter(m -> m.metrics() != null)
+                .findFirst()
+                .ifPresent(metric -> {
+                    metrics.add(metric);
+                });
+        });
+
+        rm.setMetrics(metrics);
+
+        if (log.isTraceEnabled()) {
+            log.trace("metrics: {}", rm);
+        }
+
+        return rm;
     }
 
     @Override
     public List<ResourceMetrics> listResourceMetrics() throws SystemException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'listResourceMetrics'");
+        log.debug("list metrics by instance {}", applicationProperties.getName());
+
+        if (map("instance") == null) {
+            //not supported, return empty list
+            log.warn("instance label mapping is not configured, returning empty list");
+            return List.of();
+        }
+
+        //use default interval
+        Long start = null;
+        Long end = null;
+
+        //build promQL from filter
+        List<Pair<String, String>> filters = new ArrayList<>();
+        filters.add(
+            Pair.of(
+                "instance",
+                properties.useLazyFilter()
+                    ? LAZY_MODIFIER + applicationProperties.getName() + LAZY_MODIFIER
+                    : applicationProperties.getName()
+            )
+        );
+
+        List<ResourceMetrics> metrics = fetch(filters, start, end);
+        if (log.isTraceEnabled()) {
+            log.trace("metrics: {}", metrics);
+        }
+
+        return metrics;
     }
 
     @Override
     public ResourceMetrics getResourceMetricsByProject(@NotNull String project) throws SystemException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getResourceMetricsByProject'");
+        log.debug("get current metrics by project {}", project);
+
+        if (!StringUtils.hasText(project)) {
+            throw new IllegalArgumentException("project is required");
+        }
+
+        if (map("project") == null) {
+            //not supported, return empty list
+            log.warn("project label mapping is not configured, returning empty list");
+            return new ResourceMetrics();
+        }
+
+        //default time interval
+        Long end = Instant.now().getEpochSecond();
+        Long start = end - DEFAULT_INTERVAL; //last 5 minutes
+
+        //build promQL from filter
+        List<Pair<String, String>> filters = new ArrayList<>();
+        filters.add(Pair.of("project", properties.useLazyFilter() ? LAZY_MODIFIER + project + LAZY_MODIFIER : project));
+
+        List<ResourceMetrics> list = get(filters, start, end);
+        //assemble a single result, results come as vectors from prometheus
+        List<ResourceMetrics.Metrics> metrics = new ArrayList<>();
+
+        ResourceMetrics rm = new ResourceMetrics();
+        rm.setId("m_p-" + project);
+        rm.setProject(project);
+        list.forEach(mm -> {
+            //metric should have a single value, put into collector
+            mm
+                .getMetrics()
+                .stream()
+                .filter(m -> m.metrics() != null)
+                .findFirst()
+                .ifPresent(metric -> {
+                    metrics.add(metric);
+                });
+        });
+
+        rm.setMetrics(metrics);
+
+        if (log.isTraceEnabled()) {
+            log.trace("metrics: {}", rm);
+        }
+
+        return rm;
     }
 
     @Override
     public List<ResourceMetrics> listResourceMetricsByProject(@NotNull String project) throws SystemException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'listResourceMetricsByProject'");
+        log.debug("list metrics by project {}", project);
+
+        if (!StringUtils.hasText(project)) {
+            throw new IllegalArgumentException("project is required");
+        }
+
+        if (map("project") == null) {
+            //not supported, return empty list
+            log.warn("project label mapping is not configured, returning empty list");
+            return List.of();
+        }
+
+        //use default interval
+        Long start = null;
+        Long end = null;
+
+        //build promQL from filter
+        List<Pair<String, String>> filters = new ArrayList<>();
+        filters.add(Pair.of("project", properties.useLazyFilter() ? LAZY_MODIFIER + project + LAZY_MODIFIER : project));
+
+        List<ResourceMetrics> metrics = fetch(filters, start, end);
+        if (log.isTraceEnabled()) {
+            log.trace("metrics: {}", metrics);
+        }
+
+        return metrics;
     }
 
     @Override
     public ResourceMetrics getResourceMetricsByUser(@NotNull String user) throws SystemException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getResourceMetricsByUser'");
+        log.debug("get current metrics by user {}", user);
+
+        if (!StringUtils.hasText(user)) {
+            throw new IllegalArgumentException("user is required");
+        }
+
+        if (map("user") == null) {
+            //not supported, return empty list
+            log.warn("user label mapping is not configured, returning empty list");
+            return new ResourceMetrics();
+        }
+
+        //default time interval
+        Long end = Instant.now().getEpochSecond();
+        Long start = end - DEFAULT_INTERVAL; //last 5 minutes
+
+        //build promQL from filter
+        List<Pair<String, String>> filters = new ArrayList<>();
+        //exact match always for user, no lazy filter
+        filters.add(Pair.of("user", user));
+
+        List<ResourceMetrics> list = get(filters, start, end);
+        //assemble a single result, results come as vectors from prometheus
+        List<ResourceMetrics.Metrics> metrics = new ArrayList<>();
+
+        ResourceMetrics rm = new ResourceMetrics();
+        rm.setId("m_u-" + user);
+        rm.setUser(user);
+        list.forEach(mm -> {
+            //metric should have a single value, put into collector
+            mm
+                .getMetrics()
+                .stream()
+                .filter(m -> m.metrics() != null)
+                .findFirst()
+                .ifPresent(metric -> {
+                    metrics.add(metric);
+                });
+        });
+
+        rm.setMetrics(metrics);
+
+        if (log.isTraceEnabled()) {
+            log.trace("metrics: {}", rm);
+        }
+
+        return rm;
     }
 
     @Override
     public List<ResourceMetrics> listResourceMetricsByUser(@NotNull String user) throws SystemException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'listResourceMetricsByUser'");
+        log.debug("list metrics by user {}", user);
+
+        if (!StringUtils.hasText(user)) {
+            throw new IllegalArgumentException("user is required");
+        }
+
+        if (map("user") == null) {
+            //not supported, return empty list
+            log.warn("user label mapping is not configured, returning empty list");
+            return List.of();
+        }
+
+        //use default interval
+        Long start = null;
+        Long end = null;
+
+        //build promQL from filter
+        List<Pair<String, String>> filters = new ArrayList<>();
+        //exact match always for user, no lazy filter
+        filters.add(Pair.of("user", user));
+
+        List<ResourceMetrics> metrics = fetch(filters, start, end);
+        if (log.isTraceEnabled()) {
+            log.trace("metrics: {}", metrics);
+        }
+
+        return metrics;
     }
 
     @Override
     public ResourceMetrics getResourceMetricsByRun(@NotNull String project, @NotNull String runId)
         throws SystemException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getResourceMetricsByRun'");
+        log.debug("get current metrics by run {}", runId);
+
+        //default time interval
+        Long end = Instant.now().getEpochSecond();
+        Long start = end - DEFAULT_INTERVAL; //last 5 minutes
+
+        //build promQL from filter
+        List<Pair<String, String>> filters = new ArrayList<>();
+        filters.add(Pair.of("run", properties.useLazyFilter() ? LAZY_MODIFIER + runId + LAZY_MODIFIER : runId));
+
+        List<ResourceMetrics> list = get(filters, start, end);
+        //assemble a single result, results come as vectors from prometheus
+        List<ResourceMetrics.Metrics> metrics = new ArrayList<>();
+
+        ResourceMetrics rm = new ResourceMetrics();
+        rm.setId("m_r-" + runId);
+        rm.setRun(runId);
+        list.forEach(mm -> {
+            //metric should have a single value, put into collector
+            mm
+                .getMetrics()
+                .stream()
+                .filter(m -> m.metrics() != null)
+                .findFirst()
+                .ifPresent(metric -> {
+                    metrics.add(metric);
+                });
+        });
+
+        rm.setMetrics(metrics);
+
+        if (log.isTraceEnabled()) {
+            log.trace("metrics: {}", rm);
+        }
+
+        return rm;
     }
 
     @Override
@@ -124,7 +375,7 @@ public class PrometheusMetricsService implements ResourceMetricsService {
 
             List<ResourceMetrics> metrics = fetch(filters, start, end);
             if (log.isTraceEnabled()) {
-                log.trace("logs: {}", metrics);
+                log.trace("metrics: {}", metrics);
             }
 
             return metrics;
@@ -137,11 +388,152 @@ public class PrometheusMetricsService implements ResourceMetricsService {
     /*
      * Helpers
      */
+    private List<ResourceMetrics> get(
+        @NotNull List<Pair<String, String>> filters,
+        @Nullable Long start,
+        @Nullable Long end
+    ) {
+        String filterQuery = buildFilterQuery(filters);
+
+        //build all metrics as separate requests and join results in list
+        List<ResourceMetrics> metrics = new ArrayList<>();
+
+        if (properties.getMetrics() != null && !properties.getMetrics().isEmpty()) {
+            for (Map.Entry<String, PrometheusProperties.MetricMapping> entry : properties.getMetrics().entrySet()) {
+                if (!StringUtils.hasText(entry.getValue().name())) {
+                    continue;
+                }
+
+                //get a single value for the metric by summing all series, if any
+                String mq = String.format("sum(%s)", buildMetricQuery(filterQuery, entry.getValue()));
+
+                if (log.isTraceEnabled()) {
+                    log.trace("prometheus metric query for {}: {}", entry.getValue().name(), mq);
+                }
+
+                try {
+                    QueryResult result = client.query(mq, start, end, null);
+
+                    // fetch and convert vector entries when available
+                    if (
+                        result.getData() != null &&
+                        !result.getData().isEmpty() &&
+                        result.getData() instanceof Vector vector
+                    ) {
+                        //we expect a single metric with a single value, convert to ResourceMetrics
+                        List<ResourceMetrics> mres = List.of(
+                            convert(
+                                entry,
+                                entry.getKey(),
+                                vector
+                                    .getResult()
+                                    .stream()
+                                    .map(m -> (QueryResult.Result) m)
+                                    .toList()
+                            )
+                        );
+                        metrics.addAll(mres);
+                    }
+                } catch (PrometheusException e) {
+                    log.error("prometheus query failed: {} - {}", e.getStatusCode(), e.getMessage());
+                    throw new SystemException("prometheus query failed: " + e.getMessage(), e);
+                }
+            }
+        }
+
+        return metrics;
+    }
+
     private List<ResourceMetrics> fetch(
         @NotNull List<Pair<String, String>> filters,
         @Nullable Long start,
         @Nullable Long end
     ) {
+        String filterQuery = buildFilterQuery(filters);
+
+        //build all metrics as separate requests and join results in list
+        List<ResourceMetrics> metrics = new ArrayList<>();
+
+        if (properties.getMetrics() != null && !properties.getMetrics().isEmpty()) {
+            for (Map.Entry<String, PrometheusProperties.MetricMapping> entry : properties.getMetrics().entrySet()) {
+                if (!StringUtils.hasText(entry.getValue().name())) {
+                    continue;
+                }
+
+                String mq = buildMetricQuery(filterQuery, entry.getValue());
+
+                if (log.isTraceEnabled()) {
+                    log.trace("prometheus metric query for {}: {}", entry.getValue().name(), mq);
+                }
+
+                try {
+                    //query prometheus with default params
+                    QueryResult result = client.queryRange(mq, start, end, null);
+
+                    // fetch and convert matrix entries when available
+                    if (
+                        result.getData() != null &&
+                        !result.getData().isEmpty() &&
+                        result.getData() instanceof Matrix matrix
+                    ) {
+                        if (entry.getValue().groupBy() != null) {
+                            //group by group label container to a map of metrics, then convert to ResourceMetrics
+                            Map<String, List<Matrix.Metric>> grouped = matrix
+                                .getResult()
+                                .stream()
+                                .collect(
+                                    Collectors.groupingBy(m ->
+                                        Optional.ofNullable(m.getLabels().get(entry.getValue().groupBy())).orElse(
+                                            "unknown"
+                                        )
+                                    )
+                                );
+
+                            List<ResourceMetrics> mres = grouped
+                                .entrySet()
+                                .stream()
+                                .filter(e -> !("unknown".equals(e.getKey())))
+                                .map(e ->
+                                    convert(
+                                        entry,
+                                        e.getKey(),
+                                        e
+                                            .getValue()
+                                            .stream()
+                                            .map(m -> (QueryResult.Result) m)
+                                            .toList()
+                                    )
+                                )
+                                .toList();
+
+                            metrics.addAll(mres);
+                        } else {
+                            //no group by, convert all entries to a single ResourceMetrics
+                            List<ResourceMetrics> mres = List.of(
+                                convert(
+                                    entry,
+                                    entry.getKey(),
+                                    matrix
+                                        .getResult()
+                                        .stream()
+                                        .map(m -> (QueryResult.Result) m)
+                                        .toList()
+                                )
+                            );
+                            metrics.addAll(mres);
+                        }
+                    }
+                } catch (PrometheusException e) {
+                    log.error("prometheus query failed: {} - {}", e.getStatusCode(), e.getMessage());
+                    throw new SystemException("prometheus query failed: " + e.getMessage(), e);
+                }
+            }
+        }
+
+        return metrics;
+    }
+
+    private String buildFilterQuery(@NotNull List<Pair<String, String>> filters) {
         if (
             StringUtils.hasText(properties.getNamespace()) &&
             filters.stream().noneMatch(f -> "namespace".equals(f.getFirst()))
@@ -170,79 +562,17 @@ public class PrometheusMetricsService implements ResourceMetricsService {
             log.trace("prometheus query filters: {}", query.toString());
         }
 
-        if (query.length() == 0) {
-            throw new IllegalArgumentException("no valid filters provided");
-        }
+        return query.toString();
+    }
 
-        //build all metrics as separate requests and join results in list
-        List<ResourceMetrics> metrics = new ArrayList<>();
+    private String buildMetricQuery(@NotNull String filterQuery, @NotNull PrometheusProperties.MetricMapping mapping) {
+        String metricName = mapping.name();
+        String operation = mapping.operation();
+        String window = mapping.window();
 
-        if (properties.getMetrics() != null && !properties.getMetrics().isEmpty()) {
-            for (Map.Entry<String, PrometheusProperties.MetricMapping> entry : properties.getMetrics().entrySet()) {
-                String metricName = entry.getValue().name();
-                String operation = entry.getValue().operation();
-                String window = entry.getValue().window();
-
-                if (!StringUtils.hasText(metricName)) {
-                    continue;
-                }
-
-                String mq =
-                    StringUtils.hasText(operation) && StringUtils.hasText(window)
-                        ? String.format("%s(%s%s[%s])", operation, metricName, query.toString(), window)
-                        : String.format("%s%s", metricName, query.toString());
-
-                if (log.isTraceEnabled()) {
-                    log.trace("prometheus metric query for {}: {}", metricName, mq);
-                }
-
-                try {
-                    //query prometheus with default params
-                    Long startEpoch = start != null ? start : null;
-                    Long endEpoch = end != null ? end : null;
-                    QueryResult result = client.queryRange(mq, startEpoch, endEpoch, null);
-
-                    // fetch and convert matrix entries when available
-                    if (
-                        result.getData() != null &&
-                        !result.getData().isEmpty() &&
-                        result.getData() instanceof Matrix matrix
-                    ) {
-                        if (entry.getValue().groupBy() != null) {
-                            //group by group label container to a map of metrics, then convert to ResourceMetrics
-                            Map<String, List<Matrix.Metric>> grouped = matrix
-                                .getResult()
-                                .stream()
-                                .collect(
-                                    Collectors.groupingBy(m ->
-                                        Optional.ofNullable(m.getLabels().get(entry.getValue().groupBy())).orElse(
-                                            "unknown"
-                                        )
-                                    )
-                                );
-
-                            List<ResourceMetrics> mres = grouped
-                                .entrySet()
-                                .stream()
-                                .filter(e -> !("unknown".equals(e.getKey())))
-                                .map(e -> convert(entry, e.getKey(), e.getValue()))
-                                .toList();
-
-                            metrics.addAll(mres);
-                        } else {
-                            //no group by, convert all entries to a single ResourceMetrics
-                            List<ResourceMetrics> mres = List.of(convert(entry, entry.getKey(), matrix.getResult()));
-                            metrics.addAll(mres);
-                        }
-                    }
-                } catch (PrometheusException e) {
-                    log.error("prometheus query failed: {} - {}", e.getStatusCode(), e.getMessage());
-                    throw new SystemException("prometheus query failed: " + e.getMessage(), e);
-                }
-            }
-        }
-
-        return metrics;
+        return StringUtils.hasText(operation) && StringUtils.hasText(window)
+            ? String.format("%s(%s%s[%s])", operation, metricName, filterQuery, window)
+            : String.format("%s%s", metricName, filterQuery);
     }
 
     private String map(String label) {
@@ -260,7 +590,7 @@ public class PrometheusMetricsService implements ResourceMetricsService {
     private ResourceMetrics convert(
         Map.Entry<String, PrometheusProperties.MetricMapping> mapping,
         String id,
-        List<Matrix.Metric> entries
+        List<QueryResult.Result> entries
     ) {
         ResourceMetrics rm = new ResourceMetrics();
         rm.setId(id + "-" + mapping.getKey());
@@ -270,11 +600,10 @@ public class PrometheusMetricsService implements ResourceMetricsService {
         metadata.setName(id + "-" + mapping.getKey());
 
         List<ResourceMetrics.Metrics> metrics = new ArrayList<>();
-        PropertyPlaceholderHelper helper = new PropertyPlaceholderHelper("{", "}");
 
         if (entries != null && !entries.isEmpty()) {
             //export labels as metadata from first entry, we assume all entries have same labels
-            Matrix.Metric entry = entries.get(0);
+            QueryResult.Result entry = entries.get(0);
             Set<String> labels = new HashSet<>();
             entry
                 .getLabels()
@@ -288,22 +617,21 @@ public class PrometheusMetricsService implements ResourceMetricsService {
             entries.forEach(e -> {
                 String name = mapping.getKey();
                 String label = mapping.getValue().label();
-                if (StringUtils.hasText(label) && e.getLabels() != null) {
+                if (StringUtils.hasText(label) && e.getLabels() != null && !e.getLabels().isEmpty()) {
                     //resolve placeholders like {container} with actual label values
-                    name = helper.replacePlaceholders(label, key -> e.getLabels().getOrDefault(key, mapping.getKey()));
+                    name = PLACEHOLDER_HELPER.replacePlaceholders(label, key ->
+                        e.getLabels().getOrDefault(key, mapping.getKey())
+                    );
                 }
 
                 PrometheusProperties.MetricMapping value = mapping.getValue();
-                ResourceMetrics.Metrics m = new ResourceMetrics.Metrics(
-                    name,
-                    value.unit(),
-                    e
-                        .values()
-                        .stream()
-                        .map(v -> new ResourceMetrics.Metric(v.timestamp().longValue(), Double.valueOf(v.value())))
-                        .toList(),
-                    null
-                );
+                List<Metric> em = e
+                    .getValues()
+                    .stream()
+                    .map(v -> new ResourceMetrics.Metric(v.timestamp().longValue(), Double.valueOf(v.value())))
+                    .toList();
+                ResourceMetrics.Metrics m = new ResourceMetrics.Metrics(name, value.unit(), em, summarize(em));
+
                 metrics.add(m);
             });
         }
@@ -311,5 +639,23 @@ public class PrometheusMetricsService implements ResourceMetricsService {
         rm.setMetadata(metadata.toMap());
         rm.setMetrics(metrics);
         return rm;
+    }
+
+    private List<ResourceMetrics.Summary> summarize(List<ResourceMetrics.Metric> metrics) {
+        if (metrics != null) {
+            Double sum = metrics.stream().mapToDouble(ResourceMetrics.Metric::value).sum();
+            Double avg = metrics.stream().mapToDouble(ResourceMetrics.Metric::value).average().orElse(0.0);
+            Double max = metrics.stream().mapToDouble(ResourceMetrics.Metric::value).max().orElse(0.0);
+            Double min = metrics.stream().mapToDouble(ResourceMetrics.Metric::value).min().orElse(0.0);
+
+            return List.of(
+                new ResourceMetrics.Summary("sum", sum),
+                new ResourceMetrics.Summary("avg", avg),
+                new ResourceMetrics.Summary("max", max),
+                new ResourceMetrics.Summary("min", min)
+            );
+        }
+
+        return List.of();
     }
 }

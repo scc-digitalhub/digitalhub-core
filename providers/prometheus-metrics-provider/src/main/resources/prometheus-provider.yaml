@@ -60,4 +60,5 @@ providers:
       run: ${PROMETHEUS_MAPPING_RUN:pod}
       project: ${PROMETHEUS_MAPPING_PROJECT:}
       user: ${PROMETHEUS_MAPPING_USER:}
+      instance: ${PROMETHEUS_MAPPING_INSTANCE:}
       namespace: ${PROMETHEUS_MAPPING_NAMESPACE:namespace}
