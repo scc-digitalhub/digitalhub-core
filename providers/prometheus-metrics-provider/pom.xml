@@ -10,11 +10,12 @@
         <relativePath>../../</relativePath> <!-- lookup parent from repository -->
     </parent>
     <groupId>it.smartcommunitylabdhub</groupId>
-    <artifactId>dh-entity-log</artifactId>
-    <name>entity-log</name>
-    <description>DHCore entity-log</description>
+    <artifactId>dh-prometheus-metrics-provider</artifactId>
+    <name>prometheus-metrics-provider</name>
+    <description>DHCore Prometheus metrics provider</description>
 
     <properties>
+        <jsonschema.version>4.36.0</jsonschema.version>
     </properties>
     <dependencies>
         <dependency>
@@ -24,7 +25,7 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-entity-base</artifactId>
+            <artifactId>dh-metrics</artifactId>
             <version>${revision}</version>
         </dependency>
         <dependency>
@@ -32,41 +33,12 @@
             <artifactId>dh-entity-run</artifactId>
             <version>${revision}</version>
         </dependency>
-
-
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>${lombok.version}</version>
             <scope>compile</scope>
             <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot</artifactId>
-            <version>${spring-boot.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
-            <version>${spring-boot.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
-            <version>${spring-boot.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <version>${spring-boot.version}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-starter-common</artifactId>
-            <version>${springdoc.version}</version>
         </dependency>
 
 

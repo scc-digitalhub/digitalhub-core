@@ -30,7 +30,6 @@ import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
-import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
 import it.smartcommunitylabdhub.logs.Log;
 import it.smartcommunitylabdhub.logs.LogService;
 import it.smartcommunitylabdhub.logs.LogStore;
@@ -164,7 +163,7 @@ public class LocalLogServiceImpl implements LogService, LogStore {
 
             //fetch all logs ordered by date ASC
             Specification<LogEntity> specification = (root, query, builder) -> {
-                query.orderBy(builder.asc(root.get(AbstractEntity_.CREATED)));
+                query.orderBy(builder.asc(root.get("created")));
                 return where.toPredicate(root, query, builder);
             };
 
@@ -191,7 +190,7 @@ public class LocalLogServiceImpl implements LogService, LogStore {
 
             //fetch all logs ordered by date ASC
             Specification<LogEntity> specification = (root, query, builder) -> {
-                query.orderBy(builder.asc(root.get(AbstractEntity_.CREATED)));
+                query.orderBy(builder.asc(root.get("created")));
                 return where.toPredicate(root, query, builder);
             };
 

@@ -256,6 +256,12 @@
     </dependency>
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
+      <artifactId>dh-trigger-base</artifactId>
+      <version>0.15.1-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>it.smartcommunitylabdhub</groupId>
       <artifactId>dh-console</artifactId>
       <version>0.15.1-SNAPSHOT</version>
       <scope>compile</scope>
@@ -263,6 +269,12 @@
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
       <artifactId>dh-extensions</artifactId>
+      <version>0.15.1-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>it.smartcommunitylabdhub</groupId>
+      <artifactId>dh-run-initializer</artifactId>
       <version>0.15.1-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>
@@ -280,7 +292,25 @@
     </dependency>
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
+      <artifactId>dh-entity-model</artifactId>
+      <version>0.15.1-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>it.smartcommunitylabdhub</groupId>
+      <artifactId>dh-entity-container-image</artifactId>
+      <version>0.15.1-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>it.smartcommunitylabdhub</groupId>
       <artifactId>dh-entity-function</artifactId>
+      <version>0.15.1-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>it.smartcommunitylabdhub</groupId>
+      <artifactId>dh-entity-log</artifactId>
       <version>0.15.1-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>
@@ -310,139 +340,13 @@
     </dependency>
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-entity-model</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
       <artifactId>dh-entity-trigger</artifactId>
       <version>0.15.1-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-entity-log</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
       <artifactId>dh-entity-workflow</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-entity-container-image</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-framework-k8s</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-framework-argo</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-framework-kaniko</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-trigger-base</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-trigger-scheduler</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-trigger-lifecycle</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-runtime-container</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-runtime-dbt</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-runtime-kfp</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-runtime-hera</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-runtime-python</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-runtime-flower</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-runtime-model-serve</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-runtime-kubeai</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-runtime-servicegraph</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>credentials-provider-db</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-s3-provider</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-search-lucene</artifactId>
       <version>0.15.1-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>

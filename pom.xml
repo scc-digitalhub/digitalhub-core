@@ -56,7 +56,6 @@
         <module>entities/entity-task</module>
         <module>entities/entity-model</module>
         <module>entities/entity-trigger</module>
-        <module>entities/entity-log</module>
         <module>entities/entity-workflow</module>
         <module>entities/entity-container-image</module>
         <module>frameworks/framework-k8s</module>
@@ -84,6 +83,7 @@
         <module>providers/search-solr</module>
         <module>providers/cloud-rabbitmq</module>
         <module>providers/loki-logs-provider</module>
+        <module>providers/prometheus-metrics-provider</module>
         <module>frontend</module>
         <module>application</module>
     </modules>
