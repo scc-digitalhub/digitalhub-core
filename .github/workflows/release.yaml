@@ -3,6 +3,17 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      build_amd64:
+        description: 'Build amd64 image'
+        required: false
+        default: true
+        type: boolean
+      build_arm:
+        description: 'Build arm64 image (via QEMU)'
+        required: false
+        default: false
+        type: boolean
 
 env:
   REGISTRY: ghcr.io
@@ -18,7 +29,24 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: 'true'        
+      - name: Determine build platforms
+        id: platforms
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            PLATFORMS=""
+            [ "${{ inputs.build_amd64 }}" = "true" ] && PLATFORMS="linux/amd64"
+            if [ "${{ inputs.build_arm }}" = "true" ]; then
+              PLATFORMS="${PLATFORMS:+$PLATFORMS,}linux/arm64"
+            fi
+            [ -z "$PLATFORMS" ] && PLATFORMS="linux/amd64"
+          elif [ "${{ github.event.release.prerelease }}" = "true" ]; then
+            PLATFORMS="linux/amd64"
+          else
+            PLATFORMS="linux/amd64,linux/arm64"
+          fi
+          echo "platforms=$PLATFORMS" >> $GITHUB_OUTPUT
       - name: Set up QEMU
+        if: steps.platforms.outputs.platforms != 'linux/amd64'
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -37,7 +65,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ steps.platforms.outputs.platforms }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
