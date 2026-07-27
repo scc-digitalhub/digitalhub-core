@@ -32,6 +32,7 @@ import it.smartcommunitylabdhub.commons.infrastructure.Processor;
 import it.smartcommunitylabdhub.commons.models.status.Status;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreMetric;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
+import it.smartcommunitylabdhub.framework.k8s.service.K8sMetricsService;
 import it.smartcommunitylabdhub.metrics.ResourceMetrics;
 import it.smartcommunitylabdhub.metrics.ResourceMetricsStore;
 import it.smartcommunitylabdhub.runs.Run;
@@ -106,7 +107,7 @@ public class K8sMetricsProcessor implements Processor<Run, RunBaseStatus> {
                                     BigDecimal value = e.getValue().getNumber();
                                     return new ResourceMetrics.Metrics(
                                         e.getKey(),
-                                        null,
+                                        K8sMetricsService.deriveUnit(e.getKey()),
                                         List.of(
                                             new ResourceMetrics.Metric(timestamp.toEpochMilli(), value.doubleValue())
                                         ),
