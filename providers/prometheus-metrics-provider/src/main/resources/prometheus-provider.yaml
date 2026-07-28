@@ -30,16 +30,16 @@ providers:
         window: ${PROMETHEUS_METRICS_DISK_WINDOW:}
       gpu: 
         name: ${PROMETHEUS_METRICS_GPU:}
-        unit: ${PROMETHEUS_METRICS_GPU_UNIT:}
-        label: ${PROMETHEUS_METRICS_GPU_LABEL:gpu-utilization}
-        group-by: ${PROMETHEUS_METRICS_GPU_GROUP_BY:}
+        unit: ${PROMETHEUS_METRICS_GPU_UNIT:percent}
+        label: ${PROMETHEUS_METRICS_GPU_LABEL:gpu}
+        group-by: ${PROMETHEUS_METRICS_GPU_GROUP_BY:container}
         operation: ${PROMETHEUS_METRICS_GPU_OPERATION:}
         window: ${PROMETHEUS_METRICS_GPU_WINDOW:}
       gpu-memory: 
         name: ${PROMETHEUS_METRICS_GPU_MEMORY:}
         unit: ${PROMETHEUS_METRICS_GPU_MEMORY_UNIT:bytes}
-        label: ${PROMETHEUS_METRICS_GPU_MEMORY_LABEL:gpu-memory}
-        group-by: ${PROMETHEUS_METRICS_GPU_MEMORY_GROUP_BY:}
+        label: ${PROMETHEUS_MET RICS_GPU_MEMORY_LABEL:gpu-memory}
+        group-by: ${PROMETHEUS_METRICS_GPU_MEMORY_GROUP_BY:container}
         operation: ${PROMETHEUS_METRICS_GPU_MEMORY_OPERATION:}
         window: ${PROMETHEUS_METRICS_GPU_MEMORY_WINDOW:}
       network-send: 
