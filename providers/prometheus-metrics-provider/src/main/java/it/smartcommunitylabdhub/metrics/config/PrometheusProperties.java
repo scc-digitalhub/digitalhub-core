@@ -64,6 +64,7 @@ public class PrometheusProperties {
         String label,
         String groupBy,
         String operation,
-        String window
+        String window,
+        Double quota
     ) {}
 }

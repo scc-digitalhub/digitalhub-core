@@ -111,6 +111,7 @@ public class K8sMetricsProcessor implements Processor<Run, RunBaseStatus> {
                                         List.of(
                                             new ResourceMetrics.Metric(timestamp.toEpochMilli(), value.doubleValue())
                                         ),
+                                        null,
                                         null
                                     );
                                 })

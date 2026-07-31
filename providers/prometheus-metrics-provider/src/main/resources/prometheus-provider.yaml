@@ -6,56 +6,103 @@ providers:
     namespace: ${PROMETHEUS_NAMESPACE:}
     lazy-filter: ${PROMETHEUS_LAZY_FILTER:true}
     rate-interval: ${PROMETHEUS_RATE_INTERVAL_SECONDS:120}
-    metrics: 
-      cpu: 
+    metrics:
+      cpu:
         name: ${PROMETHEUS_METRICS_CPU:container_cpu_usage_seconds_total}
         unit: ${PROMETHEUS_METRICS_CPU_UNIT:seconds}
         label: ${PROMETHEUS_METRICS_CPU_LABEL:cpu}
         group-by: ${PROMETHEUS_METRICS_CPU_GROUP_BY:container}
         operation: ${PROMETHEUS_METRICS_CPU_OPERATION:rate}
         window: ${PROMETHEUS_METRICS_CPU_WINDOW:2m}
-      memory: 
+        quota: ${PROMETHEUS_METRICS_CPU_QUOTA:}
+      cpu-requested:
+        name: ${PROMETHEUS_METRICS_CPU_REQUESTED:}
+        unit: ${PROMETHEUS_METRICS_CPU_REQUESTED_UNIT:seconds}
+        label: ${PROMETHEUS_METRICS_CPU_REQUESTED_LABEL:cpu-requested}
+        group-by: ${PROMETHEUS_METRICS_CPU_REQUESTED_GROUP_BY:container}
+        operation: ${PROMETHEUS_METRICS_CPU_REQUESTED_OPERATION:rate}
+        window: ${PROMETHEUS_METRICS_CPU_REQUESTED_WINDOW:2m}
+        quota: ${PROMETHEUS_METRICS_CPU_REQUESTED_QUOTA:}
+      memory:
         name: ${PROMETHEUS_METRICS_MEMORY:container_memory_working_set_bytes}
         unit: ${PROMETHEUS_METRICS_MEMORY_UNIT:bytes}
         label: ${PROMETHEUS_METRICS_MEMORY_LABEL:memory}
         group-by: ${PROMETHEUS_METRICS_MEMORY_GROUP_BY:container}
         operation: ${PROMETHEUS_METRICS_MEMORY_OPERATION:}
         window: ${PROMETHEUS_METRICS_MEMORY_WINDOW:}
-      disk: 
+        quota: ${PROMETHEUS_METRICS_MEMORY_QUOTA:10240000000}
+      memory-requested:
+        name: ${PROMETHEUS_METRICS_MEMORY_REQUESTED:}
+        unit: ${PROMETHEUS_METRICS_MEMORY_REQUESTED_UNIT:bytes}
+        label: ${PROMETHEUS_METRICS_MEMORY_REQUESTED_LABEL:memory-requested}
+        group-by: ${PROMETHEUS_METRICS_MEMORY_REQUESTED_GROUP_BY:container}
+        operation: ${PROMETHEUS_METRICS_MEMORY_REQUESTED_OPERATION:}
+        window: ${PROMETHEUS_METRICS_MEMORY_REQUESTED_WINDOW:}
+        quota: ${PROMETHEUS_METRICS_MEMORY_REQUESTED_QUOTA:}
+      disk:
         name: ${PROMETHEUS_METRICS_DISK:container_fs_writes_bytes_total}
         unit: ${PROMETHEUS_METRICS_DISK_UNIT:bytes}
         label: ${PROMETHEUS_METRICS_DISK_LABEL:disk-{device}}
         group-by: ${PROMETHEUS_METRICS_DISK_GROUP_BY:container}
         operation: ${PROMETHEUS_METRICS_DISK_OPERATION:}
         window: ${PROMETHEUS_METRICS_DISK_WINDOW:}
-      gpu: 
+        quota: ${PROMETHEUS_METRICS_DISK_QUOTA:}
+      volumes:
+        name: ${PROMETHEUS_METRICS_VOLUMES:kubelet_volume_stats_used_bytes}
+        unit: ${PROMETHEUS_METRICS_VOLUMES_UNIT:bytes}
+        label: ${PROMETHEUS_METRICS_VOLUMES_LABEL:volume-{persistentvolumeclaim}}
+        group-by: ${PROMETHEUS_METRICS_VOLUMES_GROUP_BY:}
+        operation: ${PROMETHEUS_METRICS_VOLUMES_OPERATION:}
+        window: ${PROMETHEUS_METRICS_VOLUMES_WINDOW:}
+        quota: ${PROMETHEUS_METRICS_VOLUMES_QUOTA:}
+      volumes-count:
+        name: ${PROMETHEUS_METRICS_VOLUMES_COUNT:}
+        unit: ${PROMETHEUS_METRICS_VOLUMES_COUNT_UNIT:}
+        label: ${PROMETHEUS_METRICS_VOLUMES_COUNT_LABEL:volumes-count}
+        group-by: ${PROMETHEUS_METRICS_VOLUMES_COUNT_GROUP_BY:}
+        operation: ${PROMETHEUS_METRICS_VOLUMES_COUNT_OPERATION:}
+        window: ${PROMETHEUS_METRICS_VOLUMES_COUNT_WINDOW:}
+        quota: ${PROMETHEUS_METRICS_VOLUMES_COUNT_QUOTA:}
+      gpu:
         name: ${PROMETHEUS_METRICS_GPU:}
         unit: ${PROMETHEUS_METRICS_GPU_UNIT:percent}
         label: ${PROMETHEUS_METRICS_GPU_LABEL:gpu}
         group-by: ${PROMETHEUS_METRICS_GPU_GROUP_BY:container}
         operation: ${PROMETHEUS_METRICS_GPU_OPERATION:}
         window: ${PROMETHEUS_METRICS_GPU_WINDOW:}
-      gpu-memory: 
+        quota: ${PROMETHEUS_METRICS_GPU_QUOTA:}
+      gpu-count:
+        name: ${PROMETHEUS_METRICS_GPU_COUNT:}
+        unit: ${PROMETHEUS_METRICS_GPU_COUNT_UNIT:}
+        label: ${PROMETHEUS_METRICS_GPU_COUNT_LABEL:gpu-count}
+        group-by: ${PROMETHEUS_METRICS_GPU_COUNT_GROUP_BY:}
+        operation: ${PROMETHEUS_METRICS_GPU_COUNT_OPERATION:}
+        window: ${PROMETHEUS_METRICS_GPU_COUNT_WINDOW:}
+        quota: ${PROMETHEUS_METRICS_GPU_COUNT_QUOTA:}
+      gpu-memory:
         name: ${PROMETHEUS_METRICS_GPU_MEMORY:}
         unit: ${PROMETHEUS_METRICS_GPU_MEMORY_UNIT:bytes}
         label: ${PROMETHEUS_MET RICS_GPU_MEMORY_LABEL:gpu-memory}
         group-by: ${PROMETHEUS_METRICS_GPU_MEMORY_GROUP_BY:container}
         operation: ${PROMETHEUS_METRICS_GPU_MEMORY_OPERATION:}
         window: ${PROMETHEUS_METRICS_GPU_MEMORY_WINDOW:}
-      network-send: 
+        quota: ${PROMETHEUS_METRICS_GPU_MEMORY_QUOTA:}
+      network-send:
         name: ${PROMETHEUS_METRICS_NETWORK_SEND:container_network_transmit_bytes_total}
         unit: ${PROMETHEUS_METRICS_NETWORK_SEND_UNIT:bytes}
         label: ${PROMETHEUS_METRICS_NETWORK_SEND_LABEL:{interface}-send}
         group-by: ${PROMETHEUS_METRICS_NETWORK_SEND_GROUP_BY:pod}
         operation: ${PROMETHEUS_METRICS_NETWORK_SEND_OPERATION:rate}
         window: ${PROMETHEUS_METRICS_NETWORK_SEND_WINDOW:2m}
-      network-receive: 
+        quota: ${PROMETHEUS_METRICS_NETWORK_SEND_QUOTA:}
+      network-receive:
         name: ${PROMETHEUS_METRICS_NETWORK_RECEIVE:container_network_receive_bytes_total}
         unit: ${PROMETHEUS_METRICS_NETWORK_RECEIVE_UNIT:bytes}
         label: ${PROMETHEUS_METRICS_NETWORK_RECEIVE_LABEL:{interface}-receive}
         group-by: ${PROMETHEUS_METRICS_NETWORK_RECEIVE_GROUP_BY:pod}
         operation: ${PROMETHEUS_METRICS_NETWORK_RECEIVE_OPERATION:rate}
         window: ${PROMETHEUS_METRICS_NETWORK_RECEIVE_WINDOW:2m}
+        quota: ${PROMETHEUS_METRICS_NETWORK_RECEIVE_QUOTA:}
     mapping:
       run: ${PROMETHEUS_MAPPING_RUN:pod}
       project: ${PROMETHEUS_MAPPING_PROJECT:}

@@ -17,6 +17,7 @@ import it.smartcommunitylabdhub.metrics.prometheus.client.Vector;
 import it.smartcommunitylabdhub.runs.Run;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -24,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +42,13 @@ public class PrometheusMetricsService implements ResourceMetricsService {
     private static final int DEFAULT_INTERVAL = 300; //default interval for current metrics
     private static final String LAZY_MODIFIER = ".*"; //lazy filter modifier for regex matching
     private static final PropertyPlaceholderHelper PLACEHOLDER_HELPER = new PropertyPlaceholderHelper("{", "}");
+    private static final int MAX_NUMBER_POINTS = 1000; //max data points per series
+    private static final long SECONDS_PER_MINUTE = 60L;
+    private static final long SECONDS_PER_HOUR = 3600L;
+    private static final long SECONDS_PER_DAY = 86400L;
+    private static final long SECONDS_PER_WEEK = 604800L;
+    private static final long SECONDS_PER_YEAR = 31536000L;
+    private static final Pattern DURATION_PATTERN = Pattern.compile("(\\d++)(ms|[smhdwy])");
 
     private final PrometheusProperties properties;
     private final PrometheusClient client;
@@ -405,7 +415,7 @@ public class PrometheusMetricsService implements ResourceMetricsService {
                 }
 
                 //get a single value for the metric by summing all series, if any
-                String mq = String.format("sum(%s)", buildMetricQuery(filterQuery, entry.getValue()));
+                String mq = String.format("sum(%s)", buildMetricQuery(filterQuery, entry.getValue(), start, end));
 
                 if (log.isTraceEnabled()) {
                     log.trace("prometheus metric query for {}: {}", entry.getValue().name(), mq);
@@ -460,15 +470,36 @@ public class PrometheusMetricsService implements ResourceMetricsService {
                     continue;
                 }
 
-                String mq = buildMetricQuery(filterQuery, entry.getValue());
+                String mq = buildMetricQuery(filterQuery, entry.getValue(), start, end);
 
                 if (log.isTraceEnabled()) {
                     log.trace("prometheus metric query for {}: {}", entry.getValue().name(), mq);
                 }
 
                 try {
-                    //query prometheus with default params
-                    QueryResult result = client.queryRange(mq, start, end, null);
+                    //query prometheus with default params, evaluating step size to avoid overflowing prometheus
+                    Duration step = PrometheusClient.DEFAULT_STEP;
+                    if (start != null && end != null) {
+                        long windowSeconds = step.getSeconds();
+                        if (windowSeconds > 0) {
+                            long intervalSeconds = end - start;
+                            long points = intervalSeconds / windowSeconds;
+                            if (points > MAX_NUMBER_POINTS) {
+                                // Minimum step required to stay within the point limit (ceiling division)
+                                long requiredStep = (intervalSeconds + MAX_NUMBER_POINTS - 1) / MAX_NUMBER_POINTS;
+
+                                // Round up to the next multiple of 15 seconds
+                                windowSeconds = ((requiredStep + 14) / 15) * 15;
+
+                                // Never go below the default step
+                                windowSeconds = Math.max(PrometheusClient.DEFAULT_STEP.getSeconds(), windowSeconds);
+
+                                step = Duration.ofSeconds(windowSeconds);
+                                log.debug("adjusted step to {}s, max points: {}", windowSeconds, MAX_NUMBER_POINTS);
+                            }
+                        }
+                    }
+                    QueryResult result = client.queryRange(mq, start, end, step);
 
                     // fetch and convert matrix entries when available
                     if (
@@ -565,14 +596,52 @@ public class PrometheusMetricsService implements ResourceMetricsService {
         return query.toString();
     }
 
-    private String buildMetricQuery(@NotNull String filterQuery, @NotNull PrometheusProperties.MetricMapping mapping) {
+    private String buildMetricQuery(
+        @NotNull String filterQuery,
+        @NotNull PrometheusProperties.MetricMapping mapping,
+        @Nullable Long start,
+        @Nullable Long end
+    ) {
         String metricName = mapping.name();
         String operation = mapping.operation();
         String window = mapping.window();
 
+        if (StringUtils.hasText(operation) && StringUtils.hasText(window) && start != null && end != null) {
+            long windowSeconds = parseDurationSeconds(window);
+            if (windowSeconds > 0) {
+                long intervalSeconds = end - start;
+                long points = intervalSeconds / windowSeconds;
+                if (points > MAX_NUMBER_POINTS) {
+                    windowSeconds = Math.max(1L, intervalSeconds / MAX_NUMBER_POINTS);
+                    window = windowSeconds + "s";
+                    log.debug("adjusted window to {}s, max points: {}", windowSeconds, MAX_NUMBER_POINTS);
+                }
+            }
+        }
+
         return StringUtils.hasText(operation) && StringUtils.hasText(window)
             ? String.format("%s(%s%s[%s])", operation, metricName, filterQuery, window)
             : String.format("%s%s", metricName, filterQuery);
+    }
+
+    private long parseDurationSeconds(@NotNull String duration) {
+        long total = 0;
+        Matcher m = DURATION_PATTERN.matcher(duration);
+        while (m.find()) {
+            long value = Long.parseLong(m.group(1));
+            String unit = m.group(2);
+            total += switch (unit) {
+                case "ms" -> 0L; // sub-second, ignore
+                case "s" -> value;
+                case "m" -> value * SECONDS_PER_MINUTE;
+                case "h" -> value * SECONDS_PER_HOUR;
+                case "d" -> value * SECONDS_PER_DAY;
+                case "w" -> value * SECONDS_PER_WEEK;
+                case "y" -> value * SECONDS_PER_YEAR;
+                default -> 0L;
+            };
+        }
+        return total;
     }
 
     private String map(String label) {
@@ -630,7 +699,13 @@ public class PrometheusMetricsService implements ResourceMetricsService {
                     .stream()
                     .map(v -> new ResourceMetrics.Metric(v.timestamp().longValue(), Double.valueOf(v.value())))
                     .toList();
-                ResourceMetrics.Metrics m = new ResourceMetrics.Metrics(name, value.unit(), em, summarize(em));
+                ResourceMetrics.Metrics m = new ResourceMetrics.Metrics(
+                    name,
+                    value.unit(),
+                    em,
+                    summarize(em),
+                    value.quota()
+                );
 
                 metrics.add(m);
             });

@@ -57,8 +57,8 @@ public class ResourceMetricsEntityBuilder implements Converter<ResourceMetrics, 
                       .stream()
                       .map(e ->
                           e.metrics() == null
-                              ? new Metrics(e.name(), e.unit(), new ArrayList<>(), null)
-                              : new Metrics(e.name(), e.unit(), new ArrayList<>(e.metrics()), null)
+                              ? new Metrics(e.name(), e.unit(), new ArrayList<>(), null, null)
+                              : new Metrics(e.name(), e.unit(), new ArrayList<>(e.metrics()), null, null)
                       )
                       .collect(Collectors.toMap(e -> e.name(), e -> e));
 

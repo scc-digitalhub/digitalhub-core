@@ -71,7 +71,8 @@ public class ResourceMetrics {
         String name,
         @Nullable String unit,
         @Nullable List<Metric> metrics,
-        @Nullable List<Summary> summary
+        @Nullable List<Summary> summary,
+        @Nullable Double quota
     ) implements Serializable {}
 
     public record Metric(Long timestamp, Double value) implements Serializable {}

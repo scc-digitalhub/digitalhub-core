@@ -376,7 +376,8 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                         e.getKey(),
                         deriveUnit(e.getKey()),
                         e.getValue(),
-                        summarize(e.getValue())
+                        summarize(e.getValue()),
+                        null
                     )
                 )
                 .toList();
@@ -418,7 +419,8 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                         e.getKey(),
                         deriveUnit(e.getKey()),
                         e.getValue(),
-                        summarize(e.getValue())
+                        summarize(e.getValue()),
+                        null
                     )
                 )
                 .toList();
@@ -491,7 +493,8 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                         e.getKey(),
                         deriveUnit(e.getKey()),
                         e.getValue(),
-                        summarize(e.getValue())
+                        summarize(e.getValue()),
+                        null
                     )
                 )
                 .toList();
@@ -531,7 +534,7 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                                         Instant.parse(pm.getTimestamp()).toEpochMilli(),
                                         v.getNumber().doubleValue()
                                     );
-                                    ml.add(new ResourceMetrics.Metrics(k, deriveUnit(k), List.of(metric), null));
+                                    ml.add(new ResourceMetrics.Metrics(k, deriveUnit(k), List.of(metric), null, null));
                                 });
 
                             return ResourceMetrics.builder()
@@ -569,9 +572,9 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                                         .stream()
                                         .collect(Collectors.toList());
                                     merged.addAll(v);
-                                    existing.put(k, new ResourceMetrics.Metrics(k, deriveUnit(k), merged, null));
+                                    existing.put(k, new ResourceMetrics.Metrics(k, deriveUnit(k), merged, null, null));
                                 } else {
-                                    existing.put(k, new ResourceMetrics.Metrics(k, deriveUnit(k), v, null));
+                                    existing.put(k, new ResourceMetrics.Metrics(k, deriveUnit(k), v, null, null));
                                 }
                             });
 
@@ -582,7 +585,7 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                                 .stream()
                                 .sorted((m1, m2) -> Long.compare(m1.timestamp(), m2.timestamp()))
                                 .toList();
-                            existing.put(k, new ResourceMetrics.Metrics(k, deriveUnit(k), sorted, null));
+                            existing.put(k, new ResourceMetrics.Metrics(k, deriveUnit(k), sorted, null, null));
                         });
 
                         rm.setMetrics(new ArrayList<>(existing.values()));
@@ -598,7 +601,13 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                             .getMetrics()
                             .stream()
                             .map(m ->
-                                new ResourceMetrics.Metrics(m.name(), m.unit(), m.metrics(), summarize(m.metrics()))
+                                new ResourceMetrics.Metrics(
+                                    m.name(),
+                                    m.unit(),
+                                    m.metrics(),
+                                    summarize(m.metrics()),
+                                    null
+                                )
                             )
                             .toList()
                     );
@@ -640,7 +649,7 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                                         Instant.parse(pm.getTimestamp()).toEpochMilli(),
                                         v.getNumber().doubleValue()
                                     );
-                                    ml.add(new ResourceMetrics.Metrics(k, deriveUnit(k), List.of(metric), null));
+                                    ml.add(new ResourceMetrics.Metrics(k, deriveUnit(k), List.of(metric), null, null));
                                 });
 
                             return ResourceMetrics.builder()
@@ -678,9 +687,9 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                                         .stream()
                                         .collect(Collectors.toList());
                                     merged.addAll(v);
-                                    existing.put(k, new ResourceMetrics.Metrics(k, deriveUnit(k), merged, null));
+                                    existing.put(k, new ResourceMetrics.Metrics(k, deriveUnit(k), merged, null, null));
                                 } else {
-                                    existing.put(k, new ResourceMetrics.Metrics(k, deriveUnit(k), v, null));
+                                    existing.put(k, new ResourceMetrics.Metrics(k, deriveUnit(k), v, null, null));
                                 }
                             });
 
@@ -691,7 +700,7 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                                 .stream()
                                 .sorted((m1, m2) -> Long.compare(m1.timestamp(), m2.timestamp()))
                                 .toList();
-                            existing.put(k, new ResourceMetrics.Metrics(k, deriveUnit(k), sorted, null));
+                            existing.put(k, new ResourceMetrics.Metrics(k, deriveUnit(k), sorted, null, null));
                         });
 
                         rm.setMetrics(new ArrayList<>(existing.values()));
@@ -707,7 +716,13 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                             .getMetrics()
                             .stream()
                             .map(m ->
-                                new ResourceMetrics.Metrics(m.name(), m.unit(), m.metrics(), summarize(m.metrics()))
+                                new ResourceMetrics.Metrics(
+                                    m.name(),
+                                    m.unit(),
+                                    m.metrics(),
+                                    summarize(m.metrics()),
+                                    null
+                                )
                             )
                             .toList()
                     );
@@ -748,7 +763,9 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                                             Instant.parse(pm.getTimestamp()).toEpochMilli(),
                                             v.getNumber().doubleValue()
                                         );
-                                        ml.add(new ResourceMetrics.Metrics(k, deriveUnit(k), List.of(metric), null));
+                                        ml.add(
+                                            new ResourceMetrics.Metrics(k, deriveUnit(k), List.of(metric), null, null)
+                                        );
                                     });
 
                                 return ResourceMetrics.builder()
@@ -796,9 +813,9 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                                         .stream()
                                         .collect(Collectors.toList());
                                     merged.addAll(v);
-                                    existing.put(k, new ResourceMetrics.Metrics(k, deriveUnit(k), merged, null));
+                                    existing.put(k, new ResourceMetrics.Metrics(k, deriveUnit(k), merged, null, null));
                                 } else {
-                                    existing.put(k, new ResourceMetrics.Metrics(k, deriveUnit(k), v, null));
+                                    existing.put(k, new ResourceMetrics.Metrics(k, deriveUnit(k), v, null, null));
                                 }
                             });
 
@@ -809,7 +826,7 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                                 .stream()
                                 .sorted((m1, m2) -> Long.compare(m1.timestamp(), m2.timestamp()))
                                 .toList();
-                            existing.put(k, new ResourceMetrics.Metrics(k, deriveUnit(k), sorted, null));
+                            existing.put(k, new ResourceMetrics.Metrics(k, deriveUnit(k), sorted, null, null));
                         });
 
                         storedMetrics.setMetrics(new ArrayList<>(existing.values()));
@@ -828,7 +845,13 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                             .getMetrics()
                             .stream()
                             .map(m ->
-                                new ResourceMetrics.Metrics(m.name(), m.unit(), m.metrics(), summarize(m.metrics()))
+                                new ResourceMetrics.Metrics(
+                                    m.name(),
+                                    m.unit(),
+                                    m.metrics(),
+                                    summarize(m.metrics()),
+                                    null
+                                )
                             )
                             .toList()
                     );
@@ -872,7 +895,8 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                         e.getKey(),
                         deriveUnit(e.getKey()),
                         e.getValue(),
-                        summarize(e.getValue())
+                        summarize(e.getValue()),
+                        null
                     )
                 )
                 .toList();
