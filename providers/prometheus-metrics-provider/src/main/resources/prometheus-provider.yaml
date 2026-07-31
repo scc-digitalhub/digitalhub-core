@@ -30,7 +30,7 @@ providers:
         group-by: ${PROMETHEUS_METRICS_MEMORY_GROUP_BY:container}
         operation: ${PROMETHEUS_METRICS_MEMORY_OPERATION:}
         window: ${PROMETHEUS_METRICS_MEMORY_WINDOW:}
-        quota: ${PROMETHEUS_METRICS_MEMORY_QUOTA:10240000000}
+        quota: ${PROMETHEUS_METRICS_MEMORY_QUOTA:}
       memory-requested:
         name: ${PROMETHEUS_METRICS_MEMORY_REQUESTED:}
         unit: ${PROMETHEUS_METRICS_MEMORY_REQUESTED_UNIT:bytes}
