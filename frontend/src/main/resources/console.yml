@@ -1,6 +1,6 @@
 console:
-  user-metrics: ${CONSOLE_USER_METRICS:"cpu,memory,disk"}
-  instance-metrics: ${CONSOLE_INSTANCE_METRICS:"cpu,memory,disk"}
+  user-metrics: ${CONSOLE_USER_METRICS:cpu,memory,disk}
+  instance-metrics: ${CONSOLE_INSTANCE_METRICS:cpu,memory,disk}
   run-metrics: ${CONSOLE_RUN_METRICS:}
   project-metrics: ${CONSOLE_PROJECT_METRICS:}
   clarity-key: ${FRONTEND_CLARITY_KEY:}
