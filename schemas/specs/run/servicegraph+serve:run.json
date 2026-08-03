@@ -19,6 +19,21 @@
       },
       "required" : [ "name", "value" ]
     },
+    "CorePort" : {
+      "type" : "object",
+      "properties" : {
+        "port" : {
+          "type" : "integer",
+          "title" : "fields.port.title",
+          "description" : "fields.port.description"
+        },
+        "target_port" : {
+          "type" : "integer",
+          "title" : "fields.targetPort.title",
+          "description" : "fields.targetPort.description"
+        }
+      }
+    },
     "CoreResource" : {
       "type" : "object",
       "properties" : {
@@ -98,47 +113,31 @@
   },
   "type" : "object",
   "properties" : {
-    "args" : {
-      "title" : "fields.vllm.args.title",
-      "description" : "fields.vllm.args.description",
-      "type" : "array",
-      "items" : {
-        "type" : "string",
-        "title" : "fields.args.item.title",
-        "description" : "fields.args.item.description"
-      }
-    },
-    "enable_telemetry" : {
-      "type" : "boolean",
-      "title" : "fields.vllm.enableTelemetry.title",
-      "description" : "fields.vllm.enableTelemetry.description"
-    },
     "local_execution" : {
       "type" : "boolean",
       "title" : "fields.localExecution.title",
       "description" : "fields.localExecution.description"
+    },
+    "parameters" : {
+      "$ref" : "#/$defs/Map_String.String_",
+      "title" : "fields.parameters.title",
+      "description" : "fields.parameters.description",
+      "additionalProperties" : {
+        "type" : "string",
+        "title" : "fields.parameters.item.title",
+        "description" : "fields.parameters.item.description"
+      }
     },
     "task" : {
       "type" : "string",
       "title" : "fields.task.title",
       "description" : "fields.task.description",
       "minLength" : 1
-    },
-    "url" : {
-      "type" : "string",
-      "title" : "fields.vllm.url.title",
-      "description" : "fields.vllm.url.description",
-      "pattern" : "^(store://([^/]+)/model/huggingface/.*)"
-    },
-    "use_cpu_image" : {
-      "type" : "boolean",
-      "title" : "fields.vllm.useCpuImage.title",
-      "description" : "fields.vllm.useCpuImage.description"
     }
   },
   "required" : [ "task" ],
-  "title" : "specs.vllmserve-pooling+serve:run.title",
-  "description" : "specs.vllmserve-pooling+serve:run.description",
+  "title" : "specs.servicegraph+serve:run.title",
+  "description" : "specs.servicegraph+serve:run.description",
   "allOf" : [ {
     "type" : "object",
     "properties" : {
@@ -189,6 +188,16 @@
         "title" : "fields.serviceName.title",
         "description" : "fields.serviceName.description"
       },
+      "service_ports" : {
+        "title" : "fields.servicePorts.title",
+        "description" : "fields.servicePorts.description",
+        "type" : "array",
+        "items" : {
+          "$ref" : "#/$defs/CorePort",
+          "title" : "fields.servicePorts.item.title",
+          "description" : "fields.servicePorts.item.description"
+        }
+      },
       "service_type" : {
         "$ref" : "#/$defs/CoreServiceType",
         "title" : "fields.serviceType.title",
@@ -207,7 +216,7 @@
       }
     },
     "required" : [ "function" ],
-    "title" : "specs.vllmserve-pooling+serve.title",
-    "description" : "specs.vllmserve-pooling+serve.description"
+    "title" : "specs.servicegraph+serve.title",
+    "description" : "specs.servicegraph+serve.description"
   } ]
 }
