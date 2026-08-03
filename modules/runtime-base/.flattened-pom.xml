@@ -44,12 +44,6 @@
     </dependency>
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-entity-log</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
       <artifactId>dh-fsm</artifactId>
       <version>0.15.1-SNAPSHOT</version>
       <scope>compile</scope>

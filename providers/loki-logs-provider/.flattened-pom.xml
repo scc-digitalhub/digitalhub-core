@@ -14,7 +14,7 @@
     </dependency>
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-entity-log</artifactId>
+      <artifactId>dh-logs</artifactId>
       <version>0.15.1-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>

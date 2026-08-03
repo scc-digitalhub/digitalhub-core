@@ -3,7 +3,7 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <groupId>it.smartcommunitylabdhub</groupId>
-  <artifactId>dh-metrics</artifactId>
+  <artifactId>dh-prometheus-metrics-provider</artifactId>
   <version>0.15.1-SNAPSHOT</version>
   <dependencies>
     <dependency>
@@ -13,21 +13,15 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.springframework.security</groupId>
-      <artifactId>spring-security-crypto</artifactId>
-      <version>6.5.7</version>
+      <groupId>it.smartcommunitylabdhub</groupId>
+      <artifactId>dh-metrics</artifactId>
+      <version>0.15.1-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-web</artifactId>
-      <version>3.5.9</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-security</artifactId>
-      <version>3.5.9</version>
+      <groupId>it.smartcommunitylabdhub</groupId>
+      <artifactId>dh-entity-run</artifactId>
+      <version>0.15.1-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
