@@ -33,10 +33,6 @@ build/
 .vscode/
 .vscode/launch.json
 
-### Metals (Scala/Java LSP) ###
-.metals/
-.bloop/
-
 ### Nodejs ###
 .env
 node_modules
