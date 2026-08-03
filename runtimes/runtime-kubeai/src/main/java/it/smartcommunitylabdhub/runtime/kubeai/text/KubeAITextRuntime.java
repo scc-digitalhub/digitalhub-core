@@ -83,13 +83,12 @@ public class KubeAITextRuntime extends KubeAIRuntime<KubeAITextFunctionSpec, Kub
         String kind = task.getKind();
 
         //build task spec as defined
-        TaskBaseSpec taskSpec =
-            switch (kind) {
-                case KubeAITextServeTaskSpec.KIND -> KubeAITextServeTaskSpec.with(task.getSpec());
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        TaskBaseSpec taskSpec = switch (kind) {
+            case KubeAITextServeTaskSpec.KIND -> KubeAITextServeTaskSpec.with(task.getSpec());
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //url is defined in function spec but overridable in run spec
         String url = funSpec.getUrl();
@@ -137,25 +136,24 @@ public class KubeAITextRuntime extends KubeAIRuntime<KubeAITextFunctionSpec, Kub
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
-        K8sCRRunnable runnable =
-            switch (runAccessor.getTask()) {
-                case KubeAITextServeTaskSpec.KIND -> new KubeAIServeRunner(
-                    KubeAITextRuntime.RUNTIME,
-                    runSpec.getFunctionSpec().getEngine() != null
-                        ? runSpec.getFunctionSpec().getEngine().name()
-                        : KubeAIEngine.VLLM.name(),
-                    runSpec.getFunctionSpec().getFeatures() != null
-                        ? runSpec.getFunctionSpec().getFeatures().stream().map(KubeAIFeature::name).toList()
-                        : Collections.emptyList(),
-                    runSpec.getFunctionSpec(),
-                    secretService.getSecretData(run.getProject(), runSpec.getSecrets()),
-                    k8sBuilderHelper,
-                    k8sSecretHelper,
-                    modelService
-                )
-                    .produce(run);
-                default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
-            };
+        K8sCRRunnable runnable = switch (runAccessor.getTask()) {
+            case KubeAITextServeTaskSpec.KIND -> new KubeAIServeRunner(
+                KubeAITextRuntime.RUNTIME,
+                runSpec.getFunctionSpec().getEngine() != null
+                    ? runSpec.getFunctionSpec().getEngine().name()
+                    : KubeAIEngine.VLLM.name(),
+                runSpec.getFunctionSpec().getFeatures() != null
+                    ? runSpec.getFunctionSpec().getFeatures().stream().map(KubeAIFeature::name).toList()
+                    : Collections.emptyList(),
+                runSpec.getFunctionSpec(),
+                secretService.getSecretData(run.getProject(), runSpec.getSecrets()),
+                k8sBuilderHelper,
+                k8sSecretHelper,
+                k8sLabelHelper,
+                modelService
+            ).produce(run);
+            default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
+        };
 
         //extract auth from security context to inflate secured credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
@@ -183,8 +181,7 @@ public class KubeAITextRuntime extends KubeAIRuntime<KubeAITextFunctionSpec, Kub
         //build openapi descriptor only once
         if (status.getOpenai() == null) {
             //inflate super or rebuild
-            OpenAIService openai = Optional
-                .ofNullable(super.onRunning(run, runnable))
+            OpenAIService openai = Optional.ofNullable(super.onRunning(run, runnable))
                 .map(s -> s.getOpenai())
                 .orElse(new OpenAIService());
 
@@ -197,8 +194,7 @@ public class KubeAITextRuntime extends KubeAIRuntime<KubeAITextFunctionSpec, Kub
         //build service descriptor only once
         if (status.getService() == null) {
             //inflate super or rebuild
-            K8sServiceInfo service = Optional
-                .ofNullable(super.onRunning(run, runnable))
+            K8sServiceInfo service = Optional.ofNullable(super.onRunning(run, runnable))
                 .map(s -> s.getService())
                 .orElse(new K8sServiceInfo());
 
@@ -206,9 +202,8 @@ public class KubeAITextRuntime extends KubeAIRuntime<KubeAITextFunctionSpec, Kub
             String baseUrl = kubeAiEndpoint + "/openai/v1";
             List<String> urls = service.getUrls() != null ? new ArrayList<>(service.getUrls()) : new ArrayList<>();
 
-            List<KubeAIFeature> features = functionSpec.getFeatures() != null
-                ? functionSpec.getFeatures()
-                : Collections.emptyList();
+            List<KubeAIFeature> features =
+                functionSpec.getFeatures() != null ? functionSpec.getFeatures() : Collections.emptyList();
             if (features.contains(KubeAIFeature.TextGeneration)) {
                 urls.add(baseUrl + "/chat/completions");
                 urls.add(baseUrl + "/completions");

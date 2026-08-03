@@ -27,6 +27,7 @@ import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
@@ -44,8 +45,6 @@ import it.smartcommunitylabdhub.runtime.servicegraph.specs.ServicegraphFunctionS
 import it.smartcommunitylabdhub.runtime.servicegraph.specs.ServicegraphRunSpec;
 import it.smartcommunitylabdhub.runtime.servicegraph.specs.ServicegraphServeRunSpec;
 import it.smartcommunitylabdhub.runtime.servicegraph.specs.ServicegraphServeTaskSpec;
-
-import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -53,7 +52,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
 import org.springframework.util.StringUtils;
 
 public class ServicegraphServeRunner {
@@ -72,15 +70,9 @@ public class ServicegraphServeRunner {
     private final String command;
 
     private final K8sBuilderHelper k8sBuilderHelper;
+    private final K8sLabelHelper k8sLabelHelper;
 
     private final FunctionManager functionService;
-    
-    protected record Context(
-        List<ContextRef> contextRefs, 
-        List<ContextSource> contextSources,
-        List<CoreEnv> coreEnvList,
-        List<CoreEnv> coreSecrets
-    ) {}
 
     public ServicegraphServeRunner(
         String image,
@@ -89,12 +81,14 @@ public class ServicegraphServeRunner {
         Integer groupId,
         String command,
         K8sBuilderHelper k8sBuilderHelper,
+        K8sLabelHelper k8sLabelHelper,
         FunctionManager functionService
     ) {
         this.image = image;
         this.command = command;
 
         this.k8sBuilderHelper = k8sBuilderHelper;
+        this.k8sLabelHelper = k8sLabelHelper;
 
         this.functionService = functionService;
         this.volumeSizeSpec = volumeSizeSpec;
@@ -104,35 +98,35 @@ public class ServicegraphServeRunner {
     }
 
     public K8sRunnable produce(Run run, Map<String, String> secretData) {
-        
         ServicegraphServeRunSpec runSpec = new ServicegraphServeRunSpec(run.getSpec());
         ServicegraphServeTaskSpec taskSpec = runSpec.getTaskServeSpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(runSpec.getTaskServeSpec().toMap());
-        
+
         //prepare context
-        Context ctx = prepareContext(run, secretData, runSpec, runSpec.getTaskServeSpec(), runSpec.getFunctionSpec());  
+        Context ctx = prepareContext(run, secretData, runSpec, runSpec.getTaskServeSpec(), runSpec.getFunctionSpec());
 
         List<CoreVolume> coreVolumes = new ArrayList<>(
             taskSpec.getVolumes() != null ? taskSpec.getVolumes() : List.of()
         );
         //check if scratch disk is requested as resource or set default
-        String volumeSize = taskSpec.getResources() != null && taskSpec.getResources().getDisk() != null
-            ? taskSpec.getResources().getDisk()
-            : volumeSizeSpec;
+        String volumeSize =
+            taskSpec.getResources() != null && taskSpec.getResources().getDisk() != null
+                ? taskSpec.getResources().getDisk()
+                : volumeSizeSpec;
         CoreResource diskResource = new CoreResource();
         diskResource.setDisk(volumeSize);
-        Optional
-            .ofNullable(k8sBuilderHelper)
-            .ifPresent(helper -> {
-                Optional.ofNullable(helper.buildSharedVolume(diskResource)).ifPresent(coreVolumes::add);
-            });
-
+        Optional.ofNullable(k8sBuilderHelper).ifPresent(helper -> {
+            Optional.ofNullable(helper.buildSharedVolume(diskResource)).ifPresent(coreVolumes::add);
+        });
 
         List<String> args = List.of("/shared/servicegraph.yaml");
 
         //evaluate service names
         List<String> serviceNames = new ArrayList<>();
-        if (runSpec.getTaskServeSpec().getServiceName() != null && StringUtils.hasText(runSpec.getTaskServeSpec().getServiceName())) {
+        if (
+            runSpec.getTaskServeSpec().getServiceName() != null &&
+            StringUtils.hasText(runSpec.getTaskServeSpec().getServiceName())
+        ) {
             //prepend with function name
             serviceNames.add(taskAccessor.getFunction() + "-" + runSpec.getTaskServeSpec().getServiceName());
         }
@@ -163,14 +157,13 @@ public class ServicegraphServeRunner {
         }
         ports.add(new CorePort(HTTP_PORT, HTTP_PORT));
 
-        K8sRunnable k8sServeRunnable = K8sServeRunnable
-            .builder()
+        K8sRunnable k8sServeRunnable = K8sServeRunnable.builder()
             .runtime(ServicegraphRuntime.RUNTIME)
             .task(ServicegraphServeTaskSpec.KIND)
             .state(State.READY.name())
             .labels(
-                k8sBuilderHelper != null
-                    ? List.of(new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction()))
+                k8sLabelHelper != null
+                    ? List.of(new CoreLabel(k8sLabelHelper.buildCoreLabel("function"), taskAccessor.getFunction()))
                     : null
             )
             //base
@@ -181,7 +174,11 @@ public class ServicegraphServeRunner {
             .contextSources(ctx.contextSources())
             .envs(ctx.coreEnvList())
             .secrets(ctx.coreSecrets())
-            .resources(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(runSpec.getTaskServeSpec().getResources()) : null)
+            .resources(
+                k8sBuilderHelper != null
+                    ? k8sBuilderHelper.convertResources(runSpec.getTaskServeSpec().getResources())
+                    : null
+            )
             .volumes(coreVolumes)
             .template(taskSpec.getProfile())
             //securityContext
@@ -191,7 +188,7 @@ public class ServicegraphServeRunner {
             //specific
             .replicas(taskSpec.getReplicas())
             // http and grpc ports
-             .servicePorts(ports)
+            .servicePorts(ports)
             .serviceType(taskSpec.getServiceType())
             .serviceNames(serviceNames != null && !serviceNames.isEmpty() ? serviceNames : null)
             .build();
@@ -202,34 +199,52 @@ public class ServicegraphServeRunner {
         return k8sServeRunnable;
     }
 
-    protected Context prepareContext(Run run, Map<String, String> secretData, ServicegraphRunSpec runSpec, ServicegraphServeTaskSpec taskSpec, ServicegraphFunctionSpec functionSpec) {
-
+    protected Context prepareContext(
+        Run run,
+        Map<String, String> secretData,
+        ServicegraphRunSpec runSpec,
+        ServicegraphServeTaskSpec taskSpec,
+        ServicegraphFunctionSpec functionSpec
+    ) {
         List<CoreEnv> coreEnvList = new ArrayList<>(
             List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))
         );
 
-        List<CoreEnv> coreSecrets = secretData == null
-            ? null
-            : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
+        List<CoreEnv> coreSecrets =
+            secretData == null
+                ? null
+                : secretData
+                      .entrySet()
+                      .stream()
+                      .map(e -> new CoreEnv(e.getKey(), e.getValue()))
+                      .toList();
 
         Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
 
         ServicegraphSourceCode servicegraphSourceCode = functionSpec.getSource();
-        String servicegraphSpec = new String(Base64.getDecoder().decode(servicegraphSourceCode.getBase64()), StandardCharsets.UTF_8);
+        String servicegraphSpec = new String(
+            Base64.getDecoder().decode(servicegraphSourceCode.getBase64()),
+            StandardCharsets.UTF_8
+        );
 
         //read source and build context
         List<ContextRef> contextRefs = null;
         List<ContextSource> contextSources = new ArrayList<>();
 
         //function definition
-        ContextSource fn = ContextSource
-            .builder()
+        ContextSource fn = ContextSource.builder()
             .name("servicegraph.yaml")
             .base64(Base64.getEncoder().encodeToString(servicegraphSpec.getBytes(StandardCharsets.UTF_8)))
             .build();
         contextSources.add(fn);
 
         return new Context(contextRefs, contextSources, coreEnvList, coreSecrets);
-    } 
-}
+    }
 
+    protected record Context(
+        List<ContextRef> contextRefs,
+        List<ContextSource> contextSources,
+        List<CoreEnv> coreEnvList,
+        List<CoreEnv> coreSecrets
+    ) {}
+}

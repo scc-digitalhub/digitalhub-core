@@ -715,7 +715,7 @@ public abstract class K8sBaseFramework<
             //add template
             template = templates.get(runnable.getTemplate()).getProfile();
             templateLabels.put(
-                K8sBuilderHelper.sanitizeNames(applicationProperties.getName()) + "/template",
+                k8sLabelHelper.buildCoreLabel("template"),
                 runnable.getTemplate()
             );
         } else if (templates.containsKey(DEFAULT_TEMPLATE)) {

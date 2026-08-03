@@ -28,6 +28,7 @@ import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
@@ -66,6 +67,8 @@ public class FlowerServerDeployRunner {
     private final String image;
 
     private final K8sBuilderHelper k8sBuilderHelper;
+    private final K8sLabelHelper k8sLabelHelper;
+
     private final FunctionManager functionService;
 
     private final Resource entrypoint = new ClassPathResource("runtime-flower/docker/server.sh");
@@ -86,11 +89,13 @@ public class FlowerServerDeployRunner {
         String tlsIntDomain,
         String tlsExtDomain,
         K8sBuilderHelper k8sBuilderHelper,
+        K8sLabelHelper k8sLabelHelper,
         FunctionManager functionService
     ) {
         this.image = image;
 
         this.k8sBuilderHelper = k8sBuilderHelper;
+        this.k8sLabelHelper = k8sLabelHelper;
         this.functionService = functionService;
 
         this.userId = userId != null ? userId : UID;
@@ -115,9 +120,14 @@ public class FlowerServerDeployRunner {
 
         coreEnvList.add(new CoreEnv("PYTHONPATH", "${PYTHONPATH}:/shared/"));
 
-        List<CoreEnv> coreSecrets = secretData == null
-            ? null
-            : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
+        List<CoreEnv> coreSecrets =
+            secretData == null
+                ? null
+                : secretData
+                      .entrySet()
+                      .stream()
+                      .map(e -> new CoreEnv(e.getKey(), e.getValue()))
+                      .toList();
 
         Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
 
@@ -145,30 +155,26 @@ public class FlowerServerDeployRunner {
                 taskAccessor.getFunction() + "-latest"
             );
             contextSources.add(
-                ContextSource
-                    .builder()
+                ContextSource.builder()
                     .name("certificates/ca.crt")
                     .base64(Base64.getEncoder().encodeToString(caCert.getBytes(StandardCharsets.UTF_8)))
                     .build()
             );
             contextSources.add(
-                ContextSource
-                    .builder()
+                ContextSource.builder()
                     .name("certificates/ca.key")
                     .base64(Base64.getEncoder().encodeToString(caKey.getBytes(StandardCharsets.UTF_8)))
                     .build()
             );
             contextSources.add(
-                ContextSource
-                    .builder()
+                ContextSource.builder()
                     .name("certificates/tls.conf")
                     .base64(
-                        Base64
-                            .getEncoder()
-                            .encodeToString(
-                                preprocessConf(tlsConf, tlsIntDomain, tlsExtDomain, new String[] { dns1, dns2 })
-                                    .getBytes(StandardCharsets.UTF_8)
+                        Base64.getEncoder().encodeToString(
+                            preprocessConf(tlsConf, tlsIntDomain, tlsExtDomain, new String[] { dns1, dns2 }).getBytes(
+                                StandardCharsets.UTF_8
                             )
+                        )
                     )
                     .build()
             );
@@ -179,8 +185,7 @@ public class FlowerServerDeployRunner {
             //add auth public keys
             String authPublicKeys = String.join(",", runSpec.getAuthPublicKeys());
             contextSources.add(
-                ContextSource
-                    .builder()
+                ContextSource.builder()
                     .name("keys/client_public_keys.csv")
                     .base64(Base64.getEncoder().encodeToString(authPublicKeys.getBytes(StandardCharsets.UTF_8)))
                     .build()
@@ -191,8 +196,7 @@ public class FlowerServerDeployRunner {
 
         //write entrypoint
         try {
-            ContextSource entry = ContextSource
-                .builder()
+            ContextSource entry = ContextSource.builder()
                 .name("server.sh")
                 .base64(Base64.getEncoder().encodeToString(entrypoint.getContentAsByteArray()))
                 .build();
@@ -217,7 +221,9 @@ public class FlowerServerDeployRunner {
         contextSources.add(ContextSource.builder().name("pyproject.toml").base64(tomlBase64).build());
 
         //expose ports
-        List<CorePort> servicePorts = HTTP_PORTS.stream().map(port -> new CorePort(port, port)).toList();
+        List<CorePort> servicePorts = HTTP_PORTS.stream()
+            .map(port -> new CorePort(port, port))
+            .toList();
 
         //evaluate service names
         List<String> serviceNames = new ArrayList<>();
@@ -233,14 +239,13 @@ public class FlowerServerDeployRunner {
 
         // use shell script as entrypoint
         String cmd = "/bin/bash";
-        K8sRunnable k8sServeRunnable = K8sServeRunnable
-            .builder()
+        K8sRunnable k8sServeRunnable = K8sServeRunnable.builder()
             .runtime(FlowerServerRuntime.RUNTIME)
             .task(FlowerServerDeployTaskSpec.KIND)
             .state(State.READY.name())
             .labels(
-                k8sBuilderHelper != null
-                    ? List.of(new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction()))
+                k8sLabelHelper != null
+                    ? List.of(new CoreLabel(k8sLabelHelper.buildCoreLabel("function"), taskAccessor.getFunction()))
                     : null
             )
             //base

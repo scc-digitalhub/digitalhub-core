@@ -65,7 +65,8 @@ public class HuggingfaceServeRuntime
         ModelServeRunStatus,
         K8sRunnable
     >
-    implements InitializingBean {
+    implements InitializingBean
+{
 
     public static final String RUNTIME = "huggingfaceserve";
     public static final String IMAGE = "kserve/huggingfaceserver";
@@ -109,9 +110,9 @@ public class HuggingfaceServeRuntime
         if (!HuggingfaceServeRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
                 "Run kind %s unsupported, expecting %s".formatted(
-                        String.valueOf(run.getKind()),
-                        HuggingfaceServeRunSpec.KIND
-                    )
+                    String.valueOf(run.getKind()),
+                    HuggingfaceServeRunSpec.KIND
+                )
             );
         }
 
@@ -121,13 +122,12 @@ public class HuggingfaceServeRuntime
         String kind = task.getKind();
 
         //build task spec as defined
-        TaskBaseSpec taskSpec =
-            switch (kind) {
-                case HuggingfaceServeTaskSpec.KIND -> HuggingfaceServeTaskSpec.with(task.getSpec());
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        TaskBaseSpec taskSpec = switch (kind) {
+            case HuggingfaceServeTaskSpec.KIND -> HuggingfaceServeTaskSpec.with(task.getSpec());
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //path is defined in function spec but overridable in run spec
         String path = funSpec.getPath();
@@ -162,9 +162,9 @@ public class HuggingfaceServeRuntime
         if (!HuggingfaceServeRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
                 "Run kind %s unsupported, expecting %s".formatted(
-                        String.valueOf(run.getKind()),
-                        HuggingfaceServeRunSpec.KIND
-                    )
+                    String.valueOf(run.getKind()),
+                    HuggingfaceServeRunSpec.KIND
+                )
             );
         }
 
@@ -173,22 +173,21 @@ public class HuggingfaceServeRuntime
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
-        K8sRunnable runnable =
-            switch (runAccessor.getTask()) {
-                case HuggingfaceServeTaskSpec.KIND -> new HuggingfaceServeRunner(
-                    image,
-                    userId,
-                    groupId,
-                    volumeSizeSpec,
-                    runSpec.getFunctionSpec(),
-                    secretService.getSecretData(run.getProject(), runSpec.getTaskServeSpec().getSecrets()),
-                    k8sBuilderHelper,
-                    modelService,
-                    functionService
-                )
-                    .produce(run);
-                default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
-            };
+        K8sRunnable runnable = switch (runAccessor.getTask()) {
+            case HuggingfaceServeTaskSpec.KIND -> new HuggingfaceServeRunner(
+                image,
+                userId,
+                groupId,
+                volumeSizeSpec,
+                runSpec.getFunctionSpec(),
+                secretService.getSecretData(run.getProject(), runSpec.getTaskServeSpec().getSecrets()),
+                k8sBuilderHelper,
+                k8sLabelHelper,
+                modelService,
+                functionService
+            ).produce(run);
+            default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
+        };
 
         //extract auth from security context to inflate secured credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();

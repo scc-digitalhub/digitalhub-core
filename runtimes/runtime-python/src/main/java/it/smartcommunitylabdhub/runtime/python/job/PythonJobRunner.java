@@ -29,6 +29,7 @@ import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
@@ -57,8 +58,12 @@ public class PythonJobRunner extends PythonBaseRunner {
 
     private static ObjectMapper jsonMapper = JacksonMapper.CUSTOM_OBJECT_MAPPER;
 
-    public PythonJobRunner(PythonProperties properties, K8sBuilderHelper k8sBuilderHelper) {
-        super(properties, k8sBuilderHelper);
+    public PythonJobRunner(
+        PythonProperties properties,
+        K8sBuilderHelper k8sBuilderHelper,
+        K8sLabelHelper k8sLabelHelper
+    ) {
+        super(properties, k8sBuilderHelper, k8sLabelHelper);
         //set handler for job
         setHandlerTemplate(new ClassPathResource("runtime-python/docker/_job_handler.py"));
     }
@@ -120,8 +125,8 @@ public class PythonJobRunner extends PythonBaseRunner {
                 .task(PythonJobTaskSpec.KIND)
                 .state(State.READY.name())
                 .labels(
-                    k8sBuilderHelper != null
-                        ? List.of(new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction()))
+                    k8sLabelHelper != null
+                        ? List.of(new CoreLabel(k8sLabelHelper.buildCoreLabel("function"), taskAccessor.getFunction()))
                         : null
                 )
                 //base

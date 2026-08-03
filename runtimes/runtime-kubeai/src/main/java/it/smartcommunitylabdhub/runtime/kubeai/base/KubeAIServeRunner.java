@@ -31,6 +31,7 @@ import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sSecretHelper;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
@@ -66,6 +67,8 @@ public class KubeAIServeRunner {
     private final ModelManager modelService;
     private final K8sBuilderHelper k8sBuilderHelper;
     private final K8sSecretHelper k8sSecretHelper;
+    private final K8sLabelHelper k8sLabelHelper;
+
     private Map<String, String> secretData;
 
     private static final String KUBEAI_API_GROUP = "kubeai.org";
@@ -81,6 +84,7 @@ public class KubeAIServeRunner {
         Map<String, String> secretData,
         K8sBuilderHelper k8sBuilderHelper,
         K8sSecretHelper k8sSecretHelper,
+        K8sLabelHelper k8sLabelHelper,
         ModelManager modelService
     ) {
         this.runtime = runtime;
@@ -91,6 +95,7 @@ public class KubeAIServeRunner {
         this.secretData = secretData;
         this.k8sBuilderHelper = k8sBuilderHelper;
         this.k8sSecretHelper = k8sSecretHelper;
+        this.k8sLabelHelper = k8sLabelHelper;
     }
 
     @SuppressWarnings("unchecked")
@@ -110,9 +115,10 @@ public class KubeAIServeRunner {
             if (!EntityUtils.getEntityName(Model.class).equalsIgnoreCase(keyAccessor.getType())) {
                 throw new CoreRuntimeException("invalid entity kind reference, expected model");
             }
-            Model model = keyAccessor.getId() != null
-                ? modelService.findModel(keyAccessor.getId())
-                : modelService.getLatestModel(keyAccessor.getProject(), keyAccessor.getName());
+            Model model =
+                keyAccessor.getId() != null
+                    ? modelService.findModel(keyAccessor.getId())
+                    : modelService.getLatestModel(keyAccessor.getProject(), keyAccessor.getName());
             if (model == null) {
                 throw new CoreRuntimeException("invalid entity reference, model not found");
             }
@@ -133,9 +139,14 @@ public class KubeAIServeRunner {
             }
         }
 
-        List<CoreEnv> coreSecrets = secretData == null
-            ? null
-            : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
+        List<CoreEnv> coreSecrets =
+            secretData == null
+                ? null
+                : secretData
+                      .entrySet()
+                      .stream()
+                      .map(e -> new CoreEnv(e.getKey(), e.getValue()))
+                      .toList();
 
         // populate env from explicit env only, secrets are referenced in the spec
         Map<String, String> env = new HashMap<>();
@@ -153,8 +164,9 @@ public class KubeAIServeRunner {
         if (secretName != null) {
             //TODO evaluate if we will get the secret, for now we assume it is always there
 
-            envFrom =
-                Collections.singletonList(KubeAiEnvFrom.builder().secretRef(new KubeAiEnvFromRef(secretName)).build());
+            envFrom = Collections.singletonList(
+                KubeAiEnvFrom.builder().secretRef(new KubeAiEnvFromRef(secretName)).build()
+            );
         }
         // set to 1 if no scaling is defined
         // int replicas = 1;
@@ -173,9 +185,10 @@ public class KubeAIServeRunner {
 
         //build custom resource name matching model name
         //TODO evaluate letting users specify real names
-        String modelName = functionSpec.getModelName() != null
-            ? K8sBuilderHelper.sanitizeNames(functionSpec.getModelName() + "-" + run.getId())
-            : run.getId();
+        String modelName =
+            functionSpec.getModelName() != null
+                ? K8sBuilderHelper.sanitizeNames(functionSpec.getModelName() + "-" + run.getId())
+                : run.getId();
 
         //enforce kubeAI max model name length 40chars
         if (modelName.length() > 39) {
@@ -202,8 +215,7 @@ public class KubeAIServeRunner {
             args.addAll(runSpec.getArgs());
         }
 
-        KubeAIModelSpec modelSpec = KubeAIModelSpec
-            .builder()
+        KubeAIModelSpec modelSpec = KubeAIModelSpec.builder()
             .url(url)
             .image(functionSpec.getImage())
             .args(args.isEmpty() ? null : args)
@@ -224,14 +236,13 @@ public class KubeAIServeRunner {
             .loadBalancing(runSpec.getScaling().getLoadBalancing())
             .build();
 
-        K8sCRRunnable k8sRunnable = K8sCRRunnable
-            .builder()
+        K8sCRRunnable k8sRunnable = K8sCRRunnable.builder()
             .runtime(runtime)
             .task(runtime + "+serve")
             .state(State.READY.name())
             .labels(
-                k8sBuilderHelper != null
-                    ? List.of(new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction()))
+                k8sLabelHelper != null
+                    ? List.of(new CoreLabel(k8sLabelHelper.buildCoreLabel("function"), taskAccessor.getFunction()))
                     : null
             )
             .name(modelName)

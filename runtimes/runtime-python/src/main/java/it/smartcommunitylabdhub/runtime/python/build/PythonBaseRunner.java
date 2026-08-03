@@ -30,6 +30,7 @@ import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreResource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
@@ -79,13 +80,18 @@ public abstract class PythonBaseRunner {
     protected final List<String> dependencies;
 
     protected final K8sBuilderHelper k8sBuilderHelper;
+    protected final K8sLabelHelper k8sLabelHelper;
 
     private final DefaultResourceLoader loader = new DefaultResourceLoader();
     protected String entrypoint;
     protected String passwdFile;
     protected Mustache handlerTemplate;
 
-    protected PythonBaseRunner(PythonProperties properties, K8sBuilderHelper k8sBuilderHelper) {
+    protected PythonBaseRunner(
+        PythonProperties properties,
+        K8sBuilderHelper k8sBuilderHelper,
+        K8sLabelHelper k8sLabelHelper
+    ) {
         Assert.notNull(properties, "properties are required");
         this.properties = properties;
 
@@ -94,6 +100,7 @@ public abstract class PythonBaseRunner {
         this.baseImages = properties.getBaseImages();
 
         this.k8sBuilderHelper = k8sBuilderHelper;
+        this.k8sLabelHelper = k8sLabelHelper;
 
         this.userId = properties.getUserId() != null ? properties.getUserId() : PythonRuntime.UID;
         this.groupId = properties.getGroupId() != null ? properties.getGroupId() : PythonRuntime.GID;
@@ -104,14 +111,16 @@ public abstract class PythonBaseRunner {
         this.dependencies = properties.getDependencies();
 
         //init resources for entrypoint, passwd and handler template when setm, or fall back to default
-        String entrypointPath = properties.getEntrypoint() != null
-            ? properties.getEntrypoint()
-            : "classpath:/runtime-python/docker/entrypoint.sh";
+        String entrypointPath =
+            properties.getEntrypoint() != null
+                ? properties.getEntrypoint()
+                : "classpath:/runtime-python/docker/entrypoint.sh";
         setEntrypoint(loader.getResource(entrypointPath));
 
-        String passwdPath = properties.getPasswdTemplate() != null
-            ? properties.getPasswdTemplate()
-            : "classpath:/runtime-python/docker/passwd.mustache";
+        String passwdPath =
+            properties.getPasswdTemplate() != null
+                ? properties.getPasswdTemplate()
+                : "classpath:/runtime-python/docker/passwd.mustache";
         setPasswdTemplate(loader.getResource(passwdPath));
     }
 
@@ -130,13 +139,12 @@ public abstract class PythonBaseRunner {
             MustacheFactory mustacheFactory = new DefaultMustacheFactory();
             Mustache template = mustacheFactory.compile(new InputStreamReader(resource.getInputStream()), "passwd");
 
-            passwd =
-                template
-                    .execute(
-                        new StringWriter(),
-                        Map.of("userId", this.userId, "groupId", this.groupId, "homeDir", this.homeDir)
-                    )
-                    .toString();
+            passwd = template
+                .execute(
+                    new StringWriter(),
+                    Map.of("userId", this.userId, "groupId", this.groupId, "homeDir", this.homeDir)
+                )
+                .toString();
         } catch (IOException ioe) {
             log.error("error with building passwd template for runtime", ioe);
             //disable template
@@ -190,8 +198,7 @@ public abstract class PythonBaseRunner {
         HashMap<String, Serializable> eventData = event != null ? new HashMap<>(event) : new HashMap<>();
 
         // Build Nuclio function
-        NuclioFunctionSpec nuclio = NuclioFunctionSpec
-            .builder()
+        NuclioFunctionSpec nuclio = NuclioFunctionSpec.builder()
             .runtime("python")
             //invoke user code wrapped via default handler
             .handler("handler:handler")
@@ -320,7 +327,11 @@ public abstract class PythonBaseRunner {
     protected List<CoreEnv> createSecrets(Run run, Map<String, String> secretData) {
         return secretData == null
             ? null
-            : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
+            : secretData
+                  .entrySet()
+                  .stream()
+                  .map(e -> new CoreEnv(e.getKey(), e.getValue()))
+                  .toList();
     }
 
     protected List<CoreVolume> createVolumes(Run run, K8sFunctionTaskBaseSpec taskSpec) {
@@ -328,17 +339,16 @@ public abstract class PythonBaseRunner {
             taskSpec.getVolumes() != null ? taskSpec.getVolumes() : List.of()
         );
         //check if scratch disk is requested as resource or set default
-        String volumeSize = taskSpec.getResources() != null && taskSpec.getResources().getDisk() != null
-            ? taskSpec.getResources().getDisk()
-            : volumeSizeSpec;
+        String volumeSize =
+            taskSpec.getResources() != null && taskSpec.getResources().getDisk() != null
+                ? taskSpec.getResources().getDisk()
+                : volumeSizeSpec;
         CoreResource diskResource = new CoreResource();
         diskResource.setDisk(volumeSize);
 
-        Optional
-            .ofNullable(k8sBuilderHelper)
-            .ifPresent(helper -> {
-                Optional.ofNullable(helper.buildSharedVolume(diskResource)).ifPresent(coreVolumes::add);
-            });
+        Optional.ofNullable(k8sBuilderHelper).ifPresent(helper -> {
+            Optional.ofNullable(helper.buildSharedVolume(diskResource)).ifPresent(coreVolumes::add);
+        });
 
         return coreVolumes;
     }

@@ -56,7 +56,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -64,10 +63,12 @@ import org.springframework.beans.factory.annotation.Value;
 @Slf4j
 @RuntimeComponent(runtime = ServicegraphRuntime.RUNTIME)
 public class ServicegraphRuntime
-    extends K8sFunctionBaseRuntime<ServicegraphFunctionSpec, ServicegraphRunSpec, ServicegraphRunStatus, K8sRunnable> {
+    extends K8sFunctionBaseRuntime<ServicegraphFunctionSpec, ServicegraphRunSpec, ServicegraphRunStatus, K8sRunnable>
+{
 
     public static final String RUNTIME = "servicegraph";
     public static final String[] KINDS = { ServicegraphServeRunSpec.KIND };
+
     @Autowired
     private SecretService secretService;
 
@@ -95,8 +96,6 @@ public class ServicegraphRuntime
     @Value("${runtime.servicegraph.volume-size:1Gi}")
     protected String volumeSizeSpec;
 
-
-
     public ServicegraphRuntime() {}
 
     @Override
@@ -107,24 +106,22 @@ public class ServicegraphRuntime
         }
 
         ServicegraphFunctionSpec funSpec = new ServicegraphFunctionSpec(function.getSpec());
-        ServicegraphRunSpec runSpec =
-            switch (run.getKind()) {
-                case ServicegraphServeRunSpec.KIND -> new ServicegraphServeRunSpec(run.getSpec());
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        ServicegraphRunSpec runSpec = switch (run.getKind()) {
+            case ServicegraphServeRunSpec.KIND -> new ServicegraphServeRunSpec(run.getSpec());
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //build task spec as defined
-        Map<String, Serializable> taskSpec =
-            switch (task.getKind()) {
-                case ServicegraphServeTaskSpec.KIND -> {
-                    yield new ServicegraphServeTaskSpec(task.getSpec()).toMap();
-                }
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        Map<String, Serializable> taskSpec = switch (task.getKind()) {
+            case ServicegraphServeTaskSpec.KIND -> {
+                yield new ServicegraphServeTaskSpec(task.getSpec()).toMap();
+            }
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
@@ -154,20 +151,19 @@ public class ServicegraphRuntime
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
-        K8sRunnable runnable =
-            switch (runAccessor.getTask()) {
-                case ServicegraphServeTaskSpec.KIND -> new ServicegraphServeRunner(
-                    image,
-                    volumeSizeSpec, 
-                    userId,
-                    groupId,
-                    command,
-                    k8sBuilderHelper,
-                    functionService
-                )
-                    .produce(run, secrets);
-                default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
-            };
+        K8sRunnable runnable = switch (runAccessor.getTask()) {
+            case ServicegraphServeTaskSpec.KIND -> new ServicegraphServeRunner(
+                image,
+                volumeSizeSpec,
+                userId,
+                groupId,
+                command,
+                k8sBuilderHelper,
+                k8sLabelHelper,
+                functionService
+            ).produce(run, secrets);
+            default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
+        };
 
         //extract auth from security context to inflate secured credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
@@ -188,7 +184,6 @@ public class ServicegraphRuntime
     public boolean isSupported(@NotNull Run run) {
         return Arrays.asList(KINDS).contains(run.getKind());
     }
-
 
     @Override
     public ServicegraphRunStatus onRunning(@NotNull Run run, RunRunnable runnable) {

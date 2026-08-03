@@ -75,7 +75,8 @@ import org.springframework.util.Assert;
 @RuntimeComponent(runtime = PythonRuntime.RUNTIME)
 public class PythonRuntime
     extends K8sFunctionBaseRuntime<PythonFunctionSpec, PythonRunSpec, PythonRunStatus, K8sRunnable>
-    implements InitializingBean {
+    implements InitializingBean
+{
 
     public static final String RUNTIME = "python";
     public static final String[] KINDS = { PythonJobRunSpec.KIND, PythonServeRunSpec.KIND, PythonBuildRunSpec.KIND };
@@ -109,9 +110,9 @@ public class PythonRuntime
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        this.buildRunner = new PythonBuildRunner(properties, k8sBuilderHelper);
-        this.jobRunner = new PythonJobRunner(properties, k8sBuilderHelper);
-        this.serveRunner = new PythonServeRunner(properties, k8sBuilderHelper, functionService);
+        this.buildRunner = new PythonBuildRunner(properties, k8sBuilderHelper, k8sLabelHelper);
+        this.jobRunner = new PythonJobRunner(properties, k8sBuilderHelper, k8sLabelHelper);
+        this.serveRunner = new PythonServeRunner(properties, k8sBuilderHelper, k8sLabelHelper, functionService);
     }
 
     @Override
@@ -122,32 +123,30 @@ public class PythonRuntime
         }
 
         PythonFunctionSpec funSpec = new PythonFunctionSpec(function.getSpec());
-        PythonRunSpec runSpec =
-            switch (run.getKind()) {
-                case PythonJobRunSpec.KIND -> new PythonJobRunSpec(run.getSpec());
-                case PythonServeRunSpec.KIND -> new PythonServeRunSpec(run.getSpec());
-                case PythonBuildRunSpec.KIND -> new PythonBuildRunSpec(run.getSpec());
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        PythonRunSpec runSpec = switch (run.getKind()) {
+            case PythonJobRunSpec.KIND -> new PythonJobRunSpec(run.getSpec());
+            case PythonServeRunSpec.KIND -> new PythonServeRunSpec(run.getSpec());
+            case PythonBuildRunSpec.KIND -> new PythonBuildRunSpec(run.getSpec());
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //build task spec as defined
-        Map<String, Serializable> taskSpec =
-            switch (task.getKind()) {
-                case PythonJobTaskSpec.KIND -> {
-                    yield new PythonJobTaskSpec(task.getSpec()).toMap();
-                }
-                case PythonServeTaskSpec.KIND -> {
-                    yield new PythonServeTaskSpec(task.getSpec()).toMap();
-                }
-                case PythonBuildTaskSpec.KIND -> {
-                    yield new PythonBuildTaskSpec(task.getSpec()).toMap();
-                }
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        Map<String, Serializable> taskSpec = switch (task.getKind()) {
+            case PythonJobTaskSpec.KIND -> {
+                yield new PythonJobTaskSpec(task.getSpec()).toMap();
+            }
+            case PythonServeTaskSpec.KIND -> {
+                yield new PythonServeTaskSpec(task.getSpec()).toMap();
+            }
+            case PythonBuildTaskSpec.KIND -> {
+                yield new PythonBuildTaskSpec(task.getSpec()).toMap();
+            }
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
@@ -168,9 +167,8 @@ public class PythonRuntime
         PythonRunSpec runSpec = new PythonRunSpec(run.getSpec());
         if (runSpec.getInputs() != null && !runSpec.getInputs().isEmpty()) {
             RelationshipsMetadata lineage = RelationshipsMetadata.from(run.getMetadata());
-            List<RelationshipDetail> rels = lineage.getRelationships() != null
-                ? new ArrayList<>(lineage.getRelationships())
-                : new ArrayList<>();
+            List<RelationshipDetail> rels =
+                lineage.getRelationships() != null ? new ArrayList<>(lineage.getRelationships()) : new ArrayList<>();
 
             runSpec
                 .getInputs()
@@ -209,13 +207,12 @@ public class PythonRuntime
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
-        K8sRunnable runnable =
-            switch (runAccessor.getTask()) {
-                case PythonJobTaskSpec.KIND -> jobRunner.produce(run, secrets);
-                case PythonServeTaskSpec.KIND -> serveRunner.produce(run, secrets);
-                case PythonBuildTaskSpec.KIND -> buildRunner.produce(run, secrets);
-                default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
-            };
+        K8sRunnable runnable = switch (runAccessor.getTask()) {
+            case PythonJobTaskSpec.KIND -> jobRunner.produce(run, secrets);
+            case PythonServeTaskSpec.KIND -> serveRunner.produce(run, secrets);
+            case PythonBuildTaskSpec.KIND -> buildRunner.produce(run, secrets);
+            default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
+        };
 
         //extract auth from security context to inflate secured credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();

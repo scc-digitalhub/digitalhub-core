@@ -402,9 +402,9 @@ public class K8sBuilderHelper implements InitializingBean {
         return image + ":" + tag;
     }
 
-    public String getLabelName(String name) {
-        return sanitizeNames(applicationProperties.getName()) + "/" + sanitizeNames(name);
-    }
+    // public String getLabelName(String name) {
+    //     return sanitizeNames(applicationProperties.getName()) + "/" + sanitizeNames(name);
+    // }
 
     public static String sanitizeNames(String name) {
         //sanitize value
