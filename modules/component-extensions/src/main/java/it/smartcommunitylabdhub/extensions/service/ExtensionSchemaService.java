@@ -11,12 +11,16 @@ import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
+
+import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
+import it.smartcommunitylabdhub.commons.infrastructure.SpecFactory;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.schemas.Schema;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.core.services.EntityService;
 import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
+import it.smartcommunitylabdhub.extensions.annotations.ExtensionType;
 import it.smartcommunitylabdhub.extensions.config.ExtensionsProperties;
 import it.smartcommunitylabdhub.extensions.model.Extension;
 import it.smartcommunitylabdhub.extensions.model.ExtensionDefinition;
@@ -41,7 +45,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourcePatternResolver;
-import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -57,6 +60,7 @@ public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
     private static final String KIND = "kind";
     private static final String SCHEMA = "schema";
     private static final String UI_SCHEMA = "uiSchema";
+    private static final String APPLIES_TO = "appliesTo";
 
     protected ResourcePatternResolver resourceLoader;
     private List<String> extensionPaths;
@@ -297,6 +301,7 @@ public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
                 .kind(kind)
                 .schema(schemaNode.get(SCHEMA))
                 .uiSchema(schemaNode.get(UI_SCHEMA))
+                .appliesTo(schemaNode.has(APPLIES_TO) ? objectMapper.convertValue(schemaNode.get(APPLIES_TO), String[].class) : null)
                 .build();
             registerSpec(kind, schema);
 
@@ -305,4 +310,26 @@ public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
             log.error("cannot load extension schema from {}: {}", path, e.getMessage());
         }
     }
+
+    @Override
+    public void registerSpec(SpecType type, Class<? extends Spec> spec, SpecFactory<? extends Spec> factory) {
+        super.registerSpec(type, spec, factory);
+        SpecRegistration registration = registrations.get(type.kind());
+        SchemaImpl.SchemaImplBuilder schema = SchemaImpl
+                .builder()
+                .entity(registration.schema().entity())
+                .kind(registration.schema().kind())
+                .schema(registration.schema().schema())
+                .uiSchema(registration.schema().uiSchema());
+        
+        ExtensionType et = spec.getAnnotation(ExtensionType.class);
+        if (et != null) {
+            schema.appliesTo(et.appliesTo());
+        }
+            
+        registrations.put(type.kind(), new SpecRegistration(
+            registration.kind(), registration.runtime(), registration.spec(), registration.factory(), schema.build()
+        ));
+    }
+
 }

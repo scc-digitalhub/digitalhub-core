@@ -3,7 +3,6 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-
 /*
  * Copyright 2025 the original author or authors.
  *
@@ -40,6 +39,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 import lombok.Setter;
 import lombok.ToString;
 import org.springframework.lang.Nullable;
@@ -48,10 +48,10 @@ import org.springframework.lang.Nullable;
 @NoArgsConstructor
 @Getter
 @Setter
-@Builder
+@SuperBuilder
 @ToString
 @JsonPropertyOrder(alphabetic = true)
-public class Project implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO {
+public class BaseProject implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO {
 
     @Nullable
     @Pattern(regexp = Keys.RFC_1123_PATTERN)

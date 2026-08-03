@@ -26,7 +26,8 @@ import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.AuthorizableAwareEntityService;
 import it.smartcommunitylabdhub.authorization.services.CredentialsProvider;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
-import it.smartcommunitylabdhub.commons.models.project.Project;
+import it.smartcommunitylabdhub.commons.models.project.BaseProject;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -46,7 +47,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 public class UserAuthenticationManager extends ProviderManager {
 
     private List<CredentialsProvider> providers = Collections.emptyList();
-    private AuthorizableAwareEntityService<Project> projectAuthHelper;
+    private AuthorizableAwareEntityService<? extends BaseProject> projectAuthHelper;
 
     public UserAuthenticationManager(AuthenticationProvider... providers) {
         this(Arrays.asList(providers));
@@ -64,7 +65,7 @@ public class UserAuthenticationManager extends ProviderManager {
     }
 
     @Autowired
-    public void setProjectAuthHelper(AuthorizableAwareEntityService<Project> projectAuthHelper) {
+    public void setProjectAuthHelper(AuthorizableAwareEntityService<? extends BaseProject> projectAuthHelper) {
         this.projectAuthHelper = projectAuthHelper;
     }
 

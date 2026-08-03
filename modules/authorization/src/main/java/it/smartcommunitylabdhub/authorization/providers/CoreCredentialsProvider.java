@@ -25,7 +25,7 @@ package it.smartcommunitylabdhub.authorization.providers;
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.AuthorizableAwareEntityService;
 import it.smartcommunitylabdhub.authorization.services.CredentialsProvider;
-import it.smartcommunitylabdhub.commons.models.project.Project;
+import it.smartcommunitylabdhub.commons.models.project.BaseProject;
 import jakarta.validation.constraints.NotNull;
 import java.util.HashSet;
 import java.util.Set;
@@ -38,10 +38,10 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class CoreCredentialsProvider implements CredentialsProvider {
 
-    AuthorizableAwareEntityService<Project> projectAuthHelper;
+    AuthorizableAwareEntityService<? extends BaseProject> projectAuthHelper;
 
     @Autowired(required = false)
-    public void setProjectAuthHelper(AuthorizableAwareEntityService<Project> projectAuthHelper) {
+    public void setProjectAuthHelper(AuthorizableAwareEntityService<? extends BaseProject> projectAuthHelper) {
         this.projectAuthHelper = projectAuthHelper;
     }
 

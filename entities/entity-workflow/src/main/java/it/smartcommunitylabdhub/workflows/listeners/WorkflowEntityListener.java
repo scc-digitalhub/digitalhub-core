@@ -25,11 +25,11 @@ package it.smartcommunitylabdhub.workflows.listeners;
 
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.core.events.AbstractEntityListener;
 import it.smartcommunitylabdhub.core.events.EntityEvent;
+import it.smartcommunitylabdhub.projects.Project;
 import it.smartcommunitylabdhub.workflows.persistence.WorkflowEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

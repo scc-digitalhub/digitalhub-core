@@ -1,4 +1,10 @@
 /*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
  * Copyright 2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,18 +21,18 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.config;
+package it.smartcommunitylabdhub.extensions.annotations;
 
-import it.smartcommunitylabdhub.commons.models.metadata.Metadata;
-import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import org.springframework.stereotype.Indexed;
 
-@Configuration
-public class EntityBaseConfig {
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+@Indexed
+public @interface ExtensionType {
+    String[] appliesTo();
 
-    @Bean
-    SpecRegistryImpl<Metadata> metadataSpecRegistry() {
-        return new SpecRegistryImpl<>(Metadata.class);
-    }
 }

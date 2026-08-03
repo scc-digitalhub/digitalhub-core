@@ -32,7 +32,7 @@ import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
-import it.smartcommunitylabdhub.commons.models.project.Project;
+import it.smartcommunitylabdhub.commons.models.project.BaseProject;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
@@ -72,7 +72,7 @@ public class BaseFilesService<
 
     protected EntityRepository<D> entityService;
 
-    private EntityRepository<Project> projectService;
+    private EntityRepository<? extends BaseProject> projectService;
     private FilesService filesService;
     private FilesInfoService filesInfoService;
     private CredentialsService credentialsService;
@@ -90,7 +90,7 @@ public class BaseFilesService<
     }
 
     @Autowired
-    public void setProjectService(EntityRepository<Project> projectService) {
+    public void setProjectService(EntityRepository<? extends BaseProject> projectService) {
         this.projectService = projectService;
     }
 

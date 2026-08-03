@@ -1,9 +1,9 @@
 package it.smartcommunitylabdhub.envoygw.specs;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.base.BaseSpec;
+import it.smartcommunitylabdhub.extensions.annotations.ExtensionType;
 import it.smartcommunitylabdhub.extensions.model.Extension;
 import java.io.Serializable;
 import java.util.List;
@@ -14,6 +14,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @SpecType(kind = GatewayExtensionSpec.KIND, entity = Extension.class)
+@ExtensionType(appliesTo = { "run" })
 public class GatewayExtensionSpec extends BaseSpec {
 
     public static final String KIND = "envoygw";

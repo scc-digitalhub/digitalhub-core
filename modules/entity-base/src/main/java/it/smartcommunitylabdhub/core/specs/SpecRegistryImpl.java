@@ -299,7 +299,7 @@ public class SpecRegistryImpl<
             .toList();
     }
 
-    protected record SpecRegistration(
+    public record SpecRegistration(
         String kind,
         String runtime,
         Class<? extends Spec> spec,

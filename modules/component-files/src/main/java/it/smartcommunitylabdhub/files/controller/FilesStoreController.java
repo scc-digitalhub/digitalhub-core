@@ -24,7 +24,7 @@ import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
-import it.smartcommunitylabdhub.commons.models.project.Project;
+import it.smartcommunitylabdhub.commons.models.project.BaseProject;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.files.models.DownloadInfo;
 import it.smartcommunitylabdhub.files.models.FileInfo;
@@ -68,7 +68,7 @@ public class FilesStoreController {
     private FilesService filesService;
 
     @Autowired
-    private EntityRepository<Project> projectService;
+    private EntityRepository<? extends BaseProject> projectService;
 
     @Autowired
     private CredentialsService credentialsService;

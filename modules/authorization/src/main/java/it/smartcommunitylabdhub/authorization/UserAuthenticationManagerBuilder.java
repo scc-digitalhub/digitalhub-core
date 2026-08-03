@@ -24,7 +24,7 @@ package it.smartcommunitylabdhub.authorization;
 
 import it.smartcommunitylabdhub.authorization.services.AuthorizableAwareEntityService;
 import it.smartcommunitylabdhub.authorization.services.CredentialsProvider;
-import it.smartcommunitylabdhub.commons.models.project.Project;
+import it.smartcommunitylabdhub.commons.models.project.BaseProject;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -40,7 +40,7 @@ import org.springframework.stereotype.Service;
 public class UserAuthenticationManagerBuilder {
 
     private List<CredentialsProvider> credentialsProviders = Collections.emptyList();
-    private AuthorizableAwareEntityService<Project> projectAuthHelper;
+    private AuthorizableAwareEntityService<? extends BaseProject> projectAuthHelper;
     private AuthenticationEventPublisher eventPublisher;
     private MessageSource messageSource;
 
@@ -62,7 +62,7 @@ public class UserAuthenticationManagerBuilder {
     }
 
     @Autowired
-    public void setProjectAuthHelper(AuthorizableAwareEntityService<Project> projectAuthHelper) {
+    public void setProjectAuthHelper(AuthorizableAwareEntityService<? extends BaseProject> projectAuthHelper) {
         this.projectAuthHelper = projectAuthHelper;
     }
 

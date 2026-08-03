@@ -27,7 +27,7 @@ import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.ConfigurationProvider;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
-import it.smartcommunitylabdhub.commons.models.project.Project;
+import it.smartcommunitylabdhub.commons.models.project.BaseProject;
 import it.smartcommunitylabdhub.commons.models.project.ProjectBaseSpec;
 import it.smartcommunitylabdhub.files.config.FilesProperties;
 import it.smartcommunitylabdhub.files.http.HttpStore;
@@ -109,7 +109,7 @@ public class FilesService implements ConfigurationProvider, InitializingBean {
     }
 
     //TODO refactor
-    public String getDefaultStore(@Nullable Project project) {
+    public String getDefaultStore(@Nullable BaseProject project) {
         //define base store, prefer any s3 with bucket if available
         List<String> keys = stores
             .keySet()
