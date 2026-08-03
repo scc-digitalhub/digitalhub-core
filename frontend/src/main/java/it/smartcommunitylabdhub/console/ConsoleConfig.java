@@ -58,4 +58,16 @@ public class ConsoleConfig extends AbstractConfiguration {
 
     @JsonProperty("react_app_clarity_key")
     private String clarityKey;
+
+    @JsonProperty("react_app_user_metrics")
+    private String userMetrics;
+
+    @JsonProperty("react_app_instance_metrics")
+    private String instanceMetrics;
+
+    @JsonProperty("react_app_run_metrics")
+    private String runMetrics;
+
+    @JsonProperty("react_app_project_metrics")
+    private String projectMetrics;
 }

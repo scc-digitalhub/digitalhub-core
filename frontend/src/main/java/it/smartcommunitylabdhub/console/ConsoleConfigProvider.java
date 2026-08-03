@@ -25,10 +25,9 @@ package it.smartcommunitylabdhub.console;
 import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
 import it.smartcommunitylabdhub.commons.config.SecurityProperties;
 import it.smartcommunitylabdhub.commons.infrastructure.ConfigurationProvider;
+import it.smartcommunitylabdhub.console.config.ConsoleProperties;
 import it.smartcommunitylabdhub.console.controllers.ConsoleController;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -36,10 +35,18 @@ import org.springframework.util.StringUtils;
 public class ConsoleConfigProvider implements ConfigurationProvider {
 
     private ConsoleConfig config;
+    private ConsoleProperties consoleProperties;
 
-    public ConsoleConfigProvider(ApplicationProperties properties, SecurityProperties securityProperties) {
+    public ConsoleConfigProvider(
+        ConsoleProperties consoleProperties,
+        ApplicationProperties properties,
+        SecurityProperties securityProperties
+    ) {
+        Assert.notNull(consoleProperties, "console properties can not be null");
         Assert.notNull(properties, "properties can not be null");
         Assert.notNull(securityProperties, "securityProperties can not be null");
+
+        this.consoleProperties = consoleProperties;
 
         log.debug("Build configuration for provider...");
         String applicationUrl = StringUtils.hasText(properties.getEndpoint()) ? properties.getEndpoint() : "";
@@ -54,17 +61,16 @@ public class ConsoleConfigProvider implements ConfigurationProvider {
             builder.authUrl(applicationUrl + ConsoleController.AUTH_PATH);
         }
 
+        builder
+            .runMetrics(consoleProperties.getRunMetrics())
+            .userMetrics(consoleProperties.getUserMetrics())
+            .instanceMetrics(consoleProperties.getInstanceMetrics())
+            .projectMetrics(consoleProperties.getProjectMetrics());
+
         this.config = builder.build();
 
         if (log.isTraceEnabled()) {
             log.trace("config: {}", config.toJson());
-        }
-    }
-
-    @Autowired
-    public void setClarityKey(@Value("${frontend.clarity.key}") String clarityKey) {
-        if (this.config != null) {
-            this.config.setClarityKey(clarityKey);
         }
     }
 

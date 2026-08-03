@@ -28,6 +28,7 @@ import it.smartcommunitylabdhub.commons.config.SecurityProperties;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.console.ConsoleConfigProvider;
 import it.smartcommunitylabdhub.console.Keys;
+import it.smartcommunitylabdhub.console.config.ConsoleProperties;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Collection;
 import java.util.HashMap;
@@ -38,7 +39,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -61,16 +61,13 @@ public class ConsoleController {
     @Autowired
     private ConfigurationService configurationService;
 
-    public ConsoleController(ApplicationProperties applicationProperties, SecurityProperties securityProperties) {
+    public ConsoleController(
+        ConsoleProperties consoleProperties,
+        ApplicationProperties applicationProperties,
+        SecurityProperties securityProperties
+    ) {
         this.applicationProperties = applicationProperties;
-        configProvider = new ConsoleConfigProvider(applicationProperties, securityProperties);
-    }
-
-    @Autowired
-    public void setClarityKey(@Value("${frontend.clarity.key}") String clarityKey) {
-        if (this.configProvider != null) {
-            this.configProvider.setClarityKey(clarityKey);
-        }
+        configProvider = new ConsoleConfigProvider(consoleProperties, applicationProperties, securityProperties);
     }
 
     @GetMapping(value = { "/", CONSOLE_CONTEXT })

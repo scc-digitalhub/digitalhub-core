@@ -142,6 +142,3 @@ jwt:
 templates:
   path: ${TEMPLATES_PATH:classpath:/templates}
 
-frontend:
-  clarity:
-    key: ${FRONTEND_CLARITY_KEY:}
