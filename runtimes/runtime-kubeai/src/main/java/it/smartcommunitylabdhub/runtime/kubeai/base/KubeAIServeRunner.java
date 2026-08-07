@@ -250,6 +250,7 @@ public class KubeAIServeRunner {
             .apiVersion(KUBEAI_API_VERSION)
             .kind(KUBEAI_API_KIND)
             .plural(KUBEAI_API_PLURAL)
+            .template(taskSpec.getProfile())
             .spec(JacksonMapper.CUSTOM_OBJECT_MAPPER.convertValue(modelSpec, Map.class))
             .requiresSecret(envFrom != null)
             .build();
