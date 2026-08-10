@@ -1,3 +1,5 @@
 lucene:
   index-path: ${LUCENE_INDEX_PATH:./data/index}
   reindex: ${LUCENE_REINDEX:never}
+  buffer-size: ${LUCENE_BUFFER_SIZE_MB:64}
+  commit-interval: ${LUCENE_COMMIT_INTERVAL_S:60}

@@ -31,20 +31,29 @@ import it.smartcommunitylabdhub.search.indexers.SearchGroupResult;
 import it.smartcommunitylabdhub.search.indexers.SearchPage;
 import it.smartcommunitylabdhub.search.service.SearchService;
 import jakarta.annotation.PreDestroy;
+import java.time.Duration;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.lucene.document.Document;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.SchedulingConfigurer;
+import org.springframework.scheduling.config.FixedDelayTask;
+import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 import org.springframework.util.Assert;
 
 @Slf4j
-public class LuceneComponent implements SearchService, InitializingBean {
+public class LuceneComponent implements SearchService, SchedulingConfigurer, InitializingBean {
+
+    private static final int DEFAULT_DELAY = 60; //every minute
+    private static final int INITIAL_DELAY = 120; //wait 120s for start
 
     private LuceneManager indexManager;
+    private LuceneProperties properties;
 
     public LuceneComponent(LuceneProperties properties) {
         Assert.notNull(properties, "lucene properties are required");
+        this.properties = properties;
 
         if (log.isTraceEnabled()) {
             log.trace("properties: {}", properties);
@@ -57,6 +66,9 @@ public class LuceneComponent implements SearchService, InitializingBean {
     @Override
     public void afterPropertiesSet() {
         Assert.notNull(indexManager, "index manager missing");
+        if (log.isTraceEnabled()) {
+            log.trace("init lucene component");
+        }
         try {
             //init
             indexManager.init();
@@ -68,12 +80,47 @@ public class LuceneComponent implements SearchService, InitializingBean {
 
     @PreDestroy
     public void close() {
+        if (log.isTraceEnabled()) {
+            log.trace("close lucene component");
+        }
         try {
             if (indexManager != null) {
                 indexManager.close();
             }
         } catch (IndexerException e) {
             log.error("error disconnecting lucene: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void configureTasks(ScheduledTaskRegistrar registrar) {
+        Integer interval =
+            properties.getCommitInterval() != null && properties.getCommitInterval() > DEFAULT_DELAY
+                ? properties.getCommitInterval()
+                : DEFAULT_DELAY;
+        registrar.addFixedDelayTask(
+            new FixedDelayTask(this::scheduledCommit, Duration.ofSeconds(interval), Duration.ofSeconds(INITIAL_DELAY))
+        );
+    }
+
+    public void scheduledCommit() {
+        if (log.isTraceEnabled()) {
+            log.trace("scheduled commit lucene index");
+        }
+        try {
+            this.commit();
+        } catch (IndexerException e) {
+            log.error("error committing lucene index: {}", e.getMessage());
+        }
+    }
+
+    /*
+     * public API
+     */
+
+    public void commit() throws IndexerException {
+        if (indexManager != null) {
+            indexManager.commit();
         }
     }
 
@@ -87,6 +134,11 @@ public class LuceneComponent implements SearchService, InitializingBean {
             throw new IllegalArgumentException("missing or invalid type in doc");
         }
         if (indexManager != null) {
+            log.debug("index doc {}", doc.getField("id").stringValue());
+
+            if (log.isTraceEnabled()) {
+                log.trace("index doc: {}", doc);
+            }
             indexManager.indexDoc(doc);
         }
     }
@@ -94,6 +146,8 @@ public class LuceneComponent implements SearchService, InitializingBean {
     public void removeDoc(String id) throws IndexerException {
         Assert.notNull(id, "id can not be null");
         if (indexManager != null) {
+            log.debug("remove doc {}", id);
+
             indexManager.removeDoc(id);
         }
     }
@@ -101,6 +155,11 @@ public class LuceneComponent implements SearchService, InitializingBean {
     public void indexBounce(Iterable<Document> docs) throws IndexerException {
         Assert.notNull(docs, "docs can not be null");
         if (indexManager != null) {
+            log.debug("index bounce docs");
+            if (log.isTraceEnabled()) {
+                log.trace("index bounce docs: {}", docs);
+            }
+
             indexManager.indexBounce(docs);
         }
     }
@@ -131,12 +190,15 @@ public class LuceneComponent implements SearchService, InitializingBean {
 
     public void clearIndex() throws IndexerException {
         if (indexManager != null) {
+            log.debug("clear index");
             indexManager.clearIndex();
         }
     }
 
     public void clearIndexByType(String type) throws IndexerException {
+        Assert.notNull(type, "type is required");
         if (indexManager != null) {
+            log.debug("clear index by type {}", type);
             indexManager.clearIndexByType(type);
         }
     }
