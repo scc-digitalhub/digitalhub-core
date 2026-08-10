@@ -14,6 +14,8 @@ Also adds a preview for the SQL client, based on Trino, and for *ServiceGraph* f
 
 ### Features
 
+* k8s cr framework and kubeai support templates ([6284437](https://github.com/scc-digitalhub/digitalhub-core/commit/628443798ed71d6f5121684cfc1213fafd5391cd))
+* prometheus aggregation metric for counts configurable, defaults to sum ([d750ca1](https://github.com/scc-digitalhub/digitalhub-core/commit/d750ca1f49d8c50d72af5f53f85c70bfba538e62))
 * console properties configurable ([1edc452](https://github.com/scc-digitalhub/digitalhub-core/commit/1edc4520516ed137fda2789ee80eebcb06337fa8))
 * resource quotas for prometheus provider ([e9c7b82](https://github.com/scc-digitalhub/digitalhub-core/commit/e9c7b8245ae4fb70d32257dffa598245ee139bec))
 * k8s metrics provider for component metrics with local store ([80a90eb](https://github.com/scc-digitalhub/digitalhub-core/commit/80a90eb987c390af5bddc78016bee82f165dbd90))
@@ -49,6 +51,7 @@ Also adds a preview for the SQL client, based on Trino, and for *ServiceGraph* f
 
 ### Bug Fixes
 
+* lucene remove locking and use buffering + flush + scheduled commits to resolve parallelism issues ([980a7e6](https://github.com/scc-digitalhub/digitalhub-core/commit/980a7e667de375fa593ee053ef012b77267b205d))
 * avoid template service crash on wrong spec/kind usage ([055881a](https://github.com/scc-digitalhub/digitalhub-core/commit/055881a9685ffbe4e2137067cd615970ef482b66))
 * explicit keyGenerator for local log service ([aae1699](https://github.com/scc-digitalhub/digitalhub-core/commit/aae169945ea07ff9e5582d486b33a12814f1a1ac))
 * kubernetes module exported templates are copied only when set ([43535b7](https://github.com/scc-digitalhub/digitalhub-core/commit/43535b77b72dd726dc4799903e566708f27f8313))
