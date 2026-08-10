@@ -13,6 +13,7 @@ providers:
         label: ${PROMETHEUS_METRICS_CPU_LABEL:cpu}
         group-by: ${PROMETHEUS_METRICS_CPU_GROUP_BY:container}
         operation: ${PROMETHEUS_METRICS_CPU_OPERATION:rate}
+        aggregation: ${PROMETHEUS_METRICS_CPU_AGGREGATION:sum}
         window: ${PROMETHEUS_METRICS_CPU_WINDOW:2m}
         quota: ${PROMETHEUS_METRICS_CPU_QUOTA:}
       cpu-requested:
@@ -21,6 +22,7 @@ providers:
         label: ${PROMETHEUS_METRICS_CPU_REQUESTED_LABEL:cpu-requested}
         group-by: ${PROMETHEUS_METRICS_CPU_REQUESTED_GROUP_BY:container}
         operation: ${PROMETHEUS_METRICS_CPU_REQUESTED_OPERATION:rate}
+        aggregation: ${PROMETHEUS_METRICS_CPU_REQUESTED_AGGREGATION:sum}
         window: ${PROMETHEUS_METRICS_CPU_REQUESTED_WINDOW:2m}
         quota: ${PROMETHEUS_METRICS_CPU_REQUESTED_QUOTA:}
       memory:
@@ -29,6 +31,7 @@ providers:
         label: ${PROMETHEUS_METRICS_MEMORY_LABEL:memory}
         group-by: ${PROMETHEUS_METRICS_MEMORY_GROUP_BY:container}
         operation: ${PROMETHEUS_METRICS_MEMORY_OPERATION:}
+        aggregation: ${PROMETHEUS_METRICS_MEMORY_AGGREGATION:sum}
         window: ${PROMETHEUS_METRICS_MEMORY_WINDOW:}
         quota: ${PROMETHEUS_METRICS_MEMORY_QUOTA:}
       memory-requested:
@@ -37,6 +40,7 @@ providers:
         label: ${PROMETHEUS_METRICS_MEMORY_REQUESTED_LABEL:memory-requested}
         group-by: ${PROMETHEUS_METRICS_MEMORY_REQUESTED_GROUP_BY:container}
         operation: ${PROMETHEUS_METRICS_MEMORY_REQUESTED_OPERATION:}
+        aggregation: ${PROMETHEUS_METRICS_MEMORY_REQUESTED_AGGREGATION:sum}
         window: ${PROMETHEUS_METRICS_MEMORY_REQUESTED_WINDOW:}
         quota: ${PROMETHEUS_METRICS_MEMORY_REQUESTED_QUOTA:}
       disk:
@@ -45,6 +49,7 @@ providers:
         label: ${PROMETHEUS_METRICS_DISK_LABEL:disk-{device}}
         group-by: ${PROMETHEUS_METRICS_DISK_GROUP_BY:container}
         operation: ${PROMETHEUS_METRICS_DISK_OPERATION:}
+        aggregation: ${PROMETHEUS_METRICS_DISK_AGGREGATION:sum}
         window: ${PROMETHEUS_METRICS_DISK_WINDOW:}
         quota: ${PROMETHEUS_METRICS_DISK_QUOTA:}
       volumes:
@@ -53,6 +58,7 @@ providers:
         label: ${PROMETHEUS_METRICS_VOLUMES_LABEL:volume-{persistentvolumeclaim}}
         group-by: ${PROMETHEUS_METRICS_VOLUMES_GROUP_BY:}
         operation: ${PROMETHEUS_METRICS_VOLUMES_OPERATION:}
+        aggregation: ${PROMETHEUS_METRICS_VOLUMES_AGGREGATION:sum}
         window: ${PROMETHEUS_METRICS_VOLUMES_WINDOW:}
         quota: ${PROMETHEUS_METRICS_VOLUMES_QUOTA:}
       volumes-count:
@@ -61,6 +67,7 @@ providers:
         label: ${PROMETHEUS_METRICS_VOLUMES_COUNT_LABEL:volumes-count}
         group-by: ${PROMETHEUS_METRICS_VOLUMES_COUNT_GROUP_BY:}
         operation: ${PROMETHEUS_METRICS_VOLUMES_COUNT_OPERATION:}
+        aggregation: ${PROMETHEUS_METRICS_VOLUMES_COUNT_AGGREGATION:sum}
         window: ${PROMETHEUS_METRICS_VOLUMES_COUNT_WINDOW:}
         quota: ${PROMETHEUS_METRICS_VOLUMES_COUNT_QUOTA:}
       gpu:
@@ -69,6 +76,7 @@ providers:
         label: ${PROMETHEUS_METRICS_GPU_LABEL:gpu}
         group-by: ${PROMETHEUS_METRICS_GPU_GROUP_BY:container}
         operation: ${PROMETHEUS_METRICS_GPU_OPERATION:}
+        aggregation: ${PROMETHEUS_METRICS_GPU_AGGREGATION:sum}
         window: ${PROMETHEUS_METRICS_GPU_WINDOW:}
         quota: ${PROMETHEUS_METRICS_GPU_QUOTA:}
       gpu-count:
@@ -77,6 +85,7 @@ providers:
         label: ${PROMETHEUS_METRICS_GPU_COUNT_LABEL:gpu-count}
         group-by: ${PROMETHEUS_METRICS_GPU_COUNT_GROUP_BY:}
         operation: ${PROMETHEUS_METRICS_GPU_COUNT_OPERATION:}
+        aggregation: ${PROMETHEUS_METRICS_GPU_COUNT_AGGREGATION:sum}
         window: ${PROMETHEUS_METRICS_GPU_COUNT_WINDOW:}
         quota: ${PROMETHEUS_METRICS_GPU_COUNT_QUOTA:}
       gpu-memory:
@@ -85,6 +94,7 @@ providers:
         label: ${PROMETHEUS_MET RICS_GPU_MEMORY_LABEL:gpu-memory}
         group-by: ${PROMETHEUS_METRICS_GPU_MEMORY_GROUP_BY:container}
         operation: ${PROMETHEUS_METRICS_GPU_MEMORY_OPERATION:}
+        aggregation: ${PROMETHEUS_METRICS_GPU_MEMORY_AGGREGATION:sum}
         window: ${PROMETHEUS_METRICS_GPU_MEMORY_WINDOW:}
         quota: ${PROMETHEUS_METRICS_GPU_MEMORY_QUOTA:}
       network-send:
@@ -93,6 +103,7 @@ providers:
         label: ${PROMETHEUS_METRICS_NETWORK_SEND_LABEL:{interface}-send}
         group-by: ${PROMETHEUS_METRICS_NETWORK_SEND_GROUP_BY:pod}
         operation: ${PROMETHEUS_METRICS_NETWORK_SEND_OPERATION:rate}
+        aggregation: ${PROMETHEUS_METRICS_NETWORK_SEND_AGGREGATION:sum}
         window: ${PROMETHEUS_METRICS_NETWORK_SEND_WINDOW:2m}
         quota: ${PROMETHEUS_METRICS_NETWORK_SEND_QUOTA:}
       network-receive:
@@ -101,6 +112,7 @@ providers:
         label: ${PROMETHEUS_METRICS_NETWORK_RECEIVE_LABEL:{interface}-receive}
         group-by: ${PROMETHEUS_METRICS_NETWORK_RECEIVE_GROUP_BY:pod}
         operation: ${PROMETHEUS_METRICS_NETWORK_RECEIVE_OPERATION:rate}
+        aggregation: ${PROMETHEUS_METRICS_NETWORK_RECEIVE_AGGREGATION:sum}
         window: ${PROMETHEUS_METRICS_NETWORK_RECEIVE_WINDOW:2m}
         quota: ${PROMETHEUS_METRICS_NETWORK_RECEIVE_QUOTA:}
     mapping:

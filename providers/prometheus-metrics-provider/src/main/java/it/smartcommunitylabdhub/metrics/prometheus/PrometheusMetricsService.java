@@ -415,7 +415,14 @@ public class PrometheusMetricsService implements ResourceMetricsService {
                 }
 
                 //get a single value for the metric by summing all series, if any
-                String mq = String.format("sum(%s)", buildMetricQuery(filterQuery, entry.getValue(), start, end));
+                String aggregation = StringUtils.hasText(entry.getValue().aggregation())
+                    ? entry.getValue().aggregation()
+                    : "sum";
+                String mq = String.format(
+                    "%s(%s)",
+                    aggregation,
+                    buildMetricQuery(filterQuery, entry.getValue(), start, end)
+                );
 
                 if (log.isTraceEnabled()) {
                     log.trace("prometheus metric query for {}: {}", entry.getValue().name(), mq);
