@@ -62,7 +62,7 @@ jobs:
           if [ "$BUILD_ARM" = "true" ]; then
             PLATFORMS="${PLATFORMS:+$PLATFORMS,}linux/arm64"
 
-            if [ -n "$MATRIX" ] && [ "$MATRIX" != "[" ]; then
+            if [ "$MATRIX" != "[" ]; then
               MATRIX="$MATRIX,"
             fi
 
@@ -163,7 +163,13 @@ jobs:
         with:
           context: .
           platforms: ${{ matrix.platform }}
-          push: true
+          # Push to GHCR and export the image filesystem locally.
+          #
+          # The exported filesystem contains /app, which is the
+          # exact application filesystem used by the runtime image.
+          outputs: |
+            type=registry
+            type=local,dest=./release-artifact
 
           # Temporary architecture-specific image.
           #
@@ -190,6 +196,37 @@ jobs:
           cache-to: |
             type=gha,mode=max,scope=${{ env.IMAGE_NAME }}-${{ matrix.arch }}
             type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-${{ matrix.arch }},mode=max
+
+      - name: Package release artifact
+        if: github.event_name == 'release'
+        shell: bash
+        env:
+          VERSION: ${{ needs.determine-platforms.outputs.tag }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          mkdir -p dist
+
+          if [ "$ARCH" = "amd64" ]; then
+            NAME="digitalhub-core-${VERSION}"
+          else
+            NAME="digitalhub-core-${VERSION}-${ARCH}"
+          fi
+
+          tar \
+            -C release-artifact/app \
+            -czf "dist/${NAME}.tar.gz" \
+            .
+
+          echo "Created:"
+          ls -lh "dist/${NAME}.tar.gz"
+
+      - name: Upload release artifact
+        if: github.event_name == 'release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.arch }}
+          path: dist/*.tar.gz
+          if-no-files-found: error
 
   publish-prerelease:
     needs:
@@ -416,4 +453,43 @@ jobs:
             echo "Unsupported platform selection: $PLATFORMS"
             exit 1
           fi
+
+  publish-release-assets:
+    needs:
+      - determine-platforms
+      - build
+
+    # Attach the architecture-specific application archives
+    # to the GitHub Release.
+    if: github.event_name == 'release'
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+
+      - name: List release assets
+        shell: bash
+        run: |
+          echo "Release assets:"
+          ls -lh dist/
+
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        shell: bash
+        run: |
+          gh release upload \
+            "$RELEASE_TAG" \
+            dist/*.tar.gz \
+            --clobber
 
