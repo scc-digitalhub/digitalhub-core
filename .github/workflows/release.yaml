@@ -2,6 +2,7 @@ name: Create and publish a Docker image
 on:
   release:
     types: [published]
+
   workflow_dispatch:
     inputs:
       build_amd64:
@@ -9,8 +10,9 @@ on:
         required: false
         default: true
         type: boolean
+
       build_arm:
-        description: 'Build arm64 image (via QEMU)'
+        description: 'Build arm64 image (native ARM runner)'
         required: false
         default: false
         type: boolean
@@ -18,58 +20,390 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  IMAGE_DESCRIPTION: "DigitalHub is an Open-Source platform for building and managing Data and AI applications and services"
+
 jobs:
-  build-and-push-image:
+  determine-platforms:
     runs-on: ubuntu-latest
+
+    outputs:
+      platforms: ${{ steps.platforms.outputs.platforms }}
+      tag: ${{ steps.platforms.outputs.tag }}
+
+    steps:
+      - name: Determine build platforms
+        id: platforms
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            PLATFORMS=""
+
+            if [ "${{ inputs.build_amd64 }}" = "true" ]; then
+              PLATFORMS="linux/amd64"
+            fi
+
+            if [ "${{ inputs.build_arm }}" = "true" ]; then
+              PLATFORMS="${PLATFORMS:+$PLATFORMS,}linux/arm64"
+            fi
+
+            # Preserve original behavior:
+            # if neither architecture is selected, build amd64.
+            if [ -z "$PLATFORMS" ]; then
+              PLATFORMS="linux/amd64"
+            fi
+
+          elif [ "${{ github.event.release.prerelease }}" = "true" ]; then
+            # Pre-releases are AMD64 only.
+            PLATFORMS="linux/amd64"
+
+          else
+            # Final releases are multi-platform.
+            PLATFORMS="linux/amd64,linux/arm64"
+          fi
+
+          TAG="${{ github.event.release.tag_name || github.ref_name }}"
+
+          echo "platforms=$PLATFORMS" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+          echo "Platforms: $PLATFORMS"
+          echo "Tag: $TAG"
+
+  metadata:
+    needs: determine-platforms
+
+    runs-on: ubuntu-latest
+
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
+      labels: ${{ steps.meta.outputs.labels }}
+
+    steps:
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+          tags: |
+            # Version:
+            #   0.15.1       -> 0.15.1
+            #   0.15.1-beta16 -> 0.15.1-beta16
+            type=semver,pattern={{version}}
+
+            # Major/minor aliases for stable releases only:
+            #   0.15.1 -> 0.15
+            #   0.15.1 -> 0
+            type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'release' && github.event.release.prerelease == false }}
+            type=semver,pattern={{major}},enable=${{ github.event_name == 'release' && github.event.release.prerelease == false }}
+
+            # latest is stable releases only.
+            type=raw,value=latest,enable=${{ github.event_name == 'release' && github.event.release.prerelease == false }}
+
+            # Useful tags for manual workflow runs.
+            type=ref,event=branch
+            type=ref,event=tag
+          labels: |
+            org.opencontainers.image.description=${{ env.IMAGE_DESCRIPTION }}
+
+  build:
+    needs:
+      - determine-platforms
+      - metadata
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-24.04
+            arch: amd64
+
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            arch: arm64
+
+    # Only build architectures selected by determine-platforms.
+    if: contains(needs.determine-platforms.outputs.platforms, matrix.platform)
+
+    runs-on: ${{ matrix.runner }}
+
     permissions:
       contents: read
       packages: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: 'true'        
-      - name: Determine build platforms
-        id: platforms
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            PLATFORMS=""
-            [ "${{ inputs.build_amd64 }}" = "true" ] && PLATFORMS="linux/amd64"
-            if [ "${{ inputs.build_arm }}" = "true" ]; then
-              PLATFORMS="${PLATFORMS:+$PLATFORMS,}linux/arm64"
-            fi
-            [ -z "$PLATFORMS" ] && PLATFORMS="linux/amd64"
-          elif [ "${{ github.event.release.prerelease }}" = "true" ]; then
-            PLATFORMS="linux/amd64"
-          else
-            PLATFORMS="linux/amd64,linux/arm64"
-          fi
-          echo "platforms=$PLATFORMS" >> $GITHUB_OUTPUT
-      - name: Set up QEMU
-        if: steps.platforms.outputs.platforms != 'linux/amd64'
-        uses: docker/setup-qemu-action@v3
+          submodules: true
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-      - name: Build and push Docker image
+
+      - name: Build and push architecture image
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: ${{ steps.platforms.outputs.platforms }}
+          platforms: ${{ matrix.platform }}
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+
+          # Temporary architecture-specific image.
+          #
+          # These images are used as the source images when the
+          # final tags/manifests are published.
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.determine-platforms.outputs.tag }}-${{ matrix.arch }}
+
+          labels: ${{ needs.metadata.outputs.labels }}
+
           build-args: |
-            VER=${{ github.event.release.tag_name || github.ref_name }}   
-          cache-from: type=gha
-          cache-to: type=gha,mode=max            
+            VER=${{ needs.determine-platforms.outputs.tag }}
+
+          # Two cache backends:
+          #
+          # 1. GitHub Actions cache
+          # 2. GHCR registry cache
+          #
+          # Each architecture has an independent cache.
+          cache-from: |
+            type=gha,scope=${{ env.IMAGE_NAME }}-${{ matrix.arch }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-${{ matrix.arch }}
+
+          cache-to: |
+            type=gha,mode=max,scope=${{ env.IMAGE_NAME }}-${{ matrix.arch }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-${{ matrix.arch }},mode=max
+
+  publish-prerelease:
+    needs:
+      - determine-platforms
+      - metadata
+      - build
+
+    # Pre-release:
+    #   AMD64 only
+    #   prerelease version tag only
+    #
+    # Example:
+    #   0.15.1-beta16
+    #
+    # Produces:
+    #   :0.15.1-beta16
+    #
+    # latest is NOT updated.
+    if: |
+      github.event_name == 'release' &&
+      github.event.release.prerelease == true
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      packages: write
+
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish pre-release tag
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          TAG: ${{ needs.determine-platforms.outputs.tag }}
+          METADATA_TAGS: ${{ needs.metadata.outputs.tags }}
+        shell: bash
+        run: |
+          SOURCE="$IMAGE:$TAG-amd64"
+
+          echo "Source image:"
+          echo "$SOURCE"
+          echo
+          echo "Publishing:"
+          echo "$METADATA_TAGS"
+
+          while IFS= read -r TARGET; do
+            [ -z "$TARGET" ] && continue
+
+            docker buildx imagetools create \
+              -t "$TARGET" \
+              "$SOURCE"
+          done <<< "$METADATA_TAGS"
+
+  publish-release:
+    needs:
+      - determine-platforms
+      - metadata
+      - build
+
+    # Final release:
+    #   AMD64 + ARM64
+    #   version + major/minor + major + latest
+    #
+    # Example:
+    #   0.15.1
+    #
+    # Produces:
+    #   :0.15.1
+    #   :0.15
+    #   :0
+    #   :latest
+    #
+    # All point to the multi-platform AMD64 + ARM64 manifest.
+    if: |
+      github.event_name == 'release' &&
+      github.event.release.prerelease == false
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      packages: write
+
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish multi-platform release tags
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          TAG: ${{ needs.determine-platforms.outputs.tag }}
+          METADATA_TAGS: ${{ needs.metadata.outputs.tags }}
+        shell: bash
+        run: |
+          AMD64="$IMAGE:$TAG-amd64"
+          ARM64="$IMAGE:$TAG-arm64"
+
+          echo "AMD64 image:"
+          echo "$AMD64"
+          echo
+          echo "ARM64 image:"
+          echo "$ARM64"
+          echo
+          echo "Publishing:"
+          echo "$METADATA_TAGS"
+
+          while IFS= read -r TARGET; do
+            [ -z "$TARGET" ] && continue
+
+            docker buildx imagetools create \
+              --annotation "index:org.opencontainers.image.description=${IMAGE_DESCRIPTION}" \
+              -t "$TARGET" \
+              "$AMD64" \
+              "$ARM64"
+          done <<< "$METADATA_TAGS"
+
+  publish-manual:
+    needs:
+      - determine-platforms
+      - metadata
+      - build
+
+    # Manual builds use the selected architecture(s).
+    #
+    # One architecture:
+    #   publish the selected image directly.
+    #
+    # Two architectures:
+    #   publish a multi-platform manifest.
+    #
+    # Manual builds NEVER update latest.
+    if: github.event_name == 'workflow_dispatch'
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      packages: write
+
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish manual build
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          TAG: ${{ needs.determine-platforms.outputs.tag }}
+          PLATFORMS: ${{ needs.determine-platforms.outputs.platforms }}
+          METADATA_TAGS: ${{ needs.metadata.outputs.tags }}
+        shell: bash
+        run: |
+          if [ "$PLATFORMS" = "linux/amd64" ]; then
+            SOURCE="$IMAGE:$TAG-amd64"
+
+            while IFS= read -r TARGET; do
+              [ -z "$TARGET" ] && continue
+
+              # Never allow manual builds to update latest.
+              if [ "$TARGET" = "$IMAGE:latest" ]; then
+                continue
+              fi
+
+              docker buildx imagetools create \
+                -t "$TARGET" \
+                "$SOURCE"
+            done <<< "$METADATA_TAGS"
+
+          elif [ "$PLATFORMS" = "linux/arm64" ]; then
+            SOURCE="$IMAGE:$TAG-arm64"
+
+            while IFS= read -r TARGET; do
+              [ -z "$TARGET" ] && continue
+
+              # Never allow manual builds to update latest.
+              if [ "$TARGET" = "$IMAGE:latest" ]; then
+                continue
+              fi
+
+              docker buildx imagetools create \
+                -t "$TARGET" \
+                "$SOURCE"
+            done <<< "$METADATA_TAGS"
+
+          elif [ "$PLATFORMS" = "linux/amd64,linux/arm64" ]; then
+            AMD64="$IMAGE:$TAG-amd64"
+            ARM64="$IMAGE:$TAG-arm64"
+
+            while IFS= read -r TARGET; do
+              [ -z "$TARGET" ] && continue
+
+              # Never allow manual builds to update latest.
+              if [ "$TARGET" = "$IMAGE:latest" ]; then
+                continue
+              fi
+
+              docker buildx imagetools create \
+                -t "$TARGET" \
+                "$AMD64" \
+                "$ARM64"
+            done <<< "$METADATA_TAGS"
+
+          else
+            echo "Unsupported platform selection: $PLATFORMS"
+            exit 1
+          fi
+```
