@@ -5,6 +5,7 @@ import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.metrics.ResourceMetrics;
 import it.smartcommunitylabdhub.metrics.ResourceMetrics.Metric;
 import it.smartcommunitylabdhub.metrics.ResourceMetricsService;
@@ -257,7 +258,7 @@ public class PrometheusMetricsService implements ResourceMetricsService {
         //build promQL from filter
         List<Pair<String, String>> filters = new ArrayList<>();
         //exact match always for user, no lazy filter
-        filters.add(Pair.of("user", user));
+        filters.add(Pair.of("user", K8sBuilderHelper.sanitizeNames(user)));
 
         List<ResourceMetrics> list = get(filters, start, end);
         //assemble a single result, results come as vectors from prometheus
@@ -308,7 +309,7 @@ public class PrometheusMetricsService implements ResourceMetricsService {
         //build promQL from filter
         List<Pair<String, String>> filters = new ArrayList<>();
         //exact match always for user, no lazy filter
-        filters.add(Pair.of("user", user));
+        filters.add(Pair.of("user",  K8sBuilderHelper.sanitizeNames(user)));
 
         List<ResourceMetrics> metrics = fetch(filters, start, end);
         if (log.isTraceEnabled()) {
