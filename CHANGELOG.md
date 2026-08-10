@@ -51,6 +51,7 @@ Also adds a preview for the SQL client, based on Trino, and for *ServiceGraph* f
 
 ### Bug Fixes
 
+* prometheus user queries should sanitize usernames for filters ([3a85c47](https://github.com/scc-digitalhub/digitalhub-core/commit/3a85c47fa9450ebed92b51ba7e4c207eba38cf2e))
 * lucene remove locking and use buffering + flush + scheduled commits to resolve parallelism issues ([980a7e6](https://github.com/scc-digitalhub/digitalhub-core/commit/980a7e667de375fa593ee053ef012b77267b205d))
 * avoid template service crash on wrong spec/kind usage ([055881a](https://github.com/scc-digitalhub/digitalhub-core/commit/055881a9685ffbe4e2137067cd615970ef482b66))
 * explicit keyGenerator for local log service ([aae1699](https://github.com/scc-digitalhub/digitalhub-core/commit/aae169945ea07ff9e5582d486b33a12814f1a1ac))
