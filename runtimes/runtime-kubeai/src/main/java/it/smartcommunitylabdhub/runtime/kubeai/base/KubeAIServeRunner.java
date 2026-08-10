@@ -245,6 +245,7 @@ public class KubeAIServeRunner {
                     ? List.of(new CoreLabel(k8sLabelHelper.buildCoreLabel("function"), taskAccessor.getFunction()))
                     : null
             )
+            .template(taskSpec.getProfile())
             .name(modelName)
             .apiGroup(KUBEAI_API_GROUP)
             .apiVersion(KUBEAI_API_VERSION)

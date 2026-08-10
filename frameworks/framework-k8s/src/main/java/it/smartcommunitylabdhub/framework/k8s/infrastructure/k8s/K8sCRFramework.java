@@ -43,7 +43,9 @@ import it.smartcommunitylabdhub.commons.annotations.infrastructure.FrameworkComp
 import it.smartcommunitylabdhub.commons.exceptions.FrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
@@ -86,6 +88,14 @@ public class K8sCRFramework extends K8sBaseFramework<K8sCRRunnable, DynamicKuber
         if (groups != null) {
             this.apiGroups = Collections.unmodifiableSet(StringUtils.commaDelimitedListToSet(groups));
         }
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        super.afterPropertiesSet();
+
+        //load templates
+        this.templates = loadTemplates(K8sCRRunnable.class);
     }
 
     @Override
