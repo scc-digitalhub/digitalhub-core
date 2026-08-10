@@ -29,6 +29,7 @@ jobs:
     outputs:
       platforms: ${{ steps.platforms.outputs.platforms }}
       tag: ${{ steps.platforms.outputs.tag }}
+      matrix: ${{ steps.platforms.outputs.matrix }}
 
     steps:
       - name: Determine build platforms
@@ -36,38 +37,56 @@ jobs:
         shell: bash
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            PLATFORMS=""
-
-            if [ "${{ inputs.build_amd64 }}" = "true" ]; then
-              PLATFORMS="linux/amd64"
-            fi
-
-            if [ "${{ inputs.build_arm }}" = "true" ]; then
-              PLATFORMS="${PLATFORMS:+$PLATFORMS,}linux/arm64"
-            fi
-
-            # Preserve original behavior:
-            # if neither architecture is selected, build amd64.
-            if [ -z "$PLATFORMS" ]; then
-              PLATFORMS="linux/amd64"
-            fi
+            BUILD_AMD64="${{ inputs.build_amd64 }}"
+            BUILD_ARM="${{ inputs.build_arm }}"
 
           elif [ "${{ github.event.release.prerelease }}" = "true" ]; then
             # Pre-releases are AMD64 only.
-            PLATFORMS="linux/amd64"
+            BUILD_AMD64="true"
+            BUILD_ARM="false"
 
           else
             # Final releases are multi-platform.
-            PLATFORMS="linux/amd64,linux/arm64"
+            BUILD_AMD64="true"
+            BUILD_ARM="true"
           fi
+
+          PLATFORMS=""
+          MATRIX="["
+
+          if [ "$BUILD_AMD64" = "true" ]; then
+            PLATFORMS="linux/amd64"
+            MATRIX="${MATRIX}"'{"platform":"linux/amd64","runner":"ubuntu-24.04","arch":"amd64"}'
+          fi
+
+          if [ "$BUILD_ARM" = "true" ]; then
+            PLATFORMS="${PLATFORMS:+$PLATFORMS,}linux/arm64"
+
+            if [ -n "$MATRIX" ] && [ "$MATRIX" != "[" ]; then
+              MATRIX="$MATRIX,"
+            fi
+
+            MATRIX="$MATRIX"'{"platform":"linux/arm64","runner":"ubuntu-24.04-arm","arch":"arm64"}'
+          fi
+
+          # Preserve original behavior:
+          # if neither architecture is selected, build amd64.
+          if [ -z "$PLATFORMS" ]; then
+            PLATFORMS="linux/amd64"
+            MATRIX="${MATRIX}"'{"platform":"linux/amd64","runner":"ubuntu-24.04","arch":"amd64"}'
+          fi
+
+          MATRIX="$MATRIX]"
 
           TAG="${{ github.event.release.tag_name || github.ref_name }}"
 
           echo "platforms=$PLATFORMS" >> "$GITHUB_OUTPUT"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
 
           echo "Platforms: $PLATFORMS"
           echo "Tag: $TAG"
+          echo "Matrix: $MATRIX"
 
   metadata:
     needs: determine-platforms
@@ -87,7 +106,7 @@ jobs:
 
           tags: |
             # Version:
-            #   0.15.1       -> 0.15.1
+            #   0.15.1        -> 0.15.1
             #   0.15.1-beta16 -> 0.15.1-beta16
             type=semver,pattern={{version}}
 
@@ -103,6 +122,7 @@ jobs:
             # Useful tags for manual workflow runs.
             type=ref,event=branch
             type=ref,event=tag
+
           labels: |
             org.opencontainers.image.description=${{ env.IMAGE_DESCRIPTION }}
 
@@ -113,19 +133,8 @@ jobs:
 
     strategy:
       fail-fast: false
-
       matrix:
-        include:
-          - platform: linux/amd64
-            runner: ubuntu-24.04
-            arch: amd64
-
-          - platform: linux/arm64
-            runner: ubuntu-24.04-arm
-            arch: arm64
-
-    # Only build architectures selected by determine-platforms.
-    if: contains(needs.determine-platforms.outputs.platforms, matrix.platform)
+        include: ${{ fromJSON(needs.determine-platforms.outputs.matrix) }}
 
     runs-on: ${{ matrix.runner }}
 
@@ -287,6 +296,7 @@ jobs:
           IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           TAG: ${{ needs.determine-platforms.outputs.tag }}
           METADATA_TAGS: ${{ needs.metadata.outputs.tags }}
+          IMAGE_DESCRIPTION: ${{ env.IMAGE_DESCRIPTION }}
         shell: bash
         run: |
           AMD64="$IMAGE:$TAG-amd64"
