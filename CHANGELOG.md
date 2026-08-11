@@ -14,6 +14,7 @@ Also adds a preview for the SQL client, based on Trino, and for *ServiceGraph* f
 
 ### Features
 
+* let admin use force update for entitites ([162e4b2](https://github.com/scc-digitalhub/digitalhub-core/commit/162e4b20f7d8e083957f81a228ce3a9debab4d01))
 * k8s cr framework and kubeai support templates ([6284437](https://github.com/scc-digitalhub/digitalhub-core/commit/628443798ed71d6f5121684cfc1213fafd5391cd))
 * prometheus aggregation metric for counts configurable, defaults to sum ([d750ca1](https://github.com/scc-digitalhub/digitalhub-core/commit/d750ca1f49d8c50d72af5f53f85c70bfba538e62))
 * console properties configurable ([1edc452](https://github.com/scc-digitalhub/digitalhub-core/commit/1edc4520516ed137fda2789ee80eebcb06337fa8))
