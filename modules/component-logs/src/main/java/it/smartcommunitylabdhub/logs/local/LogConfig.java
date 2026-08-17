@@ -31,11 +31,7 @@ public class LogConfig {
 
     @Bean
     @ConditionalOnMissingBean(LogService.class)
-    public LocalLogServiceImpl logService(
-        LogRepository repository,
-        Converter<Log, LogEntity> entityBuilder,
-        Converter<LogEntity, Log> dtoBuilder
-    ) {
-        return new LocalLogServiceImpl(repository, dtoBuilder, entityBuilder);
+    public LocalLogServiceImpl logService(LogRepository repository, Converter<LogEntity, Log> dtoBuilder) {
+        return new LocalLogServiceImpl(repository, dtoBuilder);
     }
 }
