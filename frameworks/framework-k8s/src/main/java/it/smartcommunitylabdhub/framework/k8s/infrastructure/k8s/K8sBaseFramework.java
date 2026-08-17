@@ -571,6 +571,10 @@ public abstract class K8sBaseFramework<
             return Collections.emptyList();
         }
 
+        if (object.getMetadata().getName() != null) {
+            log.debug("collect logs for {}", object.getMetadata().getName());
+        }
+
         List<CoreLog> logs = new ArrayList<>();
         List<V1Pod> pods = pods(object);
 
@@ -578,12 +582,16 @@ public abstract class K8sBaseFramework<
             if (p.getMetadata() != null && p.getStatus() != null) {
                 String pod = p.getMetadata().getName();
 
+                log.debug("collect logs for pod {}", pod);
+
                 //read init-containers first
                 if (p.getStatus().getInitContainerStatuses() != null) {
                     List<V1ContainerStatus> containers = p.getStatus().getInitContainerStatuses();
 
                     for (V1ContainerStatus c : containers) {
                         try {
+                            log.debug("collect logs for init container {} in pod {}", c.getName(), pod);
+
                             String log = coreV1Api.readNamespacedPodLog(
                                 pod,
                                 namespace,
@@ -617,6 +625,8 @@ public abstract class K8sBaseFramework<
                     List<V1ContainerStatus> containers = p.getStatus().getContainerStatuses();
                     for (V1ContainerStatus c : containers) {
                         try {
+                            log.debug("collect logs for container {} in pod {}", c.getName(), pod);
+
                             String log = coreV1Api.readNamespacedPodLog(
                                 pod,
                                 namespace,
@@ -645,6 +655,10 @@ public abstract class K8sBaseFramework<
                     }
                 }
             }
+        }
+
+        if (log.isTraceEnabled()) {
+            log.trace("collected logs: {}", logs);
         }
 
         return logs;
@@ -714,10 +728,7 @@ public abstract class K8sBaseFramework<
         if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
             //add template
             template = templates.get(runnable.getTemplate()).getProfile();
-            templateLabels.put(
-                k8sLabelHelper.buildCoreLabel("template"),
-                runnable.getTemplate()
-            );
+            templateLabels.put(k8sLabelHelper.buildCoreLabel("template"), runnable.getTemplate());
         } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
             //use default template
             template = templates.get(DEFAULT_TEMPLATE).getProfile();

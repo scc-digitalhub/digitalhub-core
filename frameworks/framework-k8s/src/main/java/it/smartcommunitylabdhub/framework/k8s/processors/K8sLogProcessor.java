@@ -42,6 +42,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
@@ -55,6 +56,7 @@ import org.springframework.validation.BindException;
 )
 @Component
 @ConditionalOnBean(LogStore.class)
+@Slf4j
 public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
 
     //TODO make configurable
@@ -85,6 +87,11 @@ public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
         String runId = run.getId();
         Instant now = Instant.now();
 
+        log.debug("write collected logs for run {}: {}", runId, logs.size());
+        if (log.isTraceEnabled()) {
+            log.trace("logs: {}", logs);
+        }
+
         //logs are grouped by pod+container, search by run and create/append
         Map<String, Log> entries = logService
             .getLogsByRunId(runId)
@@ -113,12 +120,15 @@ public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
                 String baseKey = l.namespace() + l.pod() + l.container();
                 String key = baseKey + (l.containerId() != null ? l.containerId() : "");
 
+                log.debug("process log {} for run {}", key, runId);
+
                 if (entries.get(key) != null) {
                     //update
-                    Log log = entries.get(key);
-                    log.setContent(l.value());
+                    Log le = entries.get(key);
+                    le.setContent(l.value());
 
-                    logService.updateLog(log.getId(), log);
+                    log.debug("update {} for log {} for run {}", le.getId(), key, runId);
+                    logService.updateLog(le.getId(), le);
                 } else {
                     //add as new
 
@@ -128,14 +138,15 @@ public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
                     logStatus.setNamespace(l.namespace());
                     logStatus.setContainerId(l.containerId());
 
-                    Log log = Log.builder()
+                    Log le = Log.builder()
                         .project(run.getProject())
                         .run(run.getId())
                         .extensions(logStatus.toMap())
                         .content(l.value())
                         .build();
 
-                    logService.createLog(log);
+                    log.debug("create new log {} for run {}", key, runId);
+                    logService.createLog(le);
                 }
             } catch (
                 NoSuchEntityException
