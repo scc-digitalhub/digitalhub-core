@@ -43,7 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -55,14 +55,18 @@ import org.springframework.validation.BindException;
     spec = Status.class
 )
 @Component
-@ConditionalOnBean(LogStore.class)
 @Slf4j
 public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
 
     //TODO make configurable
     public static final int MAX_METRICS = 300;
 
-    private final LogStore logService;
+    private LogStore logService;
+
+    @Autowired(required = false)
+    public void setLogService(LogStore logService) {
+        this.logService = logService;
+    }
 
     public K8sLogProcessor(LogStore logService) {
         Assert.notNull(logService, "log service is required to persist logs");
@@ -84,6 +88,11 @@ public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
     }
 
     private void writeLogs(Run run, List<CoreLog> logs) {
+        if (logService == null) {
+            log.debug("no log service available, skipping log processing for run {}", run.getId());
+            return;
+        }
+
         String runId = run.getId();
         Instant now = Instant.now();
 
