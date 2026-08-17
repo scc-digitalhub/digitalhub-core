@@ -23,10 +23,12 @@ import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.functions.FunctionManager;
+import it.smartcommunitylabdhub.models.ModelManager;
 import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipName;
 import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
 import it.smartcommunitylabdhub.runs.Run;
+import it.smartcommunitylabdhub.runtime.tvm.config.TvmProperties;
 import it.smartcommunitylabdhub.runtime.tvm.runners.build.TvmBuildRunner;
 import it.smartcommunitylabdhub.runtime.tvm.runners.compile.TvmCompileRunner;
 import it.smartcommunitylabdhub.runtime.tvm.runners.serve.TvmServeRunner;
@@ -48,14 +50,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 // TVM runtime: three K8s tasks — tvm+build (ONNX->IR), tvm+compile (IR->model.so), tvm+serve.
 @Slf4j
 @RuntimeComponent(runtime = TvmRuntime.RUNTIME)
 public class TvmRuntime
-        extends K8sFunctionBaseRuntime<TvmFunctionSpec, TvmRunSpec, TvmRunStatus, K8sRunnable> {
+        extends K8sFunctionBaseRuntime<TvmFunctionSpec, TvmRunSpec, TvmRunStatus, K8sRunnable>
+        implements InitializingBean {
 
     public static final String RUNTIME = "tvm";
     public static final String[] KINDS = { TvmBuildRunSpec.KIND, TvmCompileRunSpec.KIND, TvmServeRunSpec.KIND };
@@ -64,14 +71,10 @@ public class TvmRuntime
     public static final int GID = 1000;
     public static final String HOME_DIR = "/shared";
 
-    @Autowired
     private TvmBuildRunner buildRunner;
-
-    @Autowired
     private TvmCompileRunner compileRunner;
-
-    @Autowired
     private TvmServeRunner serveRunner;
+    private TvmProperties properties;
 
     @Autowired
     private SecretService secretService;
@@ -84,6 +87,21 @@ public class TvmRuntime
 
     @Autowired
     private FunctionManager functionService;
+
+    @Autowired
+    private ModelManager modelManager;
+
+    public TvmRuntime(@Qualifier("tvmProperties") TvmProperties properties) {
+        Assert.notNull(properties, "properties are required");
+        this.properties = properties;
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        this.buildRunner = new TvmBuildRunner(properties, k8sBuilderHelper, modelManager);
+        this.compileRunner = new TvmCompileRunner(properties, k8sBuilderHelper, modelManager);
+        this.serveRunner = new TvmServeRunner(properties, k8sBuilderHelper, modelManager, functionService);
+    }
 
     @Override
     public TvmRunSpec build(@NotNull Function function, @NotNull Task task, @NotNull Run run) {
@@ -106,7 +124,8 @@ public class TvmRuntime
             default -> throw new IllegalArgumentException("Unknown task kind: " + task.getKind());
         };
 
-        // Merge precedence: run, then task fills gaps, then function overrides (source of truth).
+        // Merge precedence: run, then task fills gaps, then function overrides (source
+        // of truth).
         Map<String, Serializable> map = new LinkedHashMap<>();
         map.putAll(runSpec.toMap());
         taskMap.forEach(map::putIfAbsent);
@@ -127,17 +146,17 @@ public class TvmRuntime
                     : new ArrayList<>();
 
             runSpec
-                .getInputs()
-                .forEach((name, input) -> {
-                    if (
-                        rels
-                            .stream()
-                            .noneMatch(r -> r.getType() == RelationshipName.CONSUMES && r.getDest().equals(input))
-                    ) {
-                        RelationshipDetail dr = new RelationshipDetail(RelationshipName.CONSUMES, run.getKey(), input);
-                        rels.add(dr);
-                    }
-                });
+                    .getInputs()
+                    .forEach((name, input) -> {
+                        if (rels
+                                .stream()
+                                .noneMatch(
+                                        r -> r.getType() == RelationshipName.CONSUMES && r.getDest().equals(input))) {
+                            RelationshipDetail dr = new RelationshipDetail(RelationshipName.CONSUMES, run.getKey(),
+                                    input);
+                            rels.add(dr);
+                        }
+                    });
 
             lineage.setRelationships(rels);
 
@@ -182,13 +201,13 @@ public class TvmRuntime
     public TvmRunStatus onComplete(@NotNull Run run, RunRunnable runnable) {
         try {
             return switch (run.getKind()) {
-                case TvmBuildRunSpec.KIND -> writeModelKeyBack(run, "ir_module", TvmFunctionSpec::setIrModel, "ir_model");
+                case TvmBuildRunSpec.KIND ->
+                    writeModelKeyBack(run, "ir_module", TvmFunctionSpec::setIrModel, "ir_model");
                 case TvmCompileRunSpec.KIND -> writeModelKeyBack(
-                    run,
-                    "compiled_so",
-                    TvmFunctionSpec::setSoModel,
-                    "so_model"
-                );
+                        run,
+                        "compiled_so",
+                        TvmFunctionSpec::setSoModel,
+                        "so_model");
                 default -> null;
             };
         } catch (Exception e) {
@@ -197,13 +216,13 @@ public class TvmRuntime
         return null;
     }
 
-    // Write the job's output model key back onto the parent function's spec so the next task can resolve it.
+    // Write the job's output model key back onto the parent function's spec so the
+    // next task can resolve it.
     private TvmRunStatus writeModelKeyBack(
-        Run run,
-        String outputKey,
-        BiConsumer<TvmFunctionSpec, String> setter,
-        String specFieldLabel
-    ) {
+            Run run,
+            String outputKey,
+            BiConsumer<TvmFunctionSpec, String> setter,
+            String specFieldLabel) {
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
         String funcName = runAccessor.getFunction();
         String funcId = runAccessor.getFunctionId();

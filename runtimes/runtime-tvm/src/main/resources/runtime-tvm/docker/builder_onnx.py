@@ -31,6 +31,44 @@ def _tensor_spec(value_info):
     return {"name": value_info.name, "shape": shape, "dtype": dtype}
 
 
+def _quant_params(model, tensor_name, is_output):
+    """Affine quantization params of a quantized boundary tensor, from its QDQ node.
+
+    Quantization and source format are independent axes: an ONNX carries the same
+    information a TFLite model does, only in a different place. In TFLite the params sit
+    on the tensor; in ONNX QDQ they sit on the node — an int8 graph input is consumed by
+    a DequantizeLinear, an int8 graph output is produced by a QuantizeLinear, and in both
+    inputs 1 and 2 are scale and zero_point, held as initializers.
+    """
+    from onnx import numpy_helper
+
+    op = "QuantizeLinear" if is_output else "DequantizeLinear"
+    inits = {i.name: i for i in model.graph.initializer}
+    for node in model.graph.node:
+        edge = node.output[0] if is_output else (node.input[0] if node.input else None)
+        if node.op_type != op or edge != tensor_name or len(node.input) < 2:
+            continue
+        scale = inits.get(node.input[1])
+        if scale is None:
+            continue
+        out = {"scale": [float(v) for v in numpy_helper.to_array(scale).reshape(-1)]}
+        zp = inits.get(node.input[2]) if len(node.input) > 2 else None
+        if zp is not None:
+            out["zero_point"] = [int(v) for v in numpy_helper.to_array(zp).reshape(-1)]
+        axis = next((a.i for a in node.attribute if a.name == "axis"), 0)
+        if axis:
+            out["quantized_dimension"] = int(axis)
+        return out
+    return {}
+
+
+def _with_quant(model, spec, is_output):
+    """Adds the quantization params when the boundary tensor is itself quantized."""
+    if spec.get("dtype") in ("int8", "uint8"):
+        spec.update(_quant_params(model, spec["name"], is_output))
+    return spec
+
+
 def extract_input_specs(model):
     """Real inputs (excludes weights that ONNX also lists in graph.input).
     Relax requires static shapes at build time, so unknown dims default to 1.
@@ -42,12 +80,12 @@ def extract_input_specs(model):
             continue
         spec = _tensor_spec(inp)
         spec["shape"] = [d if d > 0 else 1 for d in spec["shape"]]
-        inputs.append(spec)
+        inputs.append(_with_quant(model, spec, is_output=False))
     return inputs
 
 
 def extract_output_specs(model):
-    return [_tensor_spec(out) for out in model.graph.output]
+    return [_with_quant(model, _tensor_spec(out), is_output=True) for out in model.graph.output]
 
 
 def parse_bool(value: str, default: bool) -> bool:

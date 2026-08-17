@@ -19,7 +19,7 @@ import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.models.ModelManager;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.tvm.config.TvmProperties;
-import it.smartcommunitylabdhub.runtime.tvm.runners.TvmBaseRunner;
+import it.smartcommunitylabdhub.runtime.tvm.runners.TvmBaseBuildRunner;
 import it.smartcommunitylabdhub.runtime.tvm.runners.TvmRunnerHelper;
 import it.smartcommunitylabdhub.runtime.tvm.specs.TvmFunctionSpec;
 import it.smartcommunitylabdhub.runtime.tvm.specs.serve.TvmServeRunSpec;
@@ -29,28 +29,26 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 // K8s serving deployment for tvm+serve: init container drops the tvm-so Model into TVM_MODEL_DIR,
 // a swappable base serve image (default rust tvm-runtime-rust) serves it.
 @Slf4j
-@Component
-public class TvmServeRunner extends TvmBaseRunner {
+public class TvmServeRunner extends TvmBaseBuildRunner {
 
     private static final int HTTP_PORT = 8080;
     private static final int GRPC_PORT = 9000;
 
-    private final ModelManager modelService;
+    private final ModelManager modelManager;
     private final FunctionManager functionService;
 
     public TvmServeRunner(
             TvmProperties properties,
             K8sBuilderHelper k8sBuilderHelper,
-            ModelManager modelService,
+            ModelManager modelManager,
             FunctionManager functionService) {
         super(properties, k8sBuilderHelper);
-        this.modelService = modelService;
+        this.modelManager = modelManager;
         this.functionService = functionService;
     }
 
@@ -65,7 +63,8 @@ public class TvmServeRunner extends TvmBaseRunner {
                 ? taskSpec.getServedName()
                 : TvmRunnerHelper.cleanName(funcName);
 
-        // .so model to serve: explicit task.model_path wins, else the function's so_model.
+        // .so model to serve: explicit task.model_path wins, else the function's
+        // so_model.
         String modelKey = StringUtils.hasText(taskSpec.getModelPath())
                 ? taskSpec.getModelPath()
                 : (functionSpec != null ? functionSpec.getSoModel() : null);
@@ -74,8 +73,9 @@ public class TvmServeRunner extends TvmBaseRunner {
                     "tvm+serve needs a compiled .so model: set task.model_path or run tvm+compile first " +
                             "(function.spec.so_model is empty)");
         }
-        // Resolve store:// to the .so folder's S3 location (whole dir: model.so + metadata + optional params).
-        String s3SoPath = TvmRunnerHelper.resolveModelDir(modelKey, modelService);
+        // Resolve store:// to the .so folder's S3 location (whole dir: model.so +
+        // metadata + optional params).
+        String s3SoPath = TvmRunnerHelper.resolveModelDir(modelKey, modelManager);
 
         // init container drops the model here; tvm-serve reads it via TVM_MODEL_DIR.
         String modelDir = homeDir + "/model";
@@ -84,7 +84,8 @@ public class TvmServeRunner extends TvmBaseRunner {
         envs.add(new CoreEnv("TVM_TASK_KIND", TvmServeTaskSpec.KIND));
         envs.add(new CoreEnv("TVM_MODEL_DIR", modelDir));
         envs.add(new CoreEnv("TVM_MODEL_NAME", servedName));
-        // Per-pod worker count; only set when specified so each image keeps its own default of 1.
+        // Per-pod worker count; only set when specified so each image keeps its own
+        // default of 1.
         if (taskSpec.getWorkers() != null) {
             envs.add(new CoreEnv("TVM_SERVE_WORKERS", String.valueOf(taskSpec.getWorkers())));
         }
@@ -108,7 +109,8 @@ public class TvmServeRunner extends TvmBaseRunner {
         if (StringUtils.hasText(taskSpec.getServiceName())) {
             serviceNames.add(funcName + "-" + taskSpec.getServiceName());
         }
-        // Add a `<funcName>-latest` alias only when this run is the latest version; best-effort, must not fail serve.
+        // Add a `<funcName>-latest` alias only when this run is the latest version;
+        // best-effort, must not fail serve.
         if (functionService != null) {
             try {
                 Function latest = functionService.getLatestFunction(run.getProject(), funcName);
@@ -120,7 +122,8 @@ public class TvmServeRunner extends TvmBaseRunner {
             }
         }
 
-        // No command/args: the serve image's ENTRYPOINT launches tvm-serve; applyCommon fills in the rest.
+        // No command/args: the serve image's ENTRYPOINT launches tvm-serve; applyCommon
+        // fills in the rest.
         return applyCommon(
                 K8sServeRunnable.builder()
                         .replicas(taskSpec.getReplicas())

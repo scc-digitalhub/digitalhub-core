@@ -33,7 +33,8 @@ public class TvmProperties {
     // Image running compiler.py for tvm+compile (Relax IR -> model.so).
     private String compiler;
 
-    // Base serving image for tvm+serve (defaults to the rust runtime); init container injects the .so Model.
+    // Base serving image for tvm+serve (defaults to the rust runtime); init
+    // container injects the .so Model.
     private String serve;
 
     // entrypoint.sh and the per-format builder scripts injected into build pods.

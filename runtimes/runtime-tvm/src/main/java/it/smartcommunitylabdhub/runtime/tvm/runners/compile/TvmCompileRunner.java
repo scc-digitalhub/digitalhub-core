@@ -16,7 +16,7 @@ import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
 import it.smartcommunitylabdhub.models.ModelManager;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.tvm.config.TvmProperties;
-import it.smartcommunitylabdhub.runtime.tvm.runners.TvmBaseRunner;
+import it.smartcommunitylabdhub.runtime.tvm.runners.TvmBaseBuildRunner;
 import it.smartcommunitylabdhub.runtime.tvm.runners.TvmRunnerHelper;
 import it.smartcommunitylabdhub.runtime.tvm.specs.TvmFunctionSpec;
 import it.smartcommunitylabdhub.runtime.tvm.specs.compile.TvmCompileRunSpec;
@@ -25,20 +25,18 @@ import it.smartcommunitylabdhub.runtime.tvm.specs.model.TvmTargetArchitecture;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 // K8s Job for tvm+compile: Relax IR (store:// key) -> model.so via compiler.py, published as a tvm-so Model.
-@Component
-public class TvmCompileRunner extends TvmBaseRunner {
+public class TvmCompileRunner extends TvmBaseBuildRunner {
 
     private static final String COMPILER_SCRIPT_CLASSPATH = "classpath:/runtime-tvm/docker/compiler.py";
 
-    private final ModelManager modelService;
+    private final ModelManager modelManager;
 
-    public TvmCompileRunner(TvmProperties properties, K8sBuilderHelper k8sBuilderHelper, ModelManager modelService) {
+    public TvmCompileRunner(TvmProperties properties, K8sBuilderHelper k8sBuilderHelper, ModelManager modelManager) {
         super(properties, k8sBuilderHelper);
-        this.modelService = modelService;
+        this.modelManager = modelManager;
     }
 
     public K8sJobRunnable produce(Run run, Map<String, String> secretData) {
@@ -53,7 +51,8 @@ public class TvmCompileRunner extends TvmBaseRunner {
                 ? taskSpec.getTargetArchitecture()
                 : TvmTargetArchitecture.cpu;
 
-        // IR model to compile: explicit task.model_path wins, else the function's ir_model.
+        // IR model to compile: explicit task.model_path wins, else the function's
+        // ir_model.
         String modelKey = StringUtils.hasText(taskSpec.getModelPath())
                 ? taskSpec.getModelPath()
                 : (functionSpec != null ? functionSpec.getIrModel() : null);
@@ -62,8 +61,9 @@ public class TvmCompileRunner extends TvmBaseRunner {
                     "tvm+compile needs an IR model: set task.model_path or run tvm+build first " +
                             "(function.spec.ir_model is empty)");
         }
-        // Resolve store:// to the IR folder's S3 location (whole dir: model.relax.json + metadata + params).
-        String s3IrPath = TvmRunnerHelper.resolveModelDir(modelKey, modelService);
+        // Resolve store:// to the IR folder's S3 location (whole dir: model.relax.json
+        // + metadata + params).
+        String s3IrPath = TvmRunnerHelper.resolveModelDir(modelKey, modelManager);
 
         List<CoreEnv> envs = createEnvList(run, taskSpec);
         envs.add(new CoreEnv("TVM_TASK_KIND", TvmCompileTaskSpec.KIND));
@@ -81,7 +81,8 @@ public class TvmCompileRunner extends TvmBaseRunner {
         if (StringUtils.hasText(taskSpec.getTirPipeline())) {
             envs.add(new CoreEnv("TVM_TIR_PIPELINE", taskSpec.getTirPipeline()));
         }
-        // Cross targets NEED a cross-cc to link the .so; default per arch (explicit task.cross_cc wins).
+        // Cross targets NEED a cross-cc to link the .so; default per arch (explicit
+        // task.cross_cc wins).
         String crossCc = taskSpec.getCrossCc();
         if (!StringUtils.hasText(crossCc)) {
             if (architecture == TvmTargetArchitecture.arm64) {
@@ -103,11 +104,14 @@ public class TvmCompileRunner extends TvmBaseRunner {
         if (StringUtils.hasText(taskSpec.getTag())) {
             envs.add(new CoreEnv("TVM_TAG", taskSpec.getTag()));
         }
-        // Lineage: link the .so model as CONSUMES the source IR (only store:// keys are tracked entities).
+        // Lineage: link the .so model as CONSUMES the source IR (only store:// keys are
+        // tracked entities).
         if (modelKey.startsWith("store://")) {
             envs.add(new CoreEnv("TVM_SOURCE_IR_KEY", modelKey));
         }
 
+        // One compiler for every source format: the input is Relax IR, which no longer
+        // carries any trace of the framework it came from.
         String compilerScript = loadClasspathScript(COMPILER_SCRIPT_CLASSPATH);
         List<ContextSource> contextSources = TvmRunnerHelper.createContextSources(entrypoint, compilerScript);
         List<ContextRef> contextRefs = Collections.singletonList(
