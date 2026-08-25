@@ -40,6 +40,7 @@ public class BuildkitProperties {
 
     private String clientSecretName;
     private String clientSecretMountPath;
+    private boolean registryInsecure;
 
     public List<String> getArgs() {
         return args != null ? args : List.of();

@@ -395,6 +395,10 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
         V1ResourceRequirements resources = buildResources(runnable);
 
         List<String> argsAll = new ArrayList<>(properties.getArgs());
+        String outputArg = "type=image,name=" + imageName + ",push=true";
+        if (properties.isRegistryInsecure()) {
+            outputArg += ",registry.insecure=true";
+        }
 
         // Add Kaniko args
         argsAll.addAll(
@@ -404,7 +408,7 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
                 "--local",
                 "context=" + k8sProperties.getSharedVolume().getMountPath(),
                 "--output",
-                "type=image,name=" + imageName + ",push=true"
+                outputArg
             )
         );
 
