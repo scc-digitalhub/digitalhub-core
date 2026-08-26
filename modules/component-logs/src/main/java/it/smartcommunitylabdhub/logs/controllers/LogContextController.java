@@ -65,7 +65,7 @@ public class LogContextController {
 
     public static final int DEFAULT_PAGE_SIZE = 25;
 
-    @Autowired
+    @Autowired(required = false)
     LogService logService;
 
     @Autowired(required = false)
@@ -80,6 +80,9 @@ public class LogContextController {
             { @SortDefault(sort = "created", direction = Direction.DESC) }
         ) Pageable pageable
     ) {
+        if (logService == null) {
+            throw new UnsupportedOperationException();
+        }
         SearchFilter<Log> sf = null;
         if (filter != null) {
             sf = filter.toSearchFilter();
@@ -95,7 +98,7 @@ public class LogContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
         if (logStore == null) {
-            throw new SystemException("log store not available");
+            throw new UnsupportedOperationException("log store not available");
         }
 
         Log log = logStore.getLog(id);
@@ -115,7 +118,7 @@ public class LogContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
         if (logStore == null) {
-            throw new SystemException("log store not available");
+            throw new UnsupportedOperationException("log store not available");
         }
 
         Log log = logStore.getLog(id);

@@ -27,7 +27,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
-import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.logs.Log;
 import it.smartcommunitylabdhub.logs.LogService;
@@ -64,7 +63,7 @@ public class LogController {
 
     public static final int DEFAULT_PAGE_SIZE = 25;
 
-    @Autowired
+    @Autowired(required = false)
     LogService logService;
 
     @Autowired(required = false)
@@ -78,6 +77,9 @@ public class LogController {
             { @SortDefault(sort = "kind", direction = Direction.ASC) }
         ) Pageable pageable
     ) {
+        if (logService == null) {
+            throw new UnsupportedOperationException();
+        }
         SearchFilter<Log> sf = null;
         if (filter != null) {
             sf = filter.toSearchFilter();
@@ -91,7 +93,7 @@ public class LogController {
     public Log getLog(@PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id)
         throws NoSuchEntityException {
         if (logStore == null) {
-            throw new SystemException("log store not available");
+            throw new UnsupportedOperationException("log store not available");
         }
         return logStore.getLog(id);
     }
@@ -100,7 +102,7 @@ public class LogController {
     @DeleteMapping(path = "/{id}")
     public void deleteLog(@PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id) {
         if (logStore == null) {
-            throw new SystemException("log store not available");
+            throw new UnsupportedOperationException("log store not available");
         }
         logStore.deleteLog(id);
     }

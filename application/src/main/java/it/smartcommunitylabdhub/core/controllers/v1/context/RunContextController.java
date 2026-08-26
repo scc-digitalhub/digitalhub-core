@@ -97,7 +97,7 @@ public class RunContextController {
     @Autowired
     LifecycleManager<Run> lifecycleManager;
 
-    @Autowired
+    @Autowired(required = false)
     LogService logService;
 
     @Autowired
@@ -246,6 +246,10 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
+        if (logService == null) {
+            throw new SystemException("log service not available");
+        }
+
         Run run = runManager.getRun(id);
 
         //check for project
