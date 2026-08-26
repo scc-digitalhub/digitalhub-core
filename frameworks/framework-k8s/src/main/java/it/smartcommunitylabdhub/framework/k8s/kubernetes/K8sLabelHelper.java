@@ -95,6 +95,10 @@ public class K8sLabelHelper {
         return Map.entry(NAMESPACE + label, K8sBuilderHelper.sanitizeNames(value));
     }
 
+    public String buildCoreLabel(@NotNull String label) {
+        return NAMESPACE + K8sBuilderHelper.sanitizeNames(label);
+    }
+
     public Map<String, String> extractCoreLabels(@NotNull Map<String, String> labels) {
         String prefix = NAMESPACE;
 

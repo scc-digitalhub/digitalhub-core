@@ -277,9 +277,15 @@ public class ModelManagerImpl implements ModelManager {
     @Override
     public Model updateModel(@NotNull String id, @NotNull Model dto)
         throws NoSuchEntityException, IllegalArgumentException, BindException {
+        return updateModel(id, dto, false);
+    }
+
+    @Override
+    public Model updateModel(@NotNull String id, @NotNull Model dto, boolean force)
+        throws NoSuchEntityException, IllegalArgumentException, BindException {
         log.debug("update model with id {}", String.valueOf(id));
         try {
-            return entityService.update(id, dto);
+            return entityService.update(id, dto, force);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

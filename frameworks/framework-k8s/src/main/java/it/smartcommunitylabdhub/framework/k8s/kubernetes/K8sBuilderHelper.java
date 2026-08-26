@@ -268,6 +268,11 @@ public class K8sBuilderHelper implements InitializingBean {
                     new V1PersistentVolumeClaimVolumeSource()
                         .claimName(spec.getOrDefault("claimName", coreVolume.getName()))
                 );
+            case VolumeType.workflow_volume:
+                return volume.persistentVolumeClaim(
+                    new V1PersistentVolumeClaimVolumeSource()
+                        .claimName(spec.getOrDefault("claimName", coreVolume.getName()))
+                );
             case VolumeType.persistent_volume_claim:
                 return volume.persistentVolumeClaim(
                     new V1PersistentVolumeClaimVolumeSource().claimName(getVolumeName(id, coreVolume.getName()))
@@ -402,9 +407,9 @@ public class K8sBuilderHelper implements InitializingBean {
         return image + ":" + tag;
     }
 
-    public String getLabelName(String name) {
-        return sanitizeNames(applicationProperties.getName()) + "/" + sanitizeNames(name);
-    }
+    // public String getLabelName(String name) {
+    //     return sanitizeNames(applicationProperties.getName()) + "/" + sanitizeNames(name);
+    // }
 
     public static String sanitizeNames(String name) {
         //sanitize value

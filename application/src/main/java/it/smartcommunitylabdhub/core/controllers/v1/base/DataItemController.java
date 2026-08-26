@@ -124,9 +124,10 @@ public class DataItemController {
     )
     public DataItem updateDataItem(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
+        @RequestParam(required = false) Boolean force,
         @RequestBody @Valid @NotNull DataItem dto
     ) throws NoSuchEntityException, IllegalArgumentException, SystemException, BindException {
-        return dataItemManager.updateDataItem(id, dto);
+        return dataItemManager.updateDataItem(id, dto, force != null && force.booleanValue());
     }
 
     @Operation(summary = "Delete a dataItem", description = "Delete a specific dataItem")

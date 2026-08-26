@@ -32,21 +32,18 @@ import it.smartcommunitylabdhub.commons.infrastructure.Processor;
 import it.smartcommunitylabdhub.commons.models.status.Status;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sLogStatus;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLog;
-import it.smartcommunitylabdhub.framework.k8s.objects.CoreMetric;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.logs.Log;
-import it.smartcommunitylabdhub.logs.LogService;
-import it.smartcommunitylabdhub.logs.spec.LogSpec;
+import it.smartcommunitylabdhub.logs.LogStore;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
 import java.io.Serializable;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -58,14 +55,20 @@ import org.springframework.validation.BindException;
     spec = Status.class
 )
 @Component
+@Slf4j
 public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
 
     //TODO make configurable
     public static final int MAX_METRICS = 300;
 
-    private final LogService logService;
+    private LogStore logService;
 
-    public K8sLogProcessor(LogService logService) {
+    @Autowired(required = false)
+    public void setLogService(LogStore logService) {
+        this.logService = logService;
+    }
+
+    public K8sLogProcessor(LogStore logService) {
         Assert.notNull(logService, "log service is required to persist logs");
         this.logService = logService;
     }
@@ -75,19 +78,28 @@ public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
         if (input instanceof K8sRunnable runnable) {
             //extract logs
             List<CoreLog> logs = runnable.getLogs();
-            List<CoreMetric> metrics = runnable.getMetrics();
 
             if (logs != null) {
-                writeLogs(run, logs, metrics);
+                writeLogs(run, logs);
             }
         }
 
         return null;
     }
 
-    private void writeLogs(Run run, List<CoreLog> logs, List<CoreMetric> metrics) {
+    private void writeLogs(Run run, List<CoreLog> logs) {
+        if (logService == null) {
+            log.debug("no log service available, skipping log processing for run {}", run.getId());
+            return;
+        }
+
         String runId = run.getId();
         Instant now = Instant.now();
+
+        log.debug("write collected logs for run {}: {}", runId, logs.size());
+        if (log.isTraceEnabled()) {
+            log.trace("logs: {}", logs);
+        }
 
         //logs are grouped by pod+container, search by run and create/append
         Map<String, Log> entries = logService
@@ -95,7 +107,7 @@ public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
             .stream()
             .map(e -> {
                 K8sLogStatus status = new K8sLogStatus();
-                status.configure(e.getStatus());
+                status.configure(e.getExtensions());
 
                 String pod = status.getPod() != null ? status.getPod() : "";
                 String container = status.getContainer() != null ? status.getContainer() : "";
@@ -112,88 +124,22 @@ public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
             .filter(e -> e != null)
             .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
 
-        //reformat metrics grouped per container
-        //TODO refactor
-        Map<String, HashMap<String, Serializable>> mmetrics = new HashMap<>();
-        if (metrics != null) {
-            metrics.forEach(m -> {
-                if (m.metrics() != null) {
-                    m
-                        .metrics()
-                        .forEach(cm -> {
-                            String key = m.namespace() + m.pod() + cm.getName();
-                            if (cm.getUsage() != null) {
-                                HashMap<String, String> usage = cm
-                                    .getUsage()
-                                    .entrySet()
-                                    .stream()
-                                    .collect(
-                                        Collectors.toMap(
-                                            e -> e.getKey(),
-                                            e -> e.getValue().toSuffixedString(),
-                                            (prev, next) -> next,
-                                            HashMap::new
-                                        )
-                                    );
-
-                                HashMap<String, Serializable> mm = new HashMap<>();
-                                mm.put("timestamp", m.timestamp());
-                                mm.put("window", m.window());
-                                mm.put("usage", usage);
-                                mmetrics.put(key, mm);
-                            }
-                        });
-                }
-            });
-        }
-
         logs.forEach(l -> {
             try {
                 String baseKey = l.namespace() + l.pod() + l.container();
                 String key = baseKey + (l.containerId() != null ? l.containerId() : "");
 
+                log.debug("process log {} for run {}", key, runId);
+
                 if (entries.get(key) != null) {
                     //update
-                    Log log = entries.get(key);
-                    log.setContent(l.value());
+                    Log le = entries.get(key);
+                    le.setContent(l.value());
 
-                    // check if metric is available
-                    // note: we match on baseKey because metrics are per container,
-                    // while logs can be per container or per container+id
-                    // currently fetched logs are per active containers, so current metrics belong here
-                    if (mmetrics.containsKey(baseKey)) {
-                        HashMap<String, Serializable> metric = mmetrics.get(baseKey);
-
-                        //append to status
-                        K8sLogStatus logStatus = new K8sLogStatus();
-                        logStatus.configure(log.getStatus());
-
-                        List<Serializable> list =
-                            logStatus.getMetrics() != null
-                                ? new ArrayList<>(logStatus.getMetrics())
-                                : new ArrayList<>();
-
-                        list.addLast(metric);
-                        logStatus.setMetrics(list);
-
-                        //check if we need to slice
-                        //TODO cleanup
-                        if (list.size() > MAX_METRICS) {
-                            Collections.reverse(list);
-                            List<Serializable> slice = new ArrayList<>(list.subList(0, MAX_METRICS));
-                            Collections.reverse(slice);
-                            logStatus.setMetrics(slice);
-                        }
-
-                        log.setStatus(logStatus.toMap());
-                    }
-
-                    logService.updateLog(log.getId(), log);
+                    log.debug("update {} for log {} for run {}", le.getId(), key, runId);
+                    logService.updateLog(le.getId(), le);
                 } else {
                     //add as new
-                    LogSpec logSpec = new LogSpec();
-                    logSpec.setRun(runId);
-                    logSpec.setTimestamp(now.toEpochMilli());
 
                     K8sLogStatus logStatus = new K8sLogStatus();
                     logStatus.setPod(l.pod());
@@ -201,39 +147,15 @@ public class K8sLogProcessor implements Processor<Run, RunBaseStatus> {
                     logStatus.setNamespace(l.namespace());
                     logStatus.setContainerId(l.containerId());
 
-                    // check if metric is available
-                    // note: we match on baseKey because metrics are per container,
-                    // while logs can be per container or per container+id
-                    // currently fetched logs are per active containers, so current metrics belong here
-                    if (mmetrics.containsKey(baseKey)) {
-                        HashMap<String, Serializable> metric = mmetrics.get(baseKey);
-
-                        //append to status
-                        List<Serializable> list =
-                            logStatus.getMetrics() != null
-                                ? new ArrayList<>(logStatus.getMetrics())
-                                : new ArrayList<>();
-                        list.addLast(metric);
-                        logStatus.setMetrics(list);
-
-                        //check if we need to slice
-                        //TODO cleanup
-                        if (list.size() > MAX_METRICS) {
-                            Collections.reverse(list);
-                            List<Serializable> slice = new ArrayList<>(list.subList(0, MAX_METRICS));
-                            Collections.reverse(slice);
-                            logStatus.setMetrics(slice);
-                        }
-                    }
-
-                    Log log = Log.builder()
+                    Log le = Log.builder()
                         .project(run.getProject())
-                        .spec(logSpec.toMap())
-                        .status(logStatus.toMap())
+                        .run(run.getId())
+                        .extensions(logStatus.toMap())
                         .content(l.value())
                         .build();
 
-                    logService.createLog(log);
+                    log.debug("create new log {} for run {}", key, runId);
+                    logService.createLog(le);
                 }
             } catch (
                 NoSuchEntityException

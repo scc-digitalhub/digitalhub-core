@@ -1,193 +1,431 @@
-| KEY                               | DEFAULT                                                                 | DESCRIPTION |
-| --------------------------------- | ----------------------------------------------------------------------- | ----------- |
-| SERVER_HOST                       | localhost                                                               |             |
-| SERVER_PORT                       | 8080                                                                    |             |
-| SERVER_CONTEXT                    | /                                                                       |             |
-| SERVER_TOMCAT_REMOTE_IP_HEADER    | x-forwarded-for                                                         |             |
-| SERVER_TOMCAT_PROTOCOL_HEADER     | x-forwarded-proto                                                       |             |
-| JDBC_PLATFORM                     | h2                                                                      |             |
-| JDBC_DIALECT                      | org.hibernate.dialect.H2Dialect                                         |             |
-| JDBC_DRIVER                       | org.h2.Driver                                                           |             |
-| JDBC_PASS                         | password                                                                |             |
-| JDBC_USER                         | sa                                                                      |             |
-| JDBC_URL                          | jdbc:h2:file:./data/db                                                  |             |
-| H2_CONSOLE                        | false                                                                   |             |
-| MANAGEMENT_PORT                   | 8081                                                                    |             |
-| RUNTIME_DBT_IMAGE                 | ghcr.io/scc-digitalhub/digitalhub-sdk/wrapper-dbt:latest                |             |
-| RUNTIME_KFP_IMAGE                 | ghcr.io/scc-digitalhub/digitalhub-sdk/wrapper-kfp:latest                |             |
-| RUNTIME_PYTHON_IMAGE_3_9          | ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.9-latest  |             |
-| RUNTIME_PYTHON_IMAGE_3_10         | ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.10-latest |             |
-| RUNTIME_PYTHON_IMAGE_3_11         | ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.11-latest |             |
-| RUNTIME_PYTHON_IMAGE_3_12         | ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.12-latest |             |
-| RUNTIME_PYTHON_SERVERLESS_IMAGE_3_10 | ghcr.io/scc-digitalhub/digitalhub-serverless/python-serverless:3.10-latest |             |
-| RUNTIME_PYTHON_SERVERLESS_IMAGE_3_11 | ghcr.io/scc-digitalhub/digitalhub-serverless/python-serverless:3.11-latest |             |
-| RUNTIME_PYTHON_SERVERLESS_IMAGE_3_12 | ghcr.io/scc-digitalhub/digitalhub-serverless/python-serverless:3.12-latest |             |
-| RUNTIME_PYTHON_SERVERLESS_IMAGE_3_13 | ghcr.io/scc-digitalhub/digitalhub-serverless/python-serverless:3.13-latest |             |
-| RUNTIME_PYTHON_DEPENDENCIES       | digitalhub[full],digitalhub-runtime-python                              |             |
-| RUNTIME_PYTHON_VOLUME_SIZE        | 1Gi                                                                     |             |
-| RUNTIME_PYTHON_USER_ID            | ${kubernetes.security.user}                                             |             |
-| RUNTIME_PYTHON_GROUP_ID           | ${kubernetes.security.group}                                            |             |
-| RUNTIME_SKLEARN_SERVE_IMAGE       | seldonio/mlserver:latest                                                |             |
-| RUNTIME_SKLEARN_SERVE_USER_ID     | ${kubernetes.security.user}                                             |             |
-| RUNTIME_SKLEARN_SERVE_GROUP_ID    | ${kubernetes.security.group}                                            |             |
-| RUNTIME_MLFLOW_SERVE_IMAGE        | seldonio/mlserver:latest                                                |             |
-| RUNTIME_MLFLOW_SERVE_USER_ID      | ${kubernetes.security.user}                                             |             |
-| RUNTIME_MLFLOW_SERVE_GROUP_ID     | ${kubernetes.security.group}                                            |             |
-| RUNTIME_HUGGINGFACE_SERVE_IMAGE   | kserve/huggingfaceserver:latest                                         |             |
-| RUNTIME_HUGGINGFACE_USER_ID       | ${kubernetes.security.user}                                             |             |
-| RUNTIME_HUGGINGFACE_GROUP_ID      | ${kubernetes.security.group}                                            |             |
-| RUNTIME_VLLM_SERVE_IMAGE          | vllm/vllm-openai:latest                                                 |             |
-| RUNTIME_VLLM_SERVE_CPU_IMAGE      | public.ecr.aws/q9t5s3a7/vllm-cpu-release-repo:v0.10.2:latest            |             |
-| RUNTIME_VLLM_SERVE_IMAGE_AUDIO    | ${runtime.vllmserve.image}                                              |             |
-| RUNTIME_VLLM_SERVE_CPU_IMAGE_AUDIO| ${runtime.vllmserve.cpu-image}                                          |             |
-| RUNTIME_VLLM_USER_ID              | ${kubernetes.security.user}                                             |             |
-| RUNTIME_VLLM_GROUP_ID             | ${kubernetes.security.group}                                            |             |
-| RUNTIME_KUBEAI_ENDPOINT           |                                                                         |             |
-| RUNTIME_FLOWER_SERVER             | flwr/superlink:1.20.0-py3.12-ubuntu24.04                                |             |    
-| RUNTIME_FLOWER_CLIENT             | flwr/supernode:1.20.0-py3.12-ubuntu24.04                                |             |    
-| RUNTIME_FLOWER_RUNNER             | flwr/clientapp:1.20.0-py3.12-ubuntu24.04                                |             |    
-| RUNTIME_FLOWER_USER_ID            |                                                                         |             |    
-| RUNTIME_FLOWER_GROUP_ID           |                                                                         |             |    
-| RUNTIME_FLOWER_TLS_CA_CERT        |                                                                         |             |    
-| RUNTIME_FLOWER_TLS_CA_KEY         |                                                                         |             |    
-| RUNTIME_FLOWER_TLS_CONF           | classpath:/runtime-flower/docker/certificate.conf                       |             |
-| RUNTIME_FLOWER_TLS_INT_DOMAIN     | ${kubernetes.namespace}                                                 |             |
-| RUNTIME_FLOWER_TLS_EXT_DOMAIN     |                                                                         |             |
-| IMAGE_REGISTRY                    |                                                                         |             |
-| IMAGE_REGISTRY_SECRET             |                                                                         |             |
-| BUILDER_FRAMEWORK                 | kaniko                                                                  |             |
-| BUILDER_IMAGE_PREFIX              | dhcore                                                                  |             |
-| KANIKO_IMAGE                      | gcr.io/kaniko-project/executor:latest                                   |             |
-| KANIKO_IMAGE_PREFIX               | dhcore                                                                  |             |
-| KANIKO_IMAGE_REGISTRY             | ${registry.name}                                                        |             |
-| KANIKO_SECRET                     | ${registry.secret}                                                      |             |
-| KANIKO_ARGS                       |                                                                         |             |
-| DOCKER_REGISTRY                   |                                                                         |             |
-| DOCKER_REGISTRY_SECRET            |                                                                         |             |
-| BUILDKIT_IMAGE                    | moby/buildkit:master-rootless                                           |             |
-| BUILDKIT_IMAGE_PREFIX             | ${builder.image-prefix}                                                 |             |
-| BUILDKIT_IMAGE_REGISTRY           | ${registry.name}                                                        |             |
-| BUILDKIT_SECRET                   | ${registry.secret}                                                      |             |
-| BUILDKIT_COMMAND                  | buildctl-daemonless.sh                                                  |             |
-| BUILDKIT_ARGS                     | build,--frontend,dockerfile.v0                                          |             |
-| BUILDKIT_CLIENT_SECRET_NAME       |                                                                         |             |
-| BUILDKIT_CLIENT_SECRET_MOUNT_PATH | /certs/client                                                           |             |
-| LLM_OTEL_ENDPOINT                 |                                                                         |             |
-| ARGOWORKFLOWS_ARTIFACTS_CONFIGMAP | artifact-repositories                                                   |             |
-| ARGOWORKFLOWS_ARTIFACTS_KEY       | default-artifact-repository                                             |             |
-| ARGOWORKFLOWS_SERVICE_ACCOUNT     | default                                                                 |             |
-| ARGOWORKFLOWS_USER                | 1000                                                                    |             |
-| K8S_NAMESPACE                     | default                                                                 |             |
-| K8S_ENABLE_LOGS                   | true                                                                    |             |
-| K8S_ENABLE_METRICS                | true                                                                    |             |
-| K8S_ENABLE_RESULTS                | default                                                                 |             |
-| K8S_SEC_DISABLE_ROOT              | false                                                                   |             |
-| K8S_SEC_USER                      |                                                                         |             |
-| K8S_SEC_GROUP                     |                                                                         |             |
-| K8S_IMAGE_PULL_POLICY             | IfNotPresent                                                            |             |
-| K8S_REGISTRY_SECRET               | ${registry.secret}                                                      |             |
-| K8S_INIT_IMAGE                    | ghcr.io/scc-digitalhub/digitalhub-core-builder-tool:latest              |             |
-| K8S_EMPTY_DIR_SIZE                | 128Mi                                                                   |             |
-| K8S_EMPTY_DIR_MEDIUM              |                                                                         |             |
-| K8S_SERVICE_TYPE                  | NodePort                                                                |             |
-| K8S_RESOURCE_CPU_DEFAULT          | 100m                                                                    |             |
-| K8S_RESOURCE_CPU_LIMIT            |                                                                         |             |
-| K8S_RESOURCE_MEM_DEFAULT          | 256Mi                                                                   |             |
-| K8S_RESOURCE_MEM_LIMIT            |                                                                         |             |
-| K8S_RESOURCE_MEM_TOLERATION       | 1.1                                                                     |             |
-| K8S_RESOURCE_GPU_KEY              | nvidia.com/gpu                                                          |             |
-| K8S_RESOURCE_PVC_DEFAULT          | 2Gi                                                                     |             |
-| K8S_RESOURCE_PVC_LIMIT            |                                                                         |             |
-| K8S_RESOURCE_PVC_STORAGE_CLASS    |                                                                         |             |
-| K8S_RESOURCE_EPHEMERAL_DEFAULT    | 2Gi                                                                     |             |
-| K8S_RESOURCE_EPHEMERAL_LIMIT      |                                                                         |             |
-| K8S_RESOURCE_EPHEMERAL_STORAGE_CLASS |                                                                         |             |
-| K8S_RESOURCE_WORKFLOW_STORAGE_CLASS |                                                                         |             |
-| K8S_RESOURCE_WORKFLOW_ACCESS_MODE | ReadWriteMany                                                           |             |
-| DH_CONFIG_COMMON_MAPS             |                                                                         |             |
-| DH_CONFIG_COMMON_SECRETS          |                                                                         |             |
-| K8S_TEMPLATES                     |                                                                         |             |
-| K8S_JOB_DEADLINE                  | 259200                                                                  |             |
-| K8S_JOB_SUSPEND                   | false                                                                   |             |
-| K8S_CUSTOM_API_GROUPS             | kubeai.org/v1                                                           |             |
-| DH_ENDPOINT                       | http://localhost:8080                                                   |             |
-| DH_NAME                           | @project.name@                                                          |             |
-| DH_CONTACTS_EMAIL                 |                                                                         |             |
-| DH_CONTACTS_NAME                  |                                                                         |             |
-| DH_CONTACTS_LINK                  | https://github.com/scc-digitalhub/digitalhub-core                       |             |
-| DH_API_LEVEL                      |                                                                         |             |
-| spring.profiles.active            | default                                                                 |             |
-| LOG_LEVEL                         | INFO                                                                    |             |
-| LOG_LEVEL_K8S                     | INFO                                                                    |             |
-| DH_CORS_ORIGINS                   |                                                                         |             |
-| DH_AUTH_BASIC_USER                | admin                                                                   |             |
-| DH_AUTH_BASIC_PASSWORD            |                                                                         |             |
-| DH_AUTH_JWT_ISSUER_URI            | ${security.oidc.issuer-uri}                                             |             |
-| DH_AUTH_JWT_AUDIENCE              | ${security.oidc.client-id}                                              |             |
-| DH_AUTH_JWT_CLAIM                 | roles                                                                   |             |
-| DH_AUTH_JWT_USERNAME              | preferred_username                                                      |             |
-| DH_AUTH_OIDC_ISSUER_URI           |                                                                         |             |
-| DH_AUTH_OIDC_CLIENT_NAME          | ${application.name}                                                     |             |
-| DH_AUTH_OIDC_CLIENT_ID            |                                                                         |             |
-| DH_AUTH_OIDC_CLIENT_SECRET        |                                                                         |             |
-| DH_AUTH_OIDC_CLAIM                | ${security.jwt.claim}                                                   |             |
-| DH_AUTH_OIDC_USERNAME             | preferred_username                                                      |             |
-| DH_AUTH_OIDC_SCOPE                | openid,email,profile                                                    |             |
-| ENABLE_EVENTS                     | false                                                                   |             |
-| RABBITMQ_HOST                     |                                                                         |             |
-| RABBITMQ_PORT                     |                                                                         |             |
-| RABBITMQ_USER                     |                                                                         |             |
-| RABBITMQ_PASSWORD                 |                                                                         |             |
-| RABBITMQ_VHOST                    | /                                                                       |             |
-| RABBITMQ_QUEUE                    |                                                                         |             |
-| RABBITMQ_TOPIC                    | entityTopic                                                             |             |
-| RABBITMQ_ROUTING_KEY              | entityRoutingKey                                                        |             |
-| RABBITMQ_ENABLE                   | false                                                                   |             |
-| MONITORS_DELAY                    | 10                                                                      |             |
-| SOLR_URL                          | false                                                                   |             |
-| SOLR_USER                         |                                                                         |             |
-| SOLR_PASSWORD                     |                                                                         |             |
-| SOLR_ADMIN_USER                   | SOLR_USER                                                               |             |
-| SOLR_ADMIN_PASSWORD               | SOLR_PASSWORD                                                           |             |
-| SOLR_COLLECTION                   | dhcore                                                                  |             |
-| SOLR_TIMEOUT                      | 5000                                                                    |             |
-| SOLR_COLLECTION_SHARDS_NUM        | 1                                                                       |             |
-| SOLR_COLLECTION_REPLICATION       | 1                                                                       |             |
-| SOLR_REINDEX                      | never                                                                   |             |
-| LUCENE_INDEX_PATH                 | false                                                                   |             |
-| LUCENE_REINDEX                    | never                                                                   |             |
-| FILES_MAX_COLUMN_SIZE             | 2097152                                                                 |             |
-| FILES_DEFAULT_STORE               | s3://${application.name}                                                |             |
-| JWT_KEYSTORE_PATH                 | classpath:/keystore.jwks                                                |             |
-| JWT_KEYSTORE_KID                  |                                                                         |             |
-| JWT_ACCESS_TOKEN_DURATION         |                                                                         |             |
-| JWT_REFRESH_TOKEN_DURATION        |                                                                         |             |
-| JWT_CLIENT_ID                     | ${security.basic.username}                                              |             |
-| JWT_CLIENT_SECRET                 | ${security.basic.password}                                              |             |
-| JWT_REDIRECT_URIS                 | http://localhost:\*,${application.endpoint}/console/auth-callback       |             |
-| JWKS_CACHE_CONTROL                | public, max-age=900, must-revalidate, no-transform                      |             |
-| S3_CREDENTIALS_PROVIDER           | false                                                                   |             |
-| S3_ENDPOINT_URL                   |                                                                         |             |
-| S3_BUCKET                         |                                                                         |             |
-| AWS_DEFAULT_REGION                |                                                                         |             |
-| AWS_ACCESS_KEY                    |                                                                         |             |
-| AWS_SECRET_KEY                    |                                                                         |             |
-| S3_PATH_STYLE_ACCESS              |                                                                         |             |
-| DB_CREDENTIALS_PROVIDER           | false                                                                   |             |
-| DB_CREDENTIALS_PLATFORM           | postgresql                                                              |             |
-| DB_CREDENTIALS_DATABASE           |                                                                         |             |
-| DB_CREDENTIALS_ENDPOINT           |                                                                         |             |
-| DB_CREDENTIALS_CLAIM              | db/role                                                                 |             |
-| DB_CREDENTIALS_ROLE               |                                                                         |             |
-| DB_CREDENTIALS_USER               |                                                                         |             |
-| DB_CREDENTIALS_PASSWORD           |                                                                         |             |
-| MINIO_CREDENTIALS_PROVIDER        | false                                                                   |             |
-| MINIO_CREDENTIALS_ENDPOINT        |                                                                         |             |
-| MINIO_CREDENTIALS_REGION          | us-east-1                                                               |             |
-| MINIO_CREDENTIALS_BUCKET          |                                                                         |             |
-| MINIO_CREDENTIALS_CLAIM_PREFIX    | minio                                                                   |             |
-| MINIO_CREDENTIALS_POLICY          | {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:*"],"Resource":["arn:aws:s3:::*"]}]}|             |
-| MINIO_CREDENTIALS_ROLE_ARN        |                                                                         |             |
-| MINIO_CREDENTIALS_ACCESS_KEY      |                                                                         |             |
-| MINIO_CREDENTIALS_SECRET_KEY      |                                                                         |             |
-| TEMPLATES_PATH                    | classpath:/templates                                                    |             |
+# Configuration
+
+
+| Module | Environment Variable | Default |
+|--------|----------------------|---------|
+| application| `CACHE_CAFFEINE_SPEC` | `maximumSize=10000,expireAfterWrite=600s` |
+| application| `DH_API_LEVEL` | `` |
+| application| `DH_AUTH_BASIC_PASSWORD` | `` |
+| application| `DH_AUTH_BASIC_USER` | `admin` |
+| application| `DH_AUTH_JWT_AUDIENCE` | `${security.oidc.client-id` |
+| application| `DH_AUTH_JWT_CLAIM` | `roles` |
+| application| `DH_AUTH_JWT_ISSUER_URI` | `${security.oidc.issuer-uri` |
+| application| `DH_AUTH_JWT_USERNAME` | `preferred_username` |
+| application| `DH_AUTH_OIDC_CLAIM` | `${security.jwt.claim` |
+| application| `DH_AUTH_OIDC_CLIENT_ID` | `` |
+| application| `DH_AUTH_OIDC_CLIENT_NAME` | `${application.name` |
+| application| `DH_AUTH_OIDC_CLIENT_SECRET` | `` |
+| application| `DH_AUTH_OIDC_ISSUER_URI` | `` |
+| application| `DH_AUTH_OIDC_SCOPE` | `openid,email,profile` |
+| application| `DH_AUTH_OIDC_USERNAME` | `preferred_username` |
+| application| `DH_CONTACTS_EMAIL` | `` |
+| application| `DH_CONTACTS_LINK` | `https://github.com/scc-digitalhub/digitalhub-core` |
+| application| `DH_CONTACTS_NAME` | `@project.name@` |
+| application| `DH_CORS_ORIGINS` | `` |
+| application| `DH_ENDPOINT` | `http://localhost:8080` |
+| application| `DH_NAME` | `@project.name@` |
+| application| `H2_CONSOLE` | `false` |
+| application| `JDBC_DIALECT` | `org.hibernate.dialect.H2Dialect` |
+| application| `JDBC_DRIVER` | `org.h2.Driver` |
+| application| `JDBC_DRIVER` | `org.h2.Driver` |
+| application| `JDBC_DRIVER` | `org.h2.Driver` |
+| application| `JDBC_DRIVER` | `org.postgresql.Driver` |
+| application| `JDBC_PASS` | `password` |
+| application| `JDBC_PASS` | `password` |
+| application| `JDBC_PASS` | `password` |
+| application| `JDBC_PASS` | `password` |
+| application| `JDBC_PLATFORM` | `h2` |
+| application| `JDBC_PLATFORM` | `postgresql` |
+| application| `JDBC_URL` | `jdbc:h2:file:./data/db` |
+| application| `JDBC_URL` | `jdbc:h2:file:./data/newdb` |
+| application| `JDBC_URL` | `jdbc:h2:file:./data/testdb2` |
+| application| `JDBC_URL` | `jdbc:h2:file:./test/db` |
+| application| `JDBC_URL` | `jdbc:postgresql://localhost:5432/v14` |
+| application| `JDBC_USER` | `dhcore` |
+| application| `JDBC_USER` | `sa` |
+| application| `JDBC_USER` | `sa` |
+| application| `JDBC_USER` | `sa` |
+| application| `JWKS_CACHE_CONTROL` | `public, max-age=900, must-revalidate, no-transform` |
+| application| `JWT_ACCESS_TOKEN_DURATION` | `` |
+| application| `JWT_CLIENT_ID` | `${security.basic.username` |
+| application| `JWT_CLIENT_SECRET` | `${security.basic.password` |
+| application| `JWT_KEYSTORE_KID` | `` |
+| application| `JWT_KEYSTORE_PATH` | `classpath:/keystore.jwks` |
+| application| `JWT_REDIRECT_URIS` | `http://localhost:*,${application.endpoint` |
+| application| `JWT_REFRESH_TOKEN_DURATION` | `` |
+| application| `K8S_RESOURCE_CPU_DEFAULT` | `100m` |
+| application| `K8S_RESOURCE_CPU_LIMIT` | `` |
+| application| `K8S_RESOURCE_EPHEMERAL_DEFAULT` | `2Gi` |
+| application| `K8S_RESOURCE_EPHEMERAL_LIMIT` | `4Gi` |
+| application| `K8S_RESOURCE_EPHEMERAL_STORAGE_CLASS` | `` |
+| application| `K8S_RESOURCE_GPU_KEY` | `nvidia.com/gpu` |
+| application| `K8S_RESOURCE_MEM_DEFAULT` | `64m` |
+| application| `K8S_RESOURCE_MEM_LIMIT` | `` |
+| application| `K8S_RESOURCE_MEM_TOLERATION` | `1.1` |
+| application| `K8S_RESOURCE_PVC_DEFAULT` | `2Gi` |
+| application| `K8S_RESOURCE_PVC_LIMIT` | `` |
+| application| `K8S_RESOURCE_PVC_STORAGE_CLASS` | `` |
+| application| `LOGS_MAX_LENGTH` | `2097152` |
+| application| `LOG_LEVEL_K8S` | `INFO` |
+| application| `LOG_LEVEL` | `INFO` |
+| application| `MANAGEMENT_PORT` | `8081` |
+| application| `RUNTIME_PYTHON_BASE_IMAGE_3_10` | `python:3.10-slim` |
+| application| `RUNTIME_PYTHON_BASE_IMAGE_3_11` | `python:3.11-slim` |
+| application| `RUNTIME_PYTHON_BASE_IMAGE_3_12` | `python:3.12-slim` |
+| application| `RUNTIME_PYTHON_BASE_IMAGE_3_13` | `python:3.13-slim` |
+| application| `RUNTIME_PYTHON_GROUP_ID` | `${kubernetes.security.group` |
+| application| `RUNTIME_PYTHON_IMAGE_3_10` | `ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.10-0.15.0b22` |
+| application| `RUNTIME_PYTHON_IMAGE_3_11` | `ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.11-0.15.0b22` |
+| application| `RUNTIME_PYTHON_IMAGE_3_11` | `ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.11-latest` |
+| application| `RUNTIME_PYTHON_IMAGE_3_12` | `ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.12-0.15.0b22` |
+| application| `RUNTIME_PYTHON_IMAGE_3_12` | `ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.12-latest` |
+| application| `RUNTIME_PYTHON_IMAGE_3_13` | `ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.13-0.15.0b22` |
+| application| `RUNTIME_PYTHON_IMAGE_3_9` | `ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.9-latest` |
+| application| `RUNTIME_PYTHON_SERVERLESS_IMAGE_3_10` | `ghcr.io/scc-digitalhub/digitalhub-serverless/digitalhub-serverless:3.10-0.15.0b22` |
+| application| `RUNTIME_PYTHON_SERVERLESS_IMAGE_3_11` | `ghcr.io/scc-digitalhub/digitalhub-serverless/digitalhub-serverless:3.11-0.15.0b22` |
+| application| `RUNTIME_PYTHON_SERVERLESS_IMAGE_3_12` | `ghcr.io/scc-digitalhub/digitalhub-serverless/digitalhub-serverless:3.12-0.15.0b22` |
+| application| `RUNTIME_PYTHON_SERVERLESS_IMAGE_3_13` | `ghcr.io/scc-digitalhub/digitalhub-serverless/digitalhub-serverless:3.13-0.15.0b22` |
+| application| `RUNTIME_PYTHON_USER_ID` | `${kubernetes.security.user` |
+| application| `SERVER_CONTEXT` | `/` |
+| application| `SERVER_HOST` | `localhost` |
+| application| `SERVER_PORT` | `8080` |
+| application| `SERVER_TOMCAT_PROTOCOL_HEADER` | `x-forwarded-proto` |
+| application| `SERVER_TOMCAT_REMOTE_IP_HEADER` | `x-forwarded-for` |
+| application| `TEMPLATES_PATH` | `classpath:/templates` |
+| cloud-rabbitmq| `RABBITMQ_ENABLE` | `false` |
+| cloud-rabbitmq| `RABBITMQ_HOST` | `` |
+| cloud-rabbitmq| `RABBITMQ_PASSWORD` | `` |
+| cloud-rabbitmq| `RABBITMQ_PORT` | `` |
+| cloud-rabbitmq| `RABBITMQ_QUEUE` | `` |
+| cloud-rabbitmq| `RABBITMQ_ROUTING_KEY` | `entityRoutingKey` |
+| cloud-rabbitmq| `RABBITMQ_TOPIC` | `entityTopic` |
+| cloud-rabbitmq| `RABBITMQ_USER` | `` |
+| cloud-rabbitmq| `RABBITMQ_VHOST` | `/` |
+| component-container-images| `CONTAINER_IMAGES_PASSWORD` | `` |
+| component-container-images| `CONTAINER_IMAGES_REGISTRY` | `` |
+| component-container-images| `CONTAINER_IMAGES_USERNAME` | `` |
+| component-envoy-gateway| `AI_GATEWAY_ENDPOINT` | `` |
+| component-envoy-gateway| `AI_GATEWAY_NAME` | `ai-gateway` |
+| component-envoy-gateway| `GENERIC_GATEWAY_ENDPOINT` | `` |
+| component-envoy-gateway| `GENERIC_GATEWAY_NAME` | `generic-gateway` |
+| component-envoy-gateway| `PAYLOAD_LOGGER_HOST` | `` |
+| component-envoy-gateway| `PAYLOAD_LOGGER_PORT` | `` |
+| component-extensions| `EXTENSIONS_PATH` | `classpath:/extensions/` |
+| component-files| `FILES_DEFAULT_STORE` | `s3://${application.name` |
+| component-files| `FILES_MAX_COLUMN_SIZE` | `2097152` |
+| component-metrics| `FILES_MAX_COLUMN_SIZE` | `2097152` |
+| credentials-provider-db| `DB_CREDENTIALS_CLAIM` | `db/role` |
+| credentials-provider-db| `DB_CREDENTIALS_DATABASE` | `` |
+| credentials-provider-db| `DB_CREDENTIALS_ENDPOINT` | `` |
+| credentials-provider-db| `DB_CREDENTIALS_HOST` | `` |
+| credentials-provider-db| `DB_CREDENTIALS_PASSWORD` | `` |
+| credentials-provider-db| `DB_CREDENTIALS_PLATFORM` | `postgresql` |
+| credentials-provider-db| `DB_CREDENTIALS_PORT` | `` |
+| credentials-provider-db| `DB_CREDENTIALS_PROVIDER` | `false` |
+| credentials-provider-db| `DB_CREDENTIALS_ROLE` | `` |
+| credentials-provider-db| `DB_CREDENTIALS_USER` | `` |
+| framework-argo| `ARGOWORKFLOWS_ARTIFACTS_CONFIGMAP` | `` |
+| framework-argo| `ARGOWORKFLOWS_ARTIFACTS_KEY` | `` |
+| framework-argo| `ARGOWORKFLOWS_SERVICE_ACCOUNT` | `default` |
+| framework-argo| `ARGOWORKFLOWS_USER` | `1000` |
+| framework-k8s| `DH_CONFIG_COMMON_MAPS` | `` |
+| framework-k8s| `DH_CONFIG_COMMON_SECRETS` | `` |
+| framework-k8s| `IMAGE_REGISTRY_SECRET` | `` |
+| framework-k8s| `IMAGE_REGISTRY` | `` |
+| framework-k8s| `K8S_CUSTOM_API_GROUPS` | `kubeai.org/v1` |
+| framework-k8s| `K8S_EMPTY_DIR_MEDIUM` | `` |
+| framework-k8s| `K8S_EMPTY_DIR_SIZE` | `128Mi` |
+| framework-k8s| `K8S_ENABLE_LOGS` | `true` |
+| framework-k8s| `K8S_ENABLE_METRICS` | `true` |
+| framework-k8s| `K8S_ENABLE_RESULTS` | `default` |
+| framework-k8s| `K8S_IMAGE_PULL_POLICY` | `IfNotPresent` |
+| framework-k8s| `K8S_INIT_IMAGE` | `ghcr.io/scc-digitalhub/digitalhub-core-builder-tool:latest` |
+| framework-k8s| `K8S_JOB_DEADLINE` | `259200` |
+| framework-k8s| `K8S_JOB_SUSPEND` | `false` |
+| framework-k8s| `K8S_NAMESPACE` | `default` |
+| framework-k8s| `K8S_REGISTRY_SECRET` | `${registry.secret` |
+| framework-k8s| `K8S_RESOURCE_CPU_DEFAULT` | `100m` |
+| framework-k8s| `K8S_RESOURCE_CPU_LIMIT` | `` |
+| framework-k8s| `K8S_RESOURCE_EPHEMERAL_DEFAULT` | `2Gi` |
+| framework-k8s| `K8S_RESOURCE_EPHEMERAL_LIMIT` | `` |
+| framework-k8s| `K8S_RESOURCE_EPHEMERAL_STORAGE_CLASS` | `` |
+| framework-k8s| `K8S_RESOURCE_GPU_KEY` | `nvidia.com/gpu` |
+| framework-k8s| `K8S_RESOURCE_MEM_DEFAULT` | `256Mi` |
+| framework-k8s| `K8S_RESOURCE_MEM_LIMIT` | `` |
+| framework-k8s| `K8S_RESOURCE_MEM_TOLERATION` | `1.1` |
+| framework-k8s| `K8S_RESOURCE_PVC_DEFAULT` | `2Gi` |
+| framework-k8s| `K8S_RESOURCE_PVC_LIMIT` | `` |
+| framework-k8s| `K8S_RESOURCE_PVC_STORAGE_CLASS` | `` |
+| framework-k8s| `K8S_RESOURCE_WORKFLOW_ACCESS_MODE` | `ReadWriteMany` |
+| framework-k8s| `K8S_RESOURCE_WORKFLOW_STORAGE_CLASS` | `` |
+| framework-k8s| `K8S_SEC_DISABLE_ROOT` | `false` |
+| framework-k8s| `K8S_SEC_GROUP` | `` |
+| framework-k8s| `K8S_SEC_SECCOMP_PROFILE` | `RuntimeDefault` |
+| framework-k8s| `K8S_SEC_USER` | `` |
+| framework-k8s| `K8S_SERVICE_TYPE` | `NodePort` |
+| framework-k8s| `K8S_TEMPLATES` | `` |
+| framework-k8s| `MONITORS_DELAY` | `10` |
+| framework-kaniko| `BUILDER_FRAMEWORK` | `kaniko` |
+| framework-kaniko| `BUILDER_IMAGE_PREFIX` | `dhcore` |
+| framework-kaniko| `BUILDKIT_ARGS` | `build,--frontend,dockerfile.v0` |
+| framework-kaniko| `BUILDKIT_CLIENT_SECRET_MOUNT_PATH` | `/certs/client` |
+| framework-kaniko| `BUILDKIT_CLIENT_SECRET_NAME` | `` |
+| framework-kaniko| `BUILDKIT_COMMAND` | `buildctl-daemonless.sh` |
+| framework-kaniko| `BUILDKIT_IMAGE_PREFIX` | `${builder.image-prefix` |
+| framework-kaniko| `BUILDKIT_IMAGE_REGISTRY` | `${registry.name` |
+| framework-kaniko| `BUILDKIT_IMAGE` | `moby/buildkit:master-rootless` |
+| framework-kaniko| `BUILDKIT_REGISTRY_INSECURE` | `false` |
+| framework-kaniko| `BUILDKIT_SECRET` | `${registry.secret` |
+| framework-kaniko| `KANIKO_ARGS` | `` |
+| framework-kaniko| `KANIKO_IMAGE_PREFIX` | `${builder.image-prefix` |
+| framework-kaniko| `KANIKO_IMAGE_REGISTRY` | `${registry.name` |
+| framework-kaniko| `KANIKO_IMAGE` | `gcr.io/kaniko-project/executor:latest` |
+| framework-kaniko| `KANIKO_SECRET` | `${registry.secret` |
+| frontend| `CONSOLE_INSTANCE_METRICS` | `cpu,memory,disk` |
+| frontend| `CONSOLE_PROJECT_METRICS` | `` |
+| frontend| `CONSOLE_RUN_METRICS` | `` |
+| frontend| `CONSOLE_USER_METRICS` | `cpu,memory,disk` |
+| frontend| `FRONTEND_CLARITY_KEY` | `` |
+| loki-logs-provider| `LOKI_MAPPING_NAMESPACE` | `namespace` |
+| loki-logs-provider| `LOKI_MAPPING_PROJECT` | `component` |
+| loki-logs-provider| `LOKI_MAPPING_RUN` | `instance` |
+| loki-logs-provider| `LOKI_MAPPING_USER` | `` |
+| loki-logs-provider| `LOKI_MAP_WITH_PREFIX` | `true` |
+| loki-logs-provider| `LOKI_NAMESPACE` | `` |
+| loki-logs-provider| `LOKI_ORG_ID` | `` |
+| loki-logs-provider| `LOKI_PASSWORD` | `` |
+| loki-logs-provider| `LOKI_URL` | `false` |
+| loki-logs-provider| `LOKI_USERNAME` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_LAZY_FILTER` | `true` |
+| prometheus-metrics-provider| `PROMETHEUS_MAPPING_INSTANCE` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_MAPPING_NAMESPACE` | `namespace` |
+| prometheus-metrics-provider| `PROMETHEUS_MAPPING_PROJECT` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_MAPPING_RUN` | `pod` |
+| prometheus-metrics-provider| `PROMETHEUS_MAPPING_USER` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_CPU_GROUP_BY` | `container` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_CPU_LABEL` | `cpu` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_CPU_OPERATION` | `rate` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_CPU_QUOTA` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_CPU_REQUESTED_GROUP_BY` | `container` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_CPU_REQUESTED_LABEL` | `cpu-requested` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_CPU_REQUESTED_OPERATION` | `rate` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_CPU_REQUESTED_QUOTA` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_CPU_REQUESTED_UNIT` | `seconds` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_CPU_REQUESTED_WINDOW` | `2m` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_CPU_REQUESTED` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_CPU_UNIT` | `seconds` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_CPU_WINDOW` | `2m` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_CPU` | `container_cpu_usage_seconds_total` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_DISK_GROUP_BY` | `container` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_DISK_LABEL` | `disk-{device` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_DISK_OPERATION` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_DISK_QUOTA` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_DISK_UNIT` | `bytes` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_DISK_WINDOW` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_DISK` | `container_fs_writes_bytes_total` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_GPU_COUNT_GROUP_BY` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_GPU_COUNT_LABEL` | `gpu-count` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_GPU_COUNT_OPERATION` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_GPU_COUNT_QUOTA` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_GPU_COUNT_UNIT` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_GPU_COUNT_WINDOW` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_GPU_COUNT` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_GPU_GROUP_BY` | `container` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_GPU_LABEL` | `gpu` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_GPU_MEMORY_GROUP_BY` | `container` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_GPU_MEMORY_OPERATION` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_GPU_MEMORY_QUOTA` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_GPU_MEMORY_UNIT` | `bytes` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_GPU_MEMORY_WINDOW` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_GPU_MEMORY` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_GPU_OPERATION` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_GPU_QUOTA` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_GPU_UNIT` | `percent` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_GPU_WINDOW` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_GPU` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_MEMORY_GROUP_BY` | `container` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_MEMORY_LABEL` | `memory` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_MEMORY_OPERATION` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_MEMORY_QUOTA` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_MEMORY_REQUESTED_GROUP_BY` | `container` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_MEMORY_REQUESTED_LABEL` | `memory-requested` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_MEMORY_REQUESTED_OPERATION` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_MEMORY_REQUESTED_QUOTA` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_MEMORY_REQUESTED_UNIT` | `bytes` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_MEMORY_REQUESTED_WINDOW` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_MEMORY_REQUESTED` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_MEMORY_UNIT` | `bytes` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_MEMORY_WINDOW` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_MEMORY` | `container_memory_working_set_bytes` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_NETWORK_RECEIVE_GROUP_BY` | `pod` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_NETWORK_RECEIVE_LABEL` | `{interface` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_NETWORK_RECEIVE_OPERATION` | `rate` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_NETWORK_RECEIVE_QUOTA` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_NETWORK_RECEIVE_UNIT` | `bytes` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_NETWORK_RECEIVE_WINDOW` | `2m` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_NETWORK_RECEIVE` | `container_network_receive_bytes_total` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_NETWORK_SEND_GROUP_BY` | `pod` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_NETWORK_SEND_LABEL` | `{interface` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_NETWORK_SEND_OPERATION` | `rate` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_NETWORK_SEND_QUOTA` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_NETWORK_SEND_UNIT` | `bytes` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_NETWORK_SEND_WINDOW` | `2m` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_NETWORK_SEND` | `container_network_transmit_bytes_total` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_VOLUMES_COUNT_GROUP_BY` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_VOLUMES_COUNT_LABEL` | `volumes-count` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_VOLUMES_COUNT_OPERATION` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_VOLUMES_COUNT_QUOTA` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_VOLUMES_COUNT_UNIT` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_VOLUMES_COUNT_WINDOW` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_VOLUMES_COUNT` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_VOLUMES_GROUP_BY` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_VOLUMES_LABEL` | `volume-{persistentvolumeclaim` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_VOLUMES_OPERATION` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_VOLUMES_QUOTA` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_VOLUMES_UNIT` | `bytes` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_VOLUMES_WINDOW` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_METRICS_VOLUMES` | `kubelet_volume_stats_used_bytes` |
+| prometheus-metrics-provider| `PROMETHEUS_NAMESPACE` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_PASSWORD` | `` |
+| prometheus-metrics-provider| `PROMETHEUS_RATE_INTERVAL_SECONDS` | `120` |
+| prometheus-metrics-provider| `PROMETHEUS_URL` | `false` |
+| prometheus-metrics-provider| `PROMETHEUS_USERNAME` | `` |
+| proxy| `PROXY_URL` | `` |
+| runtime-dbt| `RUNTIME_DBT_IMAGE` | `ghcr.io/scc-digitalhub/digitalhub-sdk-wrapper-dbt/wrapper-dbt:latest` |
+| runtime-flower| `RUNTIME_FLOWER_CLIENT` | `flwr/supernode:1.20.0-py3.12-ubuntu24.04` |
+| runtime-flower| `RUNTIME_FLOWER_GROUP_ID` | `` |
+| runtime-flower| `RUNTIME_FLOWER_RUNNER` | `flwr/clientapp:1.20.0-py3.12-ubuntu24.04` |
+| runtime-flower| `RUNTIME_FLOWER_SERVER` | `flwr/superlink:1.20.0-py3.12-ubuntu24.04` |
+| runtime-flower| `RUNTIME_FLOWER_TLS_CA_CERT` | `` |
+| runtime-flower| `RUNTIME_FLOWER_TLS_CA_KEY` | `` |
+| runtime-flower| `RUNTIME_FLOWER_TLS_CONF` | `classpath:/runtime-flower/docker/certificate.conf` |
+| runtime-flower| `RUNTIME_FLOWER_TLS_EXT_DOMAIN` | `` |
+| runtime-flower| `RUNTIME_FLOWER_TLS_INT_DOMAIN` | `${kubernetes.namespace` |
+| runtime-flower| `RUNTIME_FLOWER_USER_ID` | `` |
+| runtime-hera| `RUNTIME_HERA_DURATION` | `${jwt.refresh-token.duration` |
+| runtime-hera| `RUNTIME_HERA_IMAGE` | `ghcr.io/scc-digitalhub/digitalhub-sdk-wrapper-hera/wrapper-hera:latest` |
+| runtime-kfp| `RUNTIME_KFP_DURATION` | `${jwt.refresh-token.duration` |
+| runtime-kfp| `RUNTIME_KFP_IMAGE` | `ghcr.io/scc-digitalhub/digitalhub-sdk-wrapper-kfp/wrapper-kfp:latest` |
+| runtime-kubeai| `RUNTIME_KUBEAI_ENDPOINT` | `` |
+| runtime-model-serve| `LLM_OTEL_ENDPOINT` | `` |
+| runtime-model-serve| `RUNTIME_HUGGINGFACE_GROUP_ID` | `${kubernetes.security.group` |
+| runtime-model-serve| `RUNTIME_HUGGINGFACE_SERVE_IMAGE` | `kserve/huggingfaceserver:latest` |
+| runtime-model-serve| `RUNTIME_HUGGINGFACE_USER_ID` | `${kubernetes.security.user` |
+| runtime-model-serve| `RUNTIME_HUGGINGFACE_VOLUME_SIZE` | `10Gi` |
+| runtime-model-serve| `RUNTIME_MLFLOW_SERVE_GROUP_ID` | `${kubernetes.security.group` |
+| runtime-model-serve| `RUNTIME_MLFLOW_SERVE_IMAGE` | `seldonio/mlserver:1.6.0-mlflow` |
+| runtime-model-serve| `RUNTIME_MLFLOW_SERVE_USER_ID` | `${kubernetes.security.user` |
+| runtime-model-serve| `RUNTIME_MLFLOW_VOLUME_SIZE` | `2Gi` |
+| runtime-model-serve| `RUNTIME_SKLEARN_SERVE_GROUP_ID` | `${kubernetes.security.group` |
+| runtime-model-serve| `RUNTIME_SKLEARN_SERVE_IMAGE` | `seldonio/mlserver:1.6.0-sklearn` |
+| runtime-model-serve| `RUNTIME_SKLEARN_SERVE_USER_ID` | `${kubernetes.security.user` |
+| runtime-model-serve| `RUNTIME_SKLEARN_VOLUME_SIZE` | `1Gi` |
+| runtime-model-serve| `RUNTIME_VLLM_GROUP_ID` | `${kubernetes.security.group` |
+| runtime-model-serve| `RUNTIME_VLLM_HOME_DIR` | `/shared` |
+| runtime-model-serve| `RUNTIME_VLLM_MEM_SIZE` | `16Gi` |
+| runtime-model-serve| `RUNTIME_VLLM_SERVE_CPU_IMAGE_AUDIO` | `${runtime.vllm.cpu-image` |
+| runtime-model-serve| `RUNTIME_VLLM_SERVE_CPU_IMAGE` | `public.ecr.aws/q9t5s3a7/vllm-cpu-release-repo:latest` |
+| runtime-model-serve| `RUNTIME_VLLM_SERVE_IMAGE_AUDIO` | `${runtime.vllm.image` |
+| runtime-model-serve| `RUNTIME_VLLM_SERVE_IMAGE` | `vllm/vllm-openai:latest` |
+| runtime-model-serve| `RUNTIME_VLLM_USER_ID` | `${kubernetes.security.user` |
+| runtime-model-serve| `RUNTIME_VLLM_VOLUME_SIZE` | `10Gi` |
+| runtime-python| `RUNTIME_GUARDRAIL_BASE_IMAGE_3_10` | `${runtime.python.base-images.PYTHON3_10` |
+| runtime-python| `RUNTIME_GUARDRAIL_BASE_IMAGE_3_11` | `${runtime.python.base-images.PYTHON3_11` |
+| runtime-python| `RUNTIME_GUARDRAIL_BASE_IMAGE_3_12` | `${runtime.python.base-images.PYTHON3_12` |
+| runtime-python| `RUNTIME_GUARDRAIL_BASE_IMAGE_3_13` | `${runtime.python.base-images.PYTHON3_13` |
+| runtime-python| `RUNTIME_GUARDRAIL_COMMAND` | `${runtime.python.command` |
+| runtime-python| `RUNTIME_GUARDRAIL_DEPENDENCIES` | `digitalhub[full],digitalhub-runtime-python` |
+| runtime-python| `RUNTIME_GUARDRAIL_GROUP_ID` | `${runtime.python.group-id` |
+| runtime-python| `RUNTIME_GUARDRAIL_HOME_DIR` | `${runtime.python.home-dir` |
+| runtime-python| `RUNTIME_GUARDRAIL_IMAGE_3_10` | `${runtime.python.images.PYTHON3_10` |
+| runtime-python| `RUNTIME_GUARDRAIL_IMAGE_3_11` | `${runtime.python.images.PYTHON3_11` |
+| runtime-python| `RUNTIME_GUARDRAIL_IMAGE_3_12` | `${runtime.python.images.PYTHON3_12` |
+| runtime-python| `RUNTIME_GUARDRAIL_IMAGE_3_13` | `${runtime.python.images.PYTHON3_13` |
+| runtime-python| `RUNTIME_GUARDRAIL_INSTALL_DEPENDENCIES` | `${runtime.python.install-dependencies` |
+| runtime-python| `RUNTIME_GUARDRAIL_SERVERLESS_IMAGE_3_10` | `${runtime.python.serverless-images.PYTHON3_10` |
+| runtime-python| `RUNTIME_GUARDRAIL_SERVERLESS_IMAGE_3_11` | `${runtime.python.serverless-images.PYTHON3_11` |
+| runtime-python| `RUNTIME_GUARDRAIL_SERVERLESS_IMAGE_3_12` | `${runtime.python.serverless-images.PYTHON3_12` |
+| runtime-python| `RUNTIME_GUARDRAIL_SERVERLESS_IMAGE_3_13` | `${runtime.python.serverless-images.PYTHON3_13` |
+| runtime-python| `RUNTIME_GUARDRAIL_USER_ID` | `${runtime.python.user-id` |
+| runtime-python| `RUNTIME_GUARDRAIL_USE_BETA_DEPENDENCIES` | `${runtime.python.use-beta-dependencies` |
+| runtime-python| `RUNTIME_GUARDRAIL_VOLUME_SIZE` | `${runtime.python.volume-size` |
+| runtime-python| `RUNTIME_OPENINFERENCE_BASE_IMAGE_3_10` | `${runtime.python.base-images.PYTHON3_10` |
+| runtime-python| `RUNTIME_OPENINFERENCE_BASE_IMAGE_3_11` | `${runtime.python.base-images.PYTHON3_11` |
+| runtime-python| `RUNTIME_OPENINFERENCE_BASE_IMAGE_3_12` | `${runtime.python.base-images.PYTHON3_12` |
+| runtime-python| `RUNTIME_OPENINFERENCE_BASE_IMAGE_3_13` | `${runtime.python.base-images.PYTHON3_13` |
+| runtime-python| `RUNTIME_OPENINFERENCE_COMMAND` | `${runtime.python.command` |
+| runtime-python| `RUNTIME_OPENINFERENCE_DEPENDENCIES` | `digitalhub[full],digitalhub-runtime-python` |
+| runtime-python| `RUNTIME_OPENINFERENCE_GROUP_ID` | `${runtime.python.group-id` |
+| runtime-python| `RUNTIME_OPENINFERENCE_HOME_DIR` | `${runtime.python.home-dir` |
+| runtime-python| `RUNTIME_OPENINFERENCE_IMAGE_3_10` | `${runtime.python.images.PYTHON3_10` |
+| runtime-python| `RUNTIME_OPENINFERENCE_IMAGE_3_11` | `${runtime.python.images.PYTHON3_11` |
+| runtime-python| `RUNTIME_OPENINFERENCE_IMAGE_3_12` | `${runtime.python.images.PYTHON3_12` |
+| runtime-python| `RUNTIME_OPENINFERENCE_IMAGE_3_13` | `${runtime.python.images.PYTHON3_13` |
+| runtime-python| `RUNTIME_OPENINFERENCE_INSTALL_DEPENDENCIES` | `${runtime.python.install-dependencies` |
+| runtime-python| `RUNTIME_OPENINFERENCE_SERVERLESS_IMAGE_3_10` | `${runtime.python.serverless-images.PYTHON3_10` |
+| runtime-python| `RUNTIME_OPENINFERENCE_SERVERLESS_IMAGE_3_11` | `${runtime.python.serverless-images.PYTHON3_11` |
+| runtime-python| `RUNTIME_OPENINFERENCE_SERVERLESS_IMAGE_3_12` | `${runtime.python.serverless-images.PYTHON3_12` |
+| runtime-python| `RUNTIME_OPENINFERENCE_SERVERLESS_IMAGE_3_13` | `${runtime.python.serverless-images.PYTHON3_13` |
+| runtime-python| `RUNTIME_OPENINFERENCE_USER_ID` | `${runtime.python.user-id` |
+| runtime-python| `RUNTIME_OPENINFERENCE_USE_BETA_DEPENDENCIES` | `${runtime.python.use-beta-dependencies` |
+| runtime-python| `RUNTIME_OPENINFERENCE_VOLUME_SIZE` | `${runtime.python.volume-size` |
+| runtime-python| `RUNTIME_PYTHON_BASE_IMAGE_3_10` | `python:3.10-slim` |
+| runtime-python| `RUNTIME_PYTHON_BASE_IMAGE_3_11` | `python:3.11-slim` |
+| runtime-python| `RUNTIME_PYTHON_BASE_IMAGE_3_12` | `python:3.12-slim` |
+| runtime-python| `RUNTIME_PYTHON_BASE_IMAGE_3_13` | `python:3.13-slim` |
+| runtime-python| `RUNTIME_PYTHON_COMMAND` | `/opt/nuclio/processor` |
+| runtime-python| `RUNTIME_PYTHON_DEPENDENCIES` | `digitalhub[full],digitalhub-runtime-python` |
+| runtime-python| `RUNTIME_PYTHON_GROUP_ID` | `${kubernetes.security.group` |
+| runtime-python| `RUNTIME_PYTHON_HOME_DIR` | `/shared` |
+| runtime-python| `RUNTIME_PYTHON_IMAGE_3_10` | `ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.10-latest` |
+| runtime-python| `RUNTIME_PYTHON_IMAGE_3_11` | `ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.11-latest` |
+| runtime-python| `RUNTIME_PYTHON_IMAGE_3_12` | `ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.12-latest` |
+| runtime-python| `RUNTIME_PYTHON_IMAGE_3_13` | `ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.13-latest` |
+| runtime-python| `RUNTIME_PYTHON_INSTALL_DEPENDENCIES` | `true` |
+| runtime-python| `RUNTIME_PYTHON_SERVERLESS_IMAGE_3_10` | `ghcr.io/scc-digitalhub/digitalhub-serverless/digitalhub-serverless:3.10-latest` |
+| runtime-python| `RUNTIME_PYTHON_SERVERLESS_IMAGE_3_11` | `ghcr.io/scc-digitalhub/digitalhub-serverless/digitalhub-serverless:3.11-latest` |
+| runtime-python| `RUNTIME_PYTHON_SERVERLESS_IMAGE_3_12` | `ghcr.io/scc-digitalhub/digitalhub-serverless/digitalhub-serverless:3.12-latest` |
+| runtime-python| `RUNTIME_PYTHON_SERVERLESS_IMAGE_3_13` | `ghcr.io/scc-digitalhub/digitalhub-serverless/digitalhub-serverless:3.13-latest` |
+| runtime-python| `RUNTIME_PYTHON_USER_ID` | `${kubernetes.security.user` |
+| runtime-python| `RUNTIME_PYTHON_USE_BETA_DEPENDENCIES` | `false` |
+| runtime-python| `RUNTIME_PYTHON_VOLUME_SIZE` | `1Gi` |
+| runtime-servicegraph| `RUNTIME_SERVICEGRAPH_COMMAND` | `/app/servicegraph` |
+| runtime-servicegraph| `RUNTIME_SERVICEGRAPH_GROUP_ID` | `${kubernetes.security.group` |
+| runtime-servicegraph| `RUNTIME_SERVICEGRAPH_IMAGE` | `ghcr.io/scc-digitalhub/digitalhub-servicegraph:latest` |
+| runtime-servicegraph| `RUNTIME_SERVICEGRAPH_USER_ID` | `${kubernetes.security.user` |
+| runtime-servicegraph| `RUNTIME_SERVICEGRAPH_VOLUME_SIZE` | `1Gi` |
+| s3-provider| `AWS_ACCESS_KEY` | `` |
+| s3-provider| `AWS_DEFAULT_REGION` | `us-east-1` |
+| s3-provider| `AWS_SECRET_KEY` | `` |
+| s3-provider| `S3_BUCKET` | `` |
+| s3-provider| `S3_CREDENTIALS_CLAIM_PREFIX` | `` |
+| s3-provider| `S3_CREDENTIALS_DURATION` | `3600` |
+| s3-provider| `S3_CREDENTIALS_POLICY_TEMPLATE` | `` |
+| s3-provider| `S3_CREDENTIALS_POLICY` | `` |
+| s3-provider| `S3_CREDENTIALS_PROVIDER` | `false` |
+| s3-provider| `S3_CREDENTIALS_ROLE_ARN` | `` |
+| s3-provider| `S3_ENDPOINT_URL` | `` |
+| s3-provider| `S3_PATH_STYLE_ACCESS` | `true` |
+| s3-provider| `S3_SIGNATURE_VERSION` | `s3v4` |
+| search-lucene| `LUCENE_INDEX_PATH` | `./data/index` |
+| search-lucene| `LUCENE_REINDEX` | `never` |
+| search-solr| `SOLR_ADMIN_PASSWORD` | `${SOLR_PASSWORD` |
+| search-solr| `SOLR_ADMIN_USER` | `${SOLR_USER` |
+| search-solr| `SOLR_COLLECTION_REPLICATION` | `1` |
+| search-solr| `SOLR_COLLECTION_SHARDS_NUM` | `1` |
+| search-solr| `SOLR_COLLECTION` | `dhcore` |
+| search-solr| `SOLR_PASSWORD` | `` |
+| search-solr| `SOLR_REINDEX` | `never` |
+| search-solr| `SOLR_TIMEOUT` | `5000` |
+| search-solr| `SOLR_URL` | `false` |
+| search-solr| `SOLR_USER` | `` |
+| trinodb-provider| `TRINODB_CATALOG` | `` |
+| trinodb-provider| `TRINODB_HOST` | `` |
+| trinodb-provider| `TRINODB_PASSWORD` | `` |
+| trinodb-provider| `TRINODB_PORT` | `` |
+| trinodb-provider| `TRINODB_PROVIDER` | `false` |
+| trinodb-provider| `TRINODB_SCHEME` | `` |
+| trinodb-provider| `TRINODB_URL` | `` |
+| trinodb-provider| `TRINODB_USER` | `` |
+| trinodb-provider| `TRINODB_USE_CORE_CREDENTIALS` | `false` |
+| trinodb-provider| `TRINODB_USE_JWT_TOKEN` | `${providers.trinodb.use-core-credentials` |

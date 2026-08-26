@@ -5,6 +5,7 @@ providers:
     scheme: ${TRINODB_SCHEME:}
     host: ${TRINODB_HOST:}
     port: ${TRINODB_PORT:}
+    url: ${TRINODB_URL:}
     catalog: ${TRINODB_CATALOG:}
     user: ${TRINODB_USER:}
     password: ${TRINODB_PASSWORD:}

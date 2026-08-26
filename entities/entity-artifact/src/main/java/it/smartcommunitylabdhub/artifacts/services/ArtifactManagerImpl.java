@@ -278,9 +278,15 @@ public class ArtifactManagerImpl implements ArtifactManager {
     @Override
     public Artifact updateArtifact(@NotNull String id, @NotNull Artifact dto)
         throws NoSuchEntityException, IllegalArgumentException, BindException {
+        return updateArtifact(id, dto, false);
+    }
+
+    @Override
+    public Artifact updateArtifact(@NotNull String id, @NotNull Artifact dto, boolean force)
+        throws NoSuchEntityException, IllegalArgumentException, BindException {
         log.debug("update artifact with id {}", String.valueOf(id));
         try {
-            return entityService.update(id, dto);
+            return entityService.update(id, dto, force);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

@@ -1,0 +1,85 @@
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/**
+ * Copyright 2025 the original author or authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package it.smartcommunitylabdhub.console;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import it.smartcommunitylabdhub.commons.infrastructure.AbstractConfiguration;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+
+@Getter
+@Setter
+@ToString
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class ConsoleConfig extends AbstractConfiguration {
+
+    @JsonProperty("react_app_context_path")
+    private String contextPath;
+
+    @JsonProperty("react_app_application_url")
+    private String applicationUrl;
+
+    @JsonProperty("react_app_api_url")
+    private String apiUrl;
+
+    @JsonProperty("react_app_auth_url")
+    private String authUrl;
+
+    @JsonProperty("react_app_websocket_url")
+    private String wsUrl;
+
+    @JsonProperty("react_app_clarity_key")
+    private String clarityKey;
+
+    //search
+    @JsonProperty("react_app_enable_search")
+    private Boolean enableSearch;
+
+    //logs
+    @JsonProperty("react_app_enable_logs")
+    private Boolean enableLogs;
+
+    //metrics
+    @JsonProperty("react_app_enable_metrics")
+    private Boolean enableMetrics;
+
+    @JsonProperty("react_app_user_metrics")
+    private String userMetrics;
+
+    @JsonProperty("react_app_instance_metrics")
+    private String instanceMetrics;
+
+    @JsonProperty("react_app_run_metrics")
+    private String runMetrics;
+
+    @JsonProperty("react_app_project_metrics")
+    private String projectMetrics;
+}

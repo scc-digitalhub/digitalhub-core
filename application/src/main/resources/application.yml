@@ -72,6 +72,8 @@ management:
       access: read-only
     health:
       access: read-only
+    metrics:
+      access: read-only
 
 # Spring Docs
 springdoc:
@@ -140,6 +142,3 @@ jwt:
 templates:
   path: ${TEMPLATES_PATH:classpath:/templates}
 
-frontend:
-  clarity:
-    key: ${FRONTEND_CLARITY_KEY:}

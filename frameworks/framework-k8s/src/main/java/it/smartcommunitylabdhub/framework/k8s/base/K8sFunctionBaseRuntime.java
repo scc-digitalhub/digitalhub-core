@@ -26,6 +26,7 @@ package it.smartcommunitylabdhub.framework.k8s.base;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.function.FunctionBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
@@ -36,16 +37,26 @@ import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 
 public abstract class K8sFunctionBaseRuntime<
-    F extends FunctionBaseSpec, S extends RunBaseSpec, Z extends RunBaseStatus, R extends K8sRunnable
->
-    extends AbstractFunctionBaseRuntime<F, S, Z, R> {
+    F extends FunctionBaseSpec,
+    S extends RunBaseSpec,
+    Z extends RunBaseStatus,
+    R extends K8sRunnable
+> extends AbstractFunctionBaseRuntime<F, S, Z, R> {
 
     @Nullable
     protected K8sBuilderHelper k8sBuilderHelper;
 
+    @Nullable
+    protected K8sLabelHelper k8sLabelHelper;
+
     @Autowired(required = false)
     public void setK8sBuilderHelper(K8sBuilderHelper k8sBuilderHelper) {
         this.k8sBuilderHelper = k8sBuilderHelper;
+    }
+
+    @Autowired(required = false)
+    public void setK8sLabelHelper(K8sLabelHelper k8sLabelHelper) {
+        this.k8sLabelHelper = k8sLabelHelper;
     }
 
     @Override
@@ -79,8 +90,7 @@ public abstract class K8sFunctionBaseRuntime<
     @SuppressWarnings("unchecked")
     private Z onRunnable(RunRunnable runnable) {
         if (runnable instanceof K8sRunnable k8sRunnable) {
-            RunBaseStatus status = RunBaseStatus
-                .baseBuilder()
+            RunBaseStatus status = RunBaseStatus.baseBuilder()
                 .state(k8sRunnable.getState())
                 .message(k8sRunnable.getError())
                 .build();

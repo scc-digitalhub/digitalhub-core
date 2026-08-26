@@ -90,15 +90,14 @@ public class DbtRuntime extends K8sFunctionBaseRuntime<DbtFunctionSpec, DbtRunSp
         String kind = task.getKind();
 
         //build task spec as defined
-        TaskBaseSpec taskSpec =
-            switch (kind) {
-                case DbtTransformSpec.KIND -> {
-                    yield new DbtTransformSpec(task.getSpec());
-                }
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        TaskBaseSpec taskSpec = switch (kind) {
+            case DbtTransformSpec.KIND -> {
+                yield new DbtTransformSpec(task.getSpec());
+            }
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
@@ -129,19 +128,20 @@ public class DbtRuntime extends K8sFunctionBaseRuntime<DbtFunctionSpec, DbtRunSp
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
-        K8sJobRunnable runnable =
-            switch (runAccessor.getTask()) {
-                case DbtTransformSpec.KIND -> {
-                    DbtTransformSpec taskSpec = runSpec.getTaskSpec();
-                    if (taskSpec == null) {
-                        throw new CoreRuntimeException("null or empty task definition");
-                    }
-
-                    yield new DbtTransformRunner(image, k8sBuilderHelper)
-                        .produce(run, secretService.getSecretData(run.getProject(), taskSpec.getSecrets()));
+        K8sJobRunnable runnable = switch (runAccessor.getTask()) {
+            case DbtTransformSpec.KIND -> {
+                DbtTransformSpec taskSpec = runSpec.getTaskSpec();
+                if (taskSpec == null) {
+                    throw new CoreRuntimeException("null or empty task definition");
                 }
-                default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
-            };
+
+                yield new DbtTransformRunner(image, k8sBuilderHelper, k8sLabelHelper).produce(
+                    run,
+                    secretService.getSecretData(run.getProject(), taskSpec.getSecrets())
+                );
+            }
+            default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
+        };
 
         //extract auth from security context to inflate secured credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();

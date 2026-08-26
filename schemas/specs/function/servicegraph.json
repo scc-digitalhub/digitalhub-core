@@ -1,0 +1,46 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "$defs" : {
+    "ServicegraphSourceCode" : {
+      "type" : "object",
+      "properties" : {
+        "base64" : {
+          "type" : "string",
+          "title" : "fields.sourceCode.base64.title",
+          "description" : "fields.sourceCode.base64.description"
+        },
+        "handler" : {
+          "type" : "string",
+          "title" : "fields.sourceCode.handler.title",
+          "description" : "fields.sourceCode.handler.description"
+        },
+        "lang" : {
+          "$ref" : "#/$defs/ServicegraphSourceCodeLanguages",
+          "title" : "fields.sourceCode.lang.title",
+          "description" : "fields.sourceCode.lang.description",
+          "default" : "yaml"
+        },
+        "source" : {
+          "type" : "string",
+          "title" : "fields.sourceCode.source.title",
+          "description" : "fields.sourceCode.source.description"
+        }
+      }
+    },
+    "ServicegraphSourceCodeLanguages" : {
+      "type" : "string",
+      "enum" : [ "yaml" ]
+    }
+  },
+  "type" : "object",
+  "properties" : {
+    "source" : {
+      "$ref" : "#/$defs/ServicegraphSourceCode",
+      "title" : "fields.servicegraph.source.title",
+      "description" : "fields.servicegraph.source.description"
+    }
+  },
+  "required" : [ "source" ],
+  "title" : "specs.servicegraph.title",
+  "description" : "specs.servicegraph.description"
+}

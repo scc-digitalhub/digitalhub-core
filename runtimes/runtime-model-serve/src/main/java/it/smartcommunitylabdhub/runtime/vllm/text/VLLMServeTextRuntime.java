@@ -81,9 +81,9 @@ public class VLLMServeTextRuntime extends VLLMServeRuntime<VLLMServeTextFunction
         if (!VLLMServeTextRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
                 "Run kind %s unsupported, expecting %s".formatted(
-                        String.valueOf(run.getKind()),
-                        VLLMServeTextRunSpec.KIND
-                    )
+                    String.valueOf(run.getKind()),
+                    VLLMServeTextRunSpec.KIND
+                )
             );
         }
 
@@ -93,13 +93,12 @@ public class VLLMServeTextRuntime extends VLLMServeRuntime<VLLMServeTextFunction
         String kind = task.getKind();
 
         //build task spec as defined
-        TaskBaseSpec taskSpec =
-            switch (kind) {
-                case VLLMServeTextServeTaskSpec.KIND -> VLLMServeTextServeTaskSpec.with(task.getSpec());
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        TaskBaseSpec taskSpec = switch (kind) {
+            case VLLMServeTextServeTaskSpec.KIND -> VLLMServeTextServeTaskSpec.with(task.getSpec());
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //url is defined in function spec but overridable in run spec
         String url = funSpec.getUrl();
@@ -134,35 +133,36 @@ public class VLLMServeTextRuntime extends VLLMServeRuntime<VLLMServeTextFunction
         if (!VLLMServeTextRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
                 "Run kind %s unsupported, expecting %s".formatted(
-                        String.valueOf(run.getKind()),
-                        VLLMServeTextRunSpec.KIND
-                    )
+                    String.valueOf(run.getKind()),
+                    VLLMServeTextRunSpec.KIND
+                )
             );
         }
 
         VLLMServeTextRunSpec runSpec = VLLMServeTextRunSpec.with(run.getSpec());
         String image = StringUtils.hasText(runSpec.getFunctionSpec().getImage())
             ? runSpec.getFunctionSpec().getImage()
-            : Boolean.TRUE.equals(runSpec.getUseCpuImage()) ? properties.getCpuImage() : properties.getImage();
+            : Boolean.TRUE.equals(runSpec.getUseCpuImage())
+                ? properties.getCpuImage()
+                : properties.getImage();
 
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
-        K8sRunnable runnable =
-            switch (runAccessor.getTask()) {
-                case VLLMServeTextServeTaskSpec.KIND -> new VLLMServeRunner(
-                    RUNTIME,
-                    image,
-                    properties,
-                    runSpec.getFunctionSpec(),
-                    secretService.getSecretData(run.getProject(), runSpec.getTaskServeSpec().getSecrets()),
-                    k8sBuilderHelper,
-                    modelService,
-                    functionService
-                )
-                    .produce(run);
-                default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
-            };
+        K8sRunnable runnable = switch (runAccessor.getTask()) {
+            case VLLMServeTextServeTaskSpec.KIND -> new VLLMServeRunner(
+                RUNTIME,
+                image,
+                properties,
+                runSpec.getFunctionSpec(),
+                secretService.getSecretData(run.getProject(), runSpec.getTaskServeSpec().getSecrets()),
+                k8sBuilderHelper,
+                k8sLabelHelper,
+                modelService,
+                functionService
+            ).produce(run);
+            default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
+        };
 
         //extract auth from security context to inflate secured credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();

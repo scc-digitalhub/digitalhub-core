@@ -27,6 +27,7 @@ import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
@@ -53,8 +54,12 @@ public class PythonBuildRunner extends PythonBaseBuildRunner {
 
     public static final int MIN_IMAGE_NAME_LENGTH = 3;
 
-    public PythonBuildRunner(PythonProperties properties, K8sBuilderHelper k8sBuilderHelper) {
-        super(properties, k8sBuilderHelper);
+    public PythonBuildRunner(
+        PythonProperties properties,
+        K8sBuilderHelper k8sBuilderHelper,
+        K8sLabelHelper k8sLabelHelper
+    ) {
+        super(properties, k8sBuilderHelper, k8sLabelHelper);
         //set handler for job by default
         setHandlerTemplate(new ClassPathResource("runtime-python/docker/_job_handler.py"));
     }
@@ -131,8 +136,8 @@ public class PythonBuildRunner extends PythonBaseBuildRunner {
             .task(PythonBuildTaskSpec.KIND)
             .state(State.READY.name())
             .labels(
-                k8sBuilderHelper != null
-                    ? List.of(new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction()))
+                k8sLabelHelper != null
+                    ? List.of(new CoreLabel(k8sLabelHelper.buildCoreLabel("function"), taskAccessor.getFunction()))
                     : null
             )
             //base

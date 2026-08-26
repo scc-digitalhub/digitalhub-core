@@ -66,7 +66,8 @@ import org.springframework.util.StringUtils;
 @RuntimeComponent(runtime = SklearnServeRuntime.RUNTIME)
 public class SklearnServeRuntime
     extends K8sFunctionBaseRuntime<SklearnServeFunctionSpec, SklearnServeRunSpec, ModelServeRunStatus, K8sRunnable>
-    implements InitializingBean {
+    implements InitializingBean
+{
 
     public static final String RUNTIME = "sklearnserve";
     public static final String IMAGE = "seldonio/mlserver";
@@ -110,9 +111,9 @@ public class SklearnServeRuntime
         if (!SklearnServeRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
                 "Run kind %s unsupported, expecting %s".formatted(
-                        String.valueOf(run.getKind()),
-                        SklearnServeRunSpec.KIND
-                    )
+                    String.valueOf(run.getKind()),
+                    SklearnServeRunSpec.KIND
+                )
             );
         }
 
@@ -122,13 +123,12 @@ public class SklearnServeRuntime
         String kind = task.getKind();
 
         //build task spec as defined
-        TaskBaseSpec taskSpec =
-            switch (kind) {
-                case SklearnServeTaskSpec.KIND -> SklearnServeTaskSpec.with(task.getSpec());
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        TaskBaseSpec taskSpec = switch (kind) {
+            case SklearnServeTaskSpec.KIND -> SklearnServeTaskSpec.with(task.getSpec());
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //path is defined in function spec but overridable in run spec
         String path = funSpec.getPath();
@@ -163,9 +163,9 @@ public class SklearnServeRuntime
         if (!SklearnServeRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
                 "Run kind %s unsupported, expecting %s".formatted(
-                        String.valueOf(run.getKind()),
-                        SklearnServeRunSpec.KIND
-                    )
+                    String.valueOf(run.getKind()),
+                    SklearnServeRunSpec.KIND
+                )
             );
         }
 
@@ -174,22 +174,21 @@ public class SklearnServeRuntime
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
-        K8sRunnable runnable =
-            switch (runAccessor.getTask()) {
-                case SklearnServeTaskSpec.KIND -> new SklearnServeRunner(
-                    image,
-                    userId,
-                    groupId,
-                    volumeSizeSpec,
-                    runSpec.getFunctionSpec(),
-                    secretService.getSecretData(run.getProject(), runSpec.getTaskServeSpec().getSecrets()),
-                    k8sBuilderHelper,
-                    modelService,
-                    functionService
-                )
-                    .produce(run);
-                default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
-            };
+        K8sRunnable runnable = switch (runAccessor.getTask()) {
+            case SklearnServeTaskSpec.KIND -> new SklearnServeRunner(
+                image,
+                userId,
+                groupId,
+                volumeSizeSpec,
+                runSpec.getFunctionSpec(),
+                secretService.getSecretData(run.getProject(), runSpec.getTaskServeSpec().getSecrets()),
+                k8sBuilderHelper,
+                k8sLabelHelper,
+                modelService,
+                functionService
+            ).produce(run);
+            default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
+        };
 
         //extract auth from security context to inflate secured credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();

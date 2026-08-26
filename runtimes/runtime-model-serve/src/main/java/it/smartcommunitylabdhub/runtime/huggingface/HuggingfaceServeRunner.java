@@ -31,6 +31,7 @@ import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
@@ -75,6 +76,8 @@ public class HuggingfaceServeRunner {
     private final Map<String, String> secretData;
 
     private final K8sBuilderHelper k8sBuilderHelper;
+    private final K8sLabelHelper k8sLabelHelper;
+
     private final ModelManager modelService;
     private final FunctionManager functionService;
 
@@ -86,6 +89,7 @@ public class HuggingfaceServeRunner {
         HuggingfaceServeFunctionSpec functionSpec,
         Map<String, String> secretData,
         K8sBuilderHelper k8sBuilderHelper,
+        K8sLabelHelper k8sLabelHelper,
         ModelManager modelService,
         FunctionManager functionService
     ) {
@@ -93,6 +97,7 @@ public class HuggingfaceServeRunner {
         this.functionSpec = functionSpec;
         this.secretData = secretData;
         this.k8sBuilderHelper = k8sBuilderHelper;
+        this.k8sLabelHelper = k8sLabelHelper;
         this.modelService = modelService;
         this.functionService = functionService;
 
@@ -110,9 +115,14 @@ public class HuggingfaceServeRunner {
             List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))
         );
 
-        List<CoreEnv> coreSecrets = secretData == null
-            ? null
-            : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
+        List<CoreEnv> coreSecrets =
+            secretData == null
+                ? null
+                : secretData
+                      .entrySet()
+                      .stream()
+                      .map(e -> new CoreEnv(e.getKey(), e.getValue()))
+                      .toList();
 
         Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
 
@@ -121,9 +131,10 @@ public class HuggingfaceServeRunner {
         );
 
         //check if scratch disk is requested as resource or set default
-        String volumeSize = taskSpec.getResources() != null && taskSpec.getResources().getDisk() != null
-            ? taskSpec.getResources().getDisk()
-            : volumeSizeSpec;
+        String volumeSize =
+            taskSpec.getResources() != null && taskSpec.getResources().getDisk() != null
+                ? taskSpec.getResources().getDisk()
+                : volumeSizeSpec;
         CoreResource diskResource = new CoreResource();
         diskResource.setDisk(volumeSize);
 
@@ -141,9 +152,10 @@ public class HuggingfaceServeRunner {
             if (!EntityUtils.getEntityName(Model.class).equalsIgnoreCase(keyAccessor.getType())) {
                 throw new CoreRuntimeException("invalid entity kind reference, expected model");
             }
-            Model model = keyAccessor.getId() != null
-                ? modelService.findModel(keyAccessor.getId())
-                : modelService.getLatestModel(keyAccessor.getProject(), keyAccessor.getName());
+            Model model =
+                keyAccessor.getId() != null
+                    ? modelService.findModel(keyAccessor.getId())
+                    : modelService.getLatestModel(keyAccessor.getProject(), keyAccessor.getName());
             if (model == null) {
                 throw new CoreRuntimeException("invalid entity reference, HuggingFace model not found");
             }
@@ -196,10 +208,9 @@ public class HuggingfaceServeRunner {
             args.add("--model_dir");
             args.add("/shared/model");
 
-            contextRefs =
-                Collections.singletonList(
-                    ContextRef.builder().source(path).protocol(uri.getScheme()).destination("model/").build()
-                );
+            contextRefs = Collections.singletonList(
+                ContextRef.builder().source(path).protocol(uri.getScheme()).destination("model/").build()
+            );
         }
 
         Map<String, String> extraArgMap = new HashMap<>();
@@ -327,14 +338,13 @@ public class HuggingfaceServeRunner {
         }
 
         //build runnable
-        K8sRunnable k8sServeRunnable = K8sServeRunnable
-            .builder()
+        K8sRunnable k8sServeRunnable = K8sServeRunnable.builder()
             .runtime(HuggingfaceServeRuntime.RUNTIME)
             .task(HuggingfaceServeTaskSpec.KIND)
             .state(State.READY.name())
             .labels(
-                k8sBuilderHelper != null
-                    ? List.of(new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction()))
+                k8sLabelHelper != null
+                    ? List.of(new CoreLabel(k8sLabelHelper.buildCoreLabel("function"), taskAccessor.getFunction()))
                     : null
             )
             //base

@@ -27,6 +27,7 @@ import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
@@ -57,8 +58,12 @@ public class OpeninferenceBuildRunner extends PythonBaseBuildRunner {
 
     public static final int MIN_IMAGE_NAME_LENGTH = 3;
 
-    public OpeninferenceBuildRunner(PythonProperties properties, K8sBuilderHelper k8sBuilderHelper) {
-        super(properties, k8sBuilderHelper);
+    public OpeninferenceBuildRunner(
+        PythonProperties properties,
+        K8sBuilderHelper k8sBuilderHelper,
+        K8sLabelHelper k8sLabelHelper
+    ) {
+        super(properties, k8sBuilderHelper, k8sLabelHelper);
         //set handler for by default
         setHandlerTemplate(new ClassPathResource("runtime-openinference/docker/openinference-handler.py"));
     }
@@ -97,8 +102,7 @@ public class OpeninferenceBuildRunner extends PythonBaseBuildRunner {
 
         //inject custom passwd to add our user
         if (passwdFile != null) {
-            ContextSource entry = ContextSource
-                .builder()
+            ContextSource entry = ContextSource.builder()
                 .name("passwd-template")
                 .base64(Base64.getEncoder().encodeToString(passwdFile.getBytes(StandardCharsets.UTF_8)))
                 .build();
@@ -106,7 +110,13 @@ public class OpeninferenceBuildRunner extends PythonBaseBuildRunner {
         }
 
         // Generate string docker file
-        String dockerfile = generateDockerfile(pythonVersion, baseImage, requirements, taskSpec.getInstructions(), taskSpec.getEnvs());
+        String dockerfile = generateDockerfile(
+            pythonVersion,
+            baseImage,
+            requirements,
+            taskSpec.getInstructions(),
+            taskSpec.getEnvs()
+        );
 
         // Parse run spec
         RunSpecAccessor runSpecAccessor = RunSpecAccessor.with(run.getSpec());
@@ -125,16 +135,15 @@ public class OpeninferenceBuildRunner extends PythonBaseBuildRunner {
             }
         }
 
-        return K8sContainerBuilderRunnable
-            .builder()
+        return K8sContainerBuilderRunnable.builder()
             .id(run.getId())
             .project(run.getProject())
             .runtime(OpeninferenceRuntime.RUNTIME)
             .task(OpeninferenceBuildTaskSpec.KIND)
             .state(State.READY.name())
             .labels(
-                k8sBuilderHelper != null
-                    ? List.of(new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction()))
+                k8sLabelHelper != null
+                    ? List.of(new CoreLabel(k8sLabelHelper.buildCoreLabel("function"), taskAccessor.getFunction()))
                     : null
             )
             //base

@@ -312,11 +312,6 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-entity-log</artifactId>
-            <version>${revision}</version>
-        </dependency>
-        <dependency>
-            <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-entity-workflow</artifactId>
             <version>${revision}</version>
         </dependency>
@@ -339,6 +334,11 @@
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-framework-kaniko</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-framework-ray</artifactId>
             <version>${revision}</version>
         </dependency>
 
@@ -387,6 +387,11 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-runtime-ray</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-runtime-flower</artifactId>
             <version>${revision}</version>
         </dependency>
@@ -430,6 +435,16 @@
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>trinodb-provider</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-loki-logs-provider</artifactId>
+            <version>${revision}</version>
+        </dependency>      
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-prometheus-metrics-provider</artifactId>
             <version>${revision}</version>
         </dependency>
         <!-- <dependency>

@@ -42,6 +42,7 @@ public class TrinoDbProperties {
     private String host;
     private Integer port;
     private String catalog;
+    private String url;
 
     private String user;
     private String password;

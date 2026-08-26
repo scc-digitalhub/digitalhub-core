@@ -28,6 +28,7 @@ import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.objects.SourceCode;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
@@ -76,17 +77,18 @@ public class ContainerBuildRunner {
     );
 
     private final K8sBuilderHelper k8sBuilderHelper;
+    private final K8sLabelHelper k8sLabelHelper;
 
-    public ContainerBuildRunner(K8sBuilderHelper k8sBuilderHelper) {
+    public ContainerBuildRunner(K8sBuilderHelper k8sBuilderHelper, K8sLabelHelper k8sLabelHelper) {
         this.k8sBuilderHelper = k8sBuilderHelper;
+        this.k8sLabelHelper = k8sLabelHelper;
     }
 
     public void setAllowedInstructions(Set<String> allowedInstructions) {
         if (allowedInstructions != null) {
-            ALLOWED_INSTRUCTIONS =
-                Collections.unmodifiableSet(
-                    allowedInstructions.stream().map(String::toUpperCase).collect(Collectors.toSet())
-                );
+            ALLOWED_INSTRUCTIONS = Collections.unmodifiableSet(
+                allowedInstructions.stream().map(String::toUpperCase).collect(Collectors.toSet())
+            );
         } else {
             ALLOWED_INSTRUCTIONS = Collections.emptySet();
         }
@@ -103,9 +105,14 @@ public class ContainerBuildRunner {
             List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))
         );
 
-        List<CoreEnv> coreSecrets = secretData == null
-            ? null
-            : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
+        List<CoreEnv> coreSecrets =
+            secretData == null
+                ? null
+                : secretData
+                      .entrySet()
+                      .stream()
+                      .map(e -> new CoreEnv(e.getKey(), e.getValue()))
+                      .toList();
 
         Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
 
@@ -121,9 +128,8 @@ public class ContainerBuildRunner {
             }
         }
 
-        List<String> instructions = taskSpec.getInstructions() != null
-            ? new ArrayList<>(taskSpec.getInstructions())
-            : new ArrayList<>();
+        List<String> instructions =
+            taskSpec.getInstructions() != null ? new ArrayList<>(taskSpec.getInstructions()) : new ArrayList<>();
 
         if (sourceDockerfile == null) {
             String baseImage = functionSpec.getBaseImage();
@@ -196,10 +202,9 @@ public class ContainerBuildRunner {
                     //write as source
                     String path = source.getSource();
                     if (StringUtils.hasText(source.getBase64())) {
-                        contextSources =
-                            Collections.singletonList(
-                                (ContextSource.builder().name(path).base64(source.getBase64()).build())
-                            );
+                        contextSources = Collections.singletonList(
+                            (ContextSource.builder().name(path).base64(source.getBase64()).build())
+                        );
                     }
                 }
             } catch (IllegalArgumentException e) {
@@ -225,16 +230,15 @@ public class ContainerBuildRunner {
         }
 
         // Build runnable
-        return K8sContainerBuilderRunnable
-            .builder()
+        return K8sContainerBuilderRunnable.builder()
             .id(run.getId())
             .project(run.getProject())
             .runtime(ContainerRuntime.RUNTIME)
             .task(ContainerBuildTaskSpec.KIND)
             .state(State.READY.name())
             .labels(
-                k8sBuilderHelper != null
-                    ? List.of(new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction()))
+                k8sLabelHelper != null
+                    ? List.of(new CoreLabel(k8sLabelHelper.buildCoreLabel("function"), taskAccessor.getFunction()))
                     : null
             )
             // Base

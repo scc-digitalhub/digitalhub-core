@@ -85,6 +85,11 @@ export GIT_CONFIG_VALUE_0="*"
 # Curl: disable .netrc and cookie jar writes (not needed for our use case)
 export CURL_HOME="${destination_dir}"
 
+# dhcli: point config file into destination_dir to avoid writing to a read-only home
+# Users can override by pre-setting DH_CONFIG before invoking this script.
+# DHCORE_ENV can be set to select a specific registered dhcli environment (-e flag).
+export DH_CONFIG="${DH_CONFIG:-${destination_dir}/.dhcore.ini}"
+
 # --------------------------
 # Helper Functions
 # --------------------------
@@ -297,6 +302,134 @@ process_context_ref() {
                 curl -L -f -o "$dest" "$source"
             fi
         ;;
+        "store")
+            # Internal catalog reference: store://<project>/<entity_type>/<kind>/<name>:<id>
+            # id takes priority; if absent, name is used (fetches latest version).
+            # Requires dhcli to be configured via DH_CONFIG (default: $destination_dir/.dhcore.ini).
+            # Set DHCORE_ENV to select a specific registered environment.
+            local stripped_source="${source#store://}"
+
+            # Parse the four path segments
+            local store_project store_entity store_name_id store_name store_id
+            store_project="$(echo "$stripped_source" | cut -d'/' -f1)"
+            store_entity="$(echo "$stripped_source"  | cut -d'/' -f2)"
+            # field 3 is <kind>, field 4 is <name>:<id>
+            store_name_id="$(echo "$stripped_source" | cut -d'/' -f4)"
+
+            # Split name:id on the colon
+            if [[ "$store_name_id" == *":"* ]]; then
+                store_name="${store_name_id%%:*}"
+                store_id="${store_name_id##*:}"
+            else
+                store_name="$store_name_id"
+                store_id=""
+            fi
+
+            if [ -z "$store_project" ] || [ -z "$store_entity" ] || [ -z "$store_name_id" ]; then
+                echo "Error: invalid store:// reference: $source"
+                exit 1
+            fi
+
+            # Optional environment selector
+            local dhcli_env_flag=""
+            [ -n "${DHCORE_ENV:-}" ] && dhcli_env_flag="-e ${DHCORE_ENV}"
+
+            mkdir -p "$dest"
+
+            if [ "$DEBUG" = "true" ]; then
+                echo "DEBUG: store ref=$stripped_source project=$store_project entity=$store_entity name=$store_name id=${store_id:-<none>} dest=$dest"
+            fi
+
+            if [ -n "$store_id" ]; then
+                dhcli download $dhcli_env_flag -p "$store_project" -d "$dest" "$store_entity" "$store_id"
+            else
+                dhcli download $dhcli_env_flag -p "$store_project" -n "$store_name" -d "$dest" "$store_entity"
+            fi
+        ;;
+        "hf")
+            # Hugging Face model download
+            # source format: hf://<owner>/<repo>[/<path_in_repo>]
+            # trailing slash on the path means recursive (whole repo or subfolder)
+            # Result is always placed under $dest/<repo_name>/
+            # e.g. hf://owner/my-model        -> $dest/my-model/
+            #      hf://owner/my-model/a.bin  -> $dest/my-model/a.bin
+            local stripped_source="${source#hf://}"
+            # Remove trailing slash for uniform parsing
+            stripped_source="${stripped_source%/}"
+
+            # parse: <owner>/<repo>[/<path_in_repo>]
+            local repo_id
+            local repo_name
+            local filename_in_repo
+            repo_id="$(echo "$stripped_source" | cut -d'/' -f1-2)"
+            filename_in_repo="$(echo "$stripped_source" | cut -d'/' -f3-)"
+
+            # Determine whether this is a whole-repo download or a single file
+            local is_recursive=false
+            [ -z "$filename_in_repo" ] && is_recursive=true
+
+            # Content always lands directly in $dest (caller controls where via the destination field)
+            mkdir -p "$dest"
+
+            if [ "$DEBUG" = "true" ]; then
+                echo "DEBUG: HF source=$stripped_source repo_id=$repo_id file=${filename_in_repo:-<all>} dest=$dest"
+            fi
+
+            # Try dfget first (DragonFly peer-to-peer download)
+            local dfget_ok=false
+            if command -v dfget &>/dev/null && [ -d "/var/run/dragonfly" ]; then
+                local use_daemon="--transfer-from-dfdaemon"
+                local hf_param=""
+                local recursive=""
+                [ "$is_recursive" = true ] && recursive="--recursive"
+                [ -n "${HF_TOKEN:-}" ] && hf_param="--hf-token $HF_TOKEN"
+
+                if [ "$DEBUG" = "true" ]; then
+                    echo "DEBUG: Trying dfget for $stripped_source -> $dest"
+                fi
+
+                # For recursive download dfget expects a trailing slash on the output path
+                local dfget_dest="$dest"
+                [ "$is_recursive" = true ] && dfget_dest="${dest}/"
+
+                if dfget $use_daemon "${source}" -O "$dfget_dest" $recursive $hf_param; then
+                    dfget_ok=true
+                else
+                    echo "Warning: dfget failed, falling back to huggingface-cli"
+                fi
+            else
+                echo "DragonFly daemon not available, using huggingface-cli"
+            fi
+
+            # Fallback: huggingface-cli download
+            if [ "$dfget_ok" = false ]; then
+                local hf_token_param=""
+                [ -n "${HF_TOKEN:-}" ] && hf_token_param="--token $HF_TOKEN"
+
+                if [ "$DEBUG" = "true" ]; then
+                    echo "DEBUG: huggingface-cli download repo=$repo_id file=${filename_in_repo:-<all>} -> $dest"
+                fi
+
+                # local hf_quiet="--quiet"
+                local hf_quiet=""
+                [ "$DEBUG" = "true" ] && hf_quiet=""
+
+                if [ "$is_recursive" = true ]; then
+                    # Download entire repo content directly into $dest
+                    hf download $hf_token_param \
+                        --local-dir "$dest" \
+                        $hf_quiet \
+                        "$repo_id"
+                else
+                    # Download a single file, preserving its in-repo path under $dest
+                    mkdir -p "$dest/$(dirname "$filename_in_repo")"
+                    hf download $hf_token_param \
+                        --local-dir "$dest" \
+                        $hf_quiet \
+                        "$repo_id" "$filename_in_repo"
+                fi
+            fi
+        ;;
         *)
             echo "Unknown protocol: $protocol"
             exit 1
@@ -385,13 +518,18 @@ done
 file_count=$(find "$destination_dir" -type f ! -path "$destination_dir/lost+found/*" | wc -l)
 total_size=$(du -sh "$destination_dir" | awk '{print $1}')
 
-echo "================ Recap ================="
+echo "================ RECAP ================="
+echo "Destination dir: $destination_dir"
 echo "Total files downloaded/copied: $file_count"
 echo "Total size: $total_size"
 echo "======================================="
 
 # Optional debug listing
 if [ "$DEBUG" = "true" ]; then
-    echo "Listing all files in $destination_dir:"
-    ls -1l "$destination_dir"
+    echo "Listing files in $destination_dir (2 levels deep):"
+    find "$destination_dir" -maxdepth 2 ! -path "$destination_dir/lost+found/*" \
+        | sort \
+        | while read -r entry; do
+            ls -ld "$entry"
+        done
 fi

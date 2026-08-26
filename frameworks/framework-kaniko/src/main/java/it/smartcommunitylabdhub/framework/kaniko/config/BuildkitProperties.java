@@ -40,8 +40,13 @@ public class BuildkitProperties {
 
     private String clientSecretName;
     private String clientSecretMountPath;
+    private Boolean registryInsecure;
 
     public List<String> getArgs() {
         return args != null ? args : List.of();
+    }
+
+    public boolean isRegistryInsecure() {
+        return registryInsecure != null ? registryInsecure.booleanValue() : false;
     }
 }
