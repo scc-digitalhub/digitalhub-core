@@ -16,12 +16,26 @@
 
 package it.smartcommunitylabdhub.console.config;
 
+import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
+import it.smartcommunitylabdhub.commons.config.SecurityProperties;
 import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
+import it.smartcommunitylabdhub.console.ConsoleConfigProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 
 @Configuration
 @PropertySource(value = "classpath:/console.yml", factory = YamlPropertySourceFactory.class)
 @EnableConfigurationProperties({ ConsoleProperties.class })
-public class ConsoleConfig {}
+public class ConsoleConfig {
+
+    @Bean
+    ConsoleConfigProvider consoleConfigProvider(
+        ConsoleProperties consoleProperties,
+        ApplicationProperties properties,
+        SecurityProperties securityProperties
+    ) {
+        return new ConsoleConfigProvider(consoleProperties, properties, securityProperties);
+    }
+}

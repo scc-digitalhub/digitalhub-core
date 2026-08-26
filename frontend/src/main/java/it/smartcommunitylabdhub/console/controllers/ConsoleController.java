@@ -55,20 +55,11 @@ public class ConsoleController {
     public static final String AUTH_PATH = "/api/auth";
     public static final String ENV_PREFIX = "REACT_APP_";
 
+    @Autowired
     private ApplicationProperties applicationProperties;
-    private ConsoleConfigProvider configProvider;
 
     @Autowired
-    private ConfigurationService configurationService;
-
-    public ConsoleController(
-        ConsoleProperties consoleProperties,
-        ApplicationProperties applicationProperties,
-        SecurityProperties securityProperties
-    ) {
-        this.applicationProperties = applicationProperties;
-        configProvider = new ConsoleConfigProvider(consoleProperties, applicationProperties, securityProperties);
-    }
+    private ConsoleConfigProvider configProvider;
 
     @GetMapping(value = { "/", CONSOLE_CONTEXT })
     public ModelAndView root() {

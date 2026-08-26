@@ -27,15 +27,19 @@ import it.smartcommunitylabdhub.commons.config.SecurityProperties;
 import it.smartcommunitylabdhub.commons.infrastructure.ConfigurationProvider;
 import it.smartcommunitylabdhub.console.config.ConsoleProperties;
 import it.smartcommunitylabdhub.console.controllers.ConsoleController;
+import it.smartcommunitylabdhub.logs.LogService;
+import it.smartcommunitylabdhub.metrics.ResourceMetricsService;
+import it.smartcommunitylabdhub.search.service.SearchService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 @Slf4j
-public class ConsoleConfigProvider implements ConfigurationProvider {
+public class ConsoleConfigProvider implements ConfigurationProvider, InitializingBean {
 
     private ConsoleConfig config;
-    private ConsoleProperties consoleProperties;
 
     public ConsoleConfigProvider(
         ConsoleProperties consoleProperties,
@@ -45,8 +49,6 @@ public class ConsoleConfigProvider implements ConfigurationProvider {
         Assert.notNull(consoleProperties, "console properties can not be null");
         Assert.notNull(properties, "properties can not be null");
         Assert.notNull(securityProperties, "securityProperties can not be null");
-
-        this.consoleProperties = consoleProperties;
 
         log.debug("Build configuration for provider...");
         String applicationUrl = StringUtils.hasText(properties.getEndpoint()) ? properties.getEndpoint() : "";
@@ -69,13 +71,42 @@ public class ConsoleConfigProvider implements ConfigurationProvider {
 
         this.config = builder.build();
 
-        if (log.isTraceEnabled()) {
-            log.trace("config: {}", config.toJson());
+        //disable feature flags by default
+        config.setEnableSearch(false);
+        config.setEnableLogs(false);
+        config.setEnableMetrics(false);
+    }
+
+    @Autowired(required = false)
+    public void setLogService(LogService logService) {
+        if (logService != null) {
+            config.setEnableLogs(true);
+        }
+    }
+
+    @Autowired(required = false)
+    public void setSearchService(SearchService searchService) {
+        if (searchService != null) {
+            config.setEnableSearch(true);
+        }
+    }
+
+    @Autowired(required = false)
+    public void setMetricsService(ResourceMetricsService metricsService) {
+        if (metricsService != null) {
+            config.setEnableMetrics(true);
         }
     }
 
     @Override
     public ConsoleConfig getConfig() {
         return config;
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        if (log.isTraceEnabled()) {
+            log.trace("config: {}", config.toJson());
+        }
     }
 }
