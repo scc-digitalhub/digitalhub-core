@@ -116,8 +116,7 @@ public class DbCredentialsProvider implements CredentialsProvider, Configuration
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        DbConfigBuilder builder = DbConfig
-            .builder()
+        DbConfigBuilder builder = DbConfig.builder()
             .platform(properties.getPlatform())
             .host(properties.getHost())
             .port(properties.getPort())
@@ -138,19 +137,17 @@ public class DbCredentialsProvider implements CredentialsProvider, Configuration
         int cacheDuration = Math.max((duration - MIN_DURATION), MIN_DURATION);
 
         //initialize cache
-        cache =
-            CacheBuilder
-                .newBuilder()
-                .expireAfterWrite(cacheDuration, TimeUnit.SECONDS)
-                .build(
-                    new CacheLoader<Pair<String, String>, Pair<DbCredentials, Instant>>() {
-                        @Override
-                        public Pair<DbCredentials, Instant> load(@Nonnull Pair<String, String> key) throws Exception {
-                            log.debug("load credentials for {} role {}", key.getFirst(), key.getSecond());
-                            return generate(key.getFirst(), key.getSecond());
-                        }
+        cache = CacheBuilder.newBuilder()
+            .expireAfterWrite(cacheDuration, TimeUnit.SECONDS)
+            .build(
+                new CacheLoader<Pair<String, String>, Pair<DbCredentials, Instant>>() {
+                    @Override
+                    public Pair<DbCredentials, Instant> load(@Nonnull Pair<String, String> key) throws Exception {
+                        log.debug("load credentials for {} role {}", key.getFirst(), key.getSecond());
+                        return generate(key.getFirst(), key.getSecond());
                     }
-                );
+                }
+            );
     }
 
     private Pair<DbCredentials, Instant> generate(@NotNull String username, @NotNull String role)
@@ -162,11 +159,9 @@ public class DbCredentialsProvider implements CredentialsProvider, Configuration
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
             if (StringUtils.hasText(properties.getUser()) && StringUtils.hasText(properties.getPassword())) {
                 //basic auth is required
-                byte[] basicAuth = Base64
-                    .getEncoder()
-                    .encode(
-                        (properties.getUser() + ":" + properties.getPassword()).getBytes(Charset.forName("US-ASCII"))
-                    );
+                byte[] basicAuth = Base64.getEncoder().encode(
+                    (properties.getUser() + ":" + properties.getPassword()).getBytes(Charset.forName("US-ASCII"))
+                );
                 headers.add("Authorization", "Basic " + new String(basicAuth));
             }
 
@@ -214,9 +209,10 @@ public class DbCredentialsProvider implements CredentialsProvider, Configuration
                 log.trace("response: {}", token);
             }
             Instant now = Instant.now();
-            Instant expiration = token.getExpiration() != null
-                ? now.plusSeconds(token.getExpiration() - SKEW_DURATION)
-                : now.plusSeconds(duration - SKEW_DURATION);
+            Instant expiration =
+                token.getExpiration() != null
+                    ? now.plusSeconds(token.getExpiration() - SKEW_DURATION)
+                    : now.plusSeconds(duration - SKEW_DURATION);
             if (expiration.toEpochMilli() - now.toEpochMilli() < MIN_DURATION * 1000) {
                 //error, no recovery
                 log.error("Error with provider, token duration is too short {}", token.getExpiration());
@@ -224,8 +220,7 @@ public class DbCredentialsProvider implements CredentialsProvider, Configuration
             }
 
             return Pair.of(
-                DbCredentials
-                    .builder()
+                DbCredentials.builder()
                     // .platform(token.getPlatform())
                     // .host(token.getHost())
                     // .port(token.getPort())
@@ -256,10 +251,14 @@ public class DbCredentialsProvider implements CredentialsProvider, Configuration
     public Credentials get(@NotNull UserAuthentication<?> auth) {
         if (properties.isEnabled() && cache != null) {
             //we expect a role credentials in context
-            DbRole role = Optional
-                .ofNullable(auth.getCredentials())
+            DbRole role = Optional.ofNullable(auth.getCredentials())
                 .map(creds ->
-                    creds.stream().filter(DbRole.class::isInstance).map(c -> (DbRole) c).findFirst().orElse(null)
+                    creds
+                        .stream()
+                        .filter(DbRole.class::isInstance)
+                        .map(c -> (DbRole) c)
+                        .findFirst()
+                        .orElse(null)
                 )
                 .orElse(null);
 
@@ -312,9 +311,9 @@ public class DbCredentialsProvider implements CredentialsProvider, Configuration
                 ((BearerTokenAuthentication) token).getTokenAttributes() != null
             ) {
                 @SuppressWarnings("unchecked")
-                List<Credentials> credentials = (List<
-                        Credentials
-                    >) ((BearerTokenAuthentication) token).getTokenAttributes().get("credentials");
+                List<Credentials> credentials = (List<Credentials>) (
+                    (BearerTokenAuthentication) token
+                ).getTokenAttributes().get("credentials");
                 if (credentials != null) {
                     Optional<DbRole> p = credentials
                         .stream()

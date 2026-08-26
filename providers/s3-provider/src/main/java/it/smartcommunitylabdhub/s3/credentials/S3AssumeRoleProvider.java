@@ -116,8 +116,10 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
             duration = accessTokenDuration + MIN_DURATION;
             if (StringUtils.hasText(properties.getPolicyTemplate())) {
                 MustacheFactory mustacheFactory = new DefaultMustacheFactory();
-                policyTemplateMustache =
-                    mustacheFactory.compile(new StringReader(properties.getPolicyTemplate()), "policyTemplate");
+                policyTemplateMustache = mustacheFactory.compile(
+                    new StringReader(properties.getPolicyTemplate()),
+                    "policyTemplate"
+                );
             }
         }
 
@@ -125,19 +127,17 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
         int cacheDuration = Math.max((duration - MIN_DURATION), MIN_DURATION);
 
         //initialize cache
-        cache =
-            CacheBuilder
-                .newBuilder()
-                .expireAfterWrite(cacheDuration, TimeUnit.SECONDS)
-                .build(
-                    new CacheLoader<Pair<String, S3PolicyMapping>, S3Credentials>() {
-                        @Override
-                        public S3Credentials load(@Nonnull Pair<String, S3PolicyMapping> key) throws Exception {
-                            log.debug("load credentials for {}", key.getFirst());
-                            return generate(key.getFirst(), key.getSecond());
-                        }
+        cache = CacheBuilder.newBuilder()
+            .expireAfterWrite(cacheDuration, TimeUnit.SECONDS)
+            .build(
+                new CacheLoader<Pair<String, S3PolicyMapping>, S3Credentials>() {
+                    @Override
+                    public S3Credentials load(@Nonnull Pair<String, S3PolicyMapping> key) throws Exception {
+                        log.debug("load credentials for {}", key.getFirst());
+                        return generate(key.getFirst(), key.getSecond());
                     }
-                );
+                }
+            );
     }
 
     private S3Credentials generate(@NotNull String username, @NotNull S3PolicyMapping policy) throws StoreException {
@@ -154,14 +154,15 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
             );
 
             // Build STS client with custom endpoint
-            StsClientBuilder stsBuilder = StsClient
-                .builder()
-                .credentialsProvider(StaticCredentialsProvider.create(awsCredentials));
+            StsClientBuilder stsBuilder = StsClient.builder().credentialsProvider(
+                StaticCredentialsProvider.create(awsCredentials)
+            );
 
             // Set region - default to us-east-1 if not provided (required by SDK)
-            String region = properties.getRegion() != null && !properties.getRegion().isEmpty()
-                ? properties.getRegion()
-                : "us-east-1";
+            String region =
+                properties.getRegion() != null && !properties.getRegion().isEmpty()
+                    ? properties.getRegion()
+                    : "us-east-1";
             stsBuilder.region(Region.of(region));
 
             // Set custom endpoint if provided
@@ -175,8 +176,7 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
             // Build assume role request
             //NOTE: roleArn is required by STS, we don't check because some third party
             // implementations allow to use policies without roleArn
-            AssumeRoleRequest.Builder requestBuilder = AssumeRoleRequest
-                .builder()
+            AssumeRoleRequest.Builder requestBuilder = AssumeRoleRequest.builder()
                 .roleArn(policy.getRoleArn())
                 .roleSessionName(sessionName)
                 .durationSeconds(duration);
@@ -203,12 +203,12 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
                 software.amazon.awssdk.services.sts.model.Credentials credentials = response.credentials();
 
                 // Convert expiration from Instant to ZonedDateTime
-                ZonedDateTime exp = credentials.expiration() != null
-                    ? ZonedDateTime.ofInstant(credentials.expiration(), ZoneId.systemDefault())
-                    : ZonedDateTime.now().plus(Duration.ofSeconds(duration - MIN_DURATION));
+                ZonedDateTime exp =
+                    credentials.expiration() != null
+                        ? ZonedDateTime.ofInstant(credentials.expiration(), ZoneId.systemDefault())
+                        : ZonedDateTime.now().plus(Duration.ofSeconds(duration - MIN_DURATION));
 
-                return S3Credentials
-                    .builder()
+                return S3Credentials.builder()
                     .accessKey(credentials.accessKeyId())
                     .secretKey(credentials.secretAccessKey())
                     .sessionToken(credentials.sessionToken())
@@ -228,8 +228,8 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
             }
             throw new StoreException(
                 "Failed to assume role: " +
-                e.getMessage() +
-                (e.awsErrorDetails() != null ? " (" + e.awsErrorDetails().errorCode() + ")" : "")
+                    e.getMessage() +
+                    (e.awsErrorDetails() != null ? " (" + e.awsErrorDetails().errorCode() + ")" : "")
             );
         } catch (Exception e) {
             //error, no recovery
@@ -242,8 +242,7 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
     public Credentials get(@NotNull UserAuthentication<?> auth) {
         if (properties.isAssumeRoleProviderEnabled() && cache != null) {
             //we expect a policy credentials in context
-            S3PolicyMapping policy = Optional
-                .ofNullable(auth.getCredentials())
+            S3PolicyMapping policy = Optional.ofNullable(auth.getCredentials())
                 .map(creds ->
                     creds
                         .stream()
@@ -263,13 +262,11 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
                     //try to resolve policy template
                     String resolvedPolicy = resolvePolicyTemplate(properties.getPolicyTemplate(), auth);
                     if (StringUtils.hasText(resolvedPolicy)) {
-                        copy =
-                            S3PolicyMapping
-                                .builder()
-                                .claim(policy.getClaim())
-                                .roleArn(policy.getRoleArn())
-                                .policy(resolvedPolicy)
-                                .build();
+                        copy = S3PolicyMapping.builder()
+                            .claim(policy.getClaim())
+                            .roleArn(policy.getRoleArn())
+                            .policy(resolvedPolicy)
+                            .build();
                     }
                 }
 
@@ -284,8 +281,7 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
                     //check remaining duration against access token
                     if (
                         credentials.getExpiration() != null &&
-                        ZonedDateTime
-                            .now()
+                        ZonedDateTime.now()
                             .plus(Duration.ofSeconds(accessTokenDuration + MIN_DURATION))
                             .isAfter(credentials.getExpiration())
                     ) {
@@ -352,10 +348,12 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
             //extract a policy from jwt tokens
             if (token instanceof JwtAuthenticationToken) {
                 //check if role or policy is set
-                String roleArnParam =
-                    ((JwtAuthenticationToken) token).getToken().getClaimAsString(properties.getClaim() + "/roleArn");
-                String policyParam =
-                    ((JwtAuthenticationToken) token).getToken().getClaimAsString(properties.getClaim() + "/policy");
+                String roleArnParam = ((JwtAuthenticationToken) token).getToken().getClaimAsString(
+                    properties.getClaim() + "/roleArn"
+                );
+                String policyParam = ((JwtAuthenticationToken) token).getToken().getClaimAsString(
+                    properties.getClaim() + "/policy"
+                );
 
                 String roleArn = StringUtils.hasText(roleArnParam) ? roleArnParam : properties.getRoleArn();
                 String policy = StringUtils.hasText(policyParam) ? policyParam : properties.getPolicy();
@@ -369,9 +367,9 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
                 ((BearerTokenAuthentication) token).getTokenAttributes() != null
             ) {
                 @SuppressWarnings("unchecked")
-                List<Credentials> credentials = (List<
-                        Credentials
-                    >) ((BearerTokenAuthentication) token).getTokenAttributes().get("credentials");
+                List<Credentials> credentials = (List<Credentials>) (
+                    (BearerTokenAuthentication) token
+                ).getTokenAttributes().get("credentials");
                 if (credentials != null) {
                     Optional<S3PolicyMapping> p = credentials
                         .stream()
@@ -385,8 +383,7 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
             }
 
             //fallback to default
-            return S3PolicyMapping
-                .builder()
+            return S3PolicyMapping.builder()
                 .claim(properties.getClaim())
                 .policy(properties.getPolicy())
                 .roleArn(properties.getRoleArn())

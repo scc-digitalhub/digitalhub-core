@@ -90,9 +90,8 @@ public class SolrFieldsExportRunner implements CommandLineRunner {
                 returnCode = 1;
             }
         }
-        int exitCode = returnCode == 0
-            ? SpringApplication.exit(context, () -> 0)
-            : SpringApplication.exit(context, () -> 1);
+        int exitCode =
+            returnCode == 0 ? SpringApplication.exit(context, () -> 0) : SpringApplication.exit(context, () -> 1);
         System.exit(exitCode);
     }
 }

@@ -51,8 +51,7 @@ public class S3StaticProvider extends S3BaseProvider implements CredentialsProvi
         log.debug("use shared credentials for user authentication {} via static provider", auth.getName());
 
         //static credentials shared
-        return S3Credentials
-            .builder()
+        return S3Credentials.builder()
             .accessKey(properties.getAccessKey())
             .secretKey(properties.getSecretKey())
             .build();

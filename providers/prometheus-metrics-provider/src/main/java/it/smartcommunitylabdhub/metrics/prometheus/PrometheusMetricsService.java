@@ -309,7 +309,7 @@ public class PrometheusMetricsService implements ResourceMetricsService {
         //build promQL from filter
         List<Pair<String, String>> filters = new ArrayList<>();
         //exact match always for user, no lazy filter
-        filters.add(Pair.of("user",  K8sBuilderHelper.sanitizeNames(user)));
+        filters.add(Pair.of("user", K8sBuilderHelper.sanitizeNames(user)));
 
         List<ResourceMetrics> metrics = fetch(filters, start, end);
         if (log.isTraceEnabled()) {

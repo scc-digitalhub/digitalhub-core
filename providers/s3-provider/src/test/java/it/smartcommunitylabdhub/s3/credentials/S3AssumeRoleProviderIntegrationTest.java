@@ -103,7 +103,6 @@ class S3AssumeRoleProviderIntegrationTest {
 
     @BeforeAll
     static void loadEnv() {
-        
         endpoint = System.getenv(ENV_ENDPOINT);
         accessKey = System.getenv(ENV_ACCESS_KEY);
         secretKey = System.getenv(ENV_SECRET_KEY);
@@ -145,7 +144,7 @@ class S3AssumeRoleProviderIntegrationTest {
         if (!props.isAssumeRoleProviderEnabled()) {
             throw new IllegalStateException(
                 "AssumeRole provider not enabled with current env; " +
-                "ensure at least one of S3_IT_ROLE_ARN or S3_IT_POLICY is set"
+                    "ensure at least one of S3_IT_ROLE_ARN or S3_IT_POLICY is set"
             );
         }
 
@@ -195,10 +194,7 @@ class S3AssumeRoleProviderIntegrationTest {
         assertThat(s3.getAccessKey()).as("access key").isNotBlank();
         assertThat(s3.getSecretKey()).as("secret key").isNotBlank();
         assertThat(s3.getSessionToken()).as("session token").isNotBlank();
-        assertThat(s3.getExpiration())
-            .as("expiration must be in the future")
-            .isNotNull()
-            .isAfter(ZonedDateTime.now());
+        assertThat(s3.getExpiration()).as("expiration must be in the future").isNotNull().isAfter(ZonedDateTime.now());
     }
 
     @Test
@@ -252,8 +248,7 @@ class S3AssumeRoleProviderIntegrationTest {
         );
 
         try (
-            S3Client client = S3Client
-                .builder()
+            S3Client client = S3Client.builder()
                 .credentialsProvider(StaticCredentialsProvider.create(creds))
                 .region(Region.of(region))
                 .endpointOverride(URI.create(s3Endpoint))
@@ -287,8 +282,7 @@ class S3AssumeRoleProviderIntegrationTest {
         bogus.setAccessTokenDuration(JwtTokenService.DEFAULT_ACCESS_TOKEN_DURATION);
         bogus.afterPropertiesSet();
 
-        S3PolicyMapping bogusMapping = S3PolicyMapping
-            .builder()
+        S3PolicyMapping bogusMapping = S3PolicyMapping.builder()
             .claim(CLAIM)
             .roleArn("arn:aws:iam::000000000000:role/this-role-does-not-exist")
             .build();
@@ -306,8 +300,7 @@ class S3AssumeRoleProviderIntegrationTest {
     void policyTemplate_resolvesProjectsFromAuthHelper() throws Exception {
         // pick the projects to grant access to; default to two synthetic ids when not provided
         String projectsCsv = orDefault(System.getenv(ENV_PROJECTS), "it-project-a,it-project-b");
-        List<String> ownProjects = Arrays
-            .stream(projectsCsv.split(","))
+        List<String> ownProjects = Arrays.stream(projectsCsv.split(","))
             .map(String::trim)
             .filter(s -> !s.isEmpty())
             .collect(Collectors.toList());
@@ -391,7 +384,7 @@ class S3AssumeRoleProviderIntegrationTest {
                     os3.getSessionToken()
                 );
 
-               // list objects should fail with access denied
+                // list objects should fail with access denied
                 assertThrows(S3Exception.class, () -> listObjects(bucket, prefix, ocreds).size());
             }
         } catch (RuntimeException re) {
@@ -402,18 +395,15 @@ class S3AssumeRoleProviderIntegrationTest {
     }
 
     private List<S3Object> listObjects(String bucket, String prefix, AwsSessionCredentials creds) {
-        S3Client s3c = S3Client
-            .builder()
+        S3Client s3c = S3Client.builder()
             .credentialsProvider(StaticCredentialsProvider.create(creds))
             .endpointOverride(URI.create(endpoint))
             .region(Region.of(region))
             .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
             .build();
-        List<S3Object> objects = s3c.listObjects(ListObjectsRequest
-            .builder()
-            .bucket(bucket)
-            .prefix(prefix)
-            .build()).contents();
+        List<S3Object> objects = s3c
+            .listObjects(ListObjectsRequest.builder().bucket(bucket).prefix(prefix).build())
+            .contents();
         return objects;
     }
 
