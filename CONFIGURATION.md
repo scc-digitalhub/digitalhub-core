@@ -174,6 +174,7 @@
 | framework-kaniko| `BUILDKIT_IMAGE_PREFIX` | `${builder.image-prefix` |
 | framework-kaniko| `BUILDKIT_IMAGE_REGISTRY` | `${registry.name` |
 | framework-kaniko| `BUILDKIT_IMAGE` | `moby/buildkit:master-rootless` |
+| framework-kaniko| `BUILDKIT_REGISTRY_INSECURE` | `false` |
 | framework-kaniko| `BUILDKIT_SECRET` | `${registry.secret` |
 | framework-kaniko| `KANIKO_ARGS` | `` |
 | framework-kaniko| `KANIKO_IMAGE_PREFIX` | `${builder.image-prefix` |
