@@ -55,24 +55,20 @@ public class DataItemEntityFilter extends AbstractEntityFilter<DataItem> {
         filters.addAll(sf.getFilters());
 
         //labels in AND
-        Optional
-            .ofNullable(labels)
-            .ifPresent(value -> {
-                List<SearchCriteria<DataItem>> lcr = new ArrayList<>();
-                value.forEach(label ->
-                    lcr.add(new BaseEntitySearchCriteria<>("labels", label, SearchCriteria.Operation.like))
-                );
+        Optional.ofNullable(labels).ifPresent(value -> {
+            List<SearchCriteria<DataItem>> lcr = new ArrayList<>();
+            value.forEach(label ->
+                lcr.add(new BaseEntitySearchCriteria<>("labels", label, SearchCriteria.Operation.like))
+            );
 
-                BaseEntityFilter<DataItem> qf = BaseEntityFilter
-                    .<DataItem>builder()
-                    .condition(Condition.and)
-                    .criteria(lcr)
-                    .build();
-                filters.add(qf);
-            });
+            BaseEntityFilter<DataItem> qf = BaseEntityFilter.<DataItem>builder()
+                .condition(Condition.and)
+                .criteria(lcr)
+                .build();
+            filters.add(qf);
+        });
 
-        return BaseEntityFilter
-            .<DataItem>builder()
+        return BaseEntityFilter.<DataItem>builder()
             .criteria(criteria)
             .filters(filters)
             .condition(SearchFilter.Condition.and)

@@ -66,18 +66,14 @@ public class TaskEntityFilter extends AbstractEntityFilter<Task> {
         criteria.addAll(super.toSearchFilter().getCriteria());
 
         //function exact match
-        Optional
-            .ofNullable(function)
-            .ifPresent(value ->
-                criteria.add(new BaseEntitySearchCriteria<>(Fields.FUNCTION, value, SearchCriteria.Operation.equal))
-            );
+        Optional.ofNullable(function).ifPresent(value ->
+            criteria.add(new BaseEntitySearchCriteria<>(Fields.FUNCTION, value, SearchCriteria.Operation.equal))
+        );
 
         //workflow exact match
-        Optional
-            .ofNullable(workflow)
-            .ifPresent(value ->
-                criteria.add(new BaseEntitySearchCriteria<>(Fields.WORKFLOW, value, SearchCriteria.Operation.equal))
-            );
+        Optional.ofNullable(workflow).ifPresent(value ->
+            criteria.add(new BaseEntitySearchCriteria<>(Fields.WORKFLOW, value, SearchCriteria.Operation.equal))
+        );
 
         return BaseEntityFilter.<Task>builder().criteria(criteria).condition(SearchFilter.Condition.and).build();
     }

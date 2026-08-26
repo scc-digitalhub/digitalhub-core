@@ -66,8 +66,7 @@ public class RunEntityBuilder implements Converter<Run, RunEntity> {
         // Extract task
         TaskSpecAccessor taskSpecAccessor = TaskSpecAccessor.with(dto.getSpec());
 
-        return RunEntity
-            .builder()
+        return RunEntity.builder()
             .id(dto.getId())
             .name(dto.getName())
             .kind(dto.getKind())

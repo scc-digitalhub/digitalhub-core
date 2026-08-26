@@ -40,8 +40,7 @@ public class TaskDTOBuilder implements Converter<TaskEntity, Task> {
     }
 
     public Task build(TaskEntity entity) {
-        return Task
-            .builder()
+        return Task.builder()
             .id(entity.getId())
             .kind(entity.getKind())
             .project(entity.getProject())

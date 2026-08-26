@@ -63,21 +63,22 @@ public class RunRelationshipServiceImpl extends BaseRelationshipsAwareEntityServ
 
                 if (accessor.isValid()) {
                     //rebuild key and check
-                    String fk = accessor.getWorkflowId() != null
-                        ? KeyUtils.buildKey(
-                            accessor.getProject(),
-                            EntityUtils.getEntityName(Workflow.class).toLowerCase(),
-                            accessor.getRuntime(),
-                            accessor.getWorkflow(),
-                            accessor.getWorkflowId()
-                        )
-                        : KeyUtils.buildKey(
-                            accessor.getProject(),
-                            EntityUtils.getEntityName(Function.class).toLowerCase(),
-                            accessor.getRuntime(),
-                            accessor.getFunction(),
-                            accessor.getFunctionId()
-                        );
+                    String fk =
+                        accessor.getWorkflowId() != null
+                            ? KeyUtils.buildKey(
+                                  accessor.getProject(),
+                                  EntityUtils.getEntityName(Workflow.class).toLowerCase(),
+                                  accessor.getRuntime(),
+                                  accessor.getWorkflow(),
+                                  accessor.getWorkflowId()
+                              )
+                            : KeyUtils.buildKey(
+                                  accessor.getProject(),
+                                  EntityUtils.getEntityName(Function.class).toLowerCase(),
+                                  accessor.getRuntime(),
+                                  accessor.getFunction(),
+                                  accessor.getFunctionId()
+                              );
 
                     if (
                         list.stream().noneMatch(r -> r.getType() == RelationshipName.RUN_OF && fk.equals(r.getDest()))

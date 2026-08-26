@@ -69,8 +69,7 @@ public class ProjectDTOBuilder implements Converter<ProjectEntity, Project> {
         Optional.ofNullable(baseMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
         Optional.ofNullable(auditingMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
 
-        return Project
-            .builder()
+        return Project.builder()
             .id(entity.getId())
             .name(entity.getName())
             .user(entity.getCreatedBy())

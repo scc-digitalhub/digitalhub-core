@@ -63,8 +63,7 @@ public class ProjectEntityBuilder implements Converter<Project, ProjectEntity> {
         ProjectBaseSpec spec = new ProjectBaseSpec();
         spec.configure(dto.getSpec());
 
-        return ProjectEntity
-            .builder()
+        return ProjectEntity.builder()
             .id(dto.getId())
             .name(dto.getName())
             .kind(dto.getKind())

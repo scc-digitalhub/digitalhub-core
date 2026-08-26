@@ -53,8 +53,7 @@ public class WorkflowEntityBuilder implements Converter<Workflow, WorkflowEntity
         BaseMetadata metadata = BaseMetadata.from(dto.getMetadata());
         EmbeddableMetadata embeddable = EmbeddableMetadata.from(dto.getMetadata());
 
-        return WorkflowEntity
-            .builder()
+        return WorkflowEntity.builder()
             .id(dto.getId())
             .name(dto.getName())
             .kind(dto.getKind())

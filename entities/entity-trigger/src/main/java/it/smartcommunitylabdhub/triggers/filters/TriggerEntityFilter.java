@@ -61,11 +61,9 @@ public class TriggerEntityFilter extends AbstractEntityFilter<Trigger> {
         criteria.addAll(super.toSearchFilter().getCriteria());
 
         //task exact match
-        Optional
-            .ofNullable(task)
-            .ifPresent(value ->
-                criteria.add(new BaseEntitySearchCriteria<>(Fields.TASK, value, SearchCriteria.Operation.equal))
-            );
+        Optional.ofNullable(task).ifPresent(value ->
+            criteria.add(new BaseEntitySearchCriteria<>(Fields.TASK, value, SearchCriteria.Operation.equal))
+        );
 
         return BaseEntityFilter.<Trigger>builder().criteria(criteria).condition(SearchFilter.Condition.and).build();
     }

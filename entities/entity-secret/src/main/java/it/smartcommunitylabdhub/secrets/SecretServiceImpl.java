@@ -294,7 +294,10 @@ public class SecretServiceImpl implements SecretService {
         try {
             //delete one-by-one to clear data
             Specification<SecretEntity> specification = Specification.allOf(CommonSpecification.projectEquals(project));
-            entityRepository.searchAll(specification).stream().forEach(s -> deleteSecret(s.getName()));
+            entityRepository
+                .searchAll(specification)
+                .stream()
+                .forEach(s -> deleteSecret(s.getName()));
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -413,8 +416,15 @@ public class SecretServiceImpl implements SecretService {
             .collect(Collectors.toList());
 
         //we expect all secrets to exists *before* settings
-        List<String> found = secrets.stream().map(s -> s.getName()).toList();
-        List<String> invalid = values.keySet().stream().filter(k -> !found.contains(k)).toList();
+        List<String> found = secrets
+            .stream()
+            .map(s -> s.getName())
+            .toList();
+        List<String> invalid = values
+            .keySet()
+            .stream()
+            .filter(k -> !found.contains(k))
+            .toList();
 
         if (!invalid.isEmpty()) {
             throw new IllegalArgumentException("missing secrets for " + String.join(",", invalid));

@@ -76,8 +76,7 @@ public class SecretDTOBuilder implements Converter<SecretEntity, Secret> {
         Optional.ofNullable(baseMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
         Optional.ofNullable(auditingMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
 
-        return Secret
-            .builder()
+        return Secret.builder()
             .id(entity.getId())
             .name(entity.getName())
             .kind(entity.getKind())

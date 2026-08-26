@@ -60,8 +60,7 @@ public class RunCloudListener {
             log.debug("receive notify for {}: {}", user, dto.getId());
 
             //unpack and notify
-            UserNotification<Run> notification = UserNotification
-                .<Run>builder()
+            UserNotification<Run> notification = UserNotification.<Run>builder()
                 .action(event.getAction())
                 .user(user)
                 .dto(dto)
@@ -81,8 +80,7 @@ public class RunCloudListener {
 
             if (notificationService != null && event.getDto() != null) {
                 //unpack and notify
-                UserNotification<Run> notification = UserNotification
-                    .<Run>builder()
+                UserNotification<Run> notification = UserNotification.<Run>builder()
                     .action(event.getAction())
                     .dto(event.getDto())
                     .build();

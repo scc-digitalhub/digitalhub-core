@@ -84,8 +84,7 @@ public class WorkflowDTOBuilder implements Converter<WorkflowEntity, Workflow> {
         Optional.ofNullable(auditingMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
         Optional.ofNullable(versioningMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
 
-        return Workflow
-            .builder()
+        return Workflow.builder()
             .id(entity.getId())
             .name(entity.getName())
             .kind(entity.getKind())

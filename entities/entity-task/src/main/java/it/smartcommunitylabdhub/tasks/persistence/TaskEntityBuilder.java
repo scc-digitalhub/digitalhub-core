@@ -49,8 +49,7 @@ public class TaskEntityBuilder implements Converter<Task, TaskEntity> {
      * @return Task the task entity
      */
     public TaskEntity build(Task dto) {
-        return TaskEntity
-            .builder()
+        return TaskEntity.builder()
             .id(dto.getId())
             .kind(dto.getKind())
             .project(dto.getProject())

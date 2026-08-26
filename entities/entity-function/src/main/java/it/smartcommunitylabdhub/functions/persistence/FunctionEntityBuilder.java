@@ -53,8 +53,7 @@ public class FunctionEntityBuilder implements Converter<Function, FunctionEntity
         BaseMetadata metadata = BaseMetadata.from(dto.getMetadata());
         EmbeddableMetadata embeddable = EmbeddableMetadata.from(dto.getMetadata());
 
-        return FunctionEntity
-            .builder()
+        return FunctionEntity.builder()
             .id(dto.getId())
             .name(dto.getName())
             .kind(dto.getKind())

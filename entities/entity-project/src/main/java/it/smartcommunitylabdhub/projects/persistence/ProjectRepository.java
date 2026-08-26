@@ -34,7 +34,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.lang.NonNull;
 
 public interface ProjectRepository
-    extends JpaRepository<ProjectEntity, String>, JpaSpecificationExecutor<ProjectEntity> {
+    extends JpaRepository<ProjectEntity, String>, JpaSpecificationExecutor<ProjectEntity>
+{
     Boolean existsByName(String name);
 
     @Modifying

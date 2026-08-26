@@ -84,50 +84,41 @@ public class RunEntityFilter extends AbstractEntityFilter<Run> {
         filters.addAll(sf.getFilters());
 
         //task exact match
-        Optional
-            .ofNullable(task)
-            .ifPresentOrElse(
-                value -> criteria.add(new BaseEntitySearchCriteria<>("task", value, SearchCriteria.Operation.equal)),
-                () -> {
-                    //if no task, check action
-                    Optional
-                        .ofNullable(action)
-                        .ifPresent(a ->
-                            criteria.add(new BaseEntitySearchCriteria<>("task", a, SearchCriteria.Operation.like))
-                        );
-                }
-            );
+        Optional.ofNullable(task).ifPresentOrElse(
+            value -> criteria.add(new BaseEntitySearchCriteria<>("task", value, SearchCriteria.Operation.equal)),
+            () -> {
+                //if no task, check action
+                Optional.ofNullable(action).ifPresent(a ->
+                    criteria.add(new BaseEntitySearchCriteria<>("task", a, SearchCriteria.Operation.like))
+                );
+            }
+        );
 
         //function match
-        Optional
-            .ofNullable(function)
-            .ifPresent(value -> {
-                Matcher matcher = java.util.regex.Pattern.compile(Keys.FUNCTION_PATTERN).matcher(value);
-                if (matcher.matches()) {
-                    //exact match
-                    criteria.add(new BaseEntitySearchCriteria<>("function", value, SearchCriteria.Operation.equal));
-                } else {
-                    //like match
-                    criteria.add(new BaseEntitySearchCriteria<>("function", value, SearchCriteria.Operation.like));
-                }
-            });
+        Optional.ofNullable(function).ifPresent(value -> {
+            Matcher matcher = java.util.regex.Pattern.compile(Keys.FUNCTION_PATTERN).matcher(value);
+            if (matcher.matches()) {
+                //exact match
+                criteria.add(new BaseEntitySearchCriteria<>("function", value, SearchCriteria.Operation.equal));
+            } else {
+                //like match
+                criteria.add(new BaseEntitySearchCriteria<>("function", value, SearchCriteria.Operation.like));
+            }
+        });
 
         //workflow exact match
-        Optional
-            .ofNullable(workflow)
-            .ifPresent(value -> {
-                Matcher matcher = java.util.regex.Pattern.compile(Keys.WORKFLOW_PATTERN).matcher(value);
-                if (matcher.matches()) {
-                    //exact match
-                    criteria.add(new BaseEntitySearchCriteria<>("workflow", value, SearchCriteria.Operation.equal));
-                } else {
-                    //like match
-                    criteria.add(new BaseEntitySearchCriteria<>("workflow", value, SearchCriteria.Operation.like));
-                }
-            });
+        Optional.ofNullable(workflow).ifPresent(value -> {
+            Matcher matcher = java.util.regex.Pattern.compile(Keys.WORKFLOW_PATTERN).matcher(value);
+            if (matcher.matches()) {
+                //exact match
+                criteria.add(new BaseEntitySearchCriteria<>("workflow", value, SearchCriteria.Operation.equal));
+            } else {
+                //like match
+                criteria.add(new BaseEntitySearchCriteria<>("workflow", value, SearchCriteria.Operation.like));
+            }
+        });
 
-        return BaseEntityFilter
-            .<Run>builder()
+        return BaseEntityFilter.<Run>builder()
             .criteria(criteria)
             .filters(filters)
             .condition(SearchFilter.Condition.and)

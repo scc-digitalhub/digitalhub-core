@@ -81,8 +81,7 @@ public class FunctionDTOBuilder implements Converter<FunctionEntity, Function> {
         Optional.ofNullable(auditingMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
         Optional.ofNullable(versioningMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
 
-        return Function
-            .builder()
+        return Function.builder()
             .id(entity.getId())
             .name(entity.getName())
             .kind(entity.getKind())

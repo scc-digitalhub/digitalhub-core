@@ -44,8 +44,8 @@ public interface ModelRepository extends JpaRepository<ModelEntity, String>, Jpa
 
     @Query(
         "SELECT a FROM ModelEntity a WHERE a.project = :project AND (a.name, a.project, a.created) IN " +
-        "(SELECT a2.name, a2.project, MAX(a2.created) FROM ModelEntity a2 WHERE a2.project = :project GROUP BY a2.name, a2.project) " +
-        "ORDER BY a.created DESC"
+            "(SELECT a2.name, a2.project, MAX(a2.created) FROM ModelEntity a2 WHERE a2.project = :project GROUP BY a2.name, a2.project) " +
+            "ORDER BY a.created DESC"
     )
     List<ModelEntity> findAllLatestModelsByProject(@Param("project") String project);
 
@@ -57,7 +57,7 @@ public interface ModelRepository extends JpaRepository<ModelEntity, String>, Jpa
 
     @Query(
         "SELECT a FROM ModelEntity a WHERE a.project = :project AND a.name = :name " +
-        "AND a.created = (SELECT MAX(a2.created) FROM ModelEntity a2 WHERE a2.project = :project AND a2.name = :name)"
+            "AND a.created = (SELECT MAX(a2.created) FROM ModelEntity a2 WHERE a2.project = :project AND a2.name = :name)"
     )
     Optional<ModelEntity> findLatestModelByProjectAndName(@Param("project") String project, @Param("name") String name);
 

@@ -55,24 +55,20 @@ public class ModelEntityFilter extends AbstractEntityFilter<Model> {
         filters.addAll(sf.getFilters());
 
         //labels in AND
-        Optional
-            .ofNullable(labels)
-            .ifPresent(value -> {
-                List<SearchCriteria<Model>> lcr = new ArrayList<>();
-                value.forEach(label ->
-                    lcr.add(new BaseEntitySearchCriteria<>("labels", label, SearchCriteria.Operation.like))
-                );
+        Optional.ofNullable(labels).ifPresent(value -> {
+            List<SearchCriteria<Model>> lcr = new ArrayList<>();
+            value.forEach(label ->
+                lcr.add(new BaseEntitySearchCriteria<>("labels", label, SearchCriteria.Operation.like))
+            );
 
-                BaseEntityFilter<Model> qf = BaseEntityFilter
-                    .<Model>builder()
-                    .condition(Condition.and)
-                    .criteria(lcr)
-                    .build();
-                filters.add(qf);
-            });
+            BaseEntityFilter<Model> qf = BaseEntityFilter.<Model>builder()
+                .condition(Condition.and)
+                .criteria(lcr)
+                .build();
+            filters.add(qf);
+        });
 
-        return BaseEntityFilter
-            .<Model>builder()
+        return BaseEntityFilter.<Model>builder()
             .criteria(criteria)
             .filters(filters)
             .condition(SearchFilter.Condition.and)

@@ -55,24 +55,20 @@ public class ArtifactEntityFilter extends AbstractEntityFilter<Artifact> {
         filters.addAll(sf.getFilters());
 
         //labels in AND
-        Optional
-            .ofNullable(labels)
-            .ifPresent(value -> {
-                List<SearchCriteria<Artifact>> lcr = new ArrayList<>();
-                value.forEach(label ->
-                    lcr.add(new BaseEntitySearchCriteria<>("labels", label, SearchCriteria.Operation.like))
-                );
+        Optional.ofNullable(labels).ifPresent(value -> {
+            List<SearchCriteria<Artifact>> lcr = new ArrayList<>();
+            value.forEach(label ->
+                lcr.add(new BaseEntitySearchCriteria<>("labels", label, SearchCriteria.Operation.like))
+            );
 
-                BaseEntityFilter<Artifact> qf = BaseEntityFilter
-                    .<Artifact>builder()
-                    .condition(Condition.and)
-                    .criteria(lcr)
-                    .build();
-                filters.add(qf);
-            });
+            BaseEntityFilter<Artifact> qf = BaseEntityFilter.<Artifact>builder()
+                .condition(Condition.and)
+                .criteria(lcr)
+                .build();
+            filters.add(qf);
+        });
 
-        return BaseEntityFilter
-            .<Artifact>builder()
+        return BaseEntityFilter.<Artifact>builder()
             .criteria(criteria)
             .filters(filters)
             .condition(SearchFilter.Condition.and)
