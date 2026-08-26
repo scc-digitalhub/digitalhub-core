@@ -24,11 +24,9 @@
 package it.smartcommunitylabdhub.console.controllers;
 
 import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
-import it.smartcommunitylabdhub.commons.config.SecurityProperties;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.console.ConsoleConfigProvider;
 import it.smartcommunitylabdhub.console.Keys;
-import it.smartcommunitylabdhub.console.config.ConsoleProperties;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Collection;
 import java.util.HashMap;
@@ -60,6 +58,9 @@ public class ConsoleController {
 
     @Autowired
     private ConsoleConfigProvider configProvider;
+
+    @Autowired
+    private ConfigurationService configurationService;
 
     @GetMapping(value = { "/", CONSOLE_CONTEXT })
     public ModelAndView root() {
