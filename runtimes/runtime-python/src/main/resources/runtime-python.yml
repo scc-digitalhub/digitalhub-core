@@ -77,4 +77,29 @@ runtime:
     use-beta-dependencies: ${RUNTIME_OPENINFERENCE_USE_BETA_DEPENDENCIES:${runtime.python.use-beta-dependencies}}
     install-dependencies: ${RUNTIME_OPENINFERENCE_INSTALL_DEPENDENCIES:${runtime.python.install-dependencies}}
     volume-size: ${RUNTIME_OPENINFERENCE_VOLUME_SIZE:${runtime.python.volume-size}}    
-        
+  hydra:
+    images:
+      PYTHON3_10: ${RUNTIME_HYDRA_IMAGE_3_10:${runtime.python.images.PYTHON3_10}}
+      PYTHON3_11: ${RUNTIME_HYDRA_IMAGE_3_11:${runtime.python.images.PYTHON3_11}}
+      PYTHON3_12: ${RUNTIME_HYDRA_IMAGE_3_12:${runtime.python.images.PYTHON3_12}}
+      PYTHON3_13: ${RUNTIME_HYDRA_IMAGE_3_13:${runtime.python.images.PYTHON3_13}}
+    serverless-images:
+      PYTHON3_10: ${RUNTIME_HYDRA_SERVERLESS_IMAGE_3_10:${runtime.python.serverless-images.PYTHON3_10}}
+      PYTHON3_11: ${RUNTIME_HYDRA_SERVERLESS_IMAGE_3_11:${runtime.python.serverless-images.PYTHON3_11}}
+      PYTHON3_12: ${RUNTIME_HYDRA_SERVERLESS_IMAGE_3_12:${runtime.python.serverless-images.PYTHON3_12}}
+      PYTHON3_13: ${RUNTIME_HYDRA_SERVERLESS_IMAGE_3_13:${runtime.python.serverless-images.PYTHON3_13}}
+    base-images:
+      PYTHON3_10: ${RUNTIME_HYDRA_BASE_IMAGE_3_10:${runtime.python.base-images.PYTHON3_10}}
+      PYTHON3_11: ${RUNTIME_HYDRA_BASE_IMAGE_3_11:${runtime.python.base-images.PYTHON3_11}}
+      PYTHON3_12: ${RUNTIME_HYDRA_BASE_IMAGE_3_12:${runtime.python.base-images.PYTHON3_12}}
+      PYTHON3_13: ${RUNTIME_HYDRA_BASE_IMAGE_3_13:${runtime.python.base-images.PYTHON3_13}}
+    user-id: ${RUNTIME_HYDRA_USER_ID:${runtime.python.user-id}}
+    group-id: ${RUNTIME_HYDRA_GROUP_ID:${runtime.python.group-id}}
+    home-dir: ${RUNTIME_HYDRA_HOME_DIR:${runtime.python.home-dir}}
+    command: ${RUNTIME_HYDRA_COMMAND:${runtime.python.command}}
+    entrypoint: ${runtime.python.entrypoint:classpath:/runtime-python/docker/entrypoint.sh}
+    passwd-template: ${runtime.python.passwd-template:classpath:/runtime-python/docker/passwd.template}
+    dependencies: ${RUNTIME_HYDRA_DEPENDENCIES:digitalhub[full],digitalhub-runtime-python,hydra-core,omegaconf}      
+    use-beta-dependencies: ${RUNTIME_HYDRA_USE_BETA_DEPENDENCIES:${runtime.python.use-beta-dependencies}}
+    install-dependencies: ${RUNTIME_HYDRA_INSTALL_DEPENDENCIES:${runtime.python.install-dependencies}}
+    volume-size: ${RUNTIME_HYDRA_VOLUME_SIZE:${runtime.python.volume-size}}

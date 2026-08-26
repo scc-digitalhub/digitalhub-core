@@ -268,6 +268,11 @@ public class K8sBuilderHelper implements InitializingBean {
                     new V1PersistentVolumeClaimVolumeSource()
                         .claimName(spec.getOrDefault("claimName", coreVolume.getName()))
                 );
+            case VolumeType.workflow_volume:
+                return volume.persistentVolumeClaim(
+                    new V1PersistentVolumeClaimVolumeSource()
+                        .claimName(spec.getOrDefault("claimName", coreVolume.getName()))
+                );
             case VolumeType.persistent_volume_claim:
                 return volume.persistentVolumeClaim(
                     new V1PersistentVolumeClaimVolumeSource().claimName(getVolumeName(id, coreVolume.getName()))

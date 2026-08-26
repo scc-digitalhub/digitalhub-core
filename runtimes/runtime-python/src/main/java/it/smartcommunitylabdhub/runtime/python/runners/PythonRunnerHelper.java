@@ -210,6 +210,9 @@ public class PythonRunnerHelper {
     //     }
     //     return contextSources;
     // }
+
+
+
     public static List<ContextSource> createContextSources(
         @NotNull String entrypoint,
         @NotNull String handlerFile,
@@ -321,6 +324,7 @@ public class PythonRunnerHelper {
     public static List<String> buildEntrypointArgs(
         String basePath,
         String processor,
+        String functionRef,
         String uvPath,
         List<String> commonRequirementsPath,
         String wheelPath
@@ -332,7 +336,7 @@ public class PythonRunnerHelper {
                 "--processor",
                 processor,
                 "--config",
-                basePath + "/function.yaml",
+                basePath + "/" + functionRef,
                 "--requirements",
                 basePath + "/requirements.txt"
             )
