@@ -2,6 +2,7 @@ package it.smartcommunitylabdhub.projects;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
@@ -15,6 +16,7 @@ import it.smartcommunitylabdhub.commons.models.project.BaseProject;
 import it.smartcommunitylabdhub.extensions.model.ExtensibleDTO;
 
 @AllArgsConstructor
+@NoArgsConstructor
 @Getter
 @Setter
 @SuperBuilder
