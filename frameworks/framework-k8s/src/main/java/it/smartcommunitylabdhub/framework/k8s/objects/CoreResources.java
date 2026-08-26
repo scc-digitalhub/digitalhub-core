@@ -43,15 +43,18 @@ public class CoreResources implements Serializable {
         return requests == null
             ? Map.of()
             : requests
-                .stream()
-                .collect(Collectors.toMap(CoreResourceDefinition::getKey, CoreResourceDefinition::getValue));
+                  .stream()
+                  .collect(Collectors.toMap(CoreResourceDefinition::getKey, CoreResourceDefinition::getValue));
     }
 
     @JsonSetter("requests")
     public void setRequestsFromMap(Map<String, String> reqs) {
         if (reqs != null) {
-            this.requests =
-                reqs.entrySet().stream().map(e -> new CoreResourceDefinition(e.getKey(), e.getValue())).toList();
+            this.requests = reqs
+                .entrySet()
+                .stream()
+                .map(e -> new CoreResourceDefinition(e.getKey(), e.getValue()))
+                .toList();
         }
     }
 
@@ -60,15 +63,18 @@ public class CoreResources implements Serializable {
         return limits == null
             ? Map.of()
             : limits
-                .stream()
-                .collect(Collectors.toMap(CoreResourceDefinition::getKey, CoreResourceDefinition::getValue));
+                  .stream()
+                  .collect(Collectors.toMap(CoreResourceDefinition::getKey, CoreResourceDefinition::getValue));
     }
 
     @JsonSetter("limits")
     public void setLimitsFromMap(Map<String, String> lims) {
         if (lims != null) {
-            this.limits =
-                lims.entrySet().stream().map(e -> new CoreResourceDefinition(e.getKey(), e.getValue())).toList();
+            this.limits = lims
+                .entrySet()
+                .stream()
+                .map(e -> new CoreResourceDefinition(e.getKey(), e.getValue()))
+                .toList();
         }
     }
 }

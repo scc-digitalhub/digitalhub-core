@@ -140,17 +140,24 @@ public class K8sDeploymentMonitor extends K8sBaseMonitor<K8sDeploymentRunnable> 
                 boolean hasRestarts = pods
                     .stream()
                     .anyMatch(pod ->
-                        Optional
-                            .ofNullable(pod.getStatus())
+                        Optional.ofNullable(pod.getStatus())
                             .map(status -> {
-                                boolean initRestarts = Optional
-                                    .ofNullable(status.getInitContainerStatuses())
-                                    .map(s -> s.stream().map(i -> i.getRestartCount()).anyMatch(r -> r > 1))
+                                boolean initRestarts = Optional.ofNullable(status.getInitContainerStatuses())
+                                    .map(s ->
+                                        s
+                                            .stream()
+                                            .map(i -> i.getRestartCount())
+                                            .anyMatch(r -> r > 1)
+                                    )
                                     .orElse(false);
 
-                                boolean restarts = Optional
-                                    .ofNullable(status.getContainerStatuses())
-                                    .map(s -> s.stream().map(i -> i.getRestartCount()).anyMatch(r -> r > 1))
+                                boolean restarts = Optional.ofNullable(status.getContainerStatuses())
+                                    .map(s ->
+                                        s
+                                            .stream()
+                                            .map(i -> i.getRestartCount())
+                                            .anyMatch(r -> r > 1)
+                                    )
                                     .orElse(false);
 
                                 return initRestarts || restarts;

@@ -143,14 +143,15 @@ public class K8sServeMonitor extends K8sBaseMonitor<K8sServeRunnable> {
                     //also check for condition ready
                     boolean ready = pods
                         .stream()
-                        .anyMatch(p ->
-                            p.getStatus() != null &&
-                            p.getStatus().getConditions() != null &&
-                            p
-                                .getStatus()
-                                .getConditions()
-                                .stream()
-                                .anyMatch(c -> "Ready".equals(c.getType()) && "True".equals(c.getStatus()))
+                        .anyMatch(
+                            p ->
+                                p.getStatus() != null &&
+                                p.getStatus().getConditions() != null &&
+                                p
+                                    .getStatus()
+                                    .getConditions()
+                                    .stream()
+                                    .anyMatch(c -> "Ready".equals(c.getType()) && "True".equals(c.getStatus()))
                         );
                     if (running && ready) {
                         runnable.setState(K8sRunnableState.RUNNING.name());
@@ -165,17 +166,24 @@ public class K8sServeMonitor extends K8sBaseMonitor<K8sServeRunnable> {
                 boolean hasRestarts = pods
                     .stream()
                     .anyMatch(pod ->
-                        Optional
-                            .ofNullable(pod.getStatus())
+                        Optional.ofNullable(pod.getStatus())
                             .map(status -> {
-                                boolean initRestarts = Optional
-                                    .ofNullable(status.getInitContainerStatuses())
-                                    .map(s -> s.stream().map(i -> i.getRestartCount()).anyMatch(r -> r > 1))
+                                boolean initRestarts = Optional.ofNullable(status.getInitContainerStatuses())
+                                    .map(s ->
+                                        s
+                                            .stream()
+                                            .map(i -> i.getRestartCount())
+                                            .anyMatch(r -> r > 1)
+                                    )
                                     .orElse(false);
 
-                                boolean restarts = Optional
-                                    .ofNullable(status.getContainerStatuses())
-                                    .map(s -> s.stream().map(i -> i.getRestartCount()).anyMatch(r -> r > 1))
+                                boolean restarts = Optional.ofNullable(status.getContainerStatuses())
+                                    .map(s ->
+                                        s
+                                            .stream()
+                                            .map(i -> i.getRestartCount())
+                                            .anyMatch(r -> r > 1)
+                                    )
                                     .orElse(false);
 
                                 return initRestarts || restarts;

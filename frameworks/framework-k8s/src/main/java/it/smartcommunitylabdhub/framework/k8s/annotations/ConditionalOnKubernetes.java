@@ -34,5 +34,4 @@ import org.springframework.context.annotation.Conditional;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Conditional(OnKubernetesCondition.class)
-public @interface ConditionalOnKubernetes {
-}
+public @interface ConditionalOnKubernetes {}

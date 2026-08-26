@@ -36,9 +36,11 @@ import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 
 public abstract class K8sWorkflowBaseRuntime<
-    F extends WorkflowBaseSpec, S extends RunBaseSpec, Z extends RunBaseStatus, R extends K8sRunnable
->
-    extends AbstractWorkflowBaseRuntime<F, S, Z, R> {
+    F extends WorkflowBaseSpec,
+    S extends RunBaseSpec,
+    Z extends RunBaseStatus,
+    R extends K8sRunnable
+> extends AbstractWorkflowBaseRuntime<F, S, Z, R> {
 
     @Nullable
     protected K8sBuilderHelper k8sBuilderHelper;
@@ -79,8 +81,7 @@ public abstract class K8sWorkflowBaseRuntime<
     @SuppressWarnings("unchecked")
     private Z onRunnable(RunRunnable runnable) {
         if (runnable instanceof K8sRunnable k8sRunnable) {
-            RunBaseStatus status = RunBaseStatus
-                .baseBuilder()
+            RunBaseStatus status = RunBaseStatus.baseBuilder()
                 .state(k8sRunnable.getState())
                 .message(k8sRunnable.getError())
                 .build();

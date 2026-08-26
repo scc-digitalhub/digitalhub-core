@@ -33,5 +33,4 @@ public record CoreLog(
     String container,
     String namespace,
     @Nullable String containerId
-)
-    implements Serializable {}
+) implements Serializable {}
