@@ -105,13 +105,11 @@ public class LabelServiceImpl implements LabelService {
             throw new DuplicatedEntityException(label);
         }
 
-        entity =
-            LabelEntity
-                .builder()
-                .id(keyGenerator.generateKey())
-                .project(project)
-                .label(label.toLowerCase().trim())
-                .build();
+        entity = LabelEntity.builder()
+            .id(keyGenerator.generateKey())
+            .project(project)
+            .label(label.toLowerCase().trim())
+            .build();
 
         entity = repository.save(entity);
 
@@ -140,8 +138,7 @@ public class LabelServiceImpl implements LabelService {
             .stream()
             .filter(l -> existing.stream().noneMatch(e -> e.getLabel().equalsIgnoreCase(l)))
             .map(l -> {
-                LabelEntity e = LabelEntity
-                    .builder()
+                LabelEntity e = LabelEntity.builder()
                     .id(keyGenerator.generateKey())
                     .project(project)
                     .label(l.toLowerCase().trim())

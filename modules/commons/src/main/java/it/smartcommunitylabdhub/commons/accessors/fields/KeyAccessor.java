@@ -48,6 +48,7 @@ public interface KeyAccessor extends Accessor<String> {
     default @NotNull String getProject() {
         return get(Fields.PROJECT);
     }
+
     default @Nullable String getType() {
         return get(Fields.TYPE);
     }

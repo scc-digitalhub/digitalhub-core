@@ -29,7 +29,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 public interface ResourceShareRepository
-    extends JpaRepository<ResourceShareEntity, String>, JpaSpecificationExecutor<ResourceShareEntity> {
+    extends JpaRepository<ResourceShareEntity, String>, JpaSpecificationExecutor<ResourceShareEntity>
+{
     List<ResourceShareEntity> findByProject(String project);
     List<ResourceShareEntity> findByOwner(String owner);
     List<ResourceShareEntity> findByUser(String user);

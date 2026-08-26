@@ -32,7 +32,8 @@ import org.springframework.util.Assert;
 
 public class LifecycleOperation<T extends BaseDTO, E extends Serializable>
     extends ApplicationEvent
-    implements ResolvableTypeProvider {
+    implements ResolvableTypeProvider
+{
 
     private final E action;
     private final T dto;

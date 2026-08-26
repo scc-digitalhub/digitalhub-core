@@ -40,7 +40,11 @@ public class NumberOrNumberArrayJacksonSerializer extends StdSerializer<NumberOr
             gen.writeNumber(obj.getValue().doubleValue());
         }
         if ((obj.getValues() != null) && (obj.getValues().size() > 0)) {
-            double[] array = obj.getValues().stream().mapToDouble(n -> n.doubleValue()).toArray();
+            double[] array = obj
+                .getValues()
+                .stream()
+                .mapToDouble(n -> n.doubleValue())
+                .toArray();
             gen.writeArray(array, 0, array.length);
         }
     }

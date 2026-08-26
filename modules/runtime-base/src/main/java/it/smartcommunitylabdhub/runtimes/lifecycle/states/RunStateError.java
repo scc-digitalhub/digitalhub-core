@@ -32,8 +32,11 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class RunStateError<S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable>
-    extends BaseRunState<S, Z, R> {
+public class RunStateError<
+    S extends RunBaseSpec,
+    Z extends RunBaseStatus,
+    R extends RunRunnable
+> extends BaseRunState<S, Z, R> {
 
     public RunStateError(Runtime<S, Z, R> runtime) {
         super(RunState.ERROR.name(), runtime);

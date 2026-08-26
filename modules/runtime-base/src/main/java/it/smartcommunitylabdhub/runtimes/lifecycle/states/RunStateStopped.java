@@ -32,8 +32,11 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class RunStateStopped<S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable>
-    extends BaseRunState<S, Z, R> {
+public class RunStateStopped<
+    S extends RunBaseSpec,
+    Z extends RunBaseStatus,
+    R extends RunRunnable
+> extends BaseRunState<S, Z, R> {
 
     public RunStateStopped(Runtime<S, Z, R> runtime) {
         this(runtime, false);
@@ -42,21 +45,20 @@ public class RunStateStopped<S extends RunBaseSpec, Z extends RunBaseStatus, R e
     public RunStateStopped(Runtime<S, Z, R> runtime, boolean isResumable) {
         super(RunState.STOPPED.name(), runtime);
         //transitions
-        txs =
-            isResumable
-                ? List.of(
-                    //(ERROR)->ERROR
-                    toError().build(),
-                    //(DELETE)->DELETING
-                    toDeleting().build(),
-                    //(RESUME)->RESUME
-                    toResume().build()
-                )
-                : List.of(
-                    //(ERROR)->ERROR
-                    toError().build(),
-                    //(DELETE)->DELETING
-                    toDeleting().build()
-                );
+        txs = isResumable
+            ? List.of(
+                  //(ERROR)->ERROR
+                  toError().build(),
+                  //(DELETE)->DELETING
+                  toDeleting().build(),
+                  //(RESUME)->RESUME
+                  toResume().build()
+              )
+            : List.of(
+                  //(ERROR)->ERROR
+                  toError().build(),
+                  //(DELETE)->DELETING
+                  toDeleting().build()
+              );
     }
 }

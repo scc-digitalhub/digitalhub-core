@@ -155,8 +155,7 @@ public class GatewayCRManager implements InitializingBean {
         Map<String, Object> context = new HashMap<>();
         context.put("serviceHost", namespacedHostName(service.getServiceHost()));
         context.put("servicePort", service.getServicePort());
-        K8sCRRunnable backendCR = K8sCRRunnable
-            .builder()
+        K8sCRRunnable backendCR = K8sCRRunnable.builder()
             .runtime(runtime)
             .task(task)
             .state(State.READY.name())
@@ -180,8 +179,7 @@ public class GatewayCRManager implements InitializingBean {
         } else {
             context.put("schemaPrefix", "");
         }
-        K8sCRRunnable aibackendCR = K8sCRRunnable
-            .builder()
+        K8sCRRunnable aibackendCR = K8sCRRunnable.builder()
             .runtime(runtime)
             .task(task)
             .state(State.READY.name())
@@ -206,8 +204,7 @@ public class GatewayCRManager implements InitializingBean {
         } else {
             context.put("schemaPrefix", "");
         }
-        K8sCRRunnable aigatewayrouteCR = K8sCRRunnable
-            .builder()
+        K8sCRRunnable aigatewayrouteCR = K8sCRRunnable.builder()
             .runtime(runtime)
             .task(task)
             .state(State.READY.name())
@@ -253,8 +250,7 @@ public class GatewayCRManager implements InitializingBean {
         Map<String, Object> context = new HashMap<>();
         context.put("serviceHost", namespacedHostName(service.getServiceHost()));
         context.put("servicePort", service.getServicePort());
-        K8sCRRunnable backendCR = K8sCRRunnable
-            .builder()
+        K8sCRRunnable backendCR = K8sCRRunnable.builder()
             .runtime(runtime)
             .task(task)
             .state(State.READY.name())
@@ -276,8 +272,7 @@ public class GatewayCRManager implements InitializingBean {
         context.put("servicePath", serviceId);
         context.put("path", service.getPath());
 
-        K8sCRRunnable genericHttpRouteCR = K8sCRRunnable
-            .builder()
+        K8sCRRunnable genericHttpRouteCR = K8sCRRunnable.builder()
             .runtime(runtime)
             .task(task)
             .state(State.READY.name())
@@ -350,8 +345,7 @@ public class GatewayCRManager implements InitializingBean {
         Map<String, Serializable> spec = generateSpec(extPolicyMustache, context);
 
         List<K8sCRRunnable> runnables = new LinkedList<>();
-        K8sCRRunnable payloadLoggerCR = K8sCRRunnable
-            .builder()
+        K8sCRRunnable payloadLoggerCR = K8sCRRunnable.builder()
             .runtime(runtime)
             .task(task)
             .state(State.READY.name())
@@ -374,8 +368,7 @@ public class GatewayCRManager implements InitializingBean {
      * @return
      */
     public GatewayInfo getGenAIGatewayInfo() {
-        return GatewayInfo
-            .builder()
+        return GatewayInfo.builder()
             .gatewayName(envoyGwProperties.getAiGateway().getName())
             .gatewayEndpoint(envoyGwProperties.getAiGateway().getEndpoint())
             .build();
@@ -386,8 +379,7 @@ public class GatewayCRManager implements InitializingBean {
      * @return
      */
     public GatewayInfo getGenericGatewayInfo() {
-        return GatewayInfo
-            .builder()
+        return GatewayInfo.builder()
             .gatewayName(envoyGwProperties.getGenericGateway().getName())
             .gatewayEndpoint(envoyGwProperties.getGenericGateway().getEndpoint())
             .build();

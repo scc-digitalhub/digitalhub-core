@@ -41,9 +41,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
 public abstract class AbstractFunctionBaseRuntime<
-    F extends FunctionBaseSpec, S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable
->
-    extends AbstractBaseRuntime<S, Z, R> {
+    F extends FunctionBaseSpec,
+    S extends RunBaseSpec,
+    Z extends RunBaseStatus,
+    R extends RunRunnable
+> extends AbstractBaseRuntime<S, Z, R> {
 
     protected EntityRepository<Function> functionRepository;
     protected EntityRepository<Task> taskRepository;

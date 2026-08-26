@@ -32,19 +32,21 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class RunStateBuilt<S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable>
-    extends BaseRunState<S, Z, R> {
+public class RunStateBuilt<
+    S extends RunBaseSpec,
+    Z extends RunBaseStatus,
+    R extends RunRunnable
+> extends BaseRunState<S, Z, R> {
 
     public RunStateBuilt(Runtime<S, Z, R> runtime) {
         super(RunState.BUILT.name(), runtime);
-        txs =
-            List.of(
-                //(RUN)->READY
-                toReady().build(),
-                //(ERROR)->ERROR
-                toError().build(),
-                //(DELETE)->DELETING
-                toDeleting().build()
-            );
+        txs = List.of(
+            //(RUN)->READY
+            toReady().build(),
+            //(ERROR)->ERROR
+            toError().build(),
+            //(DELETE)->DELETING
+            toDeleting().build()
+        );
     }
 }

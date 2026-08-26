@@ -64,8 +64,7 @@ public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
     private EntityService<ExtensionDefinition> extensionService;
 
     //loading cache
-    LoadingCache<String, Schema> extCache = CacheBuilder
-        .newBuilder()
+    LoadingCache<String, Schema> extCache = CacheBuilder.newBuilder()
         .expireAfterWrite(CACHE_TIMEOUT, TimeUnit.SECONDS)
         .build(
             new CacheLoader<String, Schema>() {
@@ -116,7 +115,11 @@ public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
     @Override
     public Collection<Schema> listSchemas() {
         List<Schema> result = new ArrayList<>();
-        registrations.values().stream().map(e -> e.schema()).forEach(result::add);
+        registrations
+            .values()
+            .stream()
+            .map(e -> e.schema())
+            .forEach(result::add);
 
         try {
             //pick from db
@@ -289,8 +292,7 @@ public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
             JsonNode schemaNode = objectMapper.readTree(res.getContentAsString(StandardCharsets.UTF_8));
             String kind = schemaNode.get(KIND).asText();
 
-            SchemaImpl schema = SchemaImpl
-                .builder()
+            SchemaImpl schema = SchemaImpl.builder()
                 .entity("extension")
                 .kind(kind)
                 .schema(schemaNode.get(SCHEMA))

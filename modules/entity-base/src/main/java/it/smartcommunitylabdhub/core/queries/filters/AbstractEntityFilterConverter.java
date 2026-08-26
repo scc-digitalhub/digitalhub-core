@@ -41,8 +41,10 @@ import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 
 @Slf4j
-public class AbstractEntityFilterConverter<D extends BaseDTO, E extends BaseEntity>
-    implements Converter<SearchFilter<D>, SearchFilter<E>> {
+public class AbstractEntityFilterConverter<
+    D extends BaseDTO,
+    E extends BaseEntity
+> implements Converter<SearchFilter<D>, SearchFilter<E>> {
 
     private final Map<String, String> mapping;
 
@@ -157,8 +159,7 @@ public class AbstractEntityFilterConverter<D extends BaseDTO, E extends BaseEnti
         Class<?> current = clazz;
         while (current != null && current != Object.class) {
             names.addAll(
-                Arrays
-                    .stream(current.getDeclaredFields())
+                Arrays.stream(current.getDeclaredFields())
                     .filter(f -> !Modifier.isStatic(f.getModifiers()) && !f.isSynthetic())
                     .filter(f -> COMPARABLE_TYPES.contains(f.getType()))
                     .map(Field::getName)

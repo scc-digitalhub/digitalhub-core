@@ -32,20 +32,22 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class RunStateStop<S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable>
-    extends BaseRunState<S, Z, R> {
+public class RunStateStop<
+    S extends RunBaseSpec,
+    Z extends RunBaseStatus,
+    R extends RunRunnable
+> extends BaseRunState<S, Z, R> {
 
     public RunStateStop(Runtime<S, Z, R> runtime) {
         super(RunState.STOP.name(), runtime);
         //transitions
-        txs =
-            List.of(
-                //(STOP)->STOPPED
-                toStopped().build(),
-                //(ERROR)->ERROR
-                toError().build(),
-                //(DELETE)->DELETING
-                toDeleting().build()
-            );
+        txs = List.of(
+            //(STOP)->STOPPED
+            toStopped().build(),
+            //(ERROR)->ERROR
+            toError().build(),
+            //(DELETE)->DELETING
+            toDeleting().build()
+        );
     }
 }

@@ -49,7 +49,10 @@ public class FsmState<S, E, C> {
      * @return
      */
     public Optional<Transition<S, E, C>> getTransitionForEvent(E event) {
-        return transitions.stream().filter(t -> t.getEvent().equals(event)).findFirst();
+        return transitions
+            .stream()
+            .filter(t -> t.getEvent().equals(event))
+            .findFirst();
     }
 
     /**
@@ -60,7 +63,10 @@ public class FsmState<S, E, C> {
      * found.
      */
     public Optional<Transition<S, E, C>> getTransitionForNext(S nextState) {
-        return transitions.stream().filter(t -> t.getNextState().equals(nextState)).findFirst();
+        return transitions
+            .stream()
+            .filter(t -> t.getNextState().equals(nextState))
+            .findFirst();
     }
 
     @FunctionalInterface

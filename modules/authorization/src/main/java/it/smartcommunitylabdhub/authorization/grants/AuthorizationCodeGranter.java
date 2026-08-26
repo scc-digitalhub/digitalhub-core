@@ -148,8 +148,7 @@ public class AuthorizationCodeGranter implements TokenGranter {
 
         String codeVerifier = parameters.get(PkceParameterNames.CODE_VERIFIER);
 
-        TokenRequest tokenRequest = TokenRequest
-            .builder()
+        TokenRequest tokenRequest = TokenRequest.builder()
             .clientId(cid)
             .code(code)
             .redirectUri(redirectUri)

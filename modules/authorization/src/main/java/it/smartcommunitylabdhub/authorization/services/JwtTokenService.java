@@ -457,8 +457,7 @@ public class JwtTokenService implements InitializingBean {
             log.debug("store refresh token for {} with id {}", authentication.getName(), jti);
 
             // store Refresh Token into db
-            RefreshToken refreshToken = RefreshToken
-                .builder()
+            RefreshToken refreshToken = RefreshToken.builder()
                 .id(id)
                 .token(jti)
                 .user(authentication.getName())
@@ -521,7 +520,6 @@ public class JwtTokenService implements InitializingBean {
             // } catch (JOSEException e) {
             //     throw new JwtTokenServiceException("Error verifying JWT token", e);
             // }
-
         } catch (IOException | StoreException e) {
             throw new JwtTokenServiceException(e.getMessage());
         }
@@ -631,8 +629,7 @@ public class JwtTokenService implements InitializingBean {
             byte[] auth = serializer.serializeToByteArray(authentication);
 
             log.debug("store personal access token for {} with id {}", authentication.getName(), jti);
-            PersonalAccessToken personalAccessToken = PersonalAccessToken
-                .builder()
+            PersonalAccessToken personalAccessToken = PersonalAccessToken.builder()
                 .id(id)
                 .name(name)
                 .token(jti)
@@ -734,7 +731,8 @@ public class JwtTokenService implements InitializingBean {
             return new ECDSASigner((ECKey) jwk);
         } else if (jwk instanceof OctetSequenceKey) {
             // build HMAC signers & verifiers
-            if (jwk.isPrivate()) { // technically redundant check because all HMAC keys are private
+            if (jwk.isPrivate()) {
+                // technically redundant check because all HMAC keys are private
                 return new MACSigner((OctetSequenceKey) jwk);
             }
         }

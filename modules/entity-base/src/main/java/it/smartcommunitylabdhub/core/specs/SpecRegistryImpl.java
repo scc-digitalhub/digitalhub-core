@@ -63,8 +63,9 @@ import org.springframework.validation.annotation.Validated;
 
 @Slf4j
 @Validated
-public class SpecRegistryImpl<D>
-    implements SpecRegistry<D>, SchemaService<D>, ApplicationContextAware, InitializingBean {
+public class SpecRegistryImpl<
+    D
+> implements SpecRegistry<D>, SchemaService<D>, ApplicationContextAware, InitializingBean {
 
     protected final Class<D> type;
     private ApplicationContext applicationContext;
@@ -145,19 +146,18 @@ public class SpecRegistryImpl<D>
                         c.newInstance();
 
                         //build a default factory
-                        factory =
-                            () -> {
-                                try {
-                                    return c.newInstance();
-                                } catch (
-                                    InstantiationException
-                                    | IllegalAccessException
-                                    | IllegalArgumentException
-                                    | InvocationTargetException e
-                                ) {
-                                    throw new IllegalArgumentException("error building spec");
-                                }
-                            };
+                        factory = () -> {
+                            try {
+                                return c.newInstance();
+                            } catch (
+                                InstantiationException
+                                | IllegalAccessException
+                                | IllegalArgumentException
+                                | InvocationTargetException e
+                            ) {
+                                throw new IllegalArgumentException("error building spec");
+                            }
+                        };
                     } catch (
                         NoSuchMethodException
                         | InstantiationException
@@ -219,8 +219,7 @@ public class SpecRegistryImpl<D>
         Class<? extends Spec> proxy = SchemaUtils.proxy(spec);
 
         // generate
-        SchemaImplBuilder builder = SchemaImpl
-            .builder()
+        SchemaImplBuilder builder = SchemaImpl.builder()
             .entity(getEntityName(entity))
             .kind(kind)
             .schema(generator.generateSchema(proxy));
@@ -283,12 +282,21 @@ public class SpecRegistryImpl<D>
 
     @Override
     public Collection<Schema> listSchemas() {
-        return registrations.values().stream().map(e -> e.schema()).toList();
+        return registrations
+            .values()
+            .stream()
+            .map(e -> e.schema())
+            .toList();
     }
 
     @Override
     public Collection<Schema> listSchemas(@NotNull String runtime) {
-        return registrations.values().stream().filter(e -> runtime.equals(e.runtime())).map(e -> e.schema()).toList();
+        return registrations
+            .values()
+            .stream()
+            .filter(e -> runtime.equals(e.runtime()))
+            .map(e -> e.schema())
+            .toList();
     }
 
     protected record SpecRegistration(

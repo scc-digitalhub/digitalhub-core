@@ -3,22 +3,18 @@ package it.smartcommunitylabdhub.fsm;
 // @SpringBootTest(classes = { StateMachineTest.class })
 public class StateMachineTest {
     // // some method definition
-
     // // @Test
     // public void fsm() {
     //     // Create the state machine
-
     //     FsmState<String, String, Map<String, Object>> state1 = new FsmState<>();
     //     FsmState<String, String, Map<String, Object>> state2 = new FsmState<>();
     //     FsmState<String, String, Map<String, Object>> state3 = new FsmState<>();
     //     FsmState<String, String, Map<String, Object>> state4 = new FsmState<>();
     //     FsmState<String, String, Map<String, Object>> errorState = new FsmState<>(); // Error
     //     // state
-
     //     // Create the initial state and context
     //     String initialState = "State1";
     //     Map<String, Object> initialContext = new HashMap<>();
-
     //     // Create the state machine using the builder
     //     Fsm.Builder<String, String, Map<String, Object>> builder = Fsm
     //         .<String, String, Map<String, Object>>builder(initialState, initialContext)
@@ -49,13 +45,11 @@ public class StateMachineTest {
     //         .withStateChangeListener((newState, context) ->
     //             System.out.println("State Change Listener: " + newState + ", context: " + context)
     //         );
-
     //     // Add event listeners
     //     builder.withEventListener(
     //         "Event1",
     //         (context, input) -> System.out.println("Event1 Listener: context: " + context)
     //     );
-
     //     builder.withEventListener(
     //         "Event2",
     //         (context, input) -> System.out.println("Event2 Listener: context: " + context)
@@ -70,9 +64,7 @@ public class StateMachineTest {
     //     );
     //     // Build the state machine
     //     Fsm<String, String, Map<String, Object>> stateMachine = builder.build();
-
     //     // here set internal logic
-
     //     stateMachine
     //         .getState("State1")
     //         .getTransition("Event1")
@@ -89,7 +81,6 @@ public class StateMachineTest {
     //             Optional.ofNullable(context).ifPresent(c -> c.put("value", 1));
     //             return Optional.of("Hellow World");
     //         });
-
     //     // Trigger events to test the state machine
     //     Optional<Integer> result = stateMachine.goToState("State2", null);
     //     Optional<String> res = stateMachine.goToState("State3", null);

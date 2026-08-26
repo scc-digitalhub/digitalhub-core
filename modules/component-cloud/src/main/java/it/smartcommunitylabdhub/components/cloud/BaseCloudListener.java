@@ -53,8 +53,7 @@ public abstract class BaseCloudListener<D extends BaseDTO & StatusDTO> {
             log.debug("receive notify for {}: {}", user, dto.getId());
 
             //unpack and notify
-            UserNotification<D> notification = UserNotification
-                .<D>builder()
+            UserNotification<D> notification = UserNotification.<D>builder()
                 .action(event.getAction())
                 .user(user)
                 .dto(dto)
@@ -72,8 +71,7 @@ public abstract class BaseCloudListener<D extends BaseDTO & StatusDTO> {
 
             if (notificationService != null && event.getDto() != null) {
                 //unpack and notify
-                UserNotification<D> notification = UserNotification
-                    .<D>builder()
+                UserNotification<D> notification = UserNotification.<D>builder()
                     .action(event.getAction())
                     .dto(event.getDto())
                     .build();

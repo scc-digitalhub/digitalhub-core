@@ -57,10 +57,14 @@ public class ResolvableTypeCacheResolver extends AbstractCacheResolver {
                         log.trace("Resolved cache name {} for repository {}", cacheName, clazz.getName());
                     }
 
-                    Set<String> names = context.getOperation().getCacheNames() != null
-                        ? context.getOperation().getCacheNames()
-                        : Set.of();
-                    return names.stream().map(name -> cacheName + "." + name).toList();
+                    Set<String> names =
+                        context.getOperation().getCacheNames() != null
+                            ? context.getOperation().getCacheNames()
+                            : Set.of();
+                    return names
+                        .stream()
+                        .map(name -> cacheName + "." + name)
+                        .toList();
                 }
             }
         }

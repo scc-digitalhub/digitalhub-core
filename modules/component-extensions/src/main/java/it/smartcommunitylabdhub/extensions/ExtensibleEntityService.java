@@ -125,7 +125,10 @@ public class ExtensibleEntityService<D extends ExtensibleDTO & BaseDTO> implemen
 
                         return extManager.createExtension(ext);
                     } catch (
-                        DuplicatedEntityException | BindException | IllegalArgumentException | SystemException ex
+                        DuplicatedEntityException
+                        | BindException
+                        | IllegalArgumentException
+                        | SystemException ex
                     ) {
                         log.error(
                             "error creating extension for entity {}: {}",
@@ -139,7 +142,12 @@ public class ExtensibleEntityService<D extends ExtensibleDTO & BaseDTO> implemen
                 .filter(e -> e != null)
                 .toList();
 
-            res.setExtensions(exts.stream().map(e -> mapper.convertValue(e, typeRef)).collect(Collectors.toList()));
+            res.setExtensions(
+                exts
+                    .stream()
+                    .map(e -> mapper.convertValue(e, typeRef))
+                    .collect(Collectors.toList())
+            );
         }
 
         return res;
@@ -208,7 +216,12 @@ public class ExtensibleEntityService<D extends ExtensibleDTO & BaseDTO> implemen
                 }
             });
 
-            res.setExtensions(exts.stream().map(e -> mapper.convertValue(e, typeRef)).collect(Collectors.toList()));
+            res.setExtensions(
+                exts
+                    .stream()
+                    .map(e -> mapper.convertValue(e, typeRef))
+                    .collect(Collectors.toList())
+            );
         }
 
         return res;

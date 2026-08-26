@@ -189,8 +189,7 @@ public class AuthorizationEndpoint implements InitializingBean {
         String code = keyGenerator.generateKey();
         Instant now = Instant.now();
 
-        AuthorizationRequest request = AuthorizationRequest
-            .builder()
+        AuthorizationRequest request = AuthorizationRequest.builder()
             .clientId(clientId)
             .redirectUri(redirectUri)
             .code(code)
@@ -212,8 +211,7 @@ public class AuthorizationEndpoint implements InitializingBean {
         log.debug("stored auth request for {} with key {}", authentication.getName(), key);
 
         //build response
-        AuthorizationResponse response = AuthorizationResponse
-            .builder()
+        AuthorizationResponse response = AuthorizationResponse.builder()
             .code(code)
             .state(state)
             .issuer(issuer)

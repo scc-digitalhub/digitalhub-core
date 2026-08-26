@@ -136,7 +136,12 @@ public class ExtensionsEntityServiceAspect {
             .filter(Objects::nonNull)
             .toList();
 
-        outputDto.setExtensions(exts.stream().map(e -> mapper.convertValue(e, typeRef)).collect(Collectors.toList()));
+        outputDto.setExtensions(
+            exts
+                .stream()
+                .map(e -> mapper.convertValue(e, typeRef))
+                .collect(Collectors.toList())
+        );
     }
 
     // ── update ────────────────────────────────────────────────────────────────
@@ -218,7 +223,12 @@ public class ExtensionsEntityServiceAspect {
                 }
             });
 
-        outputDto.setExtensions(exts.stream().map(e -> mapper.convertValue(e, typeRef)).collect(Collectors.toList()));
+        outputDto.setExtensions(
+            exts
+                .stream()
+                .map(e -> mapper.convertValue(e, typeRef))
+                .collect(Collectors.toList())
+        );
     }
 
     // ── get ───────────────────────────────────────────────────────────────────

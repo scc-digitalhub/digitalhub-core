@@ -37,9 +37,8 @@ public class YamlPropertySourceFactory implements PropertySourceFactory {
         // environment variable placeholder resolution in multi-jar deployments
         YamlPropertySourceLoader loader = new YamlPropertySourceLoader();
 
-        String fileName = encodedResource.getResource().getFilename() != null
-            ? encodedResource.getResource().getFilename()
-            : name;
+        String fileName =
+            encodedResource.getResource().getFilename() != null ? encodedResource.getResource().getFilename() : name;
 
         var propertySources = loader.load(fileName, encodedResource.getResource());
 

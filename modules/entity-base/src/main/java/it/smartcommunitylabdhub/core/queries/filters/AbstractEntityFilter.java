@@ -88,119 +88,101 @@ public abstract class AbstractEntityFilter<T extends BaseDTO> {
         List<SearchFilter<T>> filters = new ArrayList<>();
 
         //handle q in OR with id+name
-        Optional
-            .ofNullable(q)
-            .ifPresent(value -> {
-                BaseEntityFilter<T> qf = BaseEntityFilter
-                    .<T>builder()
-                    .condition(Condition.or)
-                    .criteria(processQFields(value))
-                    .build();
-                filters.add(qf);
-            });
+        Optional.ofNullable(q).ifPresent(value -> {
+            BaseEntityFilter<T> qf = BaseEntityFilter.<T>builder()
+                .condition(Condition.or)
+                .criteria(processQFields(value))
+                .build();
+            filters.add(qf);
+        });
 
-        Optional
-            .ofNullable(name)
-            .ifPresent(value ->
-                criteria.add(new BaseEntitySearchCriteria<>("name", value, SearchCriteria.Operation.equal))
-            );
+        Optional.ofNullable(name).ifPresent(value ->
+            criteria.add(new BaseEntitySearchCriteria<>("name", value, SearchCriteria.Operation.equal))
+        );
 
-        Optional
-            .ofNullable(kind)
-            .ifPresent(value ->
-                criteria.add(new BaseEntitySearchCriteria<>("kind", value, SearchCriteria.Operation.equal))
-            );
+        Optional.ofNullable(kind).ifPresent(value ->
+            criteria.add(new BaseEntitySearchCriteria<>("kind", value, SearchCriteria.Operation.equal))
+        );
 
-        Optional
-            .ofNullable(project)
-            .ifPresent(value ->
-                criteria.add(new BaseEntitySearchCriteria<>("project", value, SearchCriteria.Operation.equal))
-            );
+        Optional.ofNullable(project).ifPresent(value ->
+            criteria.add(new BaseEntitySearchCriteria<>("project", value, SearchCriteria.Operation.equal))
+        );
 
-        Optional
-            .ofNullable(user)
-            .ifPresent(value ->
-                criteria.add(new BaseEntitySearchCriteria<>("user", value, SearchCriteria.Operation.equal))
-            );
+        Optional.ofNullable(user).ifPresent(value ->
+            criteria.add(new BaseEntitySearchCriteria<>("user", value, SearchCriteria.Operation.equal))
+        );
 
-        Optional
-            .ofNullable(state)
-            .ifPresent(value -> {
-                try {
-                    criteria.add(new BaseEntitySearchCriteria<>("state", value, SearchCriteria.Operation.equal));
-                } catch (IllegalArgumentException e) {
-                    //invalid enum value, skip
-                }
-            });
+        Optional.ofNullable(state).ifPresent(value -> {
+            try {
+                criteria.add(new BaseEntitySearchCriteria<>("state", value, SearchCriteria.Operation.equal));
+            } catch (IllegalArgumentException e) {
+                //invalid enum value, skip
+            }
+        });
 
-        Optional
-            .ofNullable(created)
-            .ifPresent(value -> {
-                try {
-                    //parse as comma-separated interval or single date
-                    String[] dates = StringUtils.commaDelimitedListToStringArray(value);
-                    LocalDateTime startDate = LocalDateTime.parse(dates[0], DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+        Optional.ofNullable(created).ifPresent(value -> {
+            try {
+                //parse as comma-separated interval or single date
+                String[] dates = StringUtils.commaDelimitedListToStringArray(value);
+                LocalDateTime startDate = LocalDateTime.parse(dates[0], DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+                criteria.add(
+                    new BaseEntitySearchCriteria<>(
+                        "created",
+                        Date.from(startDate.atZone(ZoneId.systemDefault()).toInstant()),
+                        SearchCriteria.Operation.gt
+                    )
+                );
+
+                if (dates.length == 2) {
+                    //interval start,end
+
+                    LocalDateTime endDate = LocalDateTime.parse(dates[1], DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+
                     criteria.add(
                         new BaseEntitySearchCriteria<>(
                             "created",
-                            Date.from(startDate.atZone(ZoneId.systemDefault()).toInstant()),
-                            SearchCriteria.Operation.gt
+                            Date.from(endDate.atZone(ZoneId.systemDefault()).toInstant()),
+                            SearchCriteria.Operation.lt
                         )
                     );
-
-                    if (dates.length == 2) {
-                        //interval start,end
-
-                        LocalDateTime endDate = LocalDateTime.parse(dates[1], DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-
-                        criteria.add(
-                            new BaseEntitySearchCriteria<>(
-                                "created",
-                                Date.from(endDate.atZone(ZoneId.systemDefault()).toInstant()),
-                                SearchCriteria.Operation.lt
-                            )
-                        );
-                    }
-                } catch (DateTimeParseException e) {
-                    //invalid dates, skip
                 }
-            });
+            } catch (DateTimeParseException e) {
+                //invalid dates, skip
+            }
+        });
 
-        Optional
-            .ofNullable(updated)
-            .ifPresent(value -> {
-                try {
-                    //parse as comma-separated interval or single date
-                    String[] dates = StringUtils.commaDelimitedListToStringArray(value);
-                    LocalDateTime startDate = LocalDateTime.parse(dates[0], DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+        Optional.ofNullable(updated).ifPresent(value -> {
+            try {
+                //parse as comma-separated interval or single date
+                String[] dates = StringUtils.commaDelimitedListToStringArray(value);
+                LocalDateTime startDate = LocalDateTime.parse(dates[0], DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+                criteria.add(
+                    new BaseEntitySearchCriteria<>(
+                        "updated",
+                        Date.from(startDate.atZone(ZoneId.systemDefault()).toInstant()),
+                        SearchCriteria.Operation.gt
+                    )
+                );
+
+                if (dates.length == 2) {
+                    //interval start,end
+
+                    LocalDateTime endDate = LocalDateTime.parse(dates[1], DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+
                     criteria.add(
                         new BaseEntitySearchCriteria<>(
                             "updated",
-                            Date.from(startDate.atZone(ZoneId.systemDefault()).toInstant()),
-                            SearchCriteria.Operation.gt
+                            Date.from(endDate.atZone(ZoneId.systemDefault()).toInstant()),
+                            SearchCriteria.Operation.lt
                         )
                     );
-
-                    if (dates.length == 2) {
-                        //interval start,end
-
-                        LocalDateTime endDate = LocalDateTime.parse(dates[1], DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-
-                        criteria.add(
-                            new BaseEntitySearchCriteria<>(
-                                "updated",
-                                Date.from(endDate.atZone(ZoneId.systemDefault()).toInstant()),
-                                SearchCriteria.Operation.lt
-                            )
-                        );
-                    }
-                } catch (DateTimeParseException e) {
-                    //invalid dates, skip
                 }
-            });
+            } catch (DateTimeParseException e) {
+                //invalid dates, skip
+            }
+        });
 
-        return BaseEntityFilter
-            .<T>builder()
+        return BaseEntityFilter.<T>builder()
             .criteria(criteria)
             .filters(filters)
             .condition(SearchFilter.Condition.and)

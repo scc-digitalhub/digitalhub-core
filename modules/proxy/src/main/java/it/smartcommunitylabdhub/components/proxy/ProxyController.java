@@ -132,9 +132,10 @@ public class ProxyController {
         MultiValueMap<String, String> headers = new LinkedMultiValueMap<>();
         if (response.getHeaders() != null) {
             //keep content type
-            MediaType contentType = response.getHeaders().getContentType() != null
-                ? response.getHeaders().getContentType()
-                : MediaType.TEXT_PLAIN;
+            MediaType contentType =
+                response.getHeaders().getContentType() != null
+                    ? response.getHeaders().getContentType()
+                    : MediaType.TEXT_PLAIN;
             headers.add(HttpHeaders.CONTENT_TYPE, contentType.toString());
 
             //copy everything else as X-Proxy response

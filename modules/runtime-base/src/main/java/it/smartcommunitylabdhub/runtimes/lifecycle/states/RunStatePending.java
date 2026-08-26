@@ -37,25 +37,27 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class RunStatePending<S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable>
-    extends BaseRunState<S, Z, R> {
+public class RunStatePending<
+    S extends RunBaseSpec,
+    Z extends RunBaseStatus,
+    R extends RunRunnable
+> extends BaseRunState<S, Z, R> {
 
     public RunStatePending(Runtime<S, Z, R> runtime) {
         super(RunState.PENDING.name(), runtime);
         //transitions
-        txs =
-            List.of(
-                //(LOOP)->PENDING
-                loopPending().build(),
-                //(EXECUTE)->RUNNING
-                toRunning().build(),
-                //(COMPLETE)->COMPLETED
-                toCompleted().build(),
-                //(ERROR)->ERROR
-                toError().build(),
-                //(DELETE)->DELETING
-                toDeleting().build()
-            );
+        txs = List.of(
+            //(LOOP)->PENDING
+            loopPending().build(),
+            //(EXECUTE)->RUNNING
+            toRunning().build(),
+            //(COMPLETE)->COMPLETED
+            toCompleted().build(),
+            //(ERROR)->ERROR
+            toError().build(),
+            //(DELETE)->DELETING
+            toDeleting().build()
+        );
     }
 
     protected Transition.Builder<String, String, Run> loopPending() {

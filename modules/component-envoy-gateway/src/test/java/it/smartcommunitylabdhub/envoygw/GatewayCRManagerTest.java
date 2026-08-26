@@ -68,7 +68,7 @@ class GatewayCRManagerTest {
     private Mustache genericHttpRouteMustache;
 
     private Mustache envoyPolicyMustache;
-    
+
     private PayloadLoggerProperties payloadLoggerProperties;
 
     @Mock
@@ -116,11 +116,15 @@ class GatewayCRManagerTest {
         when(aigatewayrouteTemplate.getInputStream()).thenReturn(new ByteArrayInputStream("name: {{name}}".getBytes()));
         when(aibackendTemplate.getInputStream()).thenReturn(new ByteArrayInputStream("name: {{name}}".getBytes()));
         when(backendTemplate.getInputStream()).thenReturn(new ByteArrayInputStream("name: {{name}}".getBytes()));
-        when(genericHttpRouteTemplate.getInputStream()).thenReturn(new ByteArrayInputStream("name: {{name}}".getBytes()));
+        when(genericHttpRouteTemplate.getInputStream()).thenReturn(
+            new ByteArrayInputStream("name: {{name}}".getBytes())
+        );
         when(envoyPolicyTemplate.getInputStream()).thenReturn(new ByteArrayInputStream("name: {{name}}".getBytes()));
 
         // Mock mustache factory
-        lenient().when(mustacheFactory.compile(any(InputStreamReader.class), anyString())).thenReturn(mock(Mustache.class));
+        lenient()
+            .when(mustacheFactory.compile(any(InputStreamReader.class), anyString()))
+            .thenReturn(mock(Mustache.class));
 
         // Create GatewayCRManager instance
         gatewayCRManager = new GatewayCRManager(envoyGwProperties);
@@ -147,11 +151,17 @@ class GatewayCRManagerTest {
         gatewayCRManager.setPayloadLoggerProperties(payloadLoggerProperties);
 
         // Mock resource loader
-        when(resourceLoader.getResource("classpath:envoygw/templates/aigatewayroute.yaml")).thenReturn(aigatewayrouteTemplate);
+        when(resourceLoader.getResource("classpath:envoygw/templates/aigatewayroute.yaml")).thenReturn(
+            aigatewayrouteTemplate
+        );
         when(resourceLoader.getResource("classpath:envoygw/templates/aibackend.yaml")).thenReturn(aibackendTemplate);
         when(resourceLoader.getResource("classpath:envoygw/templates/backend.yaml")).thenReturn(backendTemplate);
-        when(resourceLoader.getResource("classpath:envoygw/templates/generic-httproute.yaml")).thenReturn(genericHttpRouteTemplate);
-        when(resourceLoader.getResource("classpath:envoygw/templates/envoy-policy.yaml")).thenReturn(envoyPolicyTemplate);
+        when(resourceLoader.getResource("classpath:envoygw/templates/generic-httproute.yaml")).thenReturn(
+            genericHttpRouteTemplate
+        );
+        when(resourceLoader.getResource("classpath:envoygw/templates/envoy-policy.yaml")).thenReturn(
+            envoyPolicyTemplate
+        );
 
         // Initialize the manager
         gatewayCRManager.afterPropertiesSet();
@@ -241,9 +251,8 @@ class GatewayCRManagerTest {
         service.setSchemaName("openai");
 
         // When & Then
-        IllegalArgumentException exception = assertThrows(
-            IllegalArgumentException.class,
-            () -> gatewayCRManager.createGenAIRunnables(null, "test-task", service)
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+            gatewayCRManager.createGenAIRunnables(null, "test-task", service)
         );
         assertEquals("runtime is required", exception.getMessage());
     }
@@ -260,9 +269,8 @@ class GatewayCRManagerTest {
         service.setSchemaName("openai");
 
         // When & Then
-        IllegalArgumentException exception = assertThrows(
-            IllegalArgumentException.class,
-            () -> gatewayCRManager.createGenAIRunnables("test-runtime", null, service)
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+            gatewayCRManager.createGenAIRunnables("test-runtime", null, service)
         );
         assertEquals("task is required", exception.getMessage());
     }
@@ -270,9 +278,8 @@ class GatewayCRManagerTest {
     @Test
     void testCreateGenAIRunnables_NullService_ThrowsException() {
         // When & Then
-        IllegalArgumentException exception = assertThrows(
-            IllegalArgumentException.class,
-            () -> gatewayCRManager.createGenAIRunnables("test-runtime", "test-task", null)
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+            gatewayCRManager.createGenAIRunnables("test-runtime", "test-task", null)
         );
         assertEquals("service is required", exception.getMessage());
     }
@@ -282,7 +289,14 @@ class GatewayCRManagerTest {
         // Given
         String runtime = "test-runtime";
         String task = "test-task";
-        GenericService service = new GenericService("test-project", "test-service", "test-function", "localhost", 8080, "");
+        GenericService service = new GenericService(
+            "test-project",
+            "test-service",
+            "test-function",
+            "localhost",
+            8080,
+            ""
+        );
 
         // Mock mustache execution
         mockMustacheExecution(genericHttpRouteMustache, "{\"apiVersion\":\"v1\",\"kind\":\"HTTPRoute\"}");
@@ -315,16 +329,26 @@ class GatewayCRManagerTest {
         // Given
         String runtime = "test-runtime";
         String task = "test-task";
-        GenericService service = new GenericService("test-project", "test-service", "test-function", "localhost", 8080, "");
-
-        // Mock mustache execution
-        mockMustacheExecution(
-            envoyPolicyMustache,
-            "{\"apiVersion\":\"v1alpha1\",\"kind\":\"EnvoyExtensionPolicy\"}"
+        GenericService service = new GenericService(
+            "test-project",
+            "test-service",
+            "test-function",
+            "localhost",
+            8080,
+            ""
         );
 
+        // Mock mustache execution
+        mockMustacheExecution(envoyPolicyMustache, "{\"apiVersion\":\"v1alpha1\",\"kind\":\"EnvoyExtensionPolicy\"}");
+
         // When
-        List<K8sCRRunnable> runnables = gatewayCRManager.createExtensionPolicies(runtime, task, service, Boolean.TRUE, null);
+        List<K8sCRRunnable> runnables = gatewayCRManager.createExtensionPolicies(
+            runtime,
+            task,
+            service,
+            Boolean.TRUE,
+            null
+        );
 
         // Then
         assertNotNull(runnables);
@@ -349,13 +373,26 @@ class GatewayCRManagerTest {
         extProcService.setServicePort(9090);
         extProcService.setReferenceServiceId("test-service");
         extProcService.setPath("");
-        GenericService refService = new GenericService("test-project", "test-service", "test-function", "localhost", 8080, "");
+        GenericService refService = new GenericService(
+            "test-project",
+            "test-service",
+            "test-function",
+            "localhost",
+            8080,
+            ""
+        );
 
         // Mock mustache execution
         mockMustacheExecution(envoyPolicyMustache, "{\"apiVersion\":\"v1alpha1\",\"kind\":\"EnvoyExtensionPolicy\"}");
 
         // When
-        List<K8sCRRunnable> runnables = gatewayCRManager.createExtensionPolicies(runtime, task, refService, false, List.of(extProcService));
+        List<K8sCRRunnable> runnables = gatewayCRManager.createExtensionPolicies(
+            runtime,
+            task,
+            refService,
+            false,
+            List.of(extProcService)
+        );
 
         // Then
         assertNotNull(runnables);
@@ -375,10 +412,10 @@ class GatewayCRManagerTest {
         StringWriter writer = new StringWriter();
         writer.write("{\"key\":\"value\"}");
         doAnswer(invocation -> {
-                StringWriter sw = invocation.getArgument(0);
-                sw.write("{\"key\":\"value\"}");
-                return sw;
-            })
+            StringWriter sw = invocation.getArgument(0);
+            sw.write("{\"key\":\"value\"}");
+            return sw;
+        })
             .when(mustache)
             .execute(any(StringWriter.class), (Object) any());
 
@@ -402,10 +439,10 @@ class GatewayCRManagerTest {
         // Given
         Mustache mustache = mock(Mustache.class);
         doAnswer(invocation -> {
-                StringWriter sw = invocation.getArgument(0);
-                sw.write("invalid json");
-                return sw;
-            })
+            StringWriter sw = invocation.getArgument(0);
+            sw.write("invalid json");
+            return sw;
+        })
             .when(mustache)
             .execute(any(StringWriter.class), (Object) any());
 
@@ -416,19 +453,18 @@ class GatewayCRManagerTest {
         method.setAccessible(true);
 
         // When & Then
-        InvocationTargetException exception = assertThrows(
-            InvocationTargetException.class,
-            () -> method.invoke(gatewayCRManager, mustache, context)
+        InvocationTargetException exception = assertThrows(InvocationTargetException.class, () ->
+            method.invoke(gatewayCRManager, mustache, context)
         );
         assertInstanceOf(IOException.class, exception.getCause());
     }
 
     private void mockMustacheExecution(Mustache mustache, String jsonResponse) throws IOException {
         doAnswer(invocation -> {
-                StringWriter writer = invocation.getArgument(0);
-                writer.write(jsonResponse);
-                return writer;
-            })
+            StringWriter writer = invocation.getArgument(0);
+            writer.write(jsonResponse);
+            return writer;
+        })
             .when(mustache)
             .execute(any(StringWriter.class), (Object) any());
     }

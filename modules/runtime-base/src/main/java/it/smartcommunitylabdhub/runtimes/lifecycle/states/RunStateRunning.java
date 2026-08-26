@@ -32,24 +32,26 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class RunStateRunning<S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable>
-    extends BaseRunState<S, Z, R> {
+public class RunStateRunning<
+    S extends RunBaseSpec,
+    Z extends RunBaseStatus,
+    R extends RunRunnable
+> extends BaseRunState<S, Z, R> {
 
     public RunStateRunning(Runtime<S, Z, R> runtime) {
         super(RunState.RUNNING.name(), runtime);
         //transitions
-        txs =
-            List.of(
-                //(LOOP)->RUNNING
-                loopRunning().build(),
-                //(COMPLETE)->COMPLETED
-                toCompleted().build(),
-                //(ERROR)->ERROR
-                toError().build(),
-                //(STOP)->STOP
-                toStop().build(),
-                //(DELETE)->DELETING
-                toDeleting().build()
-            );
+        txs = List.of(
+            //(LOOP)->RUNNING
+            loopRunning().build(),
+            //(COMPLETE)->COMPLETED
+            toCompleted().build(),
+            //(ERROR)->ERROR
+            toError().build(),
+            //(STOP)->STOP
+            toStop().build(),
+            //(DELETE)->DELETING
+            toDeleting().build()
+        );
     }
 }

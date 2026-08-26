@@ -98,8 +98,7 @@ public class MetricsManager {
     ) throws StoreException, SystemException {
         log.debug("save {} metrics info for entity {} id {}", name, entityName, entityId);
 
-        Metrics dto = Metrics
-            .builder()
+        Metrics dto = Metrics.builder()
             .entityId(entityId)
             .entityName(entityName.toLowerCase())
             .name(name)

@@ -29,8 +29,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.Assert;
 
 @Slf4j
-public class TriggerBaseState<X extends TriggerBaseSpec, Z extends TriggerRunBaseStatus>
-    implements FsmState.Builder<String, String, Trigger> {
+public class TriggerBaseState<
+    X extends TriggerBaseSpec,
+    Z extends TriggerRunBaseStatus
+> implements FsmState.Builder<String, String, Trigger> {
 
     protected final String state;
     protected final Actuator<X, ?, Z> actuator;
@@ -56,11 +58,9 @@ public class TriggerBaseState<X extends TriggerBaseSpec, Z extends TriggerRunBas
             .nextState(TriggerState.DELETED.name())
             .withInternalLogic((currentState, nextState, event, trigger, i) -> {
                 //runtime callback for stop
-                Optional
-                    .ofNullable(actuator.stop(trigger))
-                    .ifPresent(status ->
-                        trigger.setStatus(MapUtils.mergeMultipleMaps(trigger.getStatus(), status.toMap()))
-                    );
+                Optional.ofNullable(actuator.stop(trigger)).ifPresent(status ->
+                    trigger.setStatus(MapUtils.mergeMultipleMaps(trigger.getStatus(), status.toMap()))
+                );
 
                 return Optional.empty();
             });

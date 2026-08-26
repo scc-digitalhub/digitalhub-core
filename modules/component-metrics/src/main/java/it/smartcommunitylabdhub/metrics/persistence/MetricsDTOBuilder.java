@@ -51,8 +51,7 @@ public class MetricsDTOBuilder implements Converter<MetricsEntity, Metrics> {
             log.error("Metrics build error: {}", e.getMessage());
         }
 
-        return Metrics
-            .builder()
+        return Metrics.builder()
             .id(entity.getId())
             .entityId(entity.getEntityId())
             .entityName(entity.getEntityName())

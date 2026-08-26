@@ -30,8 +30,9 @@ import org.springframework.util.Assert;
 
 @Transactional
 @Slf4j
-public class BaseRelationshipsAwareEntityService<D extends BaseDTO & MetadataDTO>
-    implements RelationshipsAwareEntityService<D>, InitializingBean {
+public class BaseRelationshipsAwareEntityService<
+    D extends BaseDTO & MetadataDTO
+> implements RelationshipsAwareEntityService<D>, InitializingBean {
 
     protected EntityRepository<D> entityService;
     protected EntityRelationshipsManager<D> relationshipsManager;

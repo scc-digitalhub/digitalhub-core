@@ -70,8 +70,9 @@ public final class SchemaUtils {
     public static final SchemaGeneratorConfigBuilder BUILDER;
 
     static {
-        ObjectMapper schemaMapper = new ObjectMapper()
-            .setAnnotationIntrospector(new JsonSchemaAnnotationIntrospector());
+        ObjectMapper schemaMapper = new ObjectMapper().setAnnotationIntrospector(
+            new JsonSchemaAnnotationIntrospector()
+        );
 
         JacksonModule jacksonModule = new JacksonModule(
             JacksonOption.IGNORE_TYPE_INFO_TRANSFORM,
@@ -165,23 +166,22 @@ public final class SchemaUtils {
         return new ByteBuddy()
             .redefine(clazz)
             .visit(
-                new AsmVisitorWrapper.ForDeclaredFields()
-                    .field(
-                        //redefine fields marked with ignore
-                        ElementMatchers.isAnnotatedWith(JsonSchemaIgnore.class),
-                        (instrumentedType, fieldDescription, fieldVisitor) ->
-                            new FieldVisitor(OpenedClassReader.ASM_API, fieldVisitor) {
-                                @Override
-                                public AnnotationVisitor visitAnnotation(String description, boolean visible) {
-                                    //remove jsonUnwrapped to resolve issue with unwrapped fields skipping ignore
-                                    if (Type.getDescriptor(JsonUnwrapped.class).equals(description)) {
-                                        return null;
-                                    }
-
-                                    return super.visitAnnotation(description, visible);
-                                }
+                new AsmVisitorWrapper.ForDeclaredFields().field(//redefine fields marked with ignore
+                ElementMatchers.isAnnotatedWith(
+                    JsonSchemaIgnore.class
+                ), (instrumentedType, fieldDescription, fieldVisitor) ->
+                    new FieldVisitor(OpenedClassReader.ASM_API, fieldVisitor) {
+                        @Override
+                        public AnnotationVisitor visitAnnotation(String description, boolean visible) {
+                            //remove jsonUnwrapped to resolve issue with unwrapped fields skipping ignore
+                            if (Type.getDescriptor(JsonUnwrapped.class).equals(description)) {
+                                return null;
                             }
-                    )
+
+                            return super.visitAnnotation(description, visible);
+                        }
+                    }
+                )
             )
             .name(clazz.getName() + "Proxy")
             .make()
@@ -191,8 +191,7 @@ public final class SchemaUtils {
 
     private static ConfigFunction<TypeScope, String> specTypeResolver(String value) {
         return typeScope -> {
-            return Optional
-                .ofNullable(typeScope.getType().getErasedType().getAnnotation(SpecType.class))
+            return Optional.ofNullable(typeScope.getType().getErasedType().getAnnotation(SpecType.class))
                 .map(spec -> spec.kind())
                 .filter(s -> s != null)
                 .map(s -> SPECS_PREFIX + s + "." + value)

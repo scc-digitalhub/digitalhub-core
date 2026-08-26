@@ -53,8 +53,7 @@ public class ResourceSharingService {
     ) throws StoreException {
         log.debug("create share for {}:{} to user {}", entityName, id, user);
 
-        ResourceShareEntity share = ResourceShareEntity
-            .builder()
+        ResourceShareEntity share = ResourceShareEntity.builder()
             .id(UUID.randomUUID().toString().replace("-", ""))
             .project(project)
             .entity(entityName.toLowerCase())

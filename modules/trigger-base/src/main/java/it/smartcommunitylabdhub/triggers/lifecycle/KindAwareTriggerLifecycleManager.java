@@ -67,8 +67,9 @@ public class KindAwareTriggerLifecycleManager extends KindAwareLifecycleManager<
 
     @Autowired(required = false)
     public void setManagers(List<LifecycleManager<Trigger>> managers) {
-        this.managers =
-            new HashMap<>(managers.stream().collect(Collectors.toMap(r -> getKindFromAnnotation(r), r -> r)));
+        this.managers = new HashMap<>(
+            managers.stream().collect(Collectors.toMap(r -> getKindFromAnnotation(r), r -> r))
+        );
     }
 
     @Autowired

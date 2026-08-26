@@ -61,5 +61,4 @@ public class NumberOrNumberArrayJacksonDeserializer extends StdDeserializer<Numb
 		} else
 			throw new IOException("type not supported");
 	}*/
-
 }

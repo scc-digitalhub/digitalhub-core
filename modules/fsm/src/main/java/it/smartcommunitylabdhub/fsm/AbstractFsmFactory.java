@@ -63,19 +63,17 @@ public abstract class AbstractFsmFactory<S, E, C> implements Fsm.Factory<S, E, C
             FsmState<S, E, C> state = sb.build();
 
             //merge with existing state definition if already present, otherwise add new
-            Optional
-                .ofNullable(definedStates.get(state.getState()))
-                .ifPresentOrElse(
-                    existing -> {
-                        Set<Transition<S, E, C>> mergedTransitions = new HashSet<>(existing.getTransitions());
-                        mergedTransitions.addAll(state.getTransitions());
-                        definedStates.put(
-                            state.getState(),
-                            new FsmState<>(state.getState(), List.copyOf(mergedTransitions))
-                        );
-                    },
-                    () -> definedStates.put(state.getState(), state)
-                );
+            Optional.ofNullable(definedStates.get(state.getState())).ifPresentOrElse(
+                existing -> {
+                    Set<Transition<S, E, C>> mergedTransitions = new HashSet<>(existing.getTransitions());
+                    mergedTransitions.addAll(state.getTransitions());
+                    definedStates.put(
+                        state.getState(),
+                        new FsmState<>(state.getState(), List.copyOf(mergedTransitions))
+                    );
+                },
+                () -> definedStates.put(state.getState(), state)
+            );
         });
 
         //add states to builder
