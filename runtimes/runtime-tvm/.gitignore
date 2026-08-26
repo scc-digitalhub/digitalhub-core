@@ -1,0 +1,3 @@
+# Python bytecode caches (generati eseguendo gli script handler/builder in locale)
+__pycache__/
+*.pyc

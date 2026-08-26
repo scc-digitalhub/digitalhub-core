@@ -430,6 +430,12 @@
     </dependency>
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
+      <artifactId>dh-runtime-tvm</artifactId>
+      <version>0.15.1-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>it.smartcommunitylabdhub</groupId>
       <artifactId>credentials-provider-db</artifactId>
       <version>0.15.1-SNAPSHOT</version>
       <scope>compile</scope>
@@ -449,18 +455,6 @@
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
       <artifactId>trinodb-provider</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-loki-logs-provider</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>it.smartcommunitylabdhub</groupId>
-      <artifactId>dh-prometheus-metrics-provider</artifactId>
       <version>0.15.1-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>
