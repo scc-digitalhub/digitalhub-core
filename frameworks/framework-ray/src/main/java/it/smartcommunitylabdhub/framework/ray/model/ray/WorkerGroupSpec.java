@@ -1,8 +1,7 @@
 package it.smartcommunitylabdhub.framework.ray.model.ray;
 
-import java.util.Map;
-
 import io.kubernetes.client.openapi.models.V1PodTemplateSpec;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -15,6 +14,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class WorkerGroupSpec {
+
     // TODO: scaleStrategy, numOfHosts, idleTimeoutSeconds
 
     private String groupName;
@@ -27,5 +27,4 @@ public class WorkerGroupSpec {
     private Map<String, String> resources;
     private Map<String, String> labels;
     private Map<String, String> rayStartParams;
-
 }

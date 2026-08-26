@@ -1,7 +1,6 @@
 package it.smartcommunitylabdhub.framework.ray.model.ray;
 
 import java.util.List;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,6 +13,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class RayClusterSpec {
+
     // TODO: upgradeStrategy, authOptions, managedBy, headServiceAnnotations
     // TODO: autoscalerOptions, enableInTreeAutoscaling, gcsFaultToleranceOptions
 

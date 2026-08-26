@@ -13,10 +13,8 @@ import it.smartcommunitylabdhub.framework.ray.model.ray.RayClusterSpec;
 import it.smartcommunitylabdhub.framework.ray.runnables.K8sRayServiceRunnable;
 import java.io.Serializable;
 import java.util.Map;
-
-import org.apache.commons.lang3.NotImplementedException;
-
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.NotImplementedException;
 
 @Slf4j
 @FrameworkComponent(framework = K8sRayServiceFramework.FRAMEWORK)

@@ -27,6 +27,7 @@ public class K8sRayServiceRunnable extends K8sRayRunnable<RayServiceModel> {
     public String getFramework() {
         return K8sRayServiceFramework.FRAMEWORK;
     }
+
     @Override
     public boolean initAllPods() {
         return true;

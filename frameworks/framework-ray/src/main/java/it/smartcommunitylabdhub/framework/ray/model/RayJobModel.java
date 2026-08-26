@@ -1,10 +1,8 @@
 package it.smartcommunitylabdhub.framework.ray.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.Serializable;
 import java.util.Map;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -27,9 +25,9 @@ public class RayJobModel extends RayModel {
 
     @JsonProperty("dependency_spec")
     private Serializable dependencySpec;
-    
+
     private Integer backoffLimit;
-    
+
     private Boolean shutdownAfterJobFinishes;
     private Integer ttlSecondsAfterFinished;
     private Integer preRunningDeadlineSeconds;
