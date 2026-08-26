@@ -4,24 +4,24 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>it.smartcommunitylabdhub</groupId>
   <artifactId>dh-s3-provider</artifactId>
-  <version>0.15.1-SNAPSHOT</version>
+  <version>0.16.0-SNAPSHOT</version>
   <dependencies>
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
       <artifactId>dh-commons</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
+      <version>0.16.0-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
       <artifactId>dh-authorization</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
+      <version>0.16.0-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
       <artifactId>dh-files</artifactId>
-      <version>0.15.1-SNAPSHOT</version>
+      <version>0.16.0-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -52,7 +52,7 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
-      <version>3.5.9</version>
+      <version>3.5.15</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
