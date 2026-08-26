@@ -23,8 +23,10 @@ public enum TvmFormat {
             }
         }
         throw new IllegalArgumentException(
-                "cannot detect the TVM source format of '" + path +
-                        "': set spec.format explicitly (onnx, tflite) when the source has no " +
-                        "recognizable extension (e.g. a store:// or folder path)");
+            "cannot detect the TVM source format of '" +
+                path +
+                "': set spec.format explicitly (onnx, tflite) when the source has no " +
+                "recognizable extension (e.g. a store:// or folder path)"
+        );
     }
 }

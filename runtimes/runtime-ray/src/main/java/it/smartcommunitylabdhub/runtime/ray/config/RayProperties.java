@@ -108,13 +108,13 @@ public class RayProperties {
 
     /**
      * Default resource requests/limits for head pods, expressed in the same format
-     */    
+     */
     private String headDiskSize;
 
     /**
      * Default pod template/profile for worker pods. Falls back to {@link #headProfile}
      * when not set.
-     */    
+     */
     private String workerProfile;
 
     /**

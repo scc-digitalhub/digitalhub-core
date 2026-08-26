@@ -25,7 +25,8 @@ import it.smartcommunitylabdhub.runtimes.lifecycle.RunLifecycleManager;
 
 @RuntimeComponent(runtime = FlowerServerDeployRunSpec.KIND)
 public class FlowerServerDeployLifecycleManager
-    extends RunLifecycleManager<FlowerServerRunSpec, FlowerRunStatus, K8sRunnable> {
+    extends RunLifecycleManager<FlowerServerRunSpec, FlowerRunStatus, K8sRunnable>
+{
 
     FlowerServerDeployLifecycleManager(FlowerServerRuntime runtime) {
         super(runtime);

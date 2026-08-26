@@ -58,14 +58,14 @@ public class HuggingfaceServeRunSpec extends RunBaseSpec {
     @JsonProperty("path")
     @Pattern(
         regexp = "^(store://([^/]+)/model/huggingface/.*)" +
-        "|" +
-        Keys.FOLDER_PATTERN +
-        "|" +
-        Keys.ZIP_PATTERN +
-        "|" +
-        "^huggingface?://.*$" +
-        "|" +
-        "^hf?://.*$"
+            "|" +
+            Keys.FOLDER_PATTERN +
+            "|" +
+            Keys.ZIP_PATTERN +
+            "|" +
+            "^huggingface?://.*$" +
+            "|" +
+            "^hf?://.*$"
     )
     @Schema(title = "fields.path.title", description = "fields.huggingface.path.description")
     private String path;

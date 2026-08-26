@@ -65,8 +65,7 @@ public class KFPPipelineRunner {
             StandardCharsets.UTF_8
         );
 
-        K8sArgoWorkflowRunnable argoRunnable = K8sArgoWorkflowRunnable
-            .builder()
+        K8sArgoWorkflowRunnable argoRunnable = K8sArgoWorkflowRunnable.builder()
             .runtime(KFPRuntime.RUNTIME)
             .task(KFPPipelineTaskSpec.KIND)
             .state(State.READY.name())

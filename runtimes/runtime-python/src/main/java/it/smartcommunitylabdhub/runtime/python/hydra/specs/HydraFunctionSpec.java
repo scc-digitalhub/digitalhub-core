@@ -23,6 +23,8 @@
 
 package it.smartcommunitylabdhub.runtime.python.hydra.specs;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.runtime.python.hydra.HydraRuntime;
@@ -30,13 +32,8 @@ import it.smartcommunitylabdhub.runtime.python.hydra.model.HydraConfig;
 import it.smartcommunitylabdhub.runtime.python.hydra.model.HydraSourceCode;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonFunctionSpec;
 import jakarta.validation.constraints.NotNull;
-
 import java.io.Serializable;
 import java.util.Map;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -56,7 +53,6 @@ public class HydraFunctionSpec extends PythonFunctionSpec {
     @Schema(title = "fields.hydra.config.title", description = "fields.hydra.config.description")
     private HydraConfig config;
 
-   
     public HydraFunctionSpec(Map<String, Serializable> data) {
         configure(data);
     }

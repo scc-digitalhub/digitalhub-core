@@ -112,5 +112,4 @@ public class FABModel {
         return toml;
     }
     // @formatter:on
-
 }

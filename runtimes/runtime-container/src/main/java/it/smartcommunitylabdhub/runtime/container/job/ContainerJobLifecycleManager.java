@@ -25,7 +25,8 @@ import it.smartcommunitylabdhub.runtimes.lifecycle.RunLifecycleManager;
 
 @RuntimeComponent(runtime = ContainerJobRunSpec.KIND)
 public class ContainerJobLifecycleManager
-    extends RunLifecycleManager<ContainerRunSpec, ContainerRunStatus, K8sRunnable> {
+    extends RunLifecycleManager<ContainerRunSpec, ContainerRunStatus, K8sRunnable>
+{
 
     ContainerJobLifecycleManager(ContainerRuntime runtime) {
         super(runtime);

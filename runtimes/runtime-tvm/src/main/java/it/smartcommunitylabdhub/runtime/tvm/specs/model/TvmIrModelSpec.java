@@ -1,15 +1,14 @@
 /*
-   * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
-   *
-   * SPDX-License-Identifier: Apache-2.0
-   */
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 package it.smartcommunitylabdhub.runtime.tvm.specs.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.models.Model;
-
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;

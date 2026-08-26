@@ -44,14 +44,14 @@ public class KubeAIServeRunSpec extends RunBaseSpec {
 
     @Pattern(
         regexp = "^(store://([^/]+)/model/huggingface/.*)" +
-        "|" +
-        "^pvc?://.*$" +
-        "|" +
-        "^s3?://.*$" +
-        "|" +
-        "^ollama?://.*$" +
-        "|" +
-        "^hf?://.*$"
+            "|" +
+            "^pvc?://.*$" +
+            "|" +
+            "^s3?://.*$" +
+            "|" +
+            "^ollama?://.*$" +
+            "|" +
+            "^hf?://.*$"
     )
     @Schema(title = "fields.kubeai.url.title", description = "fields.kubeai.url.description")
     private String url;

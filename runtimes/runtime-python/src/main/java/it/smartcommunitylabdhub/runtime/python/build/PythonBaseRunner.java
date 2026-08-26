@@ -183,7 +183,7 @@ public abstract class PythonBaseRunner {
         );
     }
 
-     protected String buildNuclioFunction(
+    protected String buildNuclioFunction(
         @Nullable Map<String, Serializable> triggers,
         @Nullable Map<String, Serializable> event
     ) {

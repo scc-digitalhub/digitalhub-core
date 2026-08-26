@@ -92,33 +92,31 @@ public class NodeStatusMapper {
                 }
 
                 // Process labels from workflow metadata
-                Optional
-                    .ofNullable(workflow.getSpec().getTemplates())
-                    .ifPresent(templates ->
-                        templates
-                            .stream()
-                            .filter(t -> t.getName() != null && t.getName().equals(nodeStatus.getTemplateName()))
-                            .map(IoArgoprojWorkflowV1alpha1Template::getMetadata)
-                            .filter(metadata -> metadata != null && metadata.getLabels() != null)
-                            .flatMap(metadata -> metadata.getLabels().entrySet().stream())
-                            .filter(entry -> entry.getKey().startsWith(LABEL_PREFIX))
-                            .forEach(entry -> {
-                                String value = entry.getValue();
-                                switch (entry.getKey()) {
-                                    case LABEL_PREFIX + "function":
-                                        dto.setFunction(value);
-                                        break;
-                                    case LABEL_PREFIX + "function_id":
-                                        dto.setFunctionId(value);
-                                        break;
-                                    case LABEL_PREFIX + "action":
-                                        dto.setAction(value);
-                                        break;
-                                    default:
-                                        break;
-                                }
-                            })
-                    );
+                Optional.ofNullable(workflow.getSpec().getTemplates()).ifPresent(templates ->
+                    templates
+                        .stream()
+                        .filter(t -> t.getName() != null && t.getName().equals(nodeStatus.getTemplateName()))
+                        .map(IoArgoprojWorkflowV1alpha1Template::getMetadata)
+                        .filter(metadata -> metadata != null && metadata.getLabels() != null)
+                        .flatMap(metadata -> metadata.getLabels().entrySet().stream())
+                        .filter(entry -> entry.getKey().startsWith(LABEL_PREFIX))
+                        .forEach(entry -> {
+                            String value = entry.getValue();
+                            switch (entry.getKey()) {
+                                case LABEL_PREFIX + "function":
+                                    dto.setFunction(value);
+                                    break;
+                                case LABEL_PREFIX + "function_id":
+                                    dto.setFunctionId(value);
+                                    break;
+                                case LABEL_PREFIX + "action":
+                                    dto.setAction(value);
+                                    break;
+                                default:
+                                    break;
+                            }
+                        })
+                );
 
                 if (nodeStatus.getType().equals("Pod") && nodeStatus.getOutputs() != null) {
                     //TODO get correct runId

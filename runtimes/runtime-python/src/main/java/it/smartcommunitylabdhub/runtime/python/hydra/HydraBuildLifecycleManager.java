@@ -18,14 +18,13 @@ package it.smartcommunitylabdhub.runtime.python.hydra;
 
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
-import it.smartcommunitylabdhub.runtime.python.hydra.specs.HydraRunSpec;
 import it.smartcommunitylabdhub.runtime.python.hydra.specs.HydraBuildRunSpec;
+import it.smartcommunitylabdhub.runtime.python.hydra.specs.HydraRunSpec;
 import it.smartcommunitylabdhub.runtime.python.hydra.specs.HydraRunStatus;
 import it.smartcommunitylabdhub.runtimes.lifecycle.RunLifecycleManager;
 
 @RuntimeComponent(runtime = HydraBuildRunSpec.KIND)
-public class HydraBuildLifecycleManager
-    extends RunLifecycleManager<HydraRunSpec, HydraRunStatus, K8sRunnable> {
+public class HydraBuildLifecycleManager extends RunLifecycleManager<HydraRunSpec, HydraRunStatus, K8sRunnable> {
 
     HydraBuildLifecycleManager(HydraRuntime runtime) {
         super(runtime);

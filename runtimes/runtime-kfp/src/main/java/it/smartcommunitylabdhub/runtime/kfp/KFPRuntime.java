@@ -126,28 +126,26 @@ public class KFPRuntime extends K8sWorkflowBaseRuntime<KFPWorkflowSpec, KFPRunSp
         }
 
         KFPWorkflowSpec workSpec = new KFPWorkflowSpec(workflow.getSpec());
-        KFPRunSpec runSpec =
-            switch (run.getKind()) {
-                case KFPPipelineRunSpec.KIND -> new KFPPipelineRunSpec(run.getSpec());
-                case KFPBuildRunSpec.KIND -> new KFPBuildRunSpec(run.getSpec());
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right Spec for Run."
-                );
-            };
+        KFPRunSpec runSpec = switch (run.getKind()) {
+            case KFPPipelineRunSpec.KIND -> new KFPPipelineRunSpec(run.getSpec());
+            case KFPBuildRunSpec.KIND -> new KFPBuildRunSpec(run.getSpec());
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right Spec for Run."
+            );
+        };
 
         //build task spec as defined
-        Map<String, Serializable> taskSpec =
-            switch (task.getKind()) {
-                case KFPPipelineTaskSpec.KIND -> {
-                    yield new KFPPipelineTaskSpec(task.getSpec()).toMap();
-                }
-                case KFPBuildTaskSpec.KIND -> {
-                    yield new KFPBuildTaskSpec(task.getSpec()).toMap();
-                }
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        Map<String, Serializable> taskSpec = switch (task.getKind()) {
+            case KFPPipelineTaskSpec.KIND -> {
+                yield new KFPPipelineTaskSpec(task.getSpec()).toMap();
+            }
+            case KFPBuildTaskSpec.KIND -> {
+                yield new KFPBuildTaskSpec(task.getSpec()).toMap();
+            }
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
@@ -176,12 +174,11 @@ public class KFPRuntime extends K8sWorkflowBaseRuntime<KFPWorkflowSpec, KFPRunSp
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
-        K8sRunnable runnable =
-            switch (runAccessor.getTask()) {
-                case KFPPipelineTaskSpec.KIND -> new KFPPipelineRunner().produce(run);
-                case KFPBuildTaskSpec.KIND -> new KFPBuildRunner(image, secrets).produce(run);
-                default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
-            };
+        K8sRunnable runnable = switch (runAccessor.getTask()) {
+            case KFPPipelineTaskSpec.KIND -> new KFPPipelineRunner().produce(run);
+            case KFPBuildTaskSpec.KIND -> new KFPBuildRunner(image, secrets).produce(run);
+            default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
+        };
 
         //extract auth from security context to inflate secured credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
@@ -233,9 +230,10 @@ public class KFPRuntime extends K8sWorkflowBaseRuntime<KFPWorkflowSpec, KFPRunSp
 
                 // extract workflow spec part and convert to String again
                 try {
-                    IoArgoprojWorkflowV1alpha1Workflow argoWorkflow = YamlMapperFactory
-                        .yamlObjectMapper()
-                        .readValue(workflow, IoArgoprojWorkflowV1alpha1Workflow.class);
+                    IoArgoprojWorkflowV1alpha1Workflow argoWorkflow = YamlMapperFactory.yamlObjectMapper().readValue(
+                        workflow,
+                        IoArgoprojWorkflowV1alpha1Workflow.class
+                    );
                     workflow = YamlMapperFactory.yamlObjectMapper().writeValueAsString(argoWorkflow.getSpec());
                 } catch (JsonProcessingException e) {
                     log.error("Error storing Workflow specification", e);

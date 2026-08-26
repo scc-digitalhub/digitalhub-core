@@ -68,7 +68,8 @@ import org.springframework.util.Assert;
 @RuntimeComponent(runtime = RayRuntime.RUNTIME)
 public class RayRuntime
     extends K8sFunctionBaseRuntime<RayFunctionSpec, RayRunSpec, RayRunStatus, K8sRunnable>
-    implements InitializingBean {
+    implements InitializingBean
+{
 
     public static final String RUNTIME = "ray";
     public static final String[] KINDS = { RayJobRunSpec.KIND, RayBuildRunSpec.KIND };
@@ -76,8 +77,6 @@ public class RayRuntime
     public static final int UID = 8877;
     public static final int GID = 999;
     public static final String HOME_DIR = "/shared";
-
-
 
     private final RayProperties properties;
 
@@ -114,23 +113,21 @@ public class RayRuntime
         }
 
         RayFunctionSpec funSpec = new RayFunctionSpec(function.getSpec());
-        RayRunSpec runSpec =
-            switch (run.getKind()) {
-                case RayJobRunSpec.KIND -> new RayJobRunSpec(run.getSpec());
-                case RayBuildRunSpec.KIND -> new RayBuildRunSpec(run.getSpec());
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        RayRunSpec runSpec = switch (run.getKind()) {
+            case RayJobRunSpec.KIND -> new RayJobRunSpec(run.getSpec());
+            case RayBuildRunSpec.KIND -> new RayBuildRunSpec(run.getSpec());
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
-        Map<String, Serializable> taskSpec =
-            switch (task.getKind()) {
-                case RayJobTaskSpec.KIND -> new RayJobTaskSpec(task.getSpec()).toMap();
-                case RayBuildTaskSpec.KIND -> new RayBuildTaskSpec(task.getSpec()).toMap();
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        Map<String, Serializable> taskSpec = switch (task.getKind()) {
+            case RayJobTaskSpec.KIND -> new RayJobTaskSpec(task.getSpec()).toMap();
+            case RayBuildTaskSpec.KIND -> new RayBuildTaskSpec(task.getSpec()).toMap();
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //merge: run wins over task; function wins over both
         Map<String, Serializable> map = new HashMap<>();
@@ -147,9 +144,8 @@ public class RayRuntime
         RayRunSpec runSpec = new RayRunSpec(run.getSpec());
         if (runSpec.getInputs() != null && !runSpec.getInputs().isEmpty()) {
             RelationshipsMetadata lineage = RelationshipsMetadata.from(run.getMetadata());
-            List<RelationshipDetail> rels = lineage.getRelationships() != null
-                ? new ArrayList<>(lineage.getRelationships())
-                : new ArrayList<>();
+            List<RelationshipDetail> rels =
+                lineage.getRelationships() != null ? new ArrayList<>(lineage.getRelationships()) : new ArrayList<>();
 
             runSpec
                 .getInputs()
@@ -183,12 +179,11 @@ public class RayRuntime
 
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
-        K8sRunnable runnable =
-            switch (runAccessor.getTask()) {
-                case RayJobTaskSpec.KIND -> jobRunner.produce(run, secrets);
-                case RayBuildTaskSpec.KIND -> buildRunner.produce(run, secrets);
-                default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
-            };
+        K8sRunnable runnable = switch (runAccessor.getTask()) {
+            case RayJobTaskSpec.KIND -> jobRunner.produce(run, secrets);
+            case RayBuildTaskSpec.KIND -> buildRunner.produce(run, secrets);
+            default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
+        };
 
         //inject credentials from authenticated user, if any
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();

@@ -52,9 +52,8 @@ public class NuclioFunctionBuilder {
             spec.put("minReplicas", fn.getMinReplicas() != null ? fn.getMinReplicas() : 1);
             spec.put("maxReplicas", fn.getMaxReplicas() != null ? fn.getMaxReplicas() : 1);
 
-            HashMap<String, Serializable> triggers = fn.getTriggers() != null
-                ? new HashMap<String, Serializable>(fn.getTriggers())
-                : new HashMap<>();
+            HashMap<String, Serializable> triggers =
+                fn.getTriggers() != null ? new HashMap<String, Serializable>(fn.getTriggers()) : new HashMap<>();
 
             //build default trigger if empty
             if (triggers.isEmpty()) {
