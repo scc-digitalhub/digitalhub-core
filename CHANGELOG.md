@@ -14,6 +14,7 @@ Also adds a preview for the SQL client, based on Trino, and for *ServiceGraph* f
 
 ### Features
 
+* expose feature flags for console for metrics, logs, search ([0d92be8](https://github.com/scc-digitalhub/digitalhub-core/commit/0d92be845cfe0d14b48982619ee055fe40df8fa9))
 * let admin use force update for entitites ([162e4b2](https://github.com/scc-digitalhub/digitalhub-core/commit/162e4b20f7d8e083957f81a228ce3a9debab4d01))
 * k8s cr framework and kubeai support templates ([6284437](https://github.com/scc-digitalhub/digitalhub-core/commit/628443798ed71d6f5121684cfc1213fafd5391cd))
 * prometheus aggregation metric for counts configurable, defaults to sum ([d750ca1](https://github.com/scc-digitalhub/digitalhub-core/commit/d750ca1f49d8c50d72af5f53f85c70bfba538e62))
@@ -52,6 +53,7 @@ Also adds a preview for the SQL client, based on Trino, and for *ServiceGraph* f
 
 ### Bug Fixes
 
+* log service is optional, handle with unsupportedOperation exception when missing ([99e2c97](https://github.com/scc-digitalhub/digitalhub-core/commit/99e2c977c7e027cadd6e305bf371ee1e47cee121))
 * prometheus user queries should sanitize usernames for filters ([3a85c47](https://github.com/scc-digitalhub/digitalhub-core/commit/3a85c47fa9450ebed92b51ba7e4c207eba38cf2e))
 * lucene remove locking and use buffering + flush + scheduled commits to resolve parallelism issues ([980a7e6](https://github.com/scc-digitalhub/digitalhub-core/commit/980a7e667de375fa593ee053ef012b77267b205d))
 * avoid template service crash on wrong spec/kind usage ([055881a](https://github.com/scc-digitalhub/digitalhub-core/commit/055881a9685ffbe4e2137067cd615970ef482b66))
