@@ -79,8 +79,7 @@ public class SchedulerActuator implements Actuator<SchedulerTriggerSpec, Trigger
                 throw new IllegalArgumentException("invalid schedule");
             }
 
-            ScheduledTriggerJob job = ScheduledTriggerJob
-                .builder()
+            ScheduledTriggerJob job = ScheduledTriggerJob.builder()
                 .id(trigger.getId())
                 .user(trigger.getUser())
                 .project(trigger.getProject())
@@ -94,8 +93,7 @@ public class SchedulerActuator implements Actuator<SchedulerTriggerSpec, Trigger
             byte[] bytes = JacksonMapper.CBOR_OBJECT_MAPPER.writeValueAsBytes(job);
 
             //build quartz details
-            JobDetail jobDetail = JobBuilder
-                .newJob()
+            JobDetail jobDetail = JobBuilder.newJob()
                 .ofType(SchedulerJob.class)
                 .withIdentity(jobKey)
                 .usingJobData(new JobDataMap(Collections.singletonMap("job", bytes)))
@@ -121,14 +119,12 @@ public class SchedulerActuator implements Actuator<SchedulerTriggerSpec, Trigger
                     throw new IllegalArgumentException("invalid schedule");
                 }
 
-                qt =
-                    TriggerBuilder
-                        .newTrigger()
-                        .forJob(jobDetail)
-                        .withIdentity(trigger.getKey(), ACTUATOR)
-                        .withSchedule(simpleSchedule)
-                        .startAt(delay)
-                        .build();
+                qt = TriggerBuilder.newTrigger()
+                    .forJob(jobDetail)
+                    .withIdentity(trigger.getKey(), ACTUATOR)
+                    .withSchedule(simpleSchedule)
+                    .startAt(delay)
+                    .build();
             } else {
                 //min delay at 1min, we won't support jobs firing more frequently
                 Date delay = Date.from(Instant.now().plus(1, ChronoUnit.MINUTES));
@@ -148,14 +144,12 @@ public class SchedulerActuator implements Actuator<SchedulerTriggerSpec, Trigger
 
                 CronScheduleBuilder cronSchedule = CronScheduleBuilder.cronSchedule(schedule);
 
-                qt =
-                    TriggerBuilder
-                        .newTrigger()
-                        .forJob(jobDetail)
-                        .withIdentity(trigger.getKey(), ACTUATOR)
-                        .withSchedule(cronSchedule)
-                        .startAt(delay)
-                        .build();
+                qt = TriggerBuilder.newTrigger()
+                    .forJob(jobDetail)
+                    .withIdentity(trigger.getKey(), ACTUATOR)
+                    .withSchedule(cronSchedule)
+                    .startAt(delay)
+                    .build();
             }
 
             if (qt == null) {

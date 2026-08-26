@@ -62,9 +62,8 @@ public class SchedulerJob extends QuartzJobBean {
         try {
             //fetch job data and publish FIRE event
             byte[] bytes = (byte[]) context.getJobDetail().getJobDataMap().get("job");
-            ScheduledTriggerJob job = bytes != null
-                ? JacksonMapper.CBOR_OBJECT_MAPPER.readValue(bytes, ScheduledTriggerJob.class)
-                : null;
+            ScheduledTriggerJob job =
+                bytes != null ? JacksonMapper.CBOR_OBJECT_MAPPER.readValue(bytes, ScheduledTriggerJob.class) : null;
 
             log.debug("triggered {}", job.getId());
             if (log.isTraceEnabled()) {
@@ -80,8 +79,7 @@ public class SchedulerJob extends QuartzJobBean {
             );
             TriggerRun<TriggerJob> run = TriggerRun.<TriggerJob>builder().job(job).details(details).build();
 
-            TriggerExecutionEvent<TriggerJob> event = TriggerExecutionEvent
-                .builder()
+            TriggerExecutionEvent<TriggerJob> event = TriggerExecutionEvent.builder()
                 .run(run)
                 .event(TriggerEvent.FIRE)
                 .build();

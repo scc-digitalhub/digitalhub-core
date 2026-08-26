@@ -48,7 +48,8 @@ import org.springframework.util.StringUtils;
 @Slf4j
 @ActuatorComponent(actuator = LifecycleActuator.ACTUATOR)
 public class LifecycleActuator
-    implements Actuator<LifecycleTriggerSpec, TriggerBaseStatus, TriggerRunBaseStatus>, InitializingBean {
+    implements Actuator<LifecycleTriggerSpec, TriggerBaseStatus, TriggerRunBaseStatus>, InitializingBean
+{
 
     public static final String ACTUATOR = "lifecycle";
 
@@ -88,8 +89,7 @@ public class LifecycleActuator
         key.append(StringUtils.hasText(k.getName()) ? "/" + k.getName() : "/*");
         key.append(StringUtils.hasText(k.getId()) ? ":" + k.getId() : ":*");
 
-        LifecycleTriggerJob job = LifecycleTriggerJob
-            .builder()
+        LifecycleTriggerJob job = LifecycleTriggerJob.builder()
             .id(trigger.getId())
             .user(trigger.getUser())
             .task(spec.getTask())
