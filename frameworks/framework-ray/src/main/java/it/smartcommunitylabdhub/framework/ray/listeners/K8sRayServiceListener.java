@@ -10,8 +10,6 @@ import it.smartcommunitylabdhub.framework.k8s.listeners.K8sRunnableListener;
 import it.smartcommunitylabdhub.framework.ray.infrastructure.k8s.K8sRayServiceFramework;
 import it.smartcommunitylabdhub.framework.ray.runnables.K8sRayServiceRunnable;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
-import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
 
 public class K8sRayServiceListener extends K8sRunnableListener<K8sRayServiceRunnable> {
 
@@ -22,8 +20,6 @@ public class K8sRayServiceListener extends K8sRunnableListener<K8sRayServiceRunn
         super(k8sFramework, runnableStore);
     }
 
-    @Async
-    @EventListener
     public void listen(K8sRayServiceRunnable runnable) {
         if (runnable != null) {
             process(runnable);

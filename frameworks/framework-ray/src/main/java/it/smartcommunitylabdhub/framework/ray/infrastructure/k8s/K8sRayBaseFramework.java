@@ -16,7 +16,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-
 import io.kubernetes.client.custom.ContainerMetrics;
 import io.kubernetes.client.custom.PodMetrics;
 import io.kubernetes.client.custom.Quantity;
@@ -78,9 +77,9 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
-import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -97,8 +96,9 @@ import org.springframework.util.StringUtils;
  * Ray spec; this framework injects only metadata (name, labels, namespace).
  */
 @Slf4j
-public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
-    extends K8sBaseFramework<T, DynamicKubernetesObject> {
+public abstract class K8sRayBaseFramework<
+    T extends K8sRayRunnable<?>
+> extends K8sBaseFramework<T, DynamicKubernetesObject> {
 
     protected static final TypeReference<HashMap<String, Serializable>> typeRef = new TypeReference<
         HashMap<String, Serializable>
@@ -127,19 +127,18 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
      * The KubeRay operator does not accept the structured object form for
      * resource quantities.
      */
-    protected static final ObjectMapper mapper = KubernetesMapper.OBJECT_MAPPER.copy()
-        .registerModule(
-            new SimpleModule().addSerializer(
-                Quantity.class,
-                new JsonSerializer<Quantity>() {
-                    @Override
-                    public void serialize(Quantity value, JsonGenerator gen, SerializerProvider serializers)
-                        throws IOException {
-                        gen.writeString(value.toSuffixedString());
-                    }
+    protected static final ObjectMapper mapper = KubernetesMapper.OBJECT_MAPPER.copy().registerModule(
+        new SimpleModule().addSerializer(
+            Quantity.class,
+            new JsonSerializer<Quantity>() {
+                @Override
+                public void serialize(Quantity value, JsonGenerator gen, SerializerProvider serializers)
+                    throws IOException {
+                    gen.writeString(value.toSuffixedString());
                 }
-            )
-        );
+            }
+        )
+    );
 
     protected K8sRayBaseFramework(ApiClient apiClient) {
         super(apiClient);
@@ -187,8 +186,9 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
     @Autowired
     public void setInitCommand(@Value("${kubernetes.init.command}") String initCommand) {
         if (StringUtils.hasText(initCommand)) {
-            this.initCommand =
-                new LinkedList<>(Arrays.asList(StringUtils.commaDelimitedListToStringArray(initCommand)));
+            this.initCommand = new LinkedList<>(
+                Arrays.asList(StringUtils.commaDelimitedListToStringArray(initCommand))
+            );
         }
     }
 
@@ -205,7 +205,6 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
         this.pvcAccessMode = pvcAccessMode;
     }
 
-
     /**
      * @return CR kind, e.g. {@code RayCluster}
      */
@@ -219,7 +218,8 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
     /**
      * Extract the Ray spec from the runnable.
      */
-    protected abstract Map<String, Serializable> getSpec(T runnable, RayClusterSpec clusterSpec) throws K8sFrameworkException;
+    protected abstract Map<String, Serializable> getSpec(T runnable, RayClusterSpec clusterSpec)
+        throws K8sFrameworkException;
 
     /**
      * Persist the observed CR status onto the runnable.
@@ -235,7 +235,6 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
      * cast inside {@link it.smartcommunitylabdhub.framework.ray.model.PodModel#toK8sRunnable}.
      */
     protected abstract K8sRunnable.K8sRunnableBuilder<?, ?> newRunnableBuilder();
-
 
     @Override
     public void afterPropertiesSet() throws Exception {
@@ -332,16 +331,14 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
                     results
                         .entrySet()
                         .stream()
-                        .collect(Collectors.toMap(Entry::getKey, e ->  mapper.convertValue(e, typeRef)))
+                        .collect(Collectors.toMap(Entry::getKey, e -> mapper.convertValue(e, typeRef)))
                 );
             } catch (IllegalArgumentException e) {
                 log.error("error reading k8s results: {}", e.getMessage());
             }
         }
 
-        runnable.setMessage(
-            String.format("Ray %s %s created", getKind(), cr.getMetadata().getName())
-        );
+        runnable.setMessage(String.format("Ray %s %s created", getKind(), cr.getMetadata().getName()));
 
         if (log.isTraceEnabled()) {
             log.trace("result: {}", runnable);
@@ -447,7 +444,7 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
      * Build a {@link DynamicKubernetesObject} representation of the CR for this runnable.
      * Only metadata (name, labels, namespace) and spec are populated; status is left to the
      * Ray operator.
-     * @throws K8sFrameworkException 
+     * @throws K8sFrameworkException
      */
     public DynamicKubernetesObject build(T runnable) throws K8sFrameworkException {
         DynamicKubernetesObject obj = new DynamicKubernetesObject();
@@ -471,40 +468,40 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
             clusterSpec.suspend(suspend);
         }
         clusterSpec.rayVersion(cluster.getVersion());
-        
 
         Map<String, String> podLabels = Collections.singletonMap("ray.io/originated-from-cr-name", crName);
-        podLabels = MapUtils.mergeMultipleMaps(podLabels, labels); //merge with runnable labels, which may contain useful info for selection and are not mutually exclusive with ray operator labels
 
+        //merge with runnable labels, which may contain useful info for selection and are not mutually exclusive with ray operator labels
+        podLabels = MapUtils.mergeMultipleMaps(podLabels, labels);
         V1Service service = null;
-        //head group: no context, but service and ports 
+        //head group: no context, but service and ports
         V1PodSpec head = convertPodModel(runnable, "head", cluster.getHeadSpec(), false, true);
         if (cluster.getHeadServiceType() != null) {
             serviceType = cluster.getHeadServiceType();
-        }   
-        HeadGroupSpec headSpec = HeadGroupSpec
-            .builder()
-            .template(new V1PodTemplateSpec()
-                .metadata(new V1ObjectMeta().labels(podLabels))
-                .spec(head))
+        }
+        HeadGroupSpec headSpec = HeadGroupSpec.builder()
+            .template(new V1PodTemplateSpec().metadata(new V1ObjectMeta().labels(podLabels)).spec(head))
             .rayStartParams(cluster.getHeadSpec().getStartParams())
             .resources(cluster.getHeadSpec().getRayResources())
             .headService(service)
             .serviceType(serviceType.name())
             .labels(convertLabels(cluster.getHeadSpec().getLabels()))
-            .build();    
+            .build();
         clusterSpec.headGroupSpec(headSpec);
-        
+
         //worker groups
         List<WorkerGroupSpec> workerGroupSpecs = new LinkedList<>();
         for (WorkerGroupModel worker : cluster.getWorkerGroups()) {
-            V1PodSpec workerPod = convertPodModel(runnable, "worker", worker.getWorkerSpec(), runnable.initAllPods(), true);
+            V1PodSpec workerPod = convertPodModel(
+                runnable,
+                "worker",
+                worker.getWorkerSpec(),
+                runnable.initAllPods(),
+                true
+            );
 
-            WorkerGroupSpec workerGroupSpec = WorkerGroupSpec
-                .builder()
-                .template(new V1PodTemplateSpec()
-                    .metadata(new V1ObjectMeta().labels(podLabels))
-                    .spec(workerPod))
+            WorkerGroupSpec workerGroupSpec = WorkerGroupSpec.builder()
+                .template(new V1PodTemplateSpec().metadata(new V1ObjectMeta().labels(podLabels)).spec(workerPod))
                 .groupName(worker.getName())
                 .replicas(worker.getReplicas())
                 .maxReplicas(worker.getMaxReplicas())
@@ -515,7 +512,7 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
                 .build();
             workerGroupSpecs.add(workerGroupSpec);
         }
-        clusterSpec.workerGroupSpecs(workerGroupSpecs);        
+        clusterSpec.workerGroupSpecs(workerGroupSpecs);
 
         Map<String, Serializable> spec = getSpec(runnable, clusterSpec.build());
         if (spec != null) {
@@ -528,9 +525,6 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
     public String getResourceName(String prefix, String task, String id) {
         return K8sBuilderHelper.sanitizeNames(prefix + "-" + task + "-" + id);
     }
-
-
-
 
     private Map<String, String> convertLabels(List<CoreLabel> labels) {
         if (labels == null) {
@@ -724,7 +718,13 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
      * @return the constructed {@link V1PodSpec}
      * @throws K8sFrameworkException if there is an error converting the pod model
      */
-    protected V1PodSpec convertPodModel(T parent, String name, PodModel podModel, boolean withContext, boolean withResources) throws K8sFrameworkException {
+    protected V1PodSpec convertPodModel(
+        T parent,
+        String name,
+        PodModel podModel,
+        boolean withContext,
+        boolean withResources
+    ) throws K8sFrameworkException {
         if (podModel == null) {
             return null;
         }
@@ -738,9 +738,9 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
             //use default template
             template = templates.get(DEFAULT_TEMPLATE);
         }
-        
+
         T runnable = podModel.toK8sRunnable(parent, name, newRunnableBuilder(), withContext);
-    
+
         // Prepare environment variables for the Kubernetes job
         List<V1EnvFromSource> envFrom = buildEnvFrom(runnable);
         List<V1EnvVar> env = buildEnv(runnable);
@@ -753,9 +753,8 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
         V1ResourceRequirements resources = buildResources(runnable);
 
         //image policy
-        String imagePullPolicy = runnable.getImagePullPolicy() != null
-            ? runnable.getImagePullPolicy().name()
-            : defaultImagePullPolicy;
+        String imagePullPolicy =
+            runnable.getImagePullPolicy() != null ? runnable.getImagePullPolicy().name() : defaultImagePullPolicy;
 
         // Build Container
         V1Container container = new V1Container()
@@ -770,15 +769,12 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
             .env(env)
             .securityContext(buildSecurityContext(runnable));
 
-
-        V1PodSpec podSpec = Optional
-            .ofNullable(template)
+        V1PodSpec podSpec = Optional.ofNullable(template)
             .map(K8sTemplate::getJob)
             .map(V1Job::getSpec)
             .map(V1JobSpec::getTemplate)
             .map(V1PodTemplateSpec::getSpec)
             .orElse(new V1PodSpec());
-
 
         // Create a PodSpec for the container, leverage template if provided
         podSpec
@@ -806,9 +802,10 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
                 .volumeMounts(
                     volumeMounts
                         .stream()
-                        .filter(v ->
-                            k8sProperties.getSharedVolume().getMountPath().equals(v.getMountPath()) ||
-                            "/init-config-map".equals(v.getMountPath())
+                        .filter(
+                            v ->
+                                k8sProperties.getSharedVolume().getMountPath().equals(v.getMountPath()) ||
+                                "/init-config-map".equals(v.getMountPath())
                         )
                         .collect(Collectors.toList())
                 )
@@ -825,11 +822,9 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
     }
 
     @Override
-    public List<V1PersistentVolumeClaim> buildPersistentVolumeClaims(T runnable)
-        throws K8sFrameworkException {
+    public List<V1PersistentVolumeClaim> buildPersistentVolumeClaims(T runnable) throws K8sFrameworkException {
         List<V1PersistentVolumeClaim> volumes = super.buildPersistentVolumeClaims(runnable);
         if (volumes != null) {
-    
             String crName = getResourceName(runnable.getRuntime(), runnable.getTask(), runnable.getId());
             for (V1PersistentVolumeClaim pvc : volumes) {
                 if (pvc.getMetadata() == null) {
@@ -856,7 +851,7 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
     }
 
     /**
-     * Extract logs for the given pods and runnable. By default, logs are extracted for all containers (including init containers) in the pod. 
+     * Extract logs for the given pods and runnable. By default, logs are extracted for all containers (including init containers) in the pod.
      * Subclasses may override to filter specific containers or apply other custom logic.
      * @param pods
      * @param runnable
@@ -972,13 +967,17 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
             return Collections.emptyList();
         }
 
-        String name = null, containerName = null;
+        String name = null;
+        String containerName = null;
         V1Pod firstStatusPod = statusPods.get(0);
         if (firstStatusPod.getMetadata() != null && firstStatusPod.getMetadata().getName() != null) {
             name = firstStatusPod.getMetadata().getName();
-            containerName = firstStatusPod.getSpec() != null && firstStatusPod.getSpec().getContainers() != null && !firstStatusPod.getSpec().getContainers().isEmpty()
-                ? firstStatusPod.getSpec().getContainers().get(0).getName()
-                : null;
+            containerName =
+                firstStatusPod.getSpec() != null &&
+                firstStatusPod.getSpec().getContainers() != null &&
+                !firstStatusPod.getSpec().getContainers().isEmpty()
+                    ? firstStatusPod.getSpec().getContainers().get(0).getName()
+                    : null;
         }
 
         try {
@@ -987,14 +986,17 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
             String latestWindow = null;
 
             // pod names
-            Set<String> podNames = pods.stream()
+            Set<String> podNames = pods
+                .stream()
                 .filter(p -> p.getMetadata() != null && p.getMetadata().getName() != null)
-                .map(p -> p.getMetadata().getName()).collect(Collectors.toSet());
+                .map(p -> p.getMetadata().getName())
+                .collect(Collectors.toSet());
 
-            // pod metrics for the identified pods    
+            // pod metrics for the identified pods
             List<PodMetrics> podMetrics = metricsApi
                 .getPodMetrics(namespace)
-                .getItems().stream()
+                .getItems()
+                .stream()
                 .filter(m -> m.getMetadata() != null && podNames.contains(m.getMetadata().getName()))
                 .collect(Collectors.toList());
 
@@ -1012,16 +1014,20 @@ public abstract class K8sRayBaseFramework<T extends K8sRayRunnable<?>>
                     filtered.add(m);
                     podNames.remove(m.getMetadata().getName());
                 }
-            
+
                 // latest timestamp and window across all pods, mirroring the convention used in K8sMetricsService
                 if (m.getTimestamp() != null) {
-                    if (latestTimestamp == null || m.getTimestamp().compareTo(latestTimestamp) > 0 && m.getWindow() != null) {
+                    if (
+                        latestTimestamp == null ||
+                        (m.getTimestamp().compareTo(latestTimestamp) > 0 && m.getWindow() != null)
+                    ) {
                         latestTimestamp = m.getTimestamp();
                         latestWindow = m.getWindow();
                     }
                 }
             }
-            K8sMetricsService.mergePodMetrics(aggregated, filtered);
+            //TODO fix merging of metrics
+            // K8sMetricsService.mergePodMetrics(aggregated, filtered);
             //track number of pods aggregated, mirroring the convention used in K8sMetricsService
             return Collections.singletonList(
                 new CoreMetric(
