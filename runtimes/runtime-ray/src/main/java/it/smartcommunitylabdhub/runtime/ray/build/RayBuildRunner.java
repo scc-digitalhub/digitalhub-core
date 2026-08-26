@@ -6,11 +6,15 @@
 
 package it.smartcommunitylabdhub.runtime.ray.build;
 
+import com.github.mustachejava.DefaultMustacheFactory;
+import com.github.mustachejava.Mustache;
+import com.github.mustachejava.MustacheFactory;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
@@ -25,7 +29,6 @@ import it.smartcommunitylabdhub.runtime.ray.config.RayProperties;
 import it.smartcommunitylabdhub.runtime.ray.model.RaySourceCode;
 import it.smartcommunitylabdhub.runtime.ray.specs.RayFunctionSpec;
 import jakarta.annotation.Nullable;
-
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
@@ -39,16 +42,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
-
-import com.github.mustachejava.DefaultMustacheFactory;
-import com.github.mustachejava.Mustache;
-import com.github.mustachejava.MustacheFactory;
 
 /**
  * Builds a {@link K8sContainerBuilderRunnable} for the {@code ray+build} task.
@@ -74,6 +72,7 @@ public class RayBuildRunner {
 
     private final RayProperties properties;
     private final K8sBuilderHelper k8sBuilderHelper;
+    private final K8sLabelHelper k8sLabelHelper;
 
     protected final int userId;
     protected final int groupId;
@@ -82,19 +81,23 @@ public class RayBuildRunner {
     private final DefaultResourceLoader loader = new DefaultResourceLoader();
     protected String passwdFile;
 
-    public RayBuildRunner(RayProperties properties, @Nullable K8sBuilderHelper k8sBuilderHelper) {
+    public RayBuildRunner(
+        RayProperties properties,
+        @Nullable K8sBuilderHelper k8sBuilderHelper,
+        @Nullable K8sLabelHelper k8sLabelHelper
+    ) {
         this.properties = properties;
-        
         this.k8sBuilderHelper = k8sBuilderHelper;
+        this.k8sLabelHelper = k8sLabelHelper;
         this.userId = properties.getUserId() != null ? properties.getUserId() : RayRuntime.UID;
         this.groupId = properties.getGroupId() != null ? properties.getGroupId() : RayRuntime.GID;
         this.homeDir = properties.getHomeDir() != null ? properties.getHomeDir() : RayRuntime.HOME_DIR;
 
-        String passwdPath = properties.getPasswdTemplate() != null
-            ? properties.getPasswdTemplate()
-            : "classpath:/runtime-ray/docker/passwd.template";
+        String passwdPath =
+            properties.getPasswdTemplate() != null
+                ? properties.getPasswdTemplate()
+                : "classpath:/runtime-ray/docker/passwd.template";
         setPasswdTemplate(loader.getResource(passwdPath));
-
     }
 
     public void setPasswdTemplate(Resource resource) {
@@ -104,13 +107,12 @@ public class RayBuildRunner {
             MustacheFactory mustacheFactory = new DefaultMustacheFactory();
             Mustache template = mustacheFactory.compile(new InputStreamReader(resource.getInputStream()), "passwd");
 
-            passwd =
-                template
-                    .execute(
-                        new StringWriter(),
-                        Map.of("userId", this.userId, "groupId", this.groupId, "homeDir", this.homeDir)
-                    )
-                    .toString();
+            passwd = template
+                .execute(
+                    new StringWriter(),
+                    Map.of("userId", this.userId, "groupId", this.groupId, "homeDir", this.homeDir)
+                )
+                .toString();
         } catch (IOException ioe) {
             log.error("error with building passwd template for runtime", ioe);
             //disable template
@@ -144,8 +146,7 @@ public class RayBuildRunner {
 
         //inject custom passwd to add our user
         if (passwdFile != null) {
-            ContextSource entry = ContextSource
-                .builder()
+            ContextSource entry = ContextSource.builder()
                 .name("passwd-template")
                 .base64(Base64.getEncoder().encodeToString(passwdFile.getBytes(StandardCharsets.UTF_8)))
                 .build();
@@ -170,16 +171,15 @@ public class RayBuildRunner {
             }
         }
 
-        return K8sContainerBuilderRunnable
-            .builder()
+        return K8sContainerBuilderRunnable.builder()
             .id(run.getId())
             .project(run.getProject())
             .runtime(RayRuntime.RUNTIME)
             .task(RayBuildTaskSpec.KIND)
             .state(State.READY.name())
             .labels(
-                k8sBuilderHelper != null
-                    ? List.of(new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction()))
+                k8sLabelHelper != null
+                    ? List.of(new CoreLabel(k8sLabelHelper.buildCoreLabel("function"), taskAccessor.getFunction()))
                     : null
             )
             .image(imageName)
@@ -208,12 +208,8 @@ public class RayBuildRunner {
         //arg+env from task envs (build-time + runtime)
         List<CoreEnv> envs = taskSpec.getEnvs();
         if (envs != null) {
-            envs.forEach(env ->
-                df.instruction(DockerfileInstruction.Kind.ARG, env.name() + "=" + env.value())
-            );
-            envs.forEach(env ->
-                df.instruction(DockerfileInstruction.Kind.ENV, env.name() + "=$" + env.name())
-            );
+            envs.forEach(env -> df.instruction(DockerfileInstruction.Kind.ARG, env.name() + "=" + env.value()));
+            envs.forEach(env -> df.instruction(DockerfileInstruction.Kind.ENV, env.name() + "=$" + env.name()));
         }
 
         String home = StringUtils.hasText(properties.getHomeDir()) ? properties.getHomeDir() : DEFAULT_HOME_DIR;
@@ -337,19 +333,16 @@ public class RayBuildRunner {
 
         RaySourceCode source = functionSpec.getSource();
         if (source != null && StringUtils.hasText(source.getBase64())) {
-            sources.add(
-                ContextSource.builder().name(resolveSourceFileName(source)).base64(source.getBase64()).build()
-            );
+            sources.add(ContextSource.builder().name(resolveSourceFileName(source)).base64(source.getBase64()).build());
         }
 
         //emit requirements.txt only when no explicit dependency_spec is provided
-        // if (functionSpec.getDependencyFormat() == null || functionSpec.getDependencySpec() == null) 
+        // if (functionSpec.getDependencyFormat() == null || functionSpec.getDependencySpec() == null)
         List<String> reqs = mergedRequirements(functionSpec);
         if (!reqs.isEmpty()) {
             String content = String.join("\n", reqs);
             sources.add(
-                ContextSource
-                    .builder()
+                ContextSource.builder()
                     .name(REQUIREMENTS_FILE)
                     .base64(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)))
                     .build()
@@ -387,6 +380,10 @@ public class RayBuildRunner {
         if (secretData == null || secretData.isEmpty()) {
             return null;
         }
-        return secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
+        return secretData
+            .entrySet()
+            .stream()
+            .map(e -> new CoreEnv(e.getKey(), e.getValue()))
+            .toList();
     }
 }

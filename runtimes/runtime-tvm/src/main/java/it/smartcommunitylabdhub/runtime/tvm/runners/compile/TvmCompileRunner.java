@@ -8,6 +8,7 @@ package it.smartcommunitylabdhub.runtime.tvm.runners.compile;
 
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
@@ -34,8 +35,13 @@ public class TvmCompileRunner extends TvmBaseBuildRunner {
 
     private final ModelManager modelManager;
 
-    public TvmCompileRunner(TvmProperties properties, K8sBuilderHelper k8sBuilderHelper, ModelManager modelManager) {
-        super(properties, k8sBuilderHelper);
+    public TvmCompileRunner(
+        TvmProperties properties,
+        K8sBuilderHelper k8sBuilderHelper,
+        K8sLabelHelper k8sLabelHelper,
+        ModelManager modelManager
+    ) {
+        super(properties, k8sBuilderHelper, k8sLabelHelper);
         this.modelManager = modelManager;
     }
 
@@ -47,19 +53,19 @@ public class TvmCompileRunner extends TvmBaseBuildRunner {
         String funcName = taskAccessor.getFunction();
 
         // Architecture is optional in the form; default to cpu (llvm).
-        TvmTargetArchitecture architecture = taskSpec.getTargetArchitecture() != null
-                ? taskSpec.getTargetArchitecture()
-                : TvmTargetArchitecture.cpu;
+        TvmTargetArchitecture architecture =
+            taskSpec.getTargetArchitecture() != null ? taskSpec.getTargetArchitecture() : TvmTargetArchitecture.cpu;
 
         // IR model to compile: explicit task.model_path wins, else the function's
         // ir_model.
         String modelKey = StringUtils.hasText(taskSpec.getModelPath())
-                ? taskSpec.getModelPath()
-                : (functionSpec != null ? functionSpec.getIrModel() : null);
+            ? taskSpec.getModelPath()
+            : (functionSpec != null ? functionSpec.getIrModel() : null);
         if (!StringUtils.hasText(modelKey)) {
             throw new IllegalArgumentException(
-                    "tvm+compile needs an IR model: set task.model_path or run tvm+build first " +
-                            "(function.spec.ir_model is empty)");
+                "tvm+compile needs an IR model: set task.model_path or run tvm+build first " +
+                    "(function.spec.ir_model is empty)"
+            );
         }
         // Resolve store:// to the IR folder's S3 location (whole dir: model.relax.json
         // + metadata + params).
@@ -114,31 +120,32 @@ public class TvmCompileRunner extends TvmBaseBuildRunner {
         // carries any trace of the framework it came from.
         String compilerScript = loadClasspathScript(COMPILER_SCRIPT_CLASSPATH);
         List<ContextSource> contextSources = TvmRunnerHelper.createContextSources(entrypoint, compilerScript);
-        List<ContextRef> contextRefs = Collections.singletonList(
-                TvmRunnerHelper.inputContextRef(s3IrPath, "input/"));
+        List<ContextRef> contextRefs = Collections.singletonList(TvmRunnerHelper.inputContextRef(s3IrPath, "input/"));
 
         String image = resolveImage(
-                taskSpec.getImage(),
-                properties.getCompiler(),
-                "no compiler image configured: set task.image or runtime.tvm.compiler");
+            taskSpec.getImage(),
+            properties.getCompiler(),
+            "no compiler image configured: set task.image or runtime.tvm.compiler"
+        );
 
         List<CoreVolume> volumes = createVolumes(taskSpec);
         List<CoreEnv> coreSecrets = createSecrets(secretData);
 
         return applyCommon(
-                K8sJobRunnable.builder()
-                        .command("/bin/bash")
-                        .args(new String[] { homeDir + "/" + TvmRunnerHelper.ENTRYPOINT_NAME })
-                        .contextSources(contextSources)
-                        .build(),
-                run,
-                TvmCompileTaskSpec.KIND,
-                funcName,
-                image,
-                envs,
-                coreSecrets,
-                volumes,
-                contextRefs,
-                taskSpec);
+            K8sJobRunnable.builder()
+                .command("/bin/bash")
+                .args(new String[] { homeDir + "/" + TvmRunnerHelper.ENTRYPOINT_NAME })
+                .contextSources(contextSources)
+                .build(),
+            run,
+            TvmCompileTaskSpec.KIND,
+            funcName,
+            image,
+            envs,
+            coreSecrets,
+            volumes,
+            contextRefs,
+            taskSpec
+        );
     }
 }

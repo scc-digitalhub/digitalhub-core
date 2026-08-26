@@ -65,7 +65,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -77,8 +76,8 @@ import org.springframework.util.Assert;
 @RuntimeComponent(runtime = HydraRuntime.RUNTIME)
 public class HydraRuntime
     extends K8sFunctionBaseRuntime<HydraFunctionSpec, HydraRunSpec, HydraRunStatus, K8sRunnable>
-    implements InitializingBean {
-
+    implements InitializingBean
+{
 
     public static final String RUNTIME = "hydra";
     public static final String[] KINDS = { HydraJobRunSpec.KIND, HydraBuildRunSpec.KIND, HydraSubtaskRunSpec.KIND };
@@ -111,9 +110,9 @@ public class HydraRuntime
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        this.buildRunner = new HydraBuildRunner(properties, k8sBuilderHelper);
-        this.jobRunner = new HydraJobRunner(properties, k8sBuilderHelper);
-        this.subtaskRunner = new HydraSubtaskRunner(properties, k8sBuilderHelper);
+        this.buildRunner = new HydraBuildRunner(properties, k8sBuilderHelper, k8sLabelHelper);
+        this.jobRunner = new HydraJobRunner(properties, k8sBuilderHelper, k8sLabelHelper);
+        this.subtaskRunner = new HydraSubtaskRunner(properties, k8sBuilderHelper, k8sLabelHelper);
     }
 
     @Override
@@ -124,32 +123,30 @@ public class HydraRuntime
         }
 
         HydraFunctionSpec funSpec = new HydraFunctionSpec(function.getSpec());
-        HydraRunSpec runSpec =
-            switch (run.getKind()) {
-                case HydraJobRunSpec.KIND -> new HydraJobRunSpec(run.getSpec());
-                case HydraBuildRunSpec.KIND -> new HydraBuildRunSpec(run.getSpec());
-                case HydraSubtaskRunSpec.KIND -> new HydraSubtaskRunSpec(run.getSpec());
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        HydraRunSpec runSpec = switch (run.getKind()) {
+            case HydraJobRunSpec.KIND -> new HydraJobRunSpec(run.getSpec());
+            case HydraBuildRunSpec.KIND -> new HydraBuildRunSpec(run.getSpec());
+            case HydraSubtaskRunSpec.KIND -> new HydraSubtaskRunSpec(run.getSpec());
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //build task spec as defined
-        Map<String, Serializable> taskSpec =
-            switch (task.getKind()) {
-                case HydraJobTaskSpec.KIND -> {
-                    yield new HydraJobTaskSpec(task.getSpec()).toMap();
-                }
-                case HydraBuildTaskSpec.KIND -> {
-                    yield new HydraBuildTaskSpec(task.getSpec()).toMap();
-                }
-                case HydraSubtaskTaskSpec.KIND -> {
-                    yield new HydraSubtaskTaskSpec(task.getSpec()).toMap();
-                }
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        Map<String, Serializable> taskSpec = switch (task.getKind()) {
+            case HydraJobTaskSpec.KIND -> {
+                yield new HydraJobTaskSpec(task.getSpec()).toMap();
+            }
+            case HydraBuildTaskSpec.KIND -> {
+                yield new HydraBuildTaskSpec(task.getSpec()).toMap();
+            }
+            case HydraSubtaskTaskSpec.KIND -> {
+                yield new HydraSubtaskTaskSpec(task.getSpec()).toMap();
+            }
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
@@ -179,13 +176,12 @@ public class HydraRuntime
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
-        K8sRunnable runnable =
-            switch (runAccessor.getTask()) {
-                case HydraJobTaskSpec.KIND -> jobRunner.produce(run, secrets);
-                case HydraBuildTaskSpec.KIND -> buildRunner.produce(run, secrets);
-                case HydraSubtaskTaskSpec.KIND -> subtaskRunner.produce(run, secrets);
-                default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
-            };
+        K8sRunnable runnable = switch (runAccessor.getTask()) {
+            case HydraJobTaskSpec.KIND -> jobRunner.produce(run, secrets);
+            case HydraBuildTaskSpec.KIND -> buildRunner.produce(run, secrets);
+            case HydraSubtaskTaskSpec.KIND -> subtaskRunner.produce(run, secrets);
+            default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
+        };
 
         //extract auth from security context to inflate secured credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
@@ -259,7 +255,11 @@ public class HydraRuntime
             RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
             String functionId = runAccessor.getFunctionId();
             // find subtask task
-            Optional<Task> task = functionService.getTasksByFunctionId(functionId).stream().filter(t -> t.getKind().equals(HydraSubtaskTaskSpec.KIND)).findFirst();
+            Optional<Task> task = functionService
+                .getTasksByFunctionId(functionId)
+                .stream()
+                .filter(t -> t.getKind().equals(HydraSubtaskTaskSpec.KIND))
+                .findFirst();
             if (task.isPresent()) {
                 // find subtask runs and delete them
                 try {
@@ -273,13 +273,11 @@ public class HydraRuntime
             }
         }
         return null;
-
     }
-
 
     private List<Run> findSubtaskRuns(String project, Task task, String id) throws StoreException {
         //define a spec for runs building task path
-        String path = (task.getKind() + "://" +project + "/" + task.getId());
+        String path = (task.getKind() + "://" + project + "/" + task.getId());
         Specification<RunEntity> where = Specification.allOf(
             CommonSpecification.projectEquals(task.getProject()),
             createTaskSpecification(path)
@@ -289,10 +287,14 @@ public class HydraRuntime
             return where.toPredicate(root, query, builder);
         };
 
-        List<Run> runs = entityRepository.searchAll(specification).stream().filter(r -> {
-            HydraSubtaskRunSpec runSpec = new HydraSubtaskRunSpec(r.getSpec());
-            return id.equals(runSpec.getJobRef());
-        }).toList();
+        List<Run> runs = entityRepository
+            .searchAll(specification)
+            .stream()
+            .filter(r -> {
+                HydraSubtaskRunSpec runSpec = new HydraSubtaskRunSpec(r.getSpec());
+                return id.equals(runSpec.getJobRef());
+            })
+            .toList();
 
         return runs;
     }
@@ -301,10 +303,8 @@ public class HydraRuntime
         return (root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("task"), task);
     }
 
-
     @Override
     public boolean isSupported(@NotNull Run run) {
         return Arrays.asList(KINDS).contains(run.getKind());
     }
-
 }

@@ -103,8 +103,8 @@ public class RayRuntime
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        this.jobRunner = new RayJobRunner(properties, k8sBuilderHelper);
-        this.buildRunner = new RayBuildRunner(properties, k8sBuilderHelper);
+        this.jobRunner = new RayJobRunner(properties, k8sBuilderHelper, k8sLabelHelper);
+        this.buildRunner = new RayBuildRunner(properties, k8sBuilderHelper, k8sLabelHelper);
     }
 
     @Override

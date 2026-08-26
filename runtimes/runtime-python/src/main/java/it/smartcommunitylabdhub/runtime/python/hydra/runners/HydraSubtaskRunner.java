@@ -23,11 +23,14 @@
 
 package it.smartcommunitylabdhub.runtime.python.hydra.runners;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
@@ -46,21 +49,16 @@ import it.smartcommunitylabdhub.runtime.python.hydra.specs.HydraSubtaskTaskSpec;
 import it.smartcommunitylabdhub.runtime.python.job.PythonJobTaskSpec;
 import it.smartcommunitylabdhub.runtime.python.runners.PythonRunnerHelper;
 import jakarta.annotation.Nullable;
-import lombok.extern.slf4j.Slf4j;
-
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.StringUtils;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Slf4j
 public class HydraSubtaskRunner extends PythonBaseRunner {
@@ -69,10 +67,10 @@ public class HydraSubtaskRunner extends PythonBaseRunner {
 
     public HydraSubtaskRunner(
         PythonProperties properties,
-        K8sBuilderHelper k8sBuilderHelper
+        K8sBuilderHelper k8sBuilderHelper,
+        K8sLabelHelper k8sLabelHelper
     ) {
-        super(properties, k8sBuilderHelper);
-
+        super(properties, k8sBuilderHelper, k8sLabelHelper);
         //set handler for serve
         setHandlerTemplate(new ClassPathResource("runtime-hydra/docker/_subtask_handler.py"));
     }
@@ -100,7 +98,6 @@ public class HydraSubtaskRunner extends PythonBaseRunner {
                 ? buildRequirements(image, functionSpec.getRequirements())
                 : List.of();
 
-            
             List<ContextSource> contextSources = new ArrayList<>();
             List<ContextRef> contextRefs = new ArrayList<>();
 
@@ -114,21 +111,25 @@ public class HydraSubtaskRunner extends PythonBaseRunner {
             HashMap<String, Serializable> job = new HashMap<>(Map.of("kind", "job", "attributes", attributes));
             triggers.put("job", job);
 
-            String handlerRef = standalone ? "handler:handler" : "subtask_handler:handler";    
+            String handlerRef = standalone ? "handler:handler" : "subtask_handler:handler";
             String nuclioFunction = buildNuclioFunction(triggers, event, handlerRef);
             String handler = buildHandler(sourceCode);
 
             List<String> args = null;
-            // it is expected that for non standalone runs the requirements and config are already present in the shared volume, 
+            // it is expected that for non standalone runs the requirements and config are already present in the shared volume,
             // so we skip the source and requirements injection for non-standalone runs
             if (standalone) {
                 args = buildArgs(pythonVersion, baseImage, userImage);
                 //read source and build context
-                contextRefs.addAll(
-                    PythonRunnerHelper.createContextRefs(sourceCode)
-                );
+                contextRefs.addAll(PythonRunnerHelper.createContextRefs(sourceCode));
                 contextSources.addAll(
-                    PythonRunnerHelper.createContextSources(entrypoint, handler, nuclioFunction, sourceCode, requirements)
+                    PythonRunnerHelper.createContextSources(
+                        entrypoint,
+                        handler,
+                        nuclioFunction,
+                        sourceCode,
+                        requirements
+                    )
                 );
                 //inject custom config to add our user
                 contextSources.addAll(HydraRunnerHelper.createConfigSources(functionSpec.getConfig()));
@@ -147,8 +148,7 @@ public class HydraSubtaskRunner extends PythonBaseRunner {
                 String functionRef = "subtask_" + run.getId() + ".yaml";
                 //write function file
                 contextSources.add(
-                    ContextSource
-                        .builder()
+                    ContextSource.builder()
                         .name(functionRef)
                         .base64(Base64.getEncoder().encodeToString(nuclioFunction.getBytes(StandardCharsets.UTF_8)))
                         .build()
@@ -161,8 +161,8 @@ public class HydraSubtaskRunner extends PythonBaseRunner {
                 .task(PythonJobTaskSpec.KIND)
                 .state(State.READY.name())
                 .labels(
-                    k8sBuilderHelper != null
-                        ? List.of(new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction()))
+                    k8sLabelHelper != null
+                        ? List.of(new CoreLabel(k8sLabelHelper.buildCoreLabel("function"), taskAccessor.getFunction()))
                         : null
                 )
                 //base
@@ -191,7 +191,12 @@ public class HydraSubtaskRunner extends PythonBaseRunner {
         }
     }
 
-    protected List<String> buildSubtaskArgs(String pythonVersion, @Nullable String baseImage, @Nullable String userImage, String functionRef) {
+    protected List<String> buildSubtaskArgs(
+        String pythonVersion,
+        @Nullable String baseImage,
+        @Nullable String userImage,
+        String functionRef
+    ) {
         List<String> args = new ArrayList<>();
         if (useLayer(pythonVersion, baseImage, userImage)) {
             args.addAll(
@@ -216,10 +221,15 @@ public class HydraSubtaskRunner extends PythonBaseRunner {
         boolean standalone = !StringUtils.hasText(runSpec.getJobRef());
         if (!standalone) {
             // create shared volume
-            return HydraRunnerHelper.createVolumes(run, taskSpec, properties.getVolumeSize(), k8sBuilderHelper, runSpec.getJobRef(), CoreVolume.VolumeType.shared_volume);
+            return HydraRunnerHelper.createVolumes(
+                run,
+                taskSpec,
+                properties.getVolumeSize(),
+                k8sBuilderHelper,
+                runSpec.getJobRef(),
+                CoreVolume.VolumeType.shared_volume
+            );
         }
-        return super.createVolumes(run, taskSpec); 
+        return super.createVolumes(run, taskSpec);
     }
-
-    
 }
