@@ -21,22 +21,30 @@
  *
  */
 
-package it.smartcommunitylabdhub.commons;
+package it.smartcommunitylabdhub.projects.specs;
 
-public class Fields {
+import it.smartcommunitylabdhub.commons.models.base.BaseSpec;
+import java.io.Serializable;
+import java.util.Map;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-    public static final String FUNCTION = "function";
-    public static final String ID = "id";
-    public static final String KIND = "kind";
-    public static final String NAME = "name";
-    public static final String PROJECT = "project";
-    public static final String RUN = "run";
-    public static final String RUNTIME = "runtime";
-    public static final String TASK = "task";
-    public static final String TYPE = "type";
-    public static final String WORKFLOW = "workflow";
-    public static final String STATE = "state";
-    public static final String CONFIG = "config";
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class ProjectBaseSpec extends BaseSpec {
 
-    private Fields() {}
+    private String source;
+    private ProjectConfig config = new ProjectConfig();
+
+    @Override
+    public void configure(Map<String, Serializable> data) {
+        ProjectBaseSpec spec = mapper.convertValue(data, ProjectBaseSpec.class);
+
+        this.config = spec.getConfig();
+        this.source = spec.getSource();
+    }
 }

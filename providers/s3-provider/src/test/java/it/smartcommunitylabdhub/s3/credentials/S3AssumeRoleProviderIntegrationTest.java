@@ -13,7 +13,7 @@ import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.AuthorizableAwareEntityService;
 import it.smartcommunitylabdhub.authorization.services.JwtTokenService;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
-import it.smartcommunitylabdhub.commons.models.project.BaseProject;
+import it.smartcommunitylabdhub.projects.Project;
 import it.smartcommunitylabdhub.s3.config.S3Properties;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
@@ -455,7 +455,7 @@ class S3AssumeRoleProviderIntegrationTest {
      * project ids for a given user as "owned" projects. Used to validate the policy-template
      * resolution path of {@link S3AssumeRoleProvider} without pulling in Mockito.
      */
-    private static final class StaticProjectAuthHelper implements AuthorizableAwareEntityService<BaseProject> {
+    private static final class StaticProjectAuthHelper implements AuthorizableAwareEntityService<Project> {
 
         private final String user;
         private final List<String> ownIds;

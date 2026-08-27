@@ -34,7 +34,11 @@
             <artifactId>dh-files</artifactId>
             <version>${revision}</version>
         </dependency>
-
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-entity-project</artifactId>
+            <version>${revision}</version>
+        </dependency>
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>s3</artifactId>

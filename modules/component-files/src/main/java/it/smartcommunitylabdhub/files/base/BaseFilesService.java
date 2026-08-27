@@ -32,7 +32,6 @@ import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
-import it.smartcommunitylabdhub.commons.models.project.BaseProject;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
@@ -64,7 +63,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 @Slf4j
-public class BaseFilesService<
+public abstract class BaseFilesService<
     D extends BaseDTO & MetadataDTO & SpecDTO & StatusDTO
 > implements EntityFilesService<D>, InitializingBean {
 
@@ -72,26 +71,26 @@ public class BaseFilesService<
 
     protected EntityRepository<D> entityService;
 
-    private EntityRepository<? extends BaseProject> projectService;
-    private FilesService filesService;
-    private FilesInfoService filesInfoService;
-    private CredentialsService credentialsService;
+    protected FilesService filesService;
+    protected FilesInfoService filesInfoService;
+    protected CredentialsService credentialsService;
 
     @SuppressWarnings("unchecked")
-    public BaseFilesService() {
+    protected BaseFilesService() {
         // resolve generics type via subclass trick
         Type t = ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
         this.type = (Class<D>) t;
     }
 
-    @Autowired
-    public void setEntityService(EntityRepository<D> entityService) {
-        this.entityService = entityService;
+    protected String resolveBasePath(String project, String name, String id, String filename) throws StoreException {
+        return (
+            filesService.getDefaultStore(null) + "/" + project + "/" + EntityUtils.getEntityName(type).toLowerCase()
+        );
     }
 
     @Autowired
-    public void setProjectService(EntityRepository<? extends BaseProject> projectService) {
-        this.projectService = projectService;
+    public void setEntityService(EntityRepository<D> entityService) {
+        this.entityService = entityService;
     }
 
     @Autowired
@@ -112,7 +111,6 @@ public class BaseFilesService<
     @Override
     public void afterPropertiesSet() throws Exception {
         Assert.notNull(entityService, "entity service can not be null");
-        Assert.notNull(projectService, "project service can not be null");
         Assert.notNull(filesService, "files service can not be null");
         Assert.notNull(filesInfoService, "files info service can not be null");
     }
@@ -273,17 +271,7 @@ public class BaseFilesService<
         try {
             //always set a subpath to avoid collisions
             String subpath = (name != null ? name + "/" : "") + (id != null ? id : UUID.randomUUID().toString());
-
-            String path =
-                filesService.getDefaultStore(projectService.get(project)) +
-                "/" +
-                project +
-                "/" +
-                EntityUtils.getEntityName(type).toLowerCase() +
-                "/" +
-                subpath +
-                "/";
-
+            String path = resolveBasePath(project, name, id, filename) + "/" + subpath + "/";
             String fullPath = filename.startsWith("/") ? path + filename.substring(1) : path + filename;
 
             //entity may not exists (yet)
@@ -331,17 +319,7 @@ public class BaseFilesService<
         try {
             //always set a subpath to avoid collisions
             String subpath = (name != null ? name + "/" : "") + (id != null ? id : UUID.randomUUID().toString());
-
-            String path =
-                filesService.getDefaultStore(projectService.get(project)) +
-                "/" +
-                project +
-                "/" +
-                EntityUtils.getEntityName(type).toLowerCase() +
-                "/" +
-                subpath +
-                "/";
-
+            String path = resolveBasePath(project, name, id, filename) + "/" + subpath + "/";
             String fullPath = filename.startsWith("/") ? path + filename.substring(1) : path + filename;
 
             //entity may not exists (yet)

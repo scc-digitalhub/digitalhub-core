@@ -34,7 +34,7 @@ import it.smartcommunitylabdhub.authorization.services.CredentialsProvider;
 import it.smartcommunitylabdhub.authorization.services.JwtTokenService;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
-import it.smartcommunitylabdhub.commons.models.project.BaseProject;
+import it.smartcommunitylabdhub.projects.Project;
 import it.smartcommunitylabdhub.s3.base.S3BaseProvider;
 import it.smartcommunitylabdhub.s3.config.S3Properties;
 import jakarta.annotation.Nonnull;
@@ -84,7 +84,7 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
     // cache credentials for up to DURATION
     LoadingCache<Pair<String, S3PolicyMapping>, S3Credentials> cache;
 
-    AuthorizableAwareEntityService<? extends BaseProject> projectAuthHelper;
+    AuthorizableAwareEntityService<Project> projectAuthHelper;
     Mustache policyTemplateMustache;
 
     public S3AssumeRoleProvider(S3Properties properties) {
@@ -99,7 +99,7 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
     }
 
     @Autowired(required = false)
-    public void setProjectAuthHelper(AuthorizableAwareEntityService<? extends BaseProject> projectAuthHelper) {
+    public void setProjectAuthHelper(AuthorizableAwareEntityService<Project> projectAuthHelper) {
         this.projectAuthHelper = projectAuthHelper;
     }
 
