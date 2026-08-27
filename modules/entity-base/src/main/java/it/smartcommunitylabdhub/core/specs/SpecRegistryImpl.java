@@ -192,7 +192,7 @@ public class SpecRegistryImpl<
         scanForSpecTypes();
     }
 
-    private String getEntityName(Class<?> clazz) {
+    protected String getEntityName(Class<?> clazz) {
         return clazz.getSimpleName().toUpperCase();
     }
 

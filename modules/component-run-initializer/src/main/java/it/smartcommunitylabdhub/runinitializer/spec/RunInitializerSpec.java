@@ -28,6 +28,7 @@ import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.base.BaseSpec;
 import it.smartcommunitylabdhub.extensions.annotations.ExtensionType;
 import it.smartcommunitylabdhub.extensions.model.Extension;
+import it.smartcommunitylabdhub.runs.Run;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +43,7 @@ import lombok.Setter;
 @Setter
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @SpecType(kind = RunInitializerSpec.KIND, entity = Extension.class)
-@ExtensionType(appliesTo = { "run" })
+@ExtensionType(appliesTo = { Run.class })
 public class RunInitializerSpec extends BaseSpec {
 
     public static final String KIND = "run-initializer";

@@ -33,6 +33,7 @@ import org.springframework.stereotype.Indexed;
 @Target(ElementType.TYPE)
 @Indexed
 public @interface ExtensionType {
-    String[] appliesTo();
+    Class<?>[] appliesTo();
 
+    Class<?>[] appliesNotTo() default {};
 }

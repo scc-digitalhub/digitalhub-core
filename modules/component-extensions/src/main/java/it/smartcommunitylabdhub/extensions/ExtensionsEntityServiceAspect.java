@@ -35,6 +35,7 @@ import it.smartcommunitylabdhub.core.services.EntityService;
 import it.smartcommunitylabdhub.extensions.model.ExtensibleDTO;
 import it.smartcommunitylabdhub.extensions.model.Extension;
 import it.smartcommunitylabdhub.extensions.persistence.ExtensionBuilder;
+import it.smartcommunitylabdhub.extensions.service.ExtensionSchemaService;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashMap;
@@ -46,6 +47,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.BindException;
 
@@ -78,9 +80,15 @@ public class ExtensionsEntityServiceAspect {
     >() {};
 
     private final ExtensionManager extManager;
+    private ExtensionSchemaService schemaService;
 
     public ExtensionsEntityServiceAspect(ExtensionManager extManager) {
         this.extManager = extManager;
+    }
+
+    @Autowired(required = false)
+    public void setSchemaService(ExtensionSchemaService schemaService) {
+        this.schemaService = schemaService;
     }
 
     /** Returns true when the DTO type handled by the given service implements {@link ExtensibleDTO}. */
@@ -112,6 +120,16 @@ public class ExtensionsEntityServiceAspect {
             log.trace("extensions: {}", extensions);
         }
 
+        //auto-assign names if missing
+        for (int i = 0; i < extensions.size(); i++) {
+            Map<String, Serializable> e = extensions.get(i);
+            if (!e.containsKey("name")) {
+                String kind = (String) e.getOrDefault("kind", "");
+                String name = kind + "-" + Integer.toString(i + 1);
+                e.put("name", name);
+            }
+        }
+
         String entityName = EntityUtils.getEntityName(service.getType());
         List<Extension> exts = extensions
             .stream()
@@ -123,6 +141,22 @@ public class ExtensionsEntityServiceAspect {
                     ext.setName(ed.getName());
                     ext.setSpec(ed.getSpec());
                     ext.setEntity(entityName);
+
+                    //check if extension applies to this entity type
+                    if (schemaService != null) {
+                        if (!schemaService.appliesTo(service.getType().getClass(), ext.getKind())) {
+                            log.debug(
+                                "extension {} of kind {} is not applicable to entity {}",
+                                ext.getName(),
+                                ext.getKind(),
+                                entityName
+                            );
+
+                            //skip this extension
+                            return null;
+                        }
+                    }
+
                     return extManager.createExtension(ext);
                 } catch (DuplicatedEntityException | BindException | IllegalArgumentException | SystemException ex) {
                     log.error(
@@ -199,6 +233,22 @@ public class ExtensionsEntityServiceAspect {
                     ext.setName(ed.getName());
                     ext.setSpec(ed.getSpec());
                     ext.setEntity(entityName);
+
+                    //check if extension applies to this entity type
+                    if (schemaService != null) {
+                        if (!schemaService.appliesTo(service.getType().getClass(), ext.getKind())) {
+                            log.debug(
+                                "extension {} of kind {} is not applicable to entity {}",
+                                ext.getName(),
+                                ext.getKind(),
+                                entityName
+                            );
+
+                            //skip this extension
+                            return null;
+                        }
+                    }
+
                     return extManager.createOrUpdateExtension(ext);
                 } catch (BindException | IllegalArgumentException | SystemException ex) {
                     log.error(
