@@ -16,9 +16,37 @@
 
 package it.smartcommunitylabdhub.models.services;
 
+import it.smartcommunitylabdhub.commons.accessors.spec.ConfigSpecAccessor;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
+import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.files.base.BaseFilesService;
 import it.smartcommunitylabdhub.models.Model;
+import it.smartcommunitylabdhub.projects.Project;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-public class ModelFilesService extends BaseFilesService<Model> {}
+public class ModelFilesService extends BaseFilesService<Model> {
+
+    private EntityRepository<Project> projectService;
+
+    @Autowired
+    public void setProjectService(EntityRepository<Project> projectService) {
+        this.projectService = projectService;
+    }
+
+    @Override
+    protected String resolveBasePath(String project, String name, String id, String filename) throws StoreException {
+        Project prj = projectService.get(project);
+        ConfigSpecAccessor cfg = ConfigSpecAccessor.with(prj.getSpec());
+
+        return (
+            filesService.getDefaultStore(cfg.getConfig()) +
+            "/" +
+            project +
+            "/" +
+            EntityUtils.getEntityName(Model.class).toLowerCase()
+        );
+    }
+}

@@ -21,22 +21,19 @@
  *
  */
 
-package it.smartcommunitylabdhub.commons;
+package it.smartcommunitylabdhub.extensions.annotations;
 
-public class Fields {
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import org.springframework.stereotype.Indexed;
 
-    public static final String FUNCTION = "function";
-    public static final String ID = "id";
-    public static final String KIND = "kind";
-    public static final String NAME = "name";
-    public static final String PROJECT = "project";
-    public static final String RUN = "run";
-    public static final String RUNTIME = "runtime";
-    public static final String TASK = "task";
-    public static final String TYPE = "type";
-    public static final String WORKFLOW = "workflow";
-    public static final String STATE = "state";
-    public static final String CONFIG = "config";
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+@Indexed
+public @interface ExtensionType {
+    Class<?>[] appliesTo();
 
-    private Fields() {}
+    Class<?>[] appliesNotTo() default {};
 }

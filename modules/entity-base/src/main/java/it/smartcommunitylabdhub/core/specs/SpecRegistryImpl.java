@@ -192,7 +192,7 @@ public class SpecRegistryImpl<
         scanForSpecTypes();
     }
 
-    private String getEntityName(Class<?> clazz) {
+    protected String getEntityName(Class<?> clazz) {
         return clazz.getSimpleName().toUpperCase();
     }
 
@@ -299,7 +299,7 @@ public class SpecRegistryImpl<
             .toList();
     }
 
-    protected record SpecRegistration(
+    public record SpecRegistration(
         String kind,
         String runtime,
         Class<? extends Spec> spec,

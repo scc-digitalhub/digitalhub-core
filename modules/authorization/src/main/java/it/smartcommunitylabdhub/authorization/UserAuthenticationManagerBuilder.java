@@ -22,61 +22,11 @@
 
 package it.smartcommunitylabdhub.authorization;
 
-import it.smartcommunitylabdhub.authorization.services.AuthorizableAwareEntityService;
-import it.smartcommunitylabdhub.authorization.services.CredentialsProvider;
-import it.smartcommunitylabdhub.commons.models.project.Project;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.MessageSource;
-import org.springframework.security.authentication.AuthenticationEventPublisher;
 import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.stereotype.Service;
 
-@Service
-@Slf4j
-public class UserAuthenticationManagerBuilder {
+public interface UserAuthenticationManagerBuilder {
+    public UserAuthenticationManager build(AuthenticationProvider... providers);
 
-    private List<CredentialsProvider> credentialsProviders = Collections.emptyList();
-    private AuthorizableAwareEntityService<Project> projectAuthHelper;
-    private AuthenticationEventPublisher eventPublisher;
-    private MessageSource messageSource;
-
-    @Autowired
-    public void setMessageSource(MessageSource messageSource) {
-        this.messageSource = messageSource;
-    }
-
-    @Autowired
-    public void setEventPublisher(AuthenticationEventPublisher eventPublisher) {
-        this.eventPublisher = eventPublisher;
-    }
-
-    @Autowired
-    public void setCredentialsProviders(List<CredentialsProvider> providers) {
-        if (providers != null) {
-            this.credentialsProviders = providers;
-        }
-    }
-
-    @Autowired
-    public void setProjectAuthHelper(AuthorizableAwareEntityService<Project> projectAuthHelper) {
-        this.projectAuthHelper = projectAuthHelper;
-    }
-
-    public UserAuthenticationManager build(AuthenticationProvider... providers) {
-        return build(Arrays.asList(providers));
-    }
-
-    public UserAuthenticationManager build(List<AuthenticationProvider> authProviders) {
-        UserAuthenticationManager manager = new UserAuthenticationManager(authProviders);
-        manager.setProviders(credentialsProviders);
-        manager.setProjectAuthHelper(projectAuthHelper);
-
-        manager.setAuthenticationEventPublisher(eventPublisher);
-        manager.setMessageSource(messageSource);
-        return manager;
-    }
+    public UserAuthenticationManager build(List<AuthenticationProvider> authProviders);
 }

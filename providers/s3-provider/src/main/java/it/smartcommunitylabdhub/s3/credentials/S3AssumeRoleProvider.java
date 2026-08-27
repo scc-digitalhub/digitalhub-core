@@ -34,7 +34,7 @@ import it.smartcommunitylabdhub.authorization.services.CredentialsProvider;
 import it.smartcommunitylabdhub.authorization.services.JwtTokenService;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
-import it.smartcommunitylabdhub.commons.models.project.Project;
+import it.smartcommunitylabdhub.projects.Project;
 import it.smartcommunitylabdhub.s3.base.S3BaseProvider;
 import it.smartcommunitylabdhub.s3.config.S3Properties;
 import jakarta.annotation.Nonnull;

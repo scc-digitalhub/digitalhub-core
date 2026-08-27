@@ -18,7 +18,6 @@
 package it.smartcommunitylabdhub.core.config;
 
 import it.smartcommunitylabdhub.commons.models.metadata.Metadata;
-import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

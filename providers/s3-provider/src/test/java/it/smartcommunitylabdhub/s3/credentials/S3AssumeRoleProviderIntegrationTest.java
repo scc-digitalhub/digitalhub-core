@@ -13,7 +13,7 @@ import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.AuthorizableAwareEntityService;
 import it.smartcommunitylabdhub.authorization.services.JwtTokenService;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
-import it.smartcommunitylabdhub.commons.models.project.Project;
+import it.smartcommunitylabdhub.projects.Project;
 import it.smartcommunitylabdhub.s3.config.S3Properties;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;

@@ -27,8 +27,8 @@ import it.smartcommunitylabdhub.authorization.services.AuthorizableAwareEntitySe
 import it.smartcommunitylabdhub.authorization.services.ResourceSharingService;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
+import it.smartcommunitylabdhub.projects.Project;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.projects.persistence.ProjectEntity;

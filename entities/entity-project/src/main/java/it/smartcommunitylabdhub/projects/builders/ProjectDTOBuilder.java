@@ -23,8 +23,8 @@
 
 package it.smartcommunitylabdhub.projects.builders;
 
-import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
+import it.smartcommunitylabdhub.projects.Project;
 import it.smartcommunitylabdhub.core.metadata.AuditMetadataBuilder;
 import it.smartcommunitylabdhub.core.metadata.BaseMetadataBuilder;
 import it.smartcommunitylabdhub.projects.persistence.ProjectEntity;
