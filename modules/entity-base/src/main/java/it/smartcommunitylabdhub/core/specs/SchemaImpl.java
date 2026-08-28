@@ -43,6 +43,9 @@ public class SchemaImpl implements Schema, Serializable {
     @JsonIgnore
     private final transient JsonNode schema;
 
+    @JsonIgnore
+    private final transient JsonNode uiSchema;
+
     @Override
     public String kind() {
         return kind;
@@ -61,5 +64,10 @@ public class SchemaImpl implements Schema, Serializable {
     @Override
     public JsonNode schema() {
         return schema;
+    }
+
+    @Override
+    public JsonNode uiSchema() {
+        return uiSchema;
     }
 }

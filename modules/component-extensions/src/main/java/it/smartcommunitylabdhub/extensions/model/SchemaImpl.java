@@ -50,6 +50,7 @@ public class SchemaImpl implements Schema, Serializable {
 
     private final String[] appliesTo;
     private final String[] appliesNotTo;
+    private final String showIn;
 
     @Override
     public String kind() {
@@ -82,5 +83,9 @@ public class SchemaImpl implements Schema, Serializable {
 
     public String[] getAppliesNotTo() {
         return appliesNotTo;
+    }
+
+    public String getShowIn() {
+        return showIn;
     }
 }

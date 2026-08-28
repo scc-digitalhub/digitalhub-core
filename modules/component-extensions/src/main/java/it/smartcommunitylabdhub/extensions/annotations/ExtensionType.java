@@ -36,4 +36,6 @@ public @interface ExtensionType {
     Class<?>[] appliesTo();
 
     Class<?>[] appliesNotTo() default {};
+
+    String showIn() default "";
 }

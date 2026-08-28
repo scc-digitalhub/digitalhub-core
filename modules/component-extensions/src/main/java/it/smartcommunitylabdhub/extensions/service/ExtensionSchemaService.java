@@ -62,6 +62,8 @@ public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
     private static final String SCHEMA = "schema";
     private static final String UI_SCHEMA = "uiSchema";
     private static final String APPLIES_TO = "appliesTo";
+    private static final String APPLIES_NOT_TO = "appliesNotTo";
+    private static final String SHOW_IN = "showIn";
 
     protected ResourcePatternResolver resourceLoader;
     private List<String> extensionPaths;
@@ -307,6 +309,12 @@ public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
                         ? objectMapper.convertValue(schemaNode.get(APPLIES_TO), String[].class)
                         : null
                 )
+                .appliesNotTo(
+                    schemaNode.has(APPLIES_NOT_TO)
+                        ? objectMapper.convertValue(schemaNode.get(APPLIES_NOT_TO), String[].class)
+                        : null
+                )
+                .showIn(schemaNode.has(SHOW_IN) ? schemaNode.get(SHOW_IN).asText() : null)
                 .build();
             registerSpec(kind, schema);
 
@@ -341,6 +349,9 @@ public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
                         .map(e -> getEntityName(e))
                         .toArray(String[]::new)
                 );
+            }
+            if (et.showIn() != null && !et.showIn().isEmpty()) {
+                schema.showIn(et.showIn());
             }
         }
 
