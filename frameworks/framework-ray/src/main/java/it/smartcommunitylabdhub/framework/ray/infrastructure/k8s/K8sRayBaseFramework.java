@@ -730,14 +730,7 @@ public abstract class K8sRayBaseFramework<
         }
 
         //check template
-        K8sTemplate<T> template = null;
-        if (StringUtils.hasText(podModel.getTemplate()) && templates.containsKey(podModel.getTemplate())) {
-            //get template
-            template = templates.get(podModel.getTemplate());
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE);
-        }
+        K8sTemplate<T> template = getTemplate(podModel.getTemplate());
 
         T runnable = podModel.toK8sRunnable(parent, name, newRunnableBuilder(), withContext);
 

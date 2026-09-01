@@ -426,14 +426,7 @@ public class K8sJobFramework extends K8sBaseFramework<K8sJobRunnable, V1Job> {
         log.debug("build k8s job for {}", jobName);
 
         //check template
-        K8sTemplate<K8sJobRunnable> template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //get template
-            template = templates.get(runnable.getTemplate());
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE);
-        }
+        K8sTemplate<K8sJobRunnable> template = getTemplate(runnable.getTemplate());
 
         //build labels
         Map<String, String> labels = buildLabels(runnable);

@@ -480,14 +480,7 @@ public class K8sDeploymentFramework extends K8sBaseFramework<K8sDeploymentRunnab
         log.debug("build k8s deployment for {}", deploymentName);
 
         //check template
-        K8sTemplate<K8sDeploymentRunnable> template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //get template
-            template = templates.get(runnable.getTemplate());
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE);
-        }
+        K8sTemplate<K8sDeploymentRunnable> template = getTemplate(runnable.getTemplate());
 
         // Create labels for job
         Map<String, String> labels = buildLabels(runnable);

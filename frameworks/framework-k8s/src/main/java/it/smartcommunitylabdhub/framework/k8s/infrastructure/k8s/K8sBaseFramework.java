@@ -464,6 +464,23 @@ public abstract class K8sBaseFramework<
         return results;
     }
 
+    protected K8sTemplate<T> getTemplate(String templateId) {
+        if (StringUtils.hasText(templateId)) {
+            if (!templates.containsKey(templateId)) {
+                throw new IllegalArgumentException("Template " + templateId + " not found");
+            }
+
+            //use template
+            return templates.get(templateId);
+        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
+            //use default template
+            return templates.get(DEFAULT_TEMPLATE);
+        }
+
+        //no template found
+        return null;
+    }
+
     /*
      * Framework methods
      */
@@ -740,19 +757,21 @@ public abstract class K8sBaseFramework<
 
         //build template labels when defined
         Map<String, String> templateLabels = new HashMap<>();
-        K8sRunnable template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //add template
-            template = templates.get(runnable.getTemplate()).getProfile();
-            templateLabels.put(k8sLabelHelper.buildCoreLabel("template"), runnable.getTemplate());
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE).getProfile();
-        }
+        K8sTemplate<T> template = getTemplate(runnable.getTemplate());
 
-        if (template != null && template.getLabels() != null && !template.getLabels().isEmpty()) {
-            for (CoreLabel l : template.getLabels()) {
-                templateLabels.putIfAbsent(l.name(), K8sBuilderHelper.sanitizeNames(l.value()));
+        if (template != null) {
+            //inject template id as core label
+            templateLabels.put(k8sLabelHelper.buildCoreLabel("template"), template.getId());
+
+            if (
+                template.getProfile() != null &&
+                template.getProfile().getLabels() != null &&
+                !template.getProfile().getLabels().isEmpty()
+            ) {
+                //inject template labels
+                for (CoreLabel l : template.getProfile().getLabels()) {
+                    templateLabels.putIfAbsent(l.name(), K8sBuilderHelper.sanitizeNames(l.value()));
+                }
             }
         }
 
@@ -827,14 +846,9 @@ public abstract class K8sBaseFramework<
         }
 
         //volumes defined in template
-        K8sRunnable template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //add template
-            template = templates.get(runnable.getTemplate()).getProfile();
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE).getProfile();
-        }
+        K8sRunnable template = Optional.ofNullable(getTemplate(runnable.getTemplate()))
+            .map(K8sTemplate::getProfile)
+            .orElse(null);
 
         if (template != null && template.getVolumes() != null) {
             template
@@ -924,14 +938,9 @@ public abstract class K8sBaseFramework<
         }
 
         //volumes defined in template
-        K8sRunnable template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //add template
-            template = templates.get(runnable.getTemplate()).getProfile();
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE).getProfile();
-        }
+        K8sRunnable template = Optional.ofNullable(getTemplate(runnable.getTemplate()))
+            .map(K8sTemplate::getProfile)
+            .orElse(null);
 
         if (template != null && template.getVolumes() != null) {
             template
@@ -1014,14 +1023,9 @@ public abstract class K8sBaseFramework<
         V1ResourceRequirements resources = new V1ResourceRequirements();
 
         // template overrides user request
-        K8sRunnable template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //add template
-            template = templates.get(runnable.getTemplate()).getProfile();
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE).getProfile();
-        }
+        K8sRunnable template = Optional.ofNullable(getTemplate(runnable.getTemplate()))
+            .map(K8sTemplate::getProfile)
+            .orElse(null);
 
         //translate requests
         Map<String, Quantity> requests = new HashMap<>();
@@ -1304,14 +1308,9 @@ public abstract class K8sBaseFramework<
             );
         }
 
-        K8sRunnable template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //add template
-            template = templates.get(runnable.getTemplate()).getProfile();
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE).getProfile();
-        }
+        K8sRunnable template = Optional.ofNullable(getTemplate(runnable.getTemplate()))
+            .map(K8sTemplate::getProfile)
+            .orElse(null);
 
         if (template != null && template.getNodeSelector() != null && !template.getNodeSelector().isEmpty()) {
             selectors.putAll(
@@ -1341,14 +1340,9 @@ public abstract class K8sBaseFramework<
             );
         }
 
-        K8sRunnable template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //add template
-            template = templates.get(runnable.getTemplate()).getProfile();
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE).getProfile();
-        }
+        K8sRunnable template = Optional.ofNullable(getTemplate(runnable.getTemplate()))
+            .map(K8sTemplate::getProfile)
+            .orElse(null);
 
         if (template != null && template.getTolerations() != null && !template.getTolerations().isEmpty()) {
             tolerations.addAll(
@@ -1596,14 +1590,9 @@ public abstract class K8sBaseFramework<
     }
 
     public String buildPriorityClassName(T runnable) throws K8sFrameworkException {
-        K8sRunnable template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //use template
-            template = templates.get(runnable.getTemplate()).getProfile();
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE).getProfile();
-        }
+        K8sRunnable template = Optional.ofNullable(getTemplate(runnable.getTemplate()))
+            .map(K8sTemplate::getProfile)
+            .orElse(null);
 
         if (template != null) {
             return template.getPriorityClass();
@@ -1613,14 +1602,9 @@ public abstract class K8sBaseFramework<
     }
 
     public String buildRuntimeClassName(T runnable) throws K8sFrameworkException {
-        K8sRunnable template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //use template
-            template = templates.get(runnable.getTemplate()).getProfile();
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE).getProfile();
-        }
+        K8sRunnable template = Optional.ofNullable(getTemplate(runnable.getTemplate()))
+            .map(K8sTemplate::getProfile)
+            .orElse(null);
 
         if (template != null) {
             return template.getRuntimeClass();
@@ -1630,14 +1614,9 @@ public abstract class K8sBaseFramework<
     }
 
     public V1Affinity buildAffinity(T runnable) throws K8sFrameworkException {
-        K8sRunnable template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //use template
-            template = templates.get(runnable.getTemplate()).getProfile();
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE).getProfile();
-        }
+        K8sRunnable template = Optional.ofNullable(getTemplate(runnable.getTemplate()))
+            .map(K8sTemplate::getProfile)
+            .orElse(null);
 
         if (template != null) {
             return template.getAffinity();
@@ -1699,14 +1678,9 @@ public abstract class K8sBaseFramework<
 
         //volumes defined in template
         //TODO evaluate support
-        K8sRunnable template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //add template
-            template = templates.get(runnable.getTemplate()).getProfile();
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE).getProfile();
-        }
+        K8sRunnable template = Optional.ofNullable(getTemplate(runnable.getTemplate()))
+            .map(K8sTemplate::getProfile)
+            .orElse(null);
 
         if (template != null && template.getVolumes() != null) {
             template
