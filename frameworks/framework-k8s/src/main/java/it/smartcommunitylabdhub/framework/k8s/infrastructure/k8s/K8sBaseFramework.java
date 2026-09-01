@@ -100,6 +100,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.support.ResourcePatternResolver;
+import org.springframework.core.io.support.ResourcePatternUtils;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -433,35 +435,57 @@ public abstract class K8sBaseFramework<
         Map<String, K8sTemplate<T>> results = new HashMap<>();
         if (resourceLoader != null && templateKeys != null) {
             templateKeys.forEach(k -> {
-                try {
-                    String path = k;
-                    //check if we received a bare path and fix
-                    if (!path.startsWith("classpath:") && !path.startsWith("file:")) {
-                        path = "file:" + k;
+                //check if we received a bare path and fix
+                String path = k;
+                if (!path.startsWith("classpath:") && !path.startsWith("file:")) {
+                    path = "file:" + k;
+                }
+
+                if (path.endsWith("/")) {
+                    // folder: discover *.yaml, *.yml, *.json files
+                    ResourcePatternResolver resolver = ResourcePatternUtils.getResourcePatternResolver(resourceLoader);
+                    String[] patterns = { path + "*.yaml", path + "*.yml", path + "*.json" };
+                    for (String pattern : patterns) {
+                        try {
+                            Resource[] discovered = resolver.getResources(pattern);
+                            for (Resource res : discovered) {
+                                K8sTemplate<T> t = loadTemplate(res, clazz);
+                                if (t != null) {
+                                    results.put(t.getId(), t);
+                                }
+                            }
+                        } catch (IOException e) {
+                            log.error("Error discovering templates in {}: {}", path, e.getMessage());
+                        }
                     }
-
-                    // Load as resource and deserialize as template
-                    log.debug("Read template from {}", path);
-                    Resource res = resourceLoader.getResource(path);
-                    K8sTemplate<T> t = KubernetesMapper.readTemplate(
-                        res.getContentAsString(StandardCharsets.UTF_8),
-                        clazz
-                    );
-
-                    if (log.isTraceEnabled()) {
-                        log.trace("Template result {}:\n {}", t.getId(), t);
+                } else {
+                    K8sTemplate<T> t = loadTemplate(resourceLoader.getResource(path), clazz);
+                    if (t != null) {
+                        results.put(t.getId(), t);
                     }
-
-                    //TODO validate template via smartValidator
-                    results.put(t.getId(), t);
-                } catch (IOException | ClassCastException | IllegalArgumentException e) {
-                    //skip
-                    log.error("Error loading templates: " + e.getMessage());
                 }
             });
         }
 
         return results;
+    }
+
+    protected K8sTemplate<T> loadTemplate(Resource res, Class<T> clazz) {
+        try {
+            log.debug("Read template from {}", res);
+            K8sTemplate<T> t = KubernetesMapper.readTemplate(res.getContentAsString(StandardCharsets.UTF_8), clazz);
+
+            if (log.isTraceEnabled()) {
+                log.trace("Template result {}:\n {}", t.getId(), t);
+            }
+
+            //TODO validate template via smartValidator
+            return t;
+        } catch (IOException | ClassCastException | IllegalArgumentException e) {
+            //skip
+            log.error("Error loading template {}: {}", res, e.getMessage());
+            return null;
+        }
     }
 
     protected K8sTemplate<T> getTemplate(String templateId) {
