@@ -24,6 +24,7 @@
 package it.smartcommunitylabdhub.runinitializer.spec;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import it.smartcommunitylabdhub.commons.Keys;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotBlank;
@@ -43,6 +44,7 @@ import org.springframework.validation.annotation.Validated;
 @ToString
 @Validated
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonPropertyOrder({ "source", "destination" })
 public class FileRef implements Serializable {
 
     @NotBlank

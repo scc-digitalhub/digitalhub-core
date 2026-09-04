@@ -224,8 +224,8 @@ public abstract class BaseEntityServiceImpl<
             log.debug("perform action {} on id {}", action, dto.getId());
             switch (operation.getAction()) {
                 case EntityAction.UPDATE:
-                    //TODO evaluate, disabled for now
-                    // update(dto.getId(), dto);
+                    //update via service
+                    update(dto.getId(), dto);
                     break;
                 case EntityAction.DELETE:
                     //delete

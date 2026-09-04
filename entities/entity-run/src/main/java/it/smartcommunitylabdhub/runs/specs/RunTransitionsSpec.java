@@ -21,13 +21,12 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.runs.specs;
+package it.smartcommunitylabdhub.runs.specs;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import it.smartcommunitylabdhub.commons.lifecycle.LifecycleEvent;
 import it.smartcommunitylabdhub.runs.Run;
-import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
 import java.io.Serializable;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -54,6 +53,13 @@ public class RunTransitionsSpec extends RunBaseStatus {
 
         RunTransitionsSpec spec = mapper.convertValue(data, RunTransitionsSpec.class);
         this.transitions = spec.getTransitions();
+    }
+
+    public static RunTransitionsSpec from(Map<String, Serializable> data) {
+        RunTransitionsSpec spec = new RunTransitionsSpec();
+        spec.configure(data);
+
+        return spec;
     }
 
     @Getter

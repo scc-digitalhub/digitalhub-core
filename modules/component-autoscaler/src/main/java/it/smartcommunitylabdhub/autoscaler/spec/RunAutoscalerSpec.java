@@ -21,9 +21,10 @@
  *
  */
 
-package it.smartcommunitylabdhub.runinitializer.spec;
+package it.smartcommunitylabdhub.autoscaler.spec;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.base.BaseSpec;
@@ -31,7 +32,6 @@ import it.smartcommunitylabdhub.extensions.annotations.ExtensionType;
 import it.smartcommunitylabdhub.extensions.model.Extension;
 import it.smartcommunitylabdhub.runs.Run;
 import java.io.Serializable;
-import java.util.List;
 import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -43,23 +43,25 @@ import lombok.Setter;
 @Getter
 @Setter
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@SpecType(kind = RunInitializerSpec.KIND, entity = Extension.class, uiSchema = "run-initializer/uiSchema.json")
+@SpecType(kind = RunAutoscalerSpec.KIND, entity = Extension.class, uiSchema = "autoscaler/uiSchema.json")
 @ExtensionType(appliesTo = { Run.class })
-public class RunInitializerSpec extends BaseSpec {
+public class RunAutoscalerSpec extends BaseSpec {
 
-    public static final String KIND = "run-initializer";
+    public static final String KIND = "autoscaler";
 
-    @Schema(title = "Files", description = "List of files to be initialized for the run")
-    private List<FileRef> files;
+    // auto stop in seconds, if null no auto stop
+    @JsonProperty("auto_stop")
+    @Schema(title = "Auto Stop", description = "Time in seconds after which the run will be automatically stopped")
+    private Integer autoStop;
 
     @Override
     public void configure(Map<String, Serializable> data) {
-        RunInitializerSpec spec = mapper.convertValue(data, RunInitializerSpec.class);
-        this.files = spec.getFiles();
+        RunAutoscalerSpec spec = mapper.convertValue(data, RunAutoscalerSpec.class);
+        this.autoStop = spec.getAutoStop();
     }
 
-    public static RunInitializerSpec with(Map<String, Serializable> data) {
-        RunInitializerSpec spec = new RunInitializerSpec();
+    public static RunAutoscalerSpec with(Map<String, Serializable> data) {
+        RunAutoscalerSpec spec = new RunAutoscalerSpec();
         spec.configure(data);
 
         return spec;
