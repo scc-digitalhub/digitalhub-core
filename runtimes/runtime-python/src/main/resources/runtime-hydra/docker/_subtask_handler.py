@@ -104,6 +104,9 @@ def handler(context: Context, event: Event) -> Response:
     try:
         project: str = context.project.name
         context.logger.info("Executing function.")
+        from hydra.core.utils import  setup_globals
+        setup_globals()
+
 
         exec_result = context.user_function(**func_args)
         results = parse_outputs(exec_result, project, context.run.key)
