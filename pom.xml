@@ -45,6 +45,7 @@
         <module>modules/component-envoy-gateway</module>
         <module>modules/component-extensions</module>
         <module>modules/component-container-images</module>
+        <module>modules/component-compliance</module>
         <module>modules/entity-base</module>
         <module>modules/runtime-base</module>
         <module>entities/entity-artifact</module>
