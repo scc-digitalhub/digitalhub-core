@@ -7,6 +7,8 @@
 package it.smartcommunitylabdhub.runtime.ray.config;
 
 import it.smartcommunitylabdhub.runtime.ray.model.RayDependencyFormat;
+
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.AllArgsConstructor;
@@ -74,22 +76,22 @@ public class RayProperties {
     /**
      * Default ray-start params for the head pod.
      */
-    private Map<String, String> headStartParams;
+    private Map<String, String> headStartParams = new HashMap<>();
 
     /**
      * Default ray resources advertised by the head pod (e.g. {@code {"CPU": "1"}}).
      */
-    private Map<String, String> headRayResources;
+    private Map<String, String> headRayResources = new HashMap<>();
 
     /**
      * Default ray-start params for worker pods.
      */
-    private Map<String, String> workerStartParams;
+    private Map<String, String> workerStartParams = new HashMap<>();
 
     /**
      * Default ray resources advertised by worker pods.
      */
-    private Map<String, String> workerRayResources;
+    private Map<String, String> workerRayResources = new HashMap<>();
 
     /**
      * Default pod template/profile for head pods. Worker pods inherit the same
