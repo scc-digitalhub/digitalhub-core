@@ -5,16 +5,19 @@ runtime:
       PYTHON3_11: ${RUNTIME_PYTHON_IMAGE_3_11:ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.11-latest}
       PYTHON3_12: ${RUNTIME_PYTHON_IMAGE_3_12:ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.12-latest}
       PYTHON3_13: ${RUNTIME_PYTHON_IMAGE_3_13:ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.13-latest}
+      PYTHON3_14: ${RUNTIME_PYTHON_IMAGE_3_14:ghcr.io/scc-digitalhub/digitalhub-serverless/python-runtime:3.14-latest}
     serverless-images:
       PYTHON3_10: ${RUNTIME_PYTHON_SERVERLESS_IMAGE_3_10:ghcr.io/scc-digitalhub/digitalhub-serverless/digitalhub-serverless:3.10-latest}
       PYTHON3_11: ${RUNTIME_PYTHON_SERVERLESS_IMAGE_3_11:ghcr.io/scc-digitalhub/digitalhub-serverless/digitalhub-serverless:3.11-latest}
       PYTHON3_12: ${RUNTIME_PYTHON_SERVERLESS_IMAGE_3_12:ghcr.io/scc-digitalhub/digitalhub-serverless/digitalhub-serverless:3.12-latest}
       PYTHON3_13: ${RUNTIME_PYTHON_SERVERLESS_IMAGE_3_13:ghcr.io/scc-digitalhub/digitalhub-serverless/digitalhub-serverless:3.13-latest}
+      PYTHON3_14: ${RUNTIME_PYTHON_SERVERLESS_IMAGE_3_14:ghcr.io/scc-digitalhub/digitalhub-serverless/digitalhub-serverless:3.14-latest}
     base-images:
       PYTHON3_10: ${RUNTIME_PYTHON_BASE_IMAGE_3_10:python:3.10-slim}
       PYTHON3_11: ${RUNTIME_PYTHON_BASE_IMAGE_3_11:python:3.11-slim}
       PYTHON3_12: ${RUNTIME_PYTHON_BASE_IMAGE_3_12:python:3.12-slim}
       PYTHON3_13: ${RUNTIME_PYTHON_BASE_IMAGE_3_13:python:3.13-slim}
+      PYTHON3_14: ${RUNTIME_PYTHON_BASE_IMAGE_3_14:python:3.14-slim}
     user-id: ${RUNTIME_PYTHON_USER_ID:${kubernetes.security.user}}
     group-id: ${RUNTIME_PYTHON_GROUP_ID:${kubernetes.security.group}}
     home-dir: ${RUNTIME_PYTHON_HOME_DIR:/shared}
