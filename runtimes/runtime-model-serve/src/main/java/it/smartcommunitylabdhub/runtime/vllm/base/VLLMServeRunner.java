@@ -70,6 +70,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
@@ -421,25 +422,29 @@ public class VLLMServeRunner {
         if (!EntityUtils.getEntityName(Model.class).equalsIgnoreCase(keyAccessor.getType())) {
             throw new CoreRuntimeException("invalid entity kind reference, expected model");
         }
-        Model model =
-            keyAccessor.getId() != null
-                ? modelService.findModel(keyAccessor.getId())
-                : modelService.getLatestModel(keyAccessor.getProject(), keyAccessor.getName());
-        if (model == null) {
-            throw new CoreRuntimeException("invalid entity reference, HuggingFace model not found");
+        try {
+            Model model =
+                keyAccessor.getId() != null
+                    ? modelService.findModel(keyAccessor.getId())
+                    : modelService.getLatestModel(keyAccessor.getProject(), keyAccessor.getName());
+            if (model == null) {
+                throw new CoreRuntimeException("invalid entity reference, odel not found");
+            }
+            if (!model.getKind().equals("huggingface") && !model.getKind().equals("hf")) {
+                throw new CoreRuntimeException("invalid entity reference, expected HuggingFace model");
+            }
+            RelationshipDetail rel = new RelationshipDetail();
+            rel.setType(RelationshipName.CONSUMES);
+            rel.setSource(run.getKey());
+            rel.setDest(model.getKey());
+            RelationshipsMetadata relationships = RelationshipsMetadata.from(run.getMetadata());
+            relationships.getRelationships().add(rel);
+            run.getMetadata().putAll(relationships.toMap());
+            path = (String) model.getSpec().get("path");
+            return path;
+        } catch (NoSuchElementException e) {
+            throw new CoreRuntimeException("invalid entity reference, model not found", e);
         }
-        if (!model.getKind().equals("huggingface") && !model.getKind().equals("hf")) {
-            throw new CoreRuntimeException("invalid entity reference, expected HuggingFace model");
-        }
-        RelationshipDetail rel = new RelationshipDetail();
-        rel.setType(RelationshipName.CONSUMES);
-        rel.setSource(run.getKey());
-        rel.setDest(model.getKey());
-        RelationshipsMetadata relationships = RelationshipsMetadata.from(run.getMetadata());
-        relationships.getRelationships().add(rel);
-        run.getMetadata().putAll(relationships.toMap());
-        path = (String) model.getSpec().get("path");
-        return path;
     }
 
     private void mergeArgs(Map<String, List<String>> extraArgMap, List<String> explicitArgs) {

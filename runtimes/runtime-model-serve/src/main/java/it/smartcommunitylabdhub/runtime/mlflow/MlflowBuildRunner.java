@@ -49,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
@@ -126,22 +127,26 @@ public class MlflowBuildRunner {
             if (!EntityUtils.getEntityName(Model.class).equalsIgnoreCase(keyAccessor.getType())) {
                 throw new CoreRuntimeException("invalid entity kind reference, expected model");
             }
-            Model model =
-                keyAccessor.getId() != null
-                    ? modelService.findModel(keyAccessor.getId())
-                    : modelService.getLatestModel(keyAccessor.getProject(), keyAccessor.getName());
-            if (model == null) {
-                throw new CoreRuntimeException("invalid entity reference, MLFlow model not found");
-            }
-            if (!model.getKind().equals("mlflow")) {
-                throw new CoreRuntimeException("invalid entity reference, expected MLFlow model");
-            }
-
-            path = (String) model.getSpec().get("path");
-            if (!path.endsWith(".zip")) {
-                if (!path.endsWith("/")) {
-                    path += "/";
+            try {
+                Model model =
+                    keyAccessor.getId() != null
+                        ? modelService.findModel(keyAccessor.getId())
+                        : modelService.getLatestModel(keyAccessor.getProject(), keyAccessor.getName());
+                if (model == null) {
+                    throw new CoreRuntimeException("invalid entity reference, MLFlow model not found");
                 }
+                if (!model.getKind().equals("mlflow")) {
+                    throw new CoreRuntimeException("invalid entity reference, expected MLFlow model");
+                }
+
+                path = (String) model.getSpec().get("path");
+                if (!path.endsWith(".zip")) {
+                    if (!path.endsWith("/")) {
+                        path += "/";
+                    }
+                }
+            } catch (NoSuchElementException e) {
+                throw new CoreRuntimeException("invalid entity reference, MLFlow model not found", e);
             }
         }
 

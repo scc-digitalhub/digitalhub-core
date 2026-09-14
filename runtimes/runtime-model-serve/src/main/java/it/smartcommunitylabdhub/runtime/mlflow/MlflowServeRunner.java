@@ -61,6 +61,7 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponents;
@@ -154,29 +155,33 @@ public class MlflowServeRunner {
             if (!EntityUtils.getEntityName(Model.class).equalsIgnoreCase(keyAccessor.getType())) {
                 throw new CoreRuntimeException("invalid entity kind reference, expected model");
             }
-            Model model =
-                keyAccessor.getId() != null
-                    ? modelService.findModel(keyAccessor.getId())
-                    : modelService.getLatestModel(keyAccessor.getProject(), keyAccessor.getName());
-            if (model == null) {
-                throw new CoreRuntimeException("invalid entity reference, MLFlow model not found");
-            }
-            if (!model.getKind().equals("mlflow")) {
-                throw new CoreRuntimeException("invalid entity reference, expected MLFlow model");
-            }
-            RelationshipDetail rel = new RelationshipDetail();
-            rel.setType(RelationshipName.CONSUMES);
-            rel.setSource(run.getKey());
-            rel.setDest(model.getKey());
-            RelationshipsMetadata relationships = RelationshipsMetadata.from(run.getMetadata());
-            relationships.getRelationships().add(rel);
-            run.getMetadata().putAll(relationships.toMap());
-
-            path = (String) model.getSpec().get("path");
-            if (!path.endsWith(".zip")) {
-                if (!path.endsWith("/")) {
-                    path += "/";
+            try {
+                Model model =
+                    keyAccessor.getId() != null
+                        ? modelService.findModel(keyAccessor.getId())
+                        : modelService.getLatestModel(keyAccessor.getProject(), keyAccessor.getName());
+                if (model == null) {
+                    throw new CoreRuntimeException("invalid entity reference, MLFlow model not found");
                 }
+                if (!model.getKind().equals("mlflow")) {
+                    throw new CoreRuntimeException("invalid entity reference, expected MLFlow model");
+                }
+                RelationshipDetail rel = new RelationshipDetail();
+                rel.setType(RelationshipName.CONSUMES);
+                rel.setSource(run.getKey());
+                rel.setDest(model.getKey());
+                RelationshipsMetadata relationships = RelationshipsMetadata.from(run.getMetadata());
+                relationships.getRelationships().add(rel);
+                run.getMetadata().putAll(relationships.toMap());
+
+                path = (String) model.getSpec().get("path");
+                if (!path.endsWith(".zip")) {
+                    if (!path.endsWith("/")) {
+                        path += "/";
+                    }
+                }
+            } catch (NoSuchElementException e) {
+                throw new CoreRuntimeException("invalid entity reference, MLFlow model not found", e);
             }
         }
 
