@@ -201,6 +201,21 @@ public class K8sJobMonitor extends K8sBaseMonitor<K8sJobRunnable> {
                 log.error("error collecting pods for job {}: {}", runnable.getId(), e1.getMessage());
             }
 
+            //also evaluate preemption with suspend and no pods
+            if (
+                K8sRunnableState.RUNNING.name().equals(runnable.getState()) &&
+                pods != null &&
+                job.getSpec() != null &&
+                job.getSpec().getSuspend() != null &&
+                Boolean.TRUE.equals(job.getSpec().getSuspend())
+            ) {
+                //previously runnning, now suspended if no pods are active
+                if (pods.isEmpty()) {
+                    runnable.setState(K8sRunnableState.ERROR.name());
+                    runnable.setError("Job error: suspended");
+                }
+            }
+
             if (events != null) {
                 runnable.setEvents(new ArrayList<>(mapper.convertValue(events, arrayRef)));
             }
