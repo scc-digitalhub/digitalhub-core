@@ -66,6 +66,7 @@
 | application| `K8S_RESOURCE_PVC_LIMIT` | `` |
 | application| `K8S_RESOURCE_PVC_STORAGE_CLASS` | `` |
 | application| `LOGS_MAX_LENGTH` | `2097152` |
+| application| `LOG_LEVEL_AUDIT` | `INFO` |
 | application| `LOG_LEVEL_K8S` | `INFO` |
 | application| `LOG_LEVEL` | `INFO` |
 | application| `MANAGEMENT_PORT` | `8081` |

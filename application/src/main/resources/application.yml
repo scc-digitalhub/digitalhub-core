@@ -100,6 +100,7 @@ application:
 logging:
   level:
     ROOT: INFO
+    AUDIT_LOGGER: ${LOG_LEVEL_AUDIT:INFO}
     it.smartcommunitylabdhub: ${LOG_LEVEL:INFO}
     it.smartcommunitylabdhub.framework.k8s: ${LOG_LEVEL_K8S:INFO}
 
