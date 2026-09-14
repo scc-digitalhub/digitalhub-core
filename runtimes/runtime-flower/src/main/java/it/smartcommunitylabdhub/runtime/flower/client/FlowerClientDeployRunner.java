@@ -28,6 +28,7 @@ import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
@@ -65,6 +66,7 @@ public class FlowerClientDeployRunner {
 
     private final SecretService secretService;
     private final K8sBuilderHelper k8sBuilderHelper;
+    private final K8sLabelHelper k8sLabelHelper;
 
     private final Resource entrypoint = new ClassPathResource("runtime-flower/docker/client.sh");
 
@@ -73,11 +75,13 @@ public class FlowerClientDeployRunner {
         Integer userId,
         Integer groupId,
         SecretService secretService,
-        K8sBuilderHelper k8sBuilderHelper
+        K8sBuilderHelper k8sBuilderHelper,
+        K8sLabelHelper k8sLabelHelper
     ) {
         this.image = image;
         this.secretService = secretService;
         this.k8sBuilderHelper = k8sBuilderHelper;
+        this.k8sLabelHelper = k8sLabelHelper;
 
         this.userId = userId != null ? userId : UID;
         this.groupId = groupId != null ? groupId : GID;
@@ -95,9 +99,14 @@ public class FlowerClientDeployRunner {
 
         coreEnvList.add(new CoreEnv("PYTHONPATH", "${PYTHONPATH}:/shared/"));
 
-        List<CoreEnv> coreSecrets = secretData == null
-            ? null
-            : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
+        List<CoreEnv> coreSecrets =
+            secretData == null
+                ? null
+                : secretData
+                      .entrySet()
+                      .stream()
+                      .map(e -> new CoreEnv(e.getKey(), e.getValue()))
+                      .toList();
 
         Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
 
@@ -114,8 +123,7 @@ public class FlowerClientDeployRunner {
         if (StringUtils.hasText(runSpec.getRootCertificates())) {
             String ca = prepareCA(runSpec.getRootCertificates());
             contextSources.add(
-                ContextSource
-                    .builder()
+                ContextSource.builder()
                     .name("certificates/ca.crt")
                     .base64(Base64.getEncoder().encodeToString(ca.getBytes(StandardCharsets.UTF_8)))
                     .build()
@@ -147,15 +155,13 @@ public class FlowerClientDeployRunner {
                 String privateKey = secretDataMap.get(runSpec.getPrivateKeySecret());
                 String publicKey = secretDataMap.get(runSpec.getPublicKeySecret());
                 contextSources.add(
-                    ContextSource
-                        .builder()
+                    ContextSource.builder()
                         .name("keys/auth_key.pub")
                         .base64(Base64.getEncoder().encodeToString(publicKey.getBytes(StandardCharsets.UTF_8)))
                         .build()
                 );
                 contextSources.add(
-                    ContextSource
-                        .builder()
+                    ContextSource.builder()
                         .name("keys/auth_key")
                         .base64(Base64.getEncoder().encodeToString(privateKey.getBytes(StandardCharsets.UTF_8)))
                         .build()
@@ -170,8 +176,7 @@ public class FlowerClientDeployRunner {
 
         //write entrypoint
         try {
-            ContextSource entry = ContextSource
-                .builder()
+            ContextSource entry = ContextSource.builder()
                 .name("client.sh")
                 .base64(Base64.getEncoder().encodeToString(entrypoint.getContentAsByteArray()))
                 .build();
@@ -212,14 +217,13 @@ public class FlowerClientDeployRunner {
 
         String cmd = "/bin/bash";
 
-        K8sRunnable k8sDeploymentRunnable = K8sDeploymentRunnable
-            .builder()
+        K8sRunnable k8sDeploymentRunnable = K8sDeploymentRunnable.builder()
             .runtime(FlowerClientRuntime.RUNTIME)
             .task(FlowerClientDeployTaskSpec.KIND)
             .state(State.READY.name())
             .labels(
-                k8sBuilderHelper != null
-                    ? List.of(new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction()))
+                k8sLabelHelper != null
+                    ? List.of(new CoreLabel(k8sLabelHelper.buildCoreLabel("function"), taskAccessor.getFunction()))
                     : null
             )
             //base

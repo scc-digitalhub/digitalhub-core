@@ -43,6 +43,9 @@ public class Keys {
     public static final String ZIP_PATTERN = ".*\\.zip$";
     public static final String CRONTAB_PATTERN =
         "((((\\d+,)+\\d+|(\\d+(\\/|-|#)\\d+)|\\d+L?|\\*(\\/\\d+)?|L(-\\d+)?|\\?|[A-Z]{3}(-[A-Z]{3})?) ?){5,7})|(@(yearly|monthly|weekly|daily|hourly))";
+    public static final String URI_PATTERN =
+        "^[a-zA-Z][a-zA-Z0-9+.-]*:(//([a-zA-Z0-9._~!$&'()*+,;=:%-]*@)?[a-zA-Z0-9._~!$&'()*+,;=:%-]*(:[0-9]*)?)?(/[a-zA-Z0-9._~!$&'()*+,;=:@%-]*)*(\\?[a-zA-Z0-9._~!$&'()*+,;=:@/?%-]*)?(#[a-zA-Z0-9._~!$&'()*+,;=:@/?%-]*)?$";
+    public static final String LOCAL_PATH_PATTERN = "^(/|/?[\\w.-]+(/[\\w.-]+)*)$";
 
     private Keys() {}
 }

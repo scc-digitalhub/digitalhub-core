@@ -19,9 +19,13 @@ package it.smartcommunitylabdhub.core.controllers.v1.base;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
+import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.core.user.MyUserManager;
+import it.smartcommunitylabdhub.metrics.ResourceMetrics;
+import it.smartcommunitylabdhub.metrics.ResourceMetricsService;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +49,9 @@ public class UserController {
 
     @Autowired
     private MyUserManager userManager;
+
+    @Autowired(required = false)
+    private ResourceMetricsService resourceMetricsService;
 
     @Operation(summary = "List my projects")
     @GetMapping(path = "/me/projects", produces = "application/json; charset=UTF-8")
@@ -74,5 +81,18 @@ public class UserController {
         }
 
         userManager.deleteMyUser();
+    }
+
+    @Operation(
+        summary = "Get user metrics",
+        description = "Get metrics all user resources, including all projects and resources owned by the user"
+    )
+    @GetMapping(path = "/me/resource_metrics", produces = "application/json; charset=UTF-8")
+    public ResourceMetrics getMetrics(Authentication auth) throws NoSuchEntityException, StoreException {
+        if (resourceMetricsService == null) {
+            throw new StoreException("metrics service not available");
+        }
+
+        return resourceMetricsService.getResourceMetricsByUser(auth.getName());
     }
 }

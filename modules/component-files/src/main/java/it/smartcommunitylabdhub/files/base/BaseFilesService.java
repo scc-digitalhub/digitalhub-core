@@ -49,20 +49,24 @@ import it.smartcommunitylabdhub.files.service.FilesService;
 import jakarta.validation.constraints.NotNull;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 @Slf4j
-public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & StatusDTO>
-    implements EntityFilesService<D>, InitializingBean {
+public class BaseFilesService<
+    D extends BaseDTO & MetadataDTO & SpecDTO & StatusDTO
+> implements EntityFilesService<D>, InitializingBean {
 
     protected final Class<D> type;
 
@@ -130,9 +134,8 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
 
             //try to resolve credentials
             UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials = auth != null && credentialsService != null
-                ? credentialsService.getCredentials(auth)
-                : null;
+            List<Credentials> credentials =
+                auth != null && credentialsService != null ? credentialsService.getCredentials(auth) : null;
 
             DownloadInfo info = filesService.getDownloadAsUrl(path, null, credentials);
             if (log.isTraceEnabled()) {
@@ -162,8 +165,7 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
                 throw new NoSuchEntityException("file");
             }
 
-            String fullPath = Optional
-                .ofNullable(sub)
+            String fullPath = Optional.ofNullable(sub)
                 .map(s -> {
                     //build sub path *only* if not matching spec path
                     return path.endsWith(sub) ? path : path + sub;
@@ -172,9 +174,8 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
 
             //try to resolve credentials
             UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials = auth != null && credentialsService != null
-                ? credentialsService.getCredentials(auth)
-                : null;
+            List<Credentials> credentials =
+                auth != null && credentialsService != null ? credentialsService.getCredentials(auth) : null;
 
             DownloadInfo info = filesService.getDownloadAsUrl(fullPath, null, credentials);
             if (log.isTraceEnabled()) {
@@ -189,7 +190,8 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
     }
 
     @Override
-    public List<FileInfo> getFileInfo(@NotNull String id) throws NoSuchEntityException, SystemException {
+    public Slice<FileInfo> getFileInfo(@NotNull String id, @Nullable Pageable pageable)
+        throws NoSuchEntityException, SystemException {
         log.debug("get storage metadata for dto with id {}", String.valueOf(id));
         try {
             //fetch
@@ -201,9 +203,8 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
 
             //try to resolve credentials
             UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials = auth != null && credentialsService != null
-                ? credentialsService.getCredentials(auth)
-                : null;
+            List<Credentials> credentials =
+                auth != null && credentialsService != null ? credentialsService.getCredentials(auth) : null;
 
             if (files == null || files.isEmpty()) {
                 FilesInfo filesInfo = filesInfoService.getFilesInfo(EntityUtils.getEntityName(type), id);
@@ -214,7 +215,11 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
                 }
             }
 
-            if (files == null) {
+            Slice result = null;
+
+            if (files != null) {
+                result = new PageImpl<>(files, pageable != null ? pageable : Pageable.unpaged(), files.size());
+            } else {
                 //extract path from spec
                 PathAccessor accessor = PathAccessor.with(dto.getSpec());
                 String path = accessor.getPath();
@@ -222,18 +227,18 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
                     throw new NoSuchEntityException("file");
                 }
 
-                files = filesService.getFileInfo(path, credentials);
+                result = filesService.getFileInfo(path, credentials, pageable);
             }
 
-            if (files == null) {
-                files = Collections.emptyList();
+            if (result == null) {
+                result = Page.empty(pageable != null ? pageable : Pageable.unpaged());
             }
 
             if (log.isTraceEnabled()) {
-                log.trace("files info for entity with id {}: {} -> {}", id, EntityUtils.getEntityName(type), files);
+                log.trace("files info for entity with id {}: {} -> {}", id, EntityUtils.getEntityName(type), result);
             }
 
-            return files;
+            return result;
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -299,9 +304,8 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
 
             //try to resolve credentials
             UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials = auth != null && credentialsService != null
-                ? credentialsService.getCredentials(auth)
-                : null;
+            List<Credentials> credentials =
+                auth != null && credentialsService != null ? credentialsService.getCredentials(auth) : null;
 
             UploadInfo info = filesService.getUploadAsUrl(fullPath, credentials);
             if (log.isTraceEnabled()) {
@@ -358,9 +362,8 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
 
             //try to resolve credentials
             UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials = auth != null && credentialsService != null
-                ? credentialsService.getCredentials(auth)
-                : null;
+            List<Credentials> credentials =
+                auth != null && credentialsService != null ? credentialsService.getCredentials(auth) : null;
 
             UploadInfo info = filesService.startMultiPartUpload(fullPath, credentials);
             if (log.isTraceEnabled()) {
@@ -402,9 +405,8 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
 
             //try to resolve credentials
             UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials = auth != null && credentialsService != null
-                ? credentialsService.getCredentials(auth)
-                : null;
+            List<Credentials> credentials =
+                auth != null && credentialsService != null ? credentialsService.getCredentials(auth) : null;
 
             UploadInfo info = filesService.uploadMultiPart(path, uploadId, partNumber, credentials);
             if (log.isTraceEnabled()) {
@@ -446,9 +448,8 @@ public class BaseFilesService<D extends BaseDTO & MetadataDTO & SpecDTO & Status
 
             //try to resolve credentials
             UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials = auth != null && credentialsService != null
-                ? credentialsService.getCredentials(auth)
-                : null;
+            List<Credentials> credentials =
+                auth != null && credentialsService != null ? credentialsService.getCredentials(auth) : null;
 
             UploadInfo info = filesService.completeMultiPartUpload(path, uploadId, eTagPartList, credentials);
             if (log.isTraceEnabled()) {

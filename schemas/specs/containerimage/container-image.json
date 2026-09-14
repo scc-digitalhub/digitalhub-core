@@ -1,0 +1,15 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "type" : "object",
+  "properties" : {
+    "image" : {
+      "type" : "string",
+      "title" : "fields.image.title",
+      "description" : "fields.image.description",
+      "minLength" : 1
+    }
+  },
+  "required" : [ "image" ],
+  "title" : "specs.container-image.title",
+  "description" : "specs.container-image.description"
+}

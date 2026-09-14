@@ -68,7 +68,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Slf4j
 @RuntimeComponent(runtime = ContainerRuntime.RUNTIME)
 public class ContainerRuntime
-    extends K8sFunctionBaseRuntime<ContainerFunctionSpec, ContainerRunSpec, ContainerRunStatus, K8sRunnable> {
+    extends K8sFunctionBaseRuntime<ContainerFunctionSpec, ContainerRunSpec, ContainerRunStatus, K8sRunnable>
+{
 
     public static final String RUNTIME = "container";
     public static final String[] KINDS = {
@@ -100,44 +101,42 @@ public class ContainerRuntime
         ContainerFunctionSpec funSpec = new ContainerFunctionSpec(function.getSpec());
 
         String kind = run.getKind();
-        ContainerRunSpec runSpec =
-            switch (kind) {
-                case ContainerDeployRunSpec.KIND -> {
-                    yield new ContainerDeployRunSpec(run.getSpec());
-                }
-                case ContainerJobRunSpec.KIND -> {
-                    yield new ContainerJobRunSpec(run.getSpec());
-                }
-                case ContainerServeRunSpec.KIND -> {
-                    yield new ContainerServeRunSpec(run.getSpec());
-                }
-                case ContainerBuildRunSpec.KIND -> {
-                    yield new ContainerBuildRunSpec(run.getSpec());
-                }
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        ContainerRunSpec runSpec = switch (kind) {
+            case ContainerDeployRunSpec.KIND -> {
+                yield new ContainerDeployRunSpec(run.getSpec());
+            }
+            case ContainerJobRunSpec.KIND -> {
+                yield new ContainerJobRunSpec(run.getSpec());
+            }
+            case ContainerServeRunSpec.KIND -> {
+                yield new ContainerServeRunSpec(run.getSpec());
+            }
+            case ContainerBuildRunSpec.KIND -> {
+                yield new ContainerBuildRunSpec(run.getSpec());
+            }
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //build task spec as defined
-        Map<String, Serializable> taskSpec =
-            switch (task.getKind()) {
-                case ContainerDeployTaskSpec.KIND -> {
-                    yield new ContainerDeployTaskSpec(task.getSpec()).toMap();
-                }
-                case ContainerJobTaskSpec.KIND -> {
-                    yield new ContainerJobTaskSpec(task.getSpec()).toMap();
-                }
-                case ContainerServeTaskSpec.KIND -> {
-                    yield new ContainerServeTaskSpec(task.getSpec()).toMap();
-                }
-                case ContainerBuildTaskSpec.KIND -> {
-                    yield new ContainerBuildTaskSpec(task.getSpec()).toMap();
-                }
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        Map<String, Serializable> taskSpec = switch (task.getKind()) {
+            case ContainerDeployTaskSpec.KIND -> {
+                yield new ContainerDeployTaskSpec(task.getSpec()).toMap();
+            }
+            case ContainerJobTaskSpec.KIND -> {
+                yield new ContainerJobTaskSpec(task.getSpec()).toMap();
+            }
+            case ContainerServeTaskSpec.KIND -> {
+                yield new ContainerServeTaskSpec(task.getSpec()).toMap();
+            }
+            case ContainerBuildTaskSpec.KIND -> {
+                yield new ContainerBuildTaskSpec(task.getSpec()).toMap();
+            }
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
@@ -170,15 +169,26 @@ public class ContainerRuntime
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
-        K8sRunnable runnable =
-            switch (runAccessor.getTask()) {
-                case ContainerDeployTaskSpec.KIND -> new ContainerDeployRunner(k8sBuilderHelper).produce(run, secrets);
-                case ContainerJobTaskSpec.KIND -> new ContainerJobRunner(k8sBuilderHelper).produce(run, secrets);
-                case ContainerServeTaskSpec.KIND -> new ContainerServeRunner(k8sBuilderHelper, functionService)
-                    .produce(run, secrets);
-                case ContainerBuildTaskSpec.KIND -> new ContainerBuildRunner(k8sBuilderHelper).produce(run, secrets);
-                default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
-            };
+        K8sRunnable runnable = switch (runAccessor.getTask()) {
+            case ContainerDeployTaskSpec.KIND -> new ContainerDeployRunner(k8sBuilderHelper, k8sLabelHelper).produce(
+                run,
+                secrets
+            );
+            case ContainerJobTaskSpec.KIND -> new ContainerJobRunner(k8sBuilderHelper, k8sLabelHelper).produce(
+                run,
+                secrets
+            );
+            case ContainerServeTaskSpec.KIND -> new ContainerServeRunner(
+                k8sBuilderHelper,
+                k8sLabelHelper,
+                functionService
+            ).produce(run, secrets);
+            case ContainerBuildTaskSpec.KIND -> new ContainerBuildRunner(k8sBuilderHelper, k8sLabelHelper).produce(
+                run,
+                secrets
+            );
+            default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
+        };
 
         //extract auth from security context to inflate secured credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();

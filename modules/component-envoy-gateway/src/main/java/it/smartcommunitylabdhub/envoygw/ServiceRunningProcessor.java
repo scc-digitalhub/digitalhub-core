@@ -56,7 +56,7 @@ public class ServiceRunningProcessor implements Processor<Run, RunBaseStatus> {
 
     @SuppressWarnings("unchecked")
     @Override
-    public <I> RunBaseStatus process(String stage, Run run, I input) throws CoreRuntimeException {
+    public RunBaseStatus process(String stage, Run run, Serializable input) throws CoreRuntimeException {
         try {
             //read event
             String id = run.getId();

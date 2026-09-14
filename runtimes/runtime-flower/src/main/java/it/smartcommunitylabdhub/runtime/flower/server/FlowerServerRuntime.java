@@ -64,7 +64,8 @@ import org.springframework.core.io.Resource;
 @Slf4j
 @RuntimeComponent(runtime = FlowerServerRuntime.RUNTIME)
 public class FlowerServerRuntime
-    extends K8sFunctionBaseRuntime<FlowerServerFunctionSpec, FlowerServerRunSpec, FlowerRunStatus, K8sRunnable> {
+    extends K8sFunctionBaseRuntime<FlowerServerFunctionSpec, FlowerServerRunSpec, FlowerRunStatus, K8sRunnable>
+{
 
     public static final String RUNTIME = "flower-server";
     public static final String[] KINDS = { FlowerServerBuildRunSpec.KIND, FlowerServerDeployRunSpec.KIND };
@@ -118,32 +119,30 @@ public class FlowerServerRuntime
         FlowerServerFunctionSpec funSpec = new FlowerServerFunctionSpec(function.getSpec());
 
         //build run spec as defined
-        FlowerServerRunSpec runSpec =
-            switch (run.getKind()) {
-                case FlowerServerDeployRunSpec.KIND -> {
-                    yield new FlowerServerDeployRunSpec(run.getSpec());
-                }
-                case FlowerServerBuildRunSpec.KIND -> {
-                    yield new FlowerServerBuildRunSpec(run.getSpec());
-                }
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        FlowerServerRunSpec runSpec = switch (run.getKind()) {
+            case FlowerServerDeployRunSpec.KIND -> {
+                yield new FlowerServerDeployRunSpec(run.getSpec());
+            }
+            case FlowerServerBuildRunSpec.KIND -> {
+                yield new FlowerServerBuildRunSpec(run.getSpec());
+            }
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //build task spec as defined
-        Map<String, Serializable> taskSpec =
-            switch (task.getKind()) {
-                case FlowerServerDeployTaskSpec.KIND -> {
-                    yield new FlowerServerDeployTaskSpec(task.getSpec()).toMap();
-                }
-                case FlowerServerBuildTaskSpec.KIND -> {
-                    yield new FlowerServerBuildTaskSpec(task.getSpec()).toMap();
-                }
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        Map<String, Serializable> taskSpec = switch (task.getKind()) {
+            case FlowerServerDeployTaskSpec.KIND -> {
+                yield new FlowerServerDeployTaskSpec(task.getSpec()).toMap();
+            }
+            case FlowerServerBuildTaskSpec.KIND -> {
+                yield new FlowerServerBuildTaskSpec(task.getSpec()).toMap();
+            }
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
@@ -184,29 +183,28 @@ public class FlowerServerRuntime
         taskSpec.configure(run.getSpec());
         Map<String, String> secrets = secretService.getSecretData(run.getProject(), taskSpec.getSecrets());
 
-        K8sRunnable runnable =
-            switch (runAccessor.getTask()) {
-                case FlowerServerDeployTaskSpec.KIND -> new FlowerServerDeployRunner(
-                    images.get("server"),
-                    userId,
-                    groupId,
-                    caCertContent,
-                    caKeyContent,
-                    tlsConfContent,
-                    tlsIntDomain,
-                    tlsExtDomain,
-                    k8sBuilderHelper,
-                    functionService
-                )
-                    .produce(run, secrets);
-                case FlowerServerBuildTaskSpec.KIND -> new FlowerServerBuildRunner(
-                    images.get("server"),
-                    "flower-superlink",
-                    k8sBuilderHelper
-                )
-                    .produce(run, secrets);
-                default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
-            };
+        K8sRunnable runnable = switch (runAccessor.getTask()) {
+            case FlowerServerDeployTaskSpec.KIND -> new FlowerServerDeployRunner(
+                images.get("server"),
+                userId,
+                groupId,
+                caCertContent,
+                caKeyContent,
+                tlsConfContent,
+                tlsIntDomain,
+                tlsExtDomain,
+                k8sBuilderHelper,
+                k8sLabelHelper,
+                functionService
+            ).produce(run, secrets);
+            case FlowerServerBuildTaskSpec.KIND -> new FlowerServerBuildRunner(
+                images.get("server"),
+                "flower-superlink",
+                k8sBuilderHelper,
+                k8sLabelHelper
+            ).produce(run, secrets);
+            default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
+        };
 
         //extract auth from security context to inflate secured credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();

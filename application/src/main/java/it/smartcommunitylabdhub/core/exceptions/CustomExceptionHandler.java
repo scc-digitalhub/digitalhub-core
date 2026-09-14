@@ -124,4 +124,12 @@ public class CustomExceptionHandler {
         errorResponse.setMessage(ex.getMessage());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }
+
+    @ExceptionHandler(UnsupportedOperationException.class)
+    public ResponseEntity<ErrorResponse> handleUnsupportedOperationException(UnsupportedOperationException ex) {
+        ErrorResponse errorResponse = new ErrorResponse();
+        errorResponse.setStatus(HttpStatus.NOT_IMPLEMENTED.value());
+        errorResponse.setMessage(ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(errorResponse);
+    }
 }

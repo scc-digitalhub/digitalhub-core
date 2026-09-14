@@ -125,7 +125,7 @@
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
         </dependency>
-        
+
         <!-- <dependency>
             <groupId>io.kubernetes</groupId>
             <artifactId>client-java</artifactId>
@@ -235,6 +235,11 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-component-container-images</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-entity-base</artifactId>
             <version>${revision}</version>
         </dependency>
@@ -253,7 +258,12 @@
             <artifactId>dh-extensions</artifactId>
             <version>${revision}</version>
         </dependency>
-        
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-run-initializer</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
         <!-- ENTITIES  -->
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
@@ -302,15 +312,14 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-entity-log</artifactId>
+            <artifactId>dh-entity-workflow</artifactId>
             <version>${revision}</version>
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-entity-workflow</artifactId>
+            <artifactId>dh-entity-container-image</artifactId>
             <version>${revision}</version>
         </dependency>
-
         <!-- FRAMEWORKS -->
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
@@ -386,6 +395,12 @@
             <artifactId>dh-runtime-kubeai</artifactId>
             <version>${revision}</version>
         </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-runtime-servicegraph</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
 
         <!-- PROVIDERS  -->
         <dependency>
@@ -401,6 +416,21 @@
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
             <artifactId>dh-search-lucene</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>trinodb-provider</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-loki-logs-provider</artifactId>
+            <version>${revision}</version>
+        </dependency>      
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-prometheus-metrics-provider</artifactId>
             <version>${revision}</version>
         </dependency>
         <!-- <dependency>

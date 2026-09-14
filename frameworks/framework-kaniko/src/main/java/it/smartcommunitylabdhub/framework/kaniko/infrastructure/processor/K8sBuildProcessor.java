@@ -29,6 +29,7 @@ import it.smartcommunitylabdhub.commons.infrastructure.Processor;
 import it.smartcommunitylabdhub.commons.models.status.Status;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
 import it.smartcommunitylabdhub.runs.Run;
+import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import org.springframework.stereotype.Component;
@@ -38,7 +39,7 @@ import org.springframework.stereotype.Component;
 public class K8sBuildProcessor implements Processor<Run, K8sBuildStatus> {
 
     @Override
-    public <I> K8sBuildStatus process(String stage, Run run, I input) throws CoreRuntimeException {
+    public K8sBuildStatus process(String stage, Run run, Serializable input) throws CoreRuntimeException {
         if (input instanceof K8sContainerBuilderRunnable runnable) {
             String dockerfile = runnable.getDockerFile();
 

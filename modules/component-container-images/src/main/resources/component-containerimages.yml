@@ -1,0 +1,5 @@
+containerimages:
+  username: ${CONTAINER_IMAGES_USERNAME:}
+  password: ${CONTAINER_IMAGES_PASSWORD:}
+  registry: ${CONTAINER_IMAGES_REGISTRY:}
+  

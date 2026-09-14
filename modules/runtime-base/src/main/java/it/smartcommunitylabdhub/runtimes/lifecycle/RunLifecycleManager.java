@@ -69,7 +69,12 @@ public class RunLifecycleManager<
     }
 
     @Override
-    public <I, RT> Run handle(@NotNull Run dto, String nextStateValue, I input, BiConsumer<Run, RT> effect) {
+    public <I extends Serializable, RT extends Serializable> Run handle(
+        @NotNull Run dto,
+        String nextStateValue,
+        I input,
+        BiConsumer<Run, RT> effect
+    ) {
         //by default we expect a runnable as optional output from runtimes
         BiConsumer<Run, RT> callback = (run, runnable) -> {
             //support multiple returns from runtimes, we will publish all runnables returned by the runtime
@@ -92,7 +97,12 @@ public class RunLifecycleManager<
     }
 
     @Override
-    public <I, RT> Run perform(@NotNull Run dto, @NotNull String event, I input, BiConsumer<Run, RT> effect) {
+    public <I extends Serializable, RT extends Serializable> Run perform(
+        @NotNull Run dto,
+        @NotNull String event,
+        I input,
+        BiConsumer<Run, RT> effect
+    ) {
         //by default we expect a runnable as optional output from runtimes
         BiConsumer<Run, RT> callback = (run, runnable) -> {
             if (runnable != null) {

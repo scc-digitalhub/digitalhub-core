@@ -32,9 +32,12 @@ import it.smartcommunitylabdhub.files.models.UploadInfo;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 
 public interface EntityFilesService<T extends BaseDTO> {
-    public List<FileInfo> getFileInfo(@NotNull String id) throws NoSuchEntityException, SystemException;
+    public Slice<FileInfo> getFileInfo(@NotNull String id, @Nullable Pageable pageable)
+        throws NoSuchEntityException, SystemException;
 
     public void storeFileInfo(@NotNull String id, List<FileInfo> files) throws SystemException;
 

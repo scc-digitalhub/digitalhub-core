@@ -200,6 +200,18 @@ public interface ModelManager {
         throws NoSuchEntityException, SystemException, BindException, IllegalArgumentException;
 
     /**
+     * Update a specific model version
+     * @param id
+     * @param modelDTO
+     * @return
+     * @throws NoSuchEntityException
+     * @throws IllegalArgumentException
+     * @throws BindException
+     */
+    Model updateModel(@NotNull String id, @NotNull Model modelDTO, boolean force)
+        throws NoSuchEntityException, SystemException, BindException, IllegalArgumentException;
+
+    /**
      * Delete a specific model (version) via unique ID
      * @param id
      */

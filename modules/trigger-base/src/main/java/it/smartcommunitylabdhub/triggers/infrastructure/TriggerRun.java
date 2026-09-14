@@ -36,7 +36,7 @@ import lombok.Setter;
 @Builder
 @Getter
 @Setter
-public class TriggerRun<J extends TriggerJob> {
+public class TriggerRun<J extends TriggerJob> implements Serializable {
 
     private J job;
 

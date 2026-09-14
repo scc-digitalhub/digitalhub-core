@@ -71,7 +71,8 @@ import org.springframework.util.StringUtils;
 @RuntimeComponent(runtime = MlflowServeRuntime.RUNTIME)
 public class MlflowServeRuntime
     extends K8sFunctionBaseRuntime<MlflowServeFunctionSpec, MlflowRunSpec, ModelServeRunStatus, K8sRunnable>
-    implements InitializingBean {
+    implements InitializingBean
+{
 
     public static final String RUNTIME = "mlflowserve";
     public static final String IMAGE = "seldonio/mlserver";
@@ -122,24 +123,22 @@ public class MlflowServeRuntime
         }
 
         MlflowServeFunctionSpec funSpec = MlflowServeFunctionSpec.with(function.getSpec());
-        MlflowRunSpec runSpec =
-            switch (run.getKind()) {
-                case MlflowServeRunSpec.KIND -> MlflowServeRunSpec.with(run.getSpec());
-                case MlflowBuildRunSpec.KIND -> MlflowBuildRunSpec.with(run.getSpec());
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        MlflowRunSpec runSpec = switch (run.getKind()) {
+            case MlflowServeRunSpec.KIND -> MlflowServeRunSpec.with(run.getSpec());
+            case MlflowBuildRunSpec.KIND -> MlflowBuildRunSpec.with(run.getSpec());
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //build task spec as defined
-        Map<String, Serializable> taskSpec =
-            switch (task.getKind()) {
-                case MlflowServeTaskSpec.KIND -> MlflowServeTaskSpec.with(task.getSpec()).toMap();
-                case MlflowBuildTaskSpec.KIND -> MlflowBuildTaskSpec.with(task.getSpec()).toMap();
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        Map<String, Serializable> taskSpec = switch (task.getKind()) {
+            case MlflowServeTaskSpec.KIND -> MlflowServeTaskSpec.with(task.getSpec()).toMap();
+            case MlflowBuildTaskSpec.KIND -> MlflowBuildTaskSpec.with(task.getSpec()).toMap();
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //path is defined in function spec but overridable in run spec
         String path = funSpec.getPath();
@@ -184,24 +183,28 @@ public class MlflowServeRuntime
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
-        K8sRunnable runnable =
-            switch (runAccessor.getTask()) {
-                case MlflowServeTaskSpec.KIND -> new MlflowServeRunner(
-                    image,
-                    userId,
-                    groupId,
-                    volumeSizeSpec,
-                    MlflowServeRunSpec.with(run.getSpec()).getFunctionSpec(),
-                    secrets,
-                    k8sBuilderHelper,
-                    modelService,
-                    functionService
-                )
-                    .produce(run);
-                case MlflowBuildTaskSpec.KIND -> new MlflowBuildRunner(image, command, modelService, k8sBuilderHelper)
-                    .produce(run, secrets);
-                default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
-            };
+        K8sRunnable runnable = switch (runAccessor.getTask()) {
+            case MlflowServeTaskSpec.KIND -> new MlflowServeRunner(
+                image,
+                userId,
+                groupId,
+                volumeSizeSpec,
+                MlflowServeRunSpec.with(run.getSpec()).getFunctionSpec(),
+                secrets,
+                k8sBuilderHelper,
+                k8sLabelHelper,
+                modelService,
+                functionService
+            ).produce(run);
+            case MlflowBuildTaskSpec.KIND -> new MlflowBuildRunner(
+                image,
+                command,
+                modelService,
+                k8sBuilderHelper,
+                k8sLabelHelper
+            ).produce(run, secrets);
+            default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
+        };
 
         //extract auth from security context to inflate secured credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();

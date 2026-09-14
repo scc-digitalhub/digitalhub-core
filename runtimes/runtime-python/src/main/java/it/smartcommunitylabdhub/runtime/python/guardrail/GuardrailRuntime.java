@@ -67,7 +67,8 @@ import org.springframework.util.Assert;
 @RuntimeComponent(runtime = GuardrailRuntime.RUNTIME)
 public class GuardrailRuntime
     extends K8sFunctionBaseRuntime<GuardrailFunctionSpec, GuardrailRunSpec, GuardrailRunStatus, K8sRunnable>
-    implements InitializingBean {
+    implements InitializingBean
+{
 
     public static final String RUNTIME = "guardrail";
     public static final String[] KINDS = { GuardrailServeRunSpec.KIND, GuardrailBuildRunSpec.KIND };
@@ -96,8 +97,8 @@ public class GuardrailRuntime
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        this.buildRunner = new GuardrailBuildRunner(properties, k8sBuilderHelper);
-        this.serveRunner = new GuardrailServeRunner(properties, k8sBuilderHelper, functionService);
+        this.buildRunner = new GuardrailBuildRunner(properties, k8sBuilderHelper, k8sLabelHelper);
+        this.serveRunner = new GuardrailServeRunner(properties, k8sBuilderHelper, k8sLabelHelper, functionService);
     }
 
     @Override
@@ -108,28 +109,26 @@ public class GuardrailRuntime
         }
 
         GuardrailFunctionSpec funSpec = new GuardrailFunctionSpec(function.getSpec());
-        GuardrailRunSpec runSpec =
-            switch (run.getKind()) {
-                case GuardrailServeRunSpec.KIND -> new GuardrailServeRunSpec(run.getSpec());
-                case GuardrailBuildRunSpec.KIND -> new GuardrailBuildRunSpec(run.getSpec());
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        GuardrailRunSpec runSpec = switch (run.getKind()) {
+            case GuardrailServeRunSpec.KIND -> new GuardrailServeRunSpec(run.getSpec());
+            case GuardrailBuildRunSpec.KIND -> new GuardrailBuildRunSpec(run.getSpec());
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //build task spec as defined
-        Map<String, Serializable> taskSpec =
-            switch (task.getKind()) {
-                case GuardrailServeTaskSpec.KIND -> {
-                    yield new GuardrailServeTaskSpec(task.getSpec()).toMap();
-                }
-                case GuardrailBuildTaskSpec.KIND -> {
-                    yield new GuardrailBuildTaskSpec(task.getSpec()).toMap();
-                }
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        Map<String, Serializable> taskSpec = switch (task.getKind()) {
+            case GuardrailServeTaskSpec.KIND -> {
+                yield new GuardrailServeTaskSpec(task.getSpec()).toMap();
+            }
+            case GuardrailBuildTaskSpec.KIND -> {
+                yield new GuardrailBuildTaskSpec(task.getSpec()).toMap();
+            }
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
@@ -159,12 +158,11 @@ public class GuardrailRuntime
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
-        K8sRunnable runnable =
-            switch (runAccessor.getTask()) {
-                case GuardrailServeTaskSpec.KIND -> serveRunner.produce(run, secrets);
-                case GuardrailBuildTaskSpec.KIND -> buildRunner.produce(run, secrets);
-                default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
-            };
+        K8sRunnable runnable = switch (runAccessor.getTask()) {
+            case GuardrailServeTaskSpec.KIND -> serveRunner.produce(run, secrets);
+            case GuardrailBuildTaskSpec.KIND -> buildRunner.produce(run, secrets);
+            default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
+        };
 
         //extract auth from security context to inflate secured credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();

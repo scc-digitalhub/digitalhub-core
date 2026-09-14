@@ -24,11 +24,11 @@
 package it.smartcommunitylabdhub.console.controllers;
 
 import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
-import it.smartcommunitylabdhub.commons.config.SecurityProperties;
-import it.smartcommunitylabdhub.components.proxy.provider.ProxyProvider;
+import it.smartcommunitylabdhub.commons.services.ConfigurationService;
+import it.smartcommunitylabdhub.console.ConsoleConfigProvider;
 import it.smartcommunitylabdhub.console.Keys;
-import it.smartcommunitylabdhub.search.service.SearchService;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,40 +37,30 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.ModelAndView;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @Controller
 public class ConsoleController {
+
+    public static final String CONSOLE_CONTEXT = Keys.CONSOLE_CONTEXT;
+    public static final String AUTH_PATH = "/api/auth";
+    public static final String ENV_PREFIX = "REACT_APP_";
 
     @Autowired
     private ApplicationProperties applicationProperties;
 
     @Autowired
-    private SecurityProperties securityProperties;
+    private ConsoleConfigProvider configProvider;
 
-    @Autowired(required = false)
-    private SearchService searchService;
-
-    @Autowired(required = false)
-    private ProxyProvider proxyProvider;
-
-    @Value("${jwt.client-id}")
-    private String clientId;
-
-    @Value("${frontend.clarity.key}")
-    private String clarityKey;
-
-    public static final String CONSOLE_CONTEXT = Keys.CONSOLE_CONTEXT;
+    @Autowired
+    private ConfigurationService configurationService;
 
     @GetMapping(value = { "/", CONSOLE_CONTEXT })
     public ModelAndView root() {
@@ -78,69 +68,69 @@ public class ConsoleController {
     }
 
     // @GetMapping(value = { CONSOLE_CONTEXT, CONSOLE_CONTEXT + "/**" })
-    @GetMapping(value = {
+    @GetMapping(
+        value = {
             CONSOLE_CONTEXT + "/",
             CONSOLE_CONTEXT + "/{path:^(?!\\S+(?:\\.[a-z0-9]{2,}))\\S+$}",
             CONSOLE_CONTEXT + "/-/**",
-    })
+        }
+    )
     public String console(Model model, HttpServletRequest request) {
-        String requestUrl = ServletUriComponentsBuilder
-                .fromRequestUri(request)
-                .replacePath(request.getContextPath())
-                .build()
-                .toUriString();
-
-        String applicationUrl = StringUtils.hasText(applicationProperties.getEndpoint())
-                ? applicationProperties.getEndpoint()
-                : requestUrl;
-
         // build config
         Map<String, String> config = new HashMap<>();
-        config.put("REACT_APP_APPLICATION_URL", applicationUrl);
-        config.put("REACT_APP_API_URL", "/api/v1");
-        config.put("REACT_APP_CONTEXT_PATH", CONSOLE_CONTEXT);
 
         config.put("VITE_APP_NAME", applicationProperties.getDescription());
         config.put("REACT_APP_VERSION", applicationProperties.getVersion());
 
-        if (securityProperties.isBasicAuthEnabled()) {
-            config.put("REACT_APP_AUTH_URL", "/api");
-            config.put("REACT_APP_LOGIN_URL", "/auth");
+        //add console config
+        if (configProvider != null && configProvider.getConfig() != null) {
+            configProvider
+                .getConfig()
+                .toMap()
+                .forEach((k, v) -> {
+                    if (v != null) {
+                        config.put(k.toUpperCase(), v.toString());
+                    }
+                });
         }
 
-        if (securityProperties.isOidcAuthEnabled()) {
-            config.put("REACT_APP_AUTH_URL", "/api");
-            config.put("REACT_APP_LOGIN_URL", "/auth");
-            config.put("REACT_APP_ISSUER_URI", applicationUrl);
-            config.put("REACT_APP_CLIENT_ID", clientId);
-            config.put("REACT_APP_SCOPE", "openid profile offline_access");
-        }
-
-        if (proxyProvider != null) {
-            if (proxyProvider.getConfig().getProxy() != null) {
-                config.put("REACT_APP_PROXY_URL", proxyProvider.getConfig().getProxy());
-            } else {
-                config.put("REACT_APP_PROXY_URL", "core");
-            }
-        }
-
-        config.put("REACT_APP_ENABLE_SOLR", String.valueOf(searchService != null));
-
-        if (StringUtils.hasText(clarityKey)) {
-            config.put("REACT_APP_CLARITY_KEY", clarityKey);
+        //dump all configurations prefixed
+        if (configurationService != null) {
+            configurationService
+                .getConfigurations()
+                .forEach(c -> {
+                    c
+                        .toMap()
+                        .forEach((k, v) -> {
+                            if (v != null) {
+                                String vx = v.toString();
+                                if (v instanceof Collection<?> coll) {
+                                    vx = String.join(",", coll.stream().map(Object::toString).toList());
+                                }
+                                config.put(ENV_PREFIX + k.toUpperCase(), vx);
+                            }
+                        });
+                });
         }
 
         model.addAttribute("config", config);
         return "console.html";
     }
 
-    @RequestMapping(value = "/api/auth", method = { RequestMethod.GET, RequestMethod.POST })
+    @RequestMapping(value = AUTH_PATH, method = { RequestMethod.GET, RequestMethod.POST })
     public ResponseEntity<User> auth(Authentication auth) {
         if (auth == null) {
             return ResponseEntity.internalServerError().build();
         }
 
-        User user = new User(auth.getName(), auth.getAuthorities().stream().map(a -> a.getAuthority()).toList());
+        User user = new User(
+            auth.getName(),
+            auth
+                .getAuthorities()
+                .stream()
+                .map(a -> a.getAuthority())
+                .toList()
+        );
         return ResponseEntity.ok(user);
     }
 

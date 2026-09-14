@@ -76,6 +76,7 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreMetric;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreNodeSelector;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreResourceDefinition;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume.VolumeType;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import java.io.IOException;
@@ -102,10 +103,13 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Slf4j
-public abstract class K8sBaseFramework<T extends K8sRunnable, K extends KubernetesObject>
-    implements Framework<T>, InitializingBean {
+public abstract class K8sBaseFramework<
+    T extends K8sRunnable,
+    K extends KubernetesObject
+> implements Framework<T>, InitializingBean {
 
     public static final String DEFAULT_TEMPLATE = "default";
     public static final float DEFAULT_MEM_TOLERATION = 1.1f;
@@ -517,7 +521,9 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
         //assume pods have the same labels as their parent
         //can be overridden downstream
         String label = "app.kubernetes.io/instance";
-        String labelValue = Optional.ofNullable(object.getMetadata().getLabels()).map(m -> m.get(label)).orElse(null);
+        String labelValue = Optional.ofNullable(object.getMetadata().getLabels())
+            .map(m -> m.get(label))
+            .orElse(null);
         if (labelValue == null) {
             //no selectors available
             return null;
@@ -565,6 +571,10 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
             return Collections.emptyList();
         }
 
+        if (object.getMetadata().getName() != null) {
+            log.debug("collect logs for {}", object.getMetadata().getName());
+        }
+
         List<CoreLog> logs = new ArrayList<>();
         List<V1Pod> pods = pods(object);
 
@@ -572,12 +582,16 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
             if (p.getMetadata() != null && p.getStatus() != null) {
                 String pod = p.getMetadata().getName();
 
+                log.debug("collect logs for pod {}", pod);
+
                 //read init-containers first
                 if (p.getStatus().getInitContainerStatuses() != null) {
                     List<V1ContainerStatus> containers = p.getStatus().getInitContainerStatuses();
 
                     for (V1ContainerStatus c : containers) {
                         try {
+                            log.debug("collect logs for init container {} in pod {}", c.getName(), pod);
+
                             String log = coreV1Api.readNamespacedPodLog(
                                 pod,
                                 namespace,
@@ -611,6 +625,8 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
                     List<V1ContainerStatus> containers = p.getStatus().getContainerStatuses();
                     for (V1ContainerStatus c : containers) {
                         try {
+                            log.debug("collect logs for container {} in pod {}", c.getName(), pod);
+
                             String log = coreV1Api.readNamespacedPodLog(
                                 pod,
                                 namespace,
@@ -639,6 +655,10 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
                     }
                 }
             }
+        }
+
+        if (log.isTraceEnabled()) {
+            log.trace("collected logs: {}", logs);
         }
 
         return logs;
@@ -708,10 +728,7 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
         if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
             //add template
             template = templates.get(runnable.getTemplate()).getProfile();
-            templateLabels.put(
-                K8sBuilderHelper.sanitizeNames(applicationProperties.getName()) + "/template",
-                runnable.getTemplate()
-            );
+            templateLabels.put(k8sLabelHelper.buildCoreLabel("template"), runnable.getTemplate());
         } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
             //use default template
             template = templates.get(DEFAULT_TEMPLATE).getProfile();
@@ -837,13 +854,35 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
             volumes.add(volume);
         }
 
+        //also support oci images/artifacts from contextRefs as volumes
+        if (runnable.getContextRefs() != null && !runnable.getContextRefs().isEmpty()) {
+            runnable
+                .getContextRefs()
+                .forEach(cr -> {
+                    if (cr.getSource() != null && cr.getSource().startsWith("oci://")) {
+                        //parse source as URI and fetch image name
+                        String imageName = cr.getSource().substring("oci://".length());
+                        CoreVolume cv = CoreVolume.builder()
+                            .name(K8sBuilderHelper.sanitizeNames(imageName))
+                            .volumeType(VolumeType.image)
+                            .spec(Map.of("image", imageName))
+                            .build();
+                        V1Volume volume = k8sBuilderHelper.getVolume(runnable.getId(), cv);
+                        if (volume != null) {
+                            volumes.add(volume);
+                        }
+                    }
+                });
+        }
+
         //post-process
         volumes.forEach(v -> {
             //inject labels when supported
             if (v.getEphemeral() != null && v.getEphemeral().getVolumeClaimTemplate() != null) {
-                V1ObjectMeta meta = v.getEphemeral().getVolumeClaimTemplate().getMetadata() != null
-                    ? v.getEphemeral().getVolumeClaimTemplate().getMetadata()
-                    : new V1ObjectMeta();
+                V1ObjectMeta meta =
+                    v.getEphemeral().getVolumeClaimTemplate().getMetadata() != null
+                        ? v.getEphemeral().getVolumeClaimTemplate().getMetadata()
+                        : new V1ObjectMeta();
 
                 Map<String, String> labels = MapUtils.mergeMultipleMaps(buildLabels(runnable), meta.getLabels());
                 meta.setLabels(labels);
@@ -929,6 +968,29 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
                     });
             }
         }
+
+        //also support oci images/artifacts from contextRefs as volumes
+        if (runnable.getContextRefs() != null && !runnable.getContextRefs().isEmpty()) {
+            runnable
+                .getContextRefs()
+                .forEach(cr -> {
+                    if (cr.getSource() != null && cr.getSource().startsWith("oci://") && cr.getDestination() != null) {
+                        //parse source as URI and fetch image name
+                        String imageName = cr.getSource().substring("oci://".length());
+                        CoreVolume cv = CoreVolume.builder()
+                            .name(K8sBuilderHelper.sanitizeNames(imageName))
+                            .volumeType(VolumeType.image)
+                            .spec(Map.of("image", imageName))
+                            .mountPath(cr.getDestination())
+                            .build();
+                        V1VolumeMount mount = k8sBuilderHelper.getVolumeMount(cv);
+                        if (mount != null) {
+                            volumeMounts.add(mount);
+                        }
+                    }
+                });
+        }
+
         return volumeMounts;
     }
 
@@ -1254,7 +1316,13 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
         List<V1Toleration> tolerations = new ArrayList<>();
 
         if (runnable.getTolerations() != null && !runnable.getTolerations().isEmpty()) {
-            tolerations.addAll(runnable.getTolerations().stream().map(t -> t).collect(Collectors.toList()));
+            tolerations.addAll(
+                runnable
+                    .getTolerations()
+                    .stream()
+                    .map(t -> t)
+                    .collect(Collectors.toList())
+            );
         }
 
         K8sRunnable template = null;
@@ -1267,7 +1335,13 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
         }
 
         if (template != null && template.getTolerations() != null && !template.getTolerations().isEmpty()) {
-            tolerations.addAll(template.getTolerations().stream().map(t -> t).collect(Collectors.toList()));
+            tolerations.addAll(
+                template
+                    .getTolerations()
+                    .stream()
+                    .map(t -> t)
+                    .collect(Collectors.toList())
+            );
         }
 
         if (tolerations.isEmpty()) {
@@ -1288,8 +1362,7 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
     @Nullable
     protected List<V1LocalObjectReference> buildImagePullSecrets(T runnable) {
         //always include registry secret if defined
-        return Optional
-            .ofNullable(registrySecret)
+        return Optional.ofNullable(registrySecret)
             .map(s -> Collections.singletonList(new V1LocalObjectReference().name(registrySecret)))
             .orElse(null);
     }
@@ -1304,12 +1377,18 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
 
         //set core config as env
         if (runnable.getConfigurationMap() != null) {
-            runnable.getConfigurationMap().entrySet().forEach(e -> data.put(e.getKey().toUpperCase(), e.getValue()));
+            runnable
+                .getConfigurationMap()
+                .entrySet()
+                .forEach(e -> data.put(e.getKey().toUpperCase(), e.getValue()));
         }
 
         //set core credentials as env
         if (runnable.getCredentialsMap() != null) {
-            runnable.getCredentialsMap().entrySet().forEach(e -> data.put(e.getKey().toUpperCase(), e.getValue()));
+            runnable
+                .getCredentialsMap()
+                .entrySet()
+                .forEach(e -> data.put(e.getKey().toUpperCase(), e.getValue()));
         }
 
         if (!data.isEmpty()) {
@@ -1385,7 +1464,10 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
                             .map(contextRefsList ->
                                 Map.of(
                                     "context-refs.txt",
-                                    contextRefsList.stream().map(v -> v.toCsv()).collect(Collectors.joining("\n"))
+                                    contextRefsList
+                                        .stream()
+                                        .map(v -> v.toCsv())
+                                        .collect(Collectors.joining("\n"))
                                 )
                             )
                             .orElseGet(Map::of),
@@ -1398,8 +1480,7 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
                                     .collect(
                                         Collectors.toMap(
                                             c ->
-                                                Base64
-                                                    .getUrlEncoder()
+                                                Base64.getUrlEncoder()
                                                     .withoutPadding()
                                                     .encodeToString(c.getName().getBytes()),
                                             c ->
@@ -1418,14 +1499,14 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
                                     contextSources
                                         .stream()
                                         .filter(e -> StringUtils.hasText(e.getBase64()))
-                                        .map(c ->
-                                            Base64
-                                                .getUrlEncoder()
-                                                .withoutPadding()
-                                                .encodeToString(c.getName().getBytes()) +
-                                            "," +
-                                            c.getName() +
-                                            "\n"
+                                        .map(
+                                            c ->
+                                                Base64.getUrlEncoder()
+                                                    .withoutPadding()
+                                                    .encodeToString(c.getName().getBytes()) +
+                                                "," +
+                                                c.getName() +
+                                                "\n"
                                         )
                                         .collect(Collectors.joining(""))
                                 )
@@ -1563,8 +1644,9 @@ public abstract class K8sBaseFramework<T extends K8sRunnable, K extends Kubernet
                     Quantity quantity = Quantity.fromString(
                         spec.getOrDefault("size", pvcRequestResourceDefinition.getValue())
                     );
-                    V1VolumeResourceRequirements req = new V1VolumeResourceRequirements()
-                        .requests(Map.of("storage", quantity));
+                    V1VolumeResourceRequirements req = new V1VolumeResourceRequirements().requests(
+                        Map.of("storage", quantity)
+                    );
 
                     //enforce limit
                     //TODO check if valid!

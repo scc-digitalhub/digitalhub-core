@@ -10,7 +10,7 @@
     <packaging>pom</packaging>
 
     <properties>
-        <revision>0.15.0-SNAPSHOT</revision>
+        <revision>0.15.1-SNAPSHOT</revision>
         <project.build.outputTimestamp>2025-11-01T00:00:00Z</project.build.outputTimestamp>
         <java.version>21</java.version>
         <spring-boot.version>3.5.9</spring-boot.version>
@@ -44,6 +44,7 @@
         <module>modules/component-files</module>
         <module>modules/component-envoy-gateway</module>
         <module>modules/component-extensions</module>
+        <module>modules/component-container-images</module>
         <module>modules/entity-base</module>
         <module>modules/runtime-base</module>
         <module>entities/entity-artifact</module>
@@ -55,8 +56,8 @@
         <module>entities/entity-task</module>
         <module>entities/entity-model</module>
         <module>entities/entity-trigger</module>
-        <module>entities/entity-log</module>
         <module>entities/entity-workflow</module>
+        <module>entities/entity-container-image</module>
         <module>frameworks/framework-k8s</module>
         <module>frameworks/framework-argo</module>
         <module>frameworks/framework-kaniko</module>
@@ -71,13 +72,18 @@
         <module>runtimes/runtime-flower</module>
         <module>runtimes/runtime-model-serve</module>
         <module>runtimes/runtime-kubeai</module>
+        <module>runtimes/runtime-servicegraph</module>
         <module>modules/openmetadata-integration</module>
         <module>modules/proxy</module>
+        <module>modules/component-run-initializer</module>
         <module>providers/credentials-provider-db</module>
+        <module>providers/trinodb-provider</module>
         <module>providers/s3-provider</module>
         <module>providers/search-lucene</module>
         <module>providers/search-solr</module>
         <module>providers/cloud-rabbitmq</module>
+        <module>providers/loki-logs-provider</module>
+        <module>providers/prometheus-metrics-provider</module>
         <module>frontend</module>
         <module>application</module>
     </modules>

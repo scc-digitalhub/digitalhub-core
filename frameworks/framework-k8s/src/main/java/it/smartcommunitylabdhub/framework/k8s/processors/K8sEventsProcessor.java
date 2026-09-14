@@ -56,9 +56,9 @@ public class K8sEventsProcessor implements Processor<Run, K8sEventsStatus> {
     protected static final TypeReference<ArrayList<V1Pod>> arrayRef = new TypeReference<ArrayList<V1Pod>>() {};
 
     @Override
-    public <I> K8sEventsStatus process(String stage, Run run, I input) throws CoreRuntimeException {
-        if (input instanceof K8sRunnable) {
-            List<Map<String, Serializable>> res = ((K8sRunnable) input).getEvents();
+    public K8sEventsStatus process(String stage, Run run, Serializable input) throws CoreRuntimeException {
+        if (input instanceof K8sRunnable runnable) {
+            List<Map<String, Serializable>> res = runnable.getEvents();
 
             try {
                 if (res != null && !res.isEmpty()) {

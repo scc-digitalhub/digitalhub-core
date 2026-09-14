@@ -128,7 +128,7 @@
       "type" : "string",
       "title" : "fields.vllm.url.title",
       "description" : "fields.vllm.url.description",
-      "pattern" : "^(store://([^/]+)/model/huggingface/.*)|.*/$|.*\\.zip$|^huggingface?://.*$|^hf?://.*$"
+      "pattern" : "^(store://([^/]+)/model/huggingface/.*)"
     },
     "use_cpu_image" : {
       "type" : "boolean",

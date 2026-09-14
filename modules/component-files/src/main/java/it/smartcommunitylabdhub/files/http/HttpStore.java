@@ -41,6 +41,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClientException;
@@ -84,10 +87,11 @@ public class HttpStore implements FilesStore {
     }
 
     @Override
-    public List<FileInfo> fileInfo(
+    public Slice<FileInfo> fileInfo(
         @NotNull String path,
         @Nullable Boolean recursive,
-        @Nullable List<Credentials> credentials
+        @Nullable List<Credentials> credentials,
+        @Nullable Pageable pageable
     ) {
         List<FileInfo> result = new ArrayList<>();
         try {
@@ -105,7 +109,7 @@ public class HttpStore implements FilesStore {
         } catch (RestClientException | URISyntaxException e) {
             log.error("generate metadata for {}:  {}", path, e.getMessage());
         }
-        return result;
+        return new PageImpl<>(result);
     }
 
     @Override

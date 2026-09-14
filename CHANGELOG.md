@@ -1,3 +1,74 @@
+# [0.15.1](https://github.com/scc-digitalhub/digitalhub-core/compare/0.15.0...0.15.1) (2026-08-03)
+
+Minor release for v15 introducing container images details, metrics and logs external providers (Loki and Prometheus).
+Also adds a preview for the SQL client, based on Trino, and for *ServiceGraph* for composing functions.
+
+
+## What's Changed
+* feat: container images entity and component for automatic tracking of… by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/223
+* Servicegraph by @kazhamiakin in https://github.com/scc-digitalhub/digitalhub-core/pull/212
+* feat: trinodb config and credentials provider by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/224
+* Added web info to servicegraph run status and custom service ports  by @kazhamiakin in https://github.com/scc-digitalhub/digitalhub-core/pull/225
+* Logs providers by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/227
+* feat: resource metrics by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/230
+
+### Features
+
+* expose feature flags for console for metrics, logs, search ([0d92be8](https://github.com/scc-digitalhub/digitalhub-core/commit/0d92be845cfe0d14b48982619ee055fe40df8fa9))
+* let admin use force update for entitites ([162e4b2](https://github.com/scc-digitalhub/digitalhub-core/commit/162e4b20f7d8e083957f81a228ce3a9debab4d01))
+* k8s cr framework and kubeai support templates ([6284437](https://github.com/scc-digitalhub/digitalhub-core/commit/628443798ed71d6f5121684cfc1213fafd5391cd))
+* prometheus aggregation metric for counts configurable, defaults to sum ([d750ca1](https://github.com/scc-digitalhub/digitalhub-core/commit/d750ca1f49d8c50d72af5f53f85c70bfba538e62))
+* console properties configurable ([1edc452](https://github.com/scc-digitalhub/digitalhub-core/commit/1edc4520516ed137fda2789ee80eebcb06337fa8))
+* resource quotas for prometheus provider ([e9c7b82](https://github.com/scc-digitalhub/digitalhub-core/commit/e9c7b8245ae4fb70d32257dffa598245ee139bec))
+* k8s metrics provider for component metrics with local store ([80a90eb](https://github.com/scc-digitalhub/digitalhub-core/commit/80a90eb987c390af5bddc78016bee82f165dbd90))
+* prometheous metric provider current metrics with query ([2e2a721](https://github.com/scc-digitalhub/digitalhub-core/commit/2e2a7210f0bf105b7bc2e1c4b0aa47b8b18c0396))
+* prometheus metrics provider ([6d7b732](https://github.com/scc-digitalhub/digitalhub-core/commit/6d7b732a307e2b883bcea7771028253589d412f9))
+* resource metrics dedicated stack ([50576f4](https://github.com/scc-digitalhub/digitalhub-core/commit/50576f4fac05a484e0c0bbe9ef4f81fe0d1a4ff9))
+* multi-arch amd64/arm64 builds for release and cache ([264fe8b](https://github.com/scc-digitalhub/digitalhub-core/commit/264fe8bf58d008fe4a625231c144310fed7ec9dd))
+* init builder tool includes dhcli to support store:// paths ([6debd0c](https://github.com/scc-digitalhub/digitalhub-core/commit/6debd0cd231028cc42c315da54e7590ed410240b))
+* support hugginface (hf://) for init container ([386b86b](https://github.com/scc-digitalhub/digitalhub-core/commit/386b86b69ebf863b824e39c804f145410d4b5bd9))
+* enable metrics actuator by defaut ([d40ae61](https://github.com/scc-digitalhub/digitalhub-core/commit/d40ae619631635850d3e77878e5b46beb98e22c7))
+* increase container memory percentage to 75% ([3d66acf](https://github.com/scc-digitalhub/digitalhub-core/commit/3d66acfbf27eb7b2a092c1b5d14bc2320d4c933e))
+* loki requests for runs are constrained to run create/update intervals ([1e64561](https://github.com/scc-digitalhub/digitalhub-core/commit/1e6456139f306bfc5c3a7f15eed14d9edf7ddb60))
+* kubernetes configuration provider with resource profiles ([b6fb4bf](https://github.com/scc-digitalhub/digitalhub-core/commit/b6fb4bf3124c53359bfdc39006fa7da8f55dce39))
+* loki logs provider ([dd1fe75](https://github.com/scc-digitalhub/digitalhub-core/commit/dd1fe753349ad639b91e72062a3c7d1f58f832af))
+* support oci images as contextRefs ([70ad0b4](https://github.com/scc-digitalhub/digitalhub-core/commit/70ad0b44608f610ad9e58dd775f2df4d5e45a892))
+* switch console configuration to providers ([9c3fd7b](https://github.com/scc-digitalhub/digitalhub-core/commit/9c3fd7b2107a51b24aba48b5f97ebf7902c0fdaf))
+* trino provider let admin specify a different url for clients ([017ecbb](https://github.com/scc-digitalhub/digitalhub-core/commit/017ecbbb9535f88c267a54765d079596f83d765f))
+* add effects and effect saga to lifecycle to support chaining operations post transaction ([9b9d400](https://github.com/scc-digitalhub/digitalhub-core/commit/9b9d400b7fe29a254af82faccf8d0ac0715e1409))
+* Added web info to servicegraph run status and custom service ports for run spec ([#225](https://github.com/scc-digitalhub/digitalhub-core/issues/225)) ([c581685](https://github.com/scc-digitalhub/digitalhub-core/commit/c5816858ec30b2af3b7f32a78aa2b9aad5b0182f))
+* container build as output ([440aa9d](https://github.com/scc-digitalhub/digitalhub-core/commit/440aa9dd5838dcbe6bb0a2f67a9cb541007a3380))
+* container images registry providers + container image description ([7924645](https://github.com/scc-digitalhub/digitalhub-core/commit/7924645e032a1e44ef2e5f71bad6e7ef30392ec8))
+* file store pagination + continuation token pagination ([e249e1d](https://github.com/scc-digitalhub/digitalhub-core/commit/e249e1da3d1723fd23cecb07a20acd57199d6b78))
+* run initializer component ([c4d37be](https://github.com/scc-digitalhub/digitalhub-core/commit/c4d37bec74e98e34efecabc8f4ae82dbdb53ba9d))
+* trinodb config and credentials provider ([#224](https://github.com/scc-digitalhub/digitalhub-core/issues/224)) ([75472d0](https://github.com/scc-digitalhub/digitalhub-core/commit/75472d02be44a5f050560b156f23b5a309365405))
+* container images entity and component for automatic tracking of images + details service ([5a89a32](https://github.com/scc-digitalhub/digitalhub-core/commit/5a89a32bec57bc6eebedc955b0dee0a4f52de2a9))
+* ServiceGraph runtime ([9b6471f](https://github.com/scc-digitalhub/digitalhub-core/commit/9b6471f2d952fc1222c9b0fa9ca85d2864433ccd))
+* add instance label and metrics ([0979e59](https://github.com/scc-digitalhub/digitalhub-core/commit/0979e591b9d3c8159f75ae32a1e0950cd70e0f1d))
+* use message channels and parallel + partitioned dispatch for runnables to control concurrency and serialization of ops ([c9d80c2](https://github.com/scc-digitalhub/digitalhub-core/commit/c9d80c240671f04de59ccdfd58ab3198f9d64183))
+* user metrics exposed via controller ([848796f](https://github.com/scc-digitalhub/digitalhub-core/commit/848796f72b6a961ccfe58ac3c86863b2cda691bb))
+
+
+
+
+### Bug Fixes
+
+* log service is optional, handle with unsupportedOperation exception when missing ([99e2c97](https://github.com/scc-digitalhub/digitalhub-core/commit/99e2c977c7e027cadd6e305bf371ee1e47cee121))
+* prometheus user queries should sanitize usernames for filters ([3a85c47](https://github.com/scc-digitalhub/digitalhub-core/commit/3a85c47fa9450ebed92b51ba7e4c207eba38cf2e))
+* lucene remove locking and use buffering + flush + scheduled commits to resolve parallelism issues ([980a7e6](https://github.com/scc-digitalhub/digitalhub-core/commit/980a7e667de375fa593ee053ef012b77267b205d))
+* avoid template service crash on wrong spec/kind usage ([055881a](https://github.com/scc-digitalhub/digitalhub-core/commit/055881a9685ffbe4e2137067cd615970ef482b66))
+* explicit keyGenerator for local log service ([aae1699](https://github.com/scc-digitalhub/digitalhub-core/commit/aae169945ea07ff9e5582d486b33a12814f1a1ac))
+* kubernetes module exported templates are copied only when set ([43535b7](https://github.com/scc-digitalhub/digitalhub-core/commit/43535b77b72dd726dc4799903e566708f27f8313))
+* loki provider is false by default ([9d4466d](https://github.com/scc-digitalhub/digitalhub-core/commit/9d4466d18250396e45520f26d79009a5d69716a8))
+* buildkit security context to enforce volume fsGroup ([b68d0fe](https://github.com/scc-digitalhub/digitalhub-core/commit/b68d0fe09756a3bc1fbc56ec2534d6db98f861b1))
+* npe in effect chain ([a608bff](https://github.com/scc-digitalhub/digitalhub-core/commit/a608bff82a589ddb8f6655163436629a5be3ed3c))
+* build frameworks leverage base framework to properly build config map - fix null path in init ([6ad33f5](https://github.com/scc-digitalhub/digitalhub-core/commit/6ad33f56865d734594de287566d7061ebc732d81))
+* python build supports volumes ([d630562](https://github.com/scc-digitalhub/digitalhub-core/commit/d6305627fb379dadad271f36e8490e4a6c26f47a))
+* runAccessor always reads local_execution ([e20b9a1](https://github.com/scc-digitalhub/digitalhub-core/commit/e20b9a13e8adad445261deb9851beffcc4584667))
+* add error logging to python handlers for all exceptions ([b8e5048](https://github.com/scc-digitalhub/digitalhub-core/commit/b8e5048bba3e68ba8f373b440d779d5fed963d5d))
+
+**Full Changelog**: https://github.com/scc-digitalhub/digitalhub-core/compare/0.15.0...0.15.1
+
 # [0.15.0](https://github.com/scc-digitalhub/digitalhub-core/compare/0.14.3...0.15.0) (2026-05-22)
 
 ## What's Changed

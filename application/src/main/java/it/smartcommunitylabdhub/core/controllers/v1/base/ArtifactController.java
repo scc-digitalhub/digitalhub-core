@@ -139,9 +139,10 @@ public class ArtifactController {
     )
     public Artifact updateArtifact(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
+        @RequestParam(required = false) Boolean force,
         @RequestBody @Valid @NotNull Artifact dto
     ) throws NoSuchEntityException, IllegalArgumentException, SystemException, BindException {
-        return artifactManager.updateArtifact(id, dto);
+        return artifactManager.updateArtifact(id, dto, force != null && force.booleanValue());
     }
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")

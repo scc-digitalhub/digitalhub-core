@@ -93,16 +93,43 @@ public class LuceneManager {
     public synchronized void init() throws IndexerException {
         try {
             analyzer = new StandardAnalyzer();
+
             Path path = Paths.get(properties.getIndexPath());
             if (!Files.exists(path)) {
-                Files.createDirectory(path);
+                Files.createDirectories(path);
             }
+
             directory = FSDirectory.open(path);
+
             config = new IndexWriterConfig(analyzer);
             config.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
+
+            // Let Lucene buffer changes and flush them efficiently.
+            if (properties.getBufferSize() != null && properties.getBufferSize() > 0) {
+                config.setRAMBufferSizeMB(properties.getBufferSize());
+            } else {
+                config.setRAMBufferSizeMB(64);
+            }
+
             iwriter = new IndexWriter(directory, config);
+            /*
+             * Do not force a commit for every document.
+             * Lucene's default merge scheduler can perform merges
+             * asynchronously.
+             * Commit once during initialization so that the initial
+             * index state is well-defined.
+             */
             iwriter.commit();
-            ireader = DirectoryReader.open(directory);
+
+            /*
+             * NRT reader.
+             *
+             * The reader is opened from the IndexWriter rather than from
+             * the Directory, so it can see changes which have not been
+             * committed yet.
+             */
+            ireader = DirectoryReader.open(iwriter);
+
             log.info("Lucene index initialized");
         } catch (Exception e) {
             throw new IndexerException(e.getMessage());
@@ -111,94 +138,182 @@ public class LuceneManager {
 
     public synchronized void close() throws IndexerException {
         try {
-            iwriter.close();
-            ireader.close();
-            directory.close();
+            if (ireader != null) {
+                ireader.close();
+                ireader = null;
+            }
+
+            if (iwriter != null) {
+                /*
+                 * One final commit on shutdown makes pending changes
+                 * durable before closing the writer.
+                 */
+                iwriter.commit();
+                iwriter.close();
+                iwriter = null;
+            }
+
+            if (directory != null) {
+                directory.close();
+                directory = null;
+            }
+
             log.info("Lucene index closed");
         } catch (Exception e) {
             throw new IndexerException(e.getMessage());
         }
     }
 
-    public synchronized DirectoryReader getReader() throws IOException {
-        DirectoryReader newReader = DirectoryReader.openIfChanged(ireader);
-        if (newReader != null) ireader = newReader;
-        return ireader;
-    }
-
+    /**
+     * Add or replace a document.
+     *
+     * IndexWriter is thread-safe; no application-level synchronization
+     * is required here.
+     *
+     * No commit and no reader refresh.
+     */
     public void indexDoc(Document doc) throws IndexerException {
         log.debug("index doc");
+
         try {
-            synchronized (iwriter) {
-                Term term = new Term("id", doc.get("id"));
-                iwriter.deleteDocuments(term);
-                iwriter.addDocument(doc);
-                iwriter.commit();
-            }
+            iwriter.updateDocument(new Term("id", doc.get("id")), doc);
         } catch (Exception e) {
             throw new IndexerException(e.getMessage());
         }
     }
 
+    /**
+     * Remove a document.
+     *
+     * No commit and no reader refresh.
+     */
     public void removeDoc(String id) throws IndexerException {
-        log.debug("remove doc {}", String.valueOf(id));
+        log.debug("remove doc {}", id);
+
         try {
-            synchronized (iwriter) {
-                Term term = new Term("id", id);
-                iwriter.deleteDocuments(term);
-                iwriter.commit();
-            }
+            Term term = new Term("id", id);
+
+            iwriter.deleteDocuments(term);
         } catch (Exception e) {
             throw new IndexerException(e.getMessage());
         }
     }
 
+    /**
+     * Bulk indexing.
+     *
+     * No application-level synchronization and no commit.
+     */
     public void indexBounce(Iterable<Document> docs) throws IndexerException {
         log.debug("index bounce docs");
+
         try {
-            synchronized (iwriter) {
-                for (Document doc : docs) {
-                    Term term = new Term("id", doc.get("id"));
-                    iwriter.deleteDocuments(term);
-                    iwriter.addDocument(doc);
-                }
-                iwriter.commit();
+            for (Document doc : docs) {
+                iwriter.updateDocument(new Term("id", doc.get("id")), doc);
             }
         } catch (Exception e) {
             throw new IndexerException(e.getMessage());
         }
     }
 
-    public void clearIndex() throws IndexerException {
+    /**
+     * Delete the entire index.
+     *
+     * This is an administrative operation, so make the deletion
+     * immediately durable and refresh the NRT reader.
+     */
+    public synchronized void clearIndex() throws IndexerException {
         log.debug("clear index");
+
         try {
-            synchronized (iwriter) {
-                iwriter.deleteAll();
-                iwriter.commit();
-            }
+            iwriter.deleteAll();
+            iwriter.commit();
+
+            refresh();
         } catch (Exception e) {
             throw new IndexerException(e.getMessage());
         }
     }
 
+    /**
+     * Delete all documents of a given type.
+     *
+     * No commit and no reader refresh.
+     */
     public void clearIndexByType(String type) throws IndexerException {
         log.debug("clear index {}", type);
+
         try {
-            synchronized (iwriter) {
-                Term term = new Term("type", type);
-                iwriter.deleteDocuments(term);
-                iwriter.commit();
+            Term term = new Term("type", type);
+
+            iwriter.deleteDocuments(term);
+        } catch (Exception e) {
+            throw new IndexerException(e.getMessage());
+        }
+    }
+
+    /**
+     * Refresh the NRT reader.
+     *
+     * This makes changes already accepted by IndexWriter visible to
+     * IndexSearcher without requiring a commit.
+     *
+     * The writer itself is NOT locked by this method.
+     */
+    public synchronized void refresh() throws IndexerException {
+        try {
+            DirectoryReader newReader = DirectoryReader.openIfChanged(ireader);
+
+            if (newReader != null) {
+                DirectoryReader oldReader = ireader;
+                ireader = newReader;
+
+                oldReader.close();
             }
         } catch (Exception e) {
             throw new IndexerException(e.getMessage());
         }
+    }
+
+    /**
+     * Explicit durable commit.
+     *
+     * This should be used for lifecycle/checkpoint operations, not for
+     * individual entity events.
+     */
+    public void commit() throws IndexerException {
+        try {
+            iwriter.commit();
+        } catch (Exception e) {
+            throw new IndexerException(e.getMessage());
+        }
+    }
+
+    /**
+     * Return the current NRT reader.
+     *
+     * Refreshes it if the IndexWriter has changes which are visible
+     * to a new NRT reader.
+     */
+    private synchronized DirectoryReader getReader() throws IOException {
+        DirectoryReader newReader = DirectoryReader.openIfChanged(ireader);
+
+        if (newReader != null) {
+            DirectoryReader oldReader = ireader;
+            ireader = newReader;
+
+            oldReader.close();
+        }
+
+        return ireader;
     }
 
     public SearchPage<ItemResult> itemSearch(String q, List<String> fq, Pageable pageRequest) throws IndexerException {
         log.debug("item search for {} {}", q, fq);
 
         try {
-            IndexSearcher isearcher = new IndexSearcher(getReader());
+            DirectoryReader reader = getReader();
+            IndexSearcher isearcher = new IndexSearcher(reader);
 
             Map<String, List<String>> filters = new HashMap<>();
             QueryMapper queryMapper = prepareQuery(q, fq, pageRequest, filters, false);
@@ -222,7 +337,7 @@ public class LuceneManager {
             highlighter.setTextFragmenter(fragmenter);
 
             TopGroups<BytesRef> topGroups = groupingSearch.search(isearcher, queryMapper.getCompleteQuery(), 0, 1);
-            StoredFields storedFields = getReader().storedFields();
+            StoredFields storedFields = reader.storedFields();
             List<ItemResult> result = new ArrayList<>();
             long total = 0;
             for (GroupDocs<BytesRef> groupDocs : topGroups.groups) {
@@ -247,7 +362,8 @@ public class LuceneManager {
         log.debug("group search for {} {}", q, fq);
 
         try {
-            IndexSearcher isearcher = new IndexSearcher(getReader());
+            DirectoryReader reader = getReader();
+            IndexSearcher isearcher = new IndexSearcher(reader);
 
             Map<String, List<String>> filters = new HashMap<>();
             QueryMapper queryMapper = prepareQuery(q, fq, pageRequest, filters, true);
@@ -275,7 +391,7 @@ public class LuceneManager {
                 (int) pageRequest.getOffset(),
                 pageRequest.getPageSize()
             );
-            StoredFields storedFields = getReader().storedFields();
+            StoredFields storedFields = reader.storedFields();
             List<SearchGroupResult> result = new ArrayList<>();
             for (GroupDocs<BytesRef> groupDocs : topGroups.groups) {
                 SearchGroupResult groupResult = new SearchGroupResult();

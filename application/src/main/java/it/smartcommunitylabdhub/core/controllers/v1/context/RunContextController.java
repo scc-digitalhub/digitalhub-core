@@ -23,7 +23,6 @@
 
 package it.smartcommunitylabdhub.core.controllers.v1.context;
 
-import io.kubernetes.client.custom.ContainerMetrics;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.smartcommunitylabdhub.commons.Keys;
@@ -39,10 +38,11 @@ import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.extensions.ExtensionManager;
 import it.smartcommunitylabdhub.extensions.model.Extension;
 import it.smartcommunitylabdhub.extensions.persistence.ExtensionBuilder;
-import it.smartcommunitylabdhub.framework.k8s.service.K8sMetricsService;
 import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
 import it.smartcommunitylabdhub.logs.Log;
 import it.smartcommunitylabdhub.logs.LogService;
+import it.smartcommunitylabdhub.metrics.ResourceMetrics;
+import it.smartcommunitylabdhub.metrics.ResourceMetricsService;
 import it.smartcommunitylabdhub.metrics.service.MetricsService;
 import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipsAwareEntityService;
@@ -97,7 +97,7 @@ public class RunContextController {
     @Autowired
     LifecycleManager<Run> lifecycleManager;
 
-    @Autowired
+    @Autowired(required = false)
     LogService logService;
 
     @Autowired
@@ -110,7 +110,7 @@ public class RunContextController {
     ExtensionManager extensionManager;
 
     @Autowired(required = false)
-    private K8sMetricsService k8sMetricsService;
+    private ResourceMetricsService resourceMetricsService;
 
     @Operation(summary = "Create a run in a project context")
     @PostMapping(
@@ -246,6 +246,10 @@ public class RunContextController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException {
+        if (logService == null) {
+            throw new SystemException("log service not available");
+        }
+
         Run run = runManager.getRun(id);
 
         //check for project
@@ -378,15 +382,22 @@ public class RunContextController {
         }
     }
 
-    @Operation(summary = "Get k8s metrics", description = "Get metrics for a run")
-    @GetMapping(path = "/{id}/metrics/k8s", produces = "application/json; charset=UTF-8")
-    public ContainerMetrics getK8sMetrics(
+    @Operation(summary = "Get resource metrics", description = "Get metrics for a run")
+    @GetMapping(path = "/{id}/resource_metrics", produces = "application/json; charset=UTF-8")
+    public ResourceMetrics getResourceMetrics(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException, StoreException {
-        if (k8sMetricsService == null) {
+        if (resourceMetricsService == null) {
             throw new StoreException("metrics service not available");
         }
-        return k8sMetricsService.getMetrics("run", id);
+        Run run = runManager.getRun(id);
+
+        //check for project and name match
+        if (!run.getProject().equals(project)) {
+            throw new IllegalArgumentException("invalid project");
+        }
+
+        return resourceMetricsService.getResourceMetricsByRun(project, id);
     }
 }

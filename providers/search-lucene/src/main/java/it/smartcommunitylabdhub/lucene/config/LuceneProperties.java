@@ -38,4 +38,6 @@ public class LuceneProperties {
 
     private String indexPath;
     private String reindex;
+    private Integer bufferSize;
+    private Integer commitInterval;
 }

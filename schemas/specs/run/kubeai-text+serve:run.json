@@ -120,14 +120,14 @@
       "title" : "fields.kubeai.cacheprofile.title",
       "description" : "fields.kubeai.cacheprofile.description"
     },
-    "env" : {
+    "envs" : {
       "$ref" : "#/$defs/Map_String.String_",
       "title" : "fields.kubeai.env.title",
       "description" : "fields.kubeai.env.description",
       "additionalProperties" : {
         "type" : "string",
-        "title" : "fields.env.item.title",
-        "description" : "fields.env.item.description"
+        "title" : "fields.envs.item.title",
+        "description" : "fields.envs.item.description"
       }
     },
     "files" : {

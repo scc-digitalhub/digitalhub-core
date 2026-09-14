@@ -7,7 +7,9 @@ ARG USER=builder
 ARG USER_ID=1000
 ARG USER_GROUP=builder
 ARG USER_GROUP_ID=1000
-
+ARG DRAGONFLY_VERSION=1.3.12
+ARG DHCLI_VERSION=0.15.0-beta3
+ARG TARGETARCH
 # --------------------------
 # Install essential dependencies + AWS CLI from Alpine repos
 # --------------------------
@@ -20,7 +22,42 @@ RUN apk add --no-cache \
         tar \
         gzip \
         aws-cli \
+        python3 \
+        py3-pip \
     && aws --version
+RUN pip3 install --no-cache-dir --break-system-packages "huggingface_hub[cli]" \
+    && hf --help > /dev/null
+
+# --------------------------
+# Install digitalhub CLI (dhcli)
+# --------------------------
+RUN case "$TARGETARCH" in \
+        amd64) DHCLI_ARCH="amd64" ;; \
+        arm64) DHCLI_ARCH="arm64" ;; \
+        *) echo "Unsupported architecture: $TARGETARCH" && exit 1 ;; \
+    esac && \
+    mkdir -p /tmp/dhcli && \
+    wget -O /tmp/dhcli/dhcli.tar.gz \
+        "https://github.com/scc-digitalhub/digitalhub-cli/releases/download/${DHCLI_VERSION}/dhcli-linux-${DHCLI_ARCH}.tar.gz" && \
+    tar -xzf /tmp/dhcli/dhcli.tar.gz -C /tmp/dhcli && \
+    find /tmp/dhcli -name 'dhcli' -type f -exec mv {} /usr/bin/dhcli \; && \
+    chmod +x /usr/bin/dhcli && \
+    rm -rf /tmp/dhcli
+
+# --------------------------
+# Install dragonfly binary
+# --------------------------
+RUN case "$TARGETARCH" in \
+        amd64) DRAGONFLY_ARCH="x86_64" ;; \
+        arm64) DRAGONFLY_ARCH="aarch64" ;; \
+        *) echo "Unsupported architecture: $TARGETARCH" && exit 1 ;; \
+    esac && \
+    mkdir -p /tmp/dragonfly && \
+    wget -O /tmp/dragonfly/client.tar.gz \
+        "https://github.com/dragonflyoss/client/releases/download/v${DRAGONFLY_VERSION}/dragonfly-client-v${DRAGONFLY_VERSION}-${DRAGONFLY_ARCH}-unknown-linux-musl.tar.gz" && \
+    tar -xzf /tmp/dragonfly/client.tar.gz --strip-components=1 -C /tmp/dragonfly && \
+    mv /tmp/dragonfly/dfget /usr/bin/dfget && \
+    rm -rf /tmp/dragonfly
 
 # --------------------------
 # Create non-root user

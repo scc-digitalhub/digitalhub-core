@@ -28,6 +28,7 @@ import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
@@ -66,13 +67,21 @@ public class FlowerAppTrainRunner {
     private final int groupId;
 
     private final K8sBuilderHelper k8sBuilderHelper;
+    private final K8sLabelHelper k8sLabelHelper;
 
     private final Resource entrypoint = new ClassPathResource("runtime-flower/docker/app.sh");
 
-    public FlowerAppTrainRunner(String image, Integer userId, Integer groupId, K8sBuilderHelper k8sBuilderHelper) {
+    public FlowerAppTrainRunner(
+        String image,
+        Integer userId,
+        Integer groupId,
+        K8sBuilderHelper k8sBuilderHelper,
+        K8sLabelHelper k8sLabelHelper
+    ) {
         this.image = image;
 
         this.k8sBuilderHelper = k8sBuilderHelper;
+        this.k8sLabelHelper = k8sLabelHelper;
 
         this.userId = userId != null ? userId : UID;
         this.groupId = groupId != null ? groupId : GID;
@@ -90,9 +99,14 @@ public class FlowerAppTrainRunner {
 
         coreEnvList.add(new CoreEnv("PYTHONPATH", "${PYTHONPATH}:/shared/"));
 
-        List<CoreEnv> coreSecrets = secretData == null
-            ? null
-            : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
+        List<CoreEnv> coreSecrets =
+            secretData == null
+                ? null
+                : secretData
+                      .entrySet()
+                      .stream()
+                      .map(e -> new CoreEnv(e.getKey(), e.getValue()))
+                      .toList();
 
         Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
 
@@ -107,8 +121,7 @@ public class FlowerAppTrainRunner {
 
         //write entrypoint
         try {
-            ContextSource entry = ContextSource
-                .builder()
+            ContextSource entry = ContextSource.builder()
                 .name("app.sh")
                 .base64(Base64.getEncoder().encodeToString(entrypoint.getContentAsByteArray()))
                 .build();
@@ -187,13 +200,12 @@ public class FlowerAppTrainRunner {
         String federationConfig = "address=\"" + runSpec.getSuperlink() + "\"";
         if (StringUtils.hasText(runSpec.getRootCertificates())) {
             contextSources.add(
-                ContextSource
-                    .builder()
+                ContextSource.builder()
                     .name("certificates/ca.crt")
                     .base64(
-                        Base64
-                            .getEncoder()
-                            .encodeToString(prepareCA(runSpec.getRootCertificates()).getBytes(StandardCharsets.UTF_8))
+                        Base64.getEncoder().encodeToString(
+                            prepareCA(runSpec.getRootCertificates()).getBytes(StandardCharsets.UTF_8)
+                        )
                     )
                     .build()
             );
@@ -218,14 +230,13 @@ public class FlowerAppTrainRunner {
 
         String cmd = "/bin/bash";
 
-        K8sJobRunnable k8sJobRunnable = K8sJobRunnable
-            .builder()
+        K8sJobRunnable k8sJobRunnable = K8sJobRunnable.builder()
             .runtime(FlowerAppRuntime.RUNTIME)
             .task(FlowerAppTrainTaskSpec.KIND)
             .state(State.READY.name())
             .labels(
-                k8sBuilderHelper != null
-                    ? List.of(new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction()))
+                k8sLabelHelper != null
+                    ? List.of(new CoreLabel(k8sLabelHelper.buildCoreLabel("function"), taskAccessor.getFunction()))
                     : null
             )
             //base

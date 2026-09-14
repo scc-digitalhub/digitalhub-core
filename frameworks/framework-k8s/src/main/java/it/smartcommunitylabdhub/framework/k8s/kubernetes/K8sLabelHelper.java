@@ -76,6 +76,8 @@ public class K8sLabelHelper {
     public <T extends K8sRunnable> Map<String, String> buildCoreLabels(@NotNull T runnable) {
         //create custom core labels
         return Map.of(
+            NAMESPACE + "instance",
+            K8sBuilderHelper.sanitizeNames(applicationProperties.getName()),
             NAMESPACE + "project",
             K8sBuilderHelper.sanitizeNames(runnable.getProject()),
             NAMESPACE + "framework",
@@ -93,15 +95,17 @@ public class K8sLabelHelper {
         return Map.entry(NAMESPACE + label, K8sBuilderHelper.sanitizeNames(value));
     }
 
+    public String buildCoreLabel(@NotNull String label) {
+        return NAMESPACE + K8sBuilderHelper.sanitizeNames(label);
+    }
+
     public Map<String, String> extractCoreLabels(@NotNull Map<String, String> labels) {
         String prefix = NAMESPACE;
-
-        List<String> coreLabels = List.of("project", "framework", "runtime", "run", "user");
 
         return labels
             .entrySet()
             .stream()
-            .filter(entry -> coreLabels.contains(entry.getKey().replace(prefix, "")))
+            .filter(entry -> entry.getKey().startsWith(prefix))
             .collect(Collectors.toMap(entry -> entry.getKey().replace(prefix, ""), Map.Entry::getValue));
     }
 }

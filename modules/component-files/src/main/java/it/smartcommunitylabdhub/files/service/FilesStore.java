@@ -31,6 +31,8 @@ import it.smartcommunitylabdhub.files.models.UploadInfo;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 
 public interface FilesStore {
     DownloadInfo downloadAsUrl(
@@ -61,8 +63,12 @@ public interface FilesStore {
     //TODO
     // InputStream downloadAsStream(@NotNull String path);
 
-    List<FileInfo> fileInfo(@NotNull String path, @Nullable Boolean recursive, @Nullable List<Credentials> credentials)
-        throws StoreException;
+    Slice<FileInfo> fileInfo(
+        @NotNull String path,
+        @Nullable Boolean recursive,
+        @Nullable List<Credentials> credentials,
+        @Nullable Pageable pageable
+    ) throws StoreException;
 
     void remove(@NotNull String path, @Nullable Boolean recursive, @Nullable List<Credentials> credentials)
         throws StoreException;

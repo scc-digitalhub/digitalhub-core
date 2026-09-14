@@ -72,7 +72,8 @@ import org.springframework.util.Assert;
 @RuntimeComponent(runtime = OpeninferenceRuntime.RUNTIME)
 public class OpeninferenceRuntime
     extends K8sFunctionBaseRuntime<OpeninferenceFunctionSpec, OpeninferenceRunSpec, OpeninferenceRunStatus, K8sRunnable>
-    implements InitializingBean {
+    implements InitializingBean
+{
 
     public static final int HTTP_PORT = 8080;
     public static final int GRPC_PORT = 9000;
@@ -107,8 +108,8 @@ public class OpeninferenceRuntime
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        this.buildRunner = new OpeninferenceBuildRunner(properties, k8sBuilderHelper);
-        this.serveRunner = new OpeninferenceServeRunner(properties, k8sBuilderHelper, functionService);
+        this.buildRunner = new OpeninferenceBuildRunner(properties, k8sBuilderHelper, k8sLabelHelper);
+        this.serveRunner = new OpeninferenceServeRunner(properties, k8sBuilderHelper, k8sLabelHelper, functionService);
     }
 
     @Override
@@ -119,28 +120,26 @@ public class OpeninferenceRuntime
         }
 
         OpeninferenceFunctionSpec funSpec = new OpeninferenceFunctionSpec(function.getSpec());
-        OpeninferenceRunSpec runSpec =
-            switch (run.getKind()) {
-                case OpeninferenceServeRunSpec.KIND -> new OpeninferenceServeRunSpec(run.getSpec());
-                case OpeninferenceBuildRunSpec.KIND -> new OpeninferenceBuildRunSpec(run.getSpec());
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        OpeninferenceRunSpec runSpec = switch (run.getKind()) {
+            case OpeninferenceServeRunSpec.KIND -> new OpeninferenceServeRunSpec(run.getSpec());
+            case OpeninferenceBuildRunSpec.KIND -> new OpeninferenceBuildRunSpec(run.getSpec());
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //build task spec as defined
-        Map<String, Serializable> taskSpec =
-            switch (task.getKind()) {
-                case OpeninferenceServeTaskSpec.KIND -> {
-                    yield new OpeninferenceServeTaskSpec(task.getSpec()).toMap();
-                }
-                case OpeninferenceBuildTaskSpec.KIND -> {
-                    yield new OpeninferenceBuildTaskSpec(task.getSpec()).toMap();
-                }
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        Map<String, Serializable> taskSpec = switch (task.getKind()) {
+            case OpeninferenceServeTaskSpec.KIND -> {
+                yield new OpeninferenceServeTaskSpec(task.getSpec()).toMap();
+            }
+            case OpeninferenceBuildTaskSpec.KIND -> {
+                yield new OpeninferenceBuildTaskSpec(task.getSpec()).toMap();
+            }
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
@@ -170,12 +169,11 @@ public class OpeninferenceRuntime
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
-        K8sRunnable runnable =
-            switch (runAccessor.getTask()) {
-                case OpeninferenceServeTaskSpec.KIND -> serveRunner.produce(run, secrets);
-                case OpeninferenceBuildTaskSpec.KIND -> buildRunner.produce(run, secrets);
-                default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
-            };
+        K8sRunnable runnable = switch (runAccessor.getTask()) {
+            case OpeninferenceServeTaskSpec.KIND -> serveRunner.produce(run, secrets);
+            case OpeninferenceBuildTaskSpec.KIND -> buildRunner.produce(run, secrets);
+            default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
+        };
 
         //extract auth from security context to inflate secured credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();

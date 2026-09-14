@@ -31,6 +31,7 @@ import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
@@ -61,18 +62,22 @@ public class MlflowBuildRunner {
     private final String command;
 
     private final K8sBuilderHelper k8sBuilderHelper;
+    private final K8sLabelHelper k8sLabelHelper;
+
     private final ModelManager modelService;
 
     public MlflowBuildRunner(
         String image,
         String command,
         ModelManager modelService,
-        K8sBuilderHelper k8sBuilderHelper
+        K8sBuilderHelper k8sBuilderHelper,
+        K8sLabelHelper k8sLabelHelper
     ) {
         this.image = image;
         this.command = command;
         this.modelService = modelService;
         this.k8sBuilderHelper = k8sBuilderHelper;
+        this.k8sLabelHelper = k8sLabelHelper;
     }
 
     public K8sContainerBuilderRunnable produce(Run run, Map<String, String> secretData) {
@@ -85,9 +90,14 @@ public class MlflowBuildRunner {
             List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))
         );
 
-        List<CoreEnv> coreSecrets = secretData == null
-            ? null
-            : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
+        List<CoreEnv> coreSecrets =
+            secretData == null
+                ? null
+                : secretData
+                      .entrySet()
+                      .stream()
+                      .map(e -> new CoreEnv(e.getKey(), e.getValue()))
+                      .toList();
 
         Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
 
@@ -116,9 +126,10 @@ public class MlflowBuildRunner {
             if (!EntityUtils.getEntityName(Model.class).equalsIgnoreCase(keyAccessor.getType())) {
                 throw new CoreRuntimeException("invalid entity kind reference, expected model");
             }
-            Model model = keyAccessor.getId() != null
-                ? modelService.findModel(keyAccessor.getId())
-                : modelService.getLatestModel(keyAccessor.getProject(), keyAccessor.getName());
+            Model model =
+                keyAccessor.getId() != null
+                    ? modelService.findModel(keyAccessor.getId())
+                    : modelService.getLatestModel(keyAccessor.getProject(), keyAccessor.getName());
             if (model == null) {
                 throw new CoreRuntimeException("invalid entity reference, MLFlow model not found");
             }
@@ -146,9 +157,9 @@ public class MlflowBuildRunner {
         dockerfileGenerator.workdir("/shared");
 
         // Add user instructions
-        Optional
-            .ofNullable(taskSpec.getInstructions())
-            .ifPresent(instructions -> instructions.forEach(dockerfileGenerator::run));
+        Optional.ofNullable(taskSpec.getInstructions()).ifPresent(instructions ->
+            instructions.forEach(dockerfileGenerator::run)
+        );
 
         // install all requirements
         dockerfileGenerator.run("python -m pip install -r /shared/model/requirements.txt");
@@ -173,16 +184,15 @@ public class MlflowBuildRunner {
             }
         }
 
-        return K8sContainerBuilderRunnable
-            .builder()
+        return K8sContainerBuilderRunnable.builder()
             .id(run.getId())
             .project(run.getProject())
             .runtime(MlflowServeRuntime.RUNTIME)
             .task(MlflowBuildTaskSpec.KIND)
             .state(State.READY.name())
             .labels(
-                k8sBuilderHelper != null
-                    ? List.of(new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction()))
+                k8sLabelHelper != null
+                    ? List.of(new CoreLabel(k8sLabelHelper.buildCoreLabel("function"), taskAccessor.getFunction()))
                     : null
             )
             //base

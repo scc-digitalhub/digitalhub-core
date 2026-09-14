@@ -26,7 +26,7 @@ public class ServiceDeletedProcessor implements Processor<Run, RunBaseStatus> {
     }
 
     @Override
-    public <I> RunBaseStatus process(String stage, Run run, I input) throws CoreRuntimeException {
+    public RunBaseStatus process(String stage, Run run, Serializable input) throws CoreRuntimeException {
         try {
             //read event
 
@@ -36,7 +36,7 @@ public class ServiceDeletedProcessor implements Processor<Run, RunBaseStatus> {
             if (status != null && status.get("service") != null && status.get("gatewayInfo") != null) {
                 GatewayRunStatus gatewayRunStatus = GatewayRunStatus.with(status);
 
-                if (gatewayRunStatus.getRunnables() != null) {                    
+                if (gatewayRunStatus.getRunnables() != null) {
                     // delete in reverse order to avoid dependencies issues
                     for (int i = gatewayRunStatus.getRunnables().size() - 1; i >= 0; i--) {
                         K8sCRRunnable crRunnable = gatewayRunStatus.getRunnables().get(i);

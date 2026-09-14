@@ -27,6 +27,7 @@ import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
@@ -62,9 +63,10 @@ public class OpeninferenceServeRunner extends PythonBaseRunner {
     public OpeninferenceServeRunner(
         PythonProperties properties,
         K8sBuilderHelper k8sBuilderHelper,
+        K8sLabelHelper k8sLabelHelper,
         FunctionManager functionService
     ) {
-        super(properties, k8sBuilderHelper);
+        super(properties, k8sBuilderHelper, k8sLabelHelper);
         this.functionService = functionService;
 
         //set handler for serve
@@ -144,8 +146,8 @@ public class OpeninferenceServeRunner extends PythonBaseRunner {
             .task(OpeninferenceServeTaskSpec.KIND)
             .state(State.READY.name())
             .labels(
-                k8sBuilderHelper != null
-                    ? List.of(new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction()))
+                k8sLabelHelper != null
+                    ? List.of(new CoreLabel(k8sLabelHelper.buildCoreLabel("function"), taskAccessor.getFunction()))
                     : null
             )
             //base

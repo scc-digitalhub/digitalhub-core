@@ -95,13 +95,12 @@ public class VLLMServeSpeechRuntime extends VLLMServeRuntime<VLLMServeSpeechFunc
         String kind = task.getKind();
 
         //build task spec as defined
-        TaskBaseSpec taskSpec =
-            switch (kind) {
-                case VLLMServeSpeechServeTaskSpec.KIND -> VLLMServeSpeechServeTaskSpec.with(task.getSpec());
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        TaskBaseSpec taskSpec = switch (kind) {
+            case VLLMServeSpeechServeTaskSpec.KIND -> VLLMServeSpeechServeTaskSpec.with(task.getSpec());
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //url is defined in function spec but overridable in run spec
         String url = funSpec.getUrl();
@@ -154,21 +153,20 @@ public class VLLMServeSpeechRuntime extends VLLMServeRuntime<VLLMServeSpeechFunc
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
-        K8sRunnable runnable =
-            switch (runAccessor.getTask()) {
-                case VLLMServeSpeechServeTaskSpec.KIND -> new VLLMServeRunner(
-                    RUNTIME,
-                    image,
-                    properties,
-                    runSpec.getFunctionSpec(),
-                    secretService.getSecretData(run.getProject(), runSpec.getTaskServeSpec().getSecrets()),
-                    k8sBuilderHelper,
-                    modelService,
-                    functionService
-                )
-                    .produce(run);
-                default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
-            };
+        K8sRunnable runnable = switch (runAccessor.getTask()) {
+            case VLLMServeSpeechServeTaskSpec.KIND -> new VLLMServeRunner(
+                RUNTIME,
+                image,
+                properties,
+                runSpec.getFunctionSpec(),
+                secretService.getSecretData(run.getProject(), runSpec.getTaskServeSpec().getSecrets()),
+                k8sBuilderHelper,
+                k8sLabelHelper,
+                modelService,
+                functionService
+            ).produce(run);
+            default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
+        };
 
         //extract auth from security context to inflate secured credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();

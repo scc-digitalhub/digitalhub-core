@@ -57,7 +57,8 @@ import org.springframework.util.StringUtils;
 @Slf4j
 @RuntimeComponent(runtime = KubeAISpeechToTextRuntime.RUNTIME)
 public class KubeAISpeechToTextRuntime
-    extends KubeAIRuntime<KubeAISpeechToTextFunctionSpec, KubeAISpeechToTextRunSpec> {
+    extends KubeAIRuntime<KubeAISpeechToTextFunctionSpec, KubeAISpeechToTextRunSpec>
+{
 
     public static final String RUNTIME = "kubeai-speech";
     private final String FEATURE = "SpeechToText";
@@ -69,9 +70,9 @@ public class KubeAISpeechToTextRuntime
         if (!KubeAISpeechToTextRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
                 "Run kind %s unsupported, expecting %s".formatted(
-                        String.valueOf(run.getKind()),
-                        KubeAISpeechToTextRunSpec.KIND
-                    )
+                    String.valueOf(run.getKind()),
+                    KubeAISpeechToTextRunSpec.KIND
+                )
             );
         }
 
@@ -81,13 +82,12 @@ public class KubeAISpeechToTextRuntime
         String kind = task.getKind();
 
         //build task spec as defined
-        TaskBaseSpec taskSpec =
-            switch (kind) {
-                case KubeAISpeechToTextServeTaskSpec.KIND -> KubeAISpeechToTextServeTaskSpec.with(task.getSpec());
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        TaskBaseSpec taskSpec = switch (kind) {
+            case KubeAISpeechToTextServeTaskSpec.KIND -> KubeAISpeechToTextServeTaskSpec.with(task.getSpec());
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //url is defined in function spec but overridable in run spec
         String url = funSpec.getUrl();
@@ -123,9 +123,9 @@ public class KubeAISpeechToTextRuntime
         if (!KubeAISpeechToTextRunSpec.KIND.equals(run.getKind())) {
             throw new IllegalArgumentException(
                 "Run kind {} unsupported, expecting {}".formatted(
-                        String.valueOf(run.getKind()),
-                        KubeAISpeechToTextRunSpec.KIND
-                    )
+                    String.valueOf(run.getKind()),
+                    KubeAISpeechToTextRunSpec.KIND
+                )
             );
         }
 
@@ -138,21 +138,20 @@ public class KubeAISpeechToTextRuntime
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
-        K8sCRRunnable runnable =
-            switch (runAccessor.getTask()) {
-                case KubeAISpeechToTextServeTaskSpec.KIND -> new KubeAIServeRunner(
-                    KubeAISpeechToTextRuntime.RUNTIME,
-                    ENGINE,
-                    List.of(FEATURE),
-                    runSpec.getFunctionSpec(),
-                    secretService.getSecretData(run.getProject(), runSpec.getSecrets()),
-                    k8sBuilderHelper,
-                    k8sSecretHelper,
-                    modelService
-                )
-                    .produce(run);
-                default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
-            };
+        K8sCRRunnable runnable = switch (runAccessor.getTask()) {
+            case KubeAISpeechToTextServeTaskSpec.KIND -> new KubeAIServeRunner(
+                KubeAISpeechToTextRuntime.RUNTIME,
+                ENGINE,
+                List.of(FEATURE),
+                runSpec.getFunctionSpec(),
+                secretService.getSecretData(run.getProject(), runSpec.getSecrets()),
+                k8sBuilderHelper,
+                k8sSecretHelper,
+                k8sLabelHelper,
+                modelService
+            ).produce(run);
+            default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
+        };
 
         //extract auth from security context to inflate secured credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
@@ -180,8 +179,7 @@ public class KubeAISpeechToTextRuntime
         //build openapi descriptor only once
         if (status.getOpenai() == null) {
             //inflate super or rebuild
-            OpenAIService openai = Optional
-                .ofNullable(super.onRunning(run, runnable))
+            OpenAIService openai = Optional.ofNullable(super.onRunning(run, runnable))
                 .map(s -> s.getOpenai())
                 .orElse(new OpenAIService());
 
@@ -194,8 +192,7 @@ public class KubeAISpeechToTextRuntime
         //build service descriptor only once
         if (status.getService() == null) {
             //inflate super or rebuild
-            K8sServiceInfo service = Optional
-                .ofNullable(super.onRunning(run, runnable))
+            K8sServiceInfo service = Optional.ofNullable(super.onRunning(run, runnable))
                 .map(s -> s.getService())
                 .orElse(new K8sServiceInfo());
 

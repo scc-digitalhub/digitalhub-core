@@ -48,8 +48,6 @@ import it.smartcommunitylabdhub.commons.annotations.infrastructure.FrameworkComp
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sBaseFramework;
-import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
-import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sTemplate;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
@@ -57,10 +55,8 @@ import it.smartcommunitylabdhub.framework.kaniko.config.KanikoProperties;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -158,69 +154,11 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
         //build and create configMap
         try {
             // Generate Config map
-            Optional<List<ContextRef>> contextRefsOpt = Optional.ofNullable(runnable.getContextRefs());
-            Optional<List<ContextSource>> contextSourcesOpt = Optional.ofNullable(runnable.getContextSources());
-            V1ConfigMap configMap = new V1ConfigMap()
-                .metadata(new V1ObjectMeta().name("init-config-map-" + runnable.getId()).labels(buildLabels(runnable)))
-                .data(
-                    MapUtils.mergeMultipleMaps(
-                        //dockerfile
-                        Map.of("Dockerfile", runnable.getDockerFile()),
-                        // Generate context-refs.txt if exist
-                        contextRefsOpt
-                            .map(contextRefsList ->
-                                Map.of(
-                                    "context-refs.txt",
-                                    contextRefsList
-                                        .stream()
-                                        .map(
-                                            v -> v.getProtocol() + "," + v.getDestination() + "," + v.getSource() + "\n"
-                                        )
-                                        .collect(Collectors.joining(""))
-                                )
-                            )
-                            .orElseGet(Map::of),
-                        // Generate context-sources.txt if exist
-                        contextSourcesOpt
-                            .map(contextSources ->
-                                contextSources
-                                    .stream()
-                                    .collect(
-                                        Collectors.toMap(
-                                            c ->
-                                                Base64.getUrlEncoder()
-                                                    .withoutPadding()
-                                                    .encodeToString(c.getName().getBytes()),
-                                            c ->
-                                                new String(
-                                                    Base64.getDecoder().decode(c.getBase64()),
-                                                    StandardCharsets.UTF_8
-                                                )
-                                        )
-                                    )
-                            )
-                            .orElseGet(Map::of),
-                        contextSourcesOpt
-                            .map(contextSources ->
-                                Map.of(
-                                    "context-sources-map.txt",
-                                    contextSources
-                                        .stream()
-                                        .map(
-                                            c ->
-                                                Base64.getUrlEncoder()
-                                                    .withoutPadding()
-                                                    .encodeToString(c.getName().getBytes()) +
-                                                "," +
-                                                c.getName() +
-                                                "\n"
-                                        )
-                                        .collect(Collectors.joining(""))
-                                )
-                            )
-                            .orElseGet(Map::of)
-                    )
-                );
+            V1ConfigMap configMap = buildInitConfigMap(runnable);
+            //patch dockerFile
+            configMap.data(
+                MapUtils.mergeMultipleMaps(configMap.getData(), Map.of("Dockerfile", runnable.getDockerFile()))
+            );
 
             coreV1Api.createNamespacedConfigMap(namespace, configMap, null, null, null, null);
             //clear data before storing

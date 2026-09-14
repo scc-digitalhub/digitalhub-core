@@ -35,6 +35,7 @@ import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
@@ -104,6 +105,8 @@ public class VLLMServeRunner {
     private final Map<String, String> secretData;
 
     private final K8sBuilderHelper k8sBuilderHelper;
+    private final K8sLabelHelper k8sLabelHelper;
+
     private final ModelManager modelService;
     private final FunctionManager functionService;
 
@@ -114,6 +117,7 @@ public class VLLMServeRunner {
         VLLMServeFunctionSpec functionSpec,
         Map<String, String> secretData,
         K8sBuilderHelper k8sBuilderHelper,
+        K8sLabelHelper k8sLabelHelper,
         ModelManager modelService,
         FunctionManager functionService
     ) {
@@ -126,6 +130,7 @@ public class VLLMServeRunner {
         this.functionSpec = functionSpec;
         this.secretData = secretData;
         this.k8sBuilderHelper = k8sBuilderHelper;
+        this.k8sLabelHelper = k8sLabelHelper;
         this.modelService = modelService;
         this.functionService = functionService;
 
@@ -354,8 +359,8 @@ public class VLLMServeRunner {
             .task(runtime + "+serve")
             .state(State.READY.name())
             .labels(
-                k8sBuilderHelper != null
-                    ? List.of(new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction()))
+                k8sLabelHelper != null
+                    ? List.of(new CoreLabel(k8sLabelHelper.buildCoreLabel("function"), taskAccessor.getFunction()))
                     : null
             )
             //base

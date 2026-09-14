@@ -43,9 +43,9 @@ import org.springframework.stereotype.Component;
 public class K8sProcessor implements Processor<Run, K8sRunStatus> {
 
     @Override
-    public <I> K8sRunStatus process(String stage, Run run, I input) throws CoreRuntimeException {
-        if (input instanceof K8sRunnable) {
-            Map<String, Serializable> res = ((K8sRunnable) input).getResults();
+    public K8sRunStatus process(String stage, Run run, Serializable input) throws CoreRuntimeException {
+        if (input instanceof K8sRunnable runnable) {
+            Map<String, Serializable> res = runnable.getResults();
 
             if (res != null && !res.isEmpty()) {
                 //extract k8s details

@@ -32,6 +32,7 @@ import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
@@ -80,6 +81,8 @@ public class MlflowServeRunner {
     private final Map<String, String> secretData;
 
     private final K8sBuilderHelper k8sBuilderHelper;
+    private final K8sLabelHelper k8sLabelHelper;
+
     private final ModelManager modelService;
     private final FunctionManager functionService;
 
@@ -91,6 +94,7 @@ public class MlflowServeRunner {
         MlflowServeFunctionSpec functionSpec,
         Map<String, String> secretData,
         K8sBuilderHelper k8sBuilderHelper,
+        K8sLabelHelper k8sLabelHelper,
         ModelManager modelService,
         FunctionManager functionService
     ) {
@@ -98,6 +102,7 @@ public class MlflowServeRunner {
         this.functionSpec = functionSpec;
         this.secretData = secretData;
         this.k8sBuilderHelper = k8sBuilderHelper;
+        this.k8sLabelHelper = k8sLabelHelper;
         this.modelService = modelService;
         this.functionService = functionService;
 
@@ -115,9 +120,14 @@ public class MlflowServeRunner {
             List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))
         );
 
-        List<CoreEnv> coreSecrets = secretData == null
-            ? null
-            : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
+        List<CoreEnv> coreSecrets =
+            secretData == null
+                ? null
+                : secretData
+                      .entrySet()
+                      .stream()
+                      .map(e -> new CoreEnv(e.getKey(), e.getValue()))
+                      .toList();
 
         Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
 
@@ -126,9 +136,10 @@ public class MlflowServeRunner {
         );
 
         //check if scratch disk is requested as resource or set default
-        String volumeSize = taskSpec.getResources() != null && taskSpec.getResources().getDisk() != null
-            ? taskSpec.getResources().getDisk()
-            : volumeSizeSpec;
+        String volumeSize =
+            taskSpec.getResources() != null && taskSpec.getResources().getDisk() != null
+                ? taskSpec.getResources().getDisk()
+                : volumeSizeSpec;
         CoreResource diskResource = new CoreResource();
         diskResource.setDisk(volumeSize);
 
@@ -143,9 +154,10 @@ public class MlflowServeRunner {
             if (!EntityUtils.getEntityName(Model.class).equalsIgnoreCase(keyAccessor.getType())) {
                 throw new CoreRuntimeException("invalid entity kind reference, expected model");
             }
-            Model model = keyAccessor.getId() != null
-                ? modelService.findModel(keyAccessor.getId())
-                : modelService.getLatestModel(keyAccessor.getProject(), keyAccessor.getName());
+            Model model =
+                keyAccessor.getId() != null
+                    ? modelService.findModel(keyAccessor.getId())
+                    : modelService.getLatestModel(keyAccessor.getProject(), keyAccessor.getName());
             if (model == null) {
                 throw new CoreRuntimeException("invalid entity reference, MLFlow model not found");
             }
@@ -176,14 +188,12 @@ public class MlflowServeRunner {
         );
         List<ContextSource> contextSources = new ArrayList<>();
 
-        MLServerSettingsSpec mlServerSettingsSpec = MLServerSettingsSpec
-            .builder()
+        MLServerSettingsSpec mlServerSettingsSpec = MLServerSettingsSpec.builder()
             .name(StringUtils.hasText(functionSpec.getModelName()) ? functionSpec.getModelName() : "model")
             .implementation("mlserver_mlflow.MLflowRuntime")
             // .platform()
             .parameters(
-                MLServerSettingsParameters
-                    .builder()
+                MLServerSettingsParameters.builder()
                     .uri("./model")
                     // .contentType()
                     .build()
@@ -192,15 +202,12 @@ public class MlflowServeRunner {
 
         //write model settings
         try {
-            ContextSource entry = ContextSource
-                .builder()
+            ContextSource entry = ContextSource.builder()
                 .name("model-settings.json")
                 .base64(
-                    Base64
-                        .getEncoder()
-                        .encodeToString(
-                            JacksonMapper.CUSTOM_OBJECT_MAPPER.writeValueAsString(mlServerSettingsSpec).getBytes()
-                        )
+                    Base64.getEncoder().encodeToString(
+                        JacksonMapper.CUSTOM_OBJECT_MAPPER.writeValueAsString(mlServerSettingsSpec).getBytes()
+                    )
                 )
                 .build();
             contextSources.add(entry);
@@ -240,14 +247,13 @@ public class MlflowServeRunner {
         }
 
         //build runnable
-        K8sRunnable k8sServeRunnable = K8sServeRunnable
-            .builder()
+        K8sRunnable k8sServeRunnable = K8sServeRunnable.builder()
             .runtime(MlflowServeRuntime.RUNTIME)
             .task(MlflowServeTaskSpec.KIND)
             .state(State.READY.name())
             .labels(
-                k8sBuilderHelper != null
-                    ? List.of(new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction()))
+                k8sLabelHelper != null
+                    ? List.of(new CoreLabel(k8sLabelHelper.buildCoreLabel("function"), taskAccessor.getFunction()))
                     : null
             )
             //base

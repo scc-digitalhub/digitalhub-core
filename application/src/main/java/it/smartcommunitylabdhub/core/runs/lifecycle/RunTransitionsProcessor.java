@@ -30,6 +30,7 @@ import it.smartcommunitylabdhub.core.runs.specs.RunTransitionsSpec;
 import it.smartcommunitylabdhub.core.runs.specs.RunTransitionsSpec.Transition;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
+import java.io.Serializable;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -61,26 +62,23 @@ import org.springframework.stereotype.Component;
 public class RunTransitionsProcessor implements Processor<Run, RunTransitionsSpec> {
 
     @Override
-    public RunTransitionsSpec process(String stage, Run run, Object input) {
+    public RunTransitionsSpec process(String stage, Run run, Serializable input) {
         RunBaseStatus status = RunBaseStatus.with(run.getStatus());
 
         LinkedList<RunTransitionsSpec.Transition> list = new LinkedList<>();
 
         //keep old in order
-        Optional
-            .ofNullable(run.getStatus())
-            .ifPresent(s -> {
-                RunTransitionsSpec rts = new RunTransitionsSpec();
-                rts.configure(s);
+        Optional.ofNullable(run.getStatus()).ifPresent(s -> {
+            RunTransitionsSpec rts = new RunTransitionsSpec();
+            rts.configure(s);
 
-                if (rts.getTransitions() != null) {
-                    list.addAll(rts.getTransitions());
-                }
-            });
+            if (rts.getTransitions() != null) {
+                list.addAll(rts.getTransitions());
+            }
+        });
 
         //current
-        Transition tr = RunTransitionsSpec.Transition
-            .builder()
+        Transition tr = RunTransitionsSpec.Transition.builder()
             .event(null) //TODO add explicit event
             .status(status != null ? status.getState() : null)
             .message(status != null ? status.getMessage() : null)

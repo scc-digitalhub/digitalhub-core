@@ -204,6 +204,16 @@ public interface ArtifactManager {
         throws NoSuchEntityException, BindException, IllegalArgumentException, SystemException;
 
     /**
+     * Update a specific artifact version
+     * @param id
+     * @param artifactDTO
+     * @return
+     * @throws NoSuchEntityException
+     */
+    Artifact updateArtifact(@NotNull String id, @NotNull Artifact artifactDTO, boolean force)
+        throws NoSuchEntityException, BindException, IllegalArgumentException, SystemException;
+
+    /**
      * Delete a specific artifact (version) via unique ID
      * @param id
      */

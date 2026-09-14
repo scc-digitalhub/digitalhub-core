@@ -13,8 +13,43 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}-builder-tool
 jobs:
-  build-and-push-image:
+  metadata:
     runs-on: ubuntu-latest
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
+      labels: ${{ steps.meta.outputs.labels }}
+      temp_tag: ${{ steps.extract_sha.outputs.sha_short }}
+    steps:
+      - name: Extract the first 8 characters of the SHA
+        id: extract_sha
+        shell: bash
+        run: echo "sha_short=${GITHUB_SHA:0:8}" >> "$GITHUB_OUTPUT"
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5.5.1
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ steps.extract_sha.outputs.sha_short }}
+          labels: |
+            commit.sha=${{ github.sha }}
+          flavor: |
+            latest=true
+
+  build-and-push-image:
+    needs: metadata
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-24.04
+            arch: amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            arch: arm64
+
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
@@ -22,34 +57,66 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: 'true'        
+          submodules: 'false'
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       - name: Log in to the Container registry
         uses: docker/login-action@v3.0.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Extract the first 5 characters of the SHA
-        id: extract_sha
-        run: echo "SHA_SHORT=${GITHUB_SHA:0:8}" >> $GITHUB_ENV
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v5.5.1
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=${{ env.SHA_SHORT }}
-          labels: |
-            commit.sha=${{ github.sha }}
-          flavor: |
-            latest=true          
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5.1.0
+      - name: Build and push architecture image
+        uses: docker/build-push-action@v6
         with:
           context: ./core-builder-tool
+          platforms: ${{ matrix.platform }}
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.metadata.outputs.temp_tag }}-${{ matrix.arch }}
+          labels: ${{ needs.metadata.outputs.labels }}
           file: ./core-builder-tool/Dockerfile
+          cache-from: |
+            type=gha,scope=${{ env.IMAGE_NAME }}-${{ matrix.arch }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-${{ matrix.arch }}
+          cache-to: |
+            type=gha,mode=max,scope=${{ env.IMAGE_NAME }}-${{ matrix.arch }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-${{ matrix.arch }},mode=max
+
+  publish-image:
+    needs:
+      - metadata
+      - build-and-push-image
+
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3.0.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish multi-platform tags
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          TEMP_TAG: ${{ needs.metadata.outputs.temp_tag }}
+          METADATA_TAGS: ${{ needs.metadata.outputs.tags }}
+        shell: bash
+        run: |
+          AMD64="$IMAGE:$TEMP_TAG-amd64"
+          ARM64="$IMAGE:$TEMP_TAG-arm64"
+
+          while IFS= read -r TARGET; do
+            [ -z "$TARGET" ] && continue
+
+            docker buildx imagetools create \
+              -t "$TARGET" \
+              "$AMD64" \
+              "$ARM64"
+          done <<< "$METADATA_TAGS"
 
           

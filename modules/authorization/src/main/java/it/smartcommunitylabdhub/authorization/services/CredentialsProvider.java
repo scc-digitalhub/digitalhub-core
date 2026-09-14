@@ -35,7 +35,9 @@ public interface CredentialsProvider {
      */
 
     @Nullable
-    <T extends AbstractAuthenticationToken> Credentials process(@NotNull T token);
+    default <T extends AbstractAuthenticationToken> Credentials process(@NotNull T token) {
+        return null;
+    }
 
     /*
      * Generate or get a set of credentials for the given authenticated user

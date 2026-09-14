@@ -54,7 +54,8 @@ import org.springframework.beans.factory.annotation.Value;
 @Slf4j
 @RuntimeComponent(runtime = FlowerAppRuntime.RUNTIME)
 public class FlowerAppRuntime
-    extends K8sFunctionBaseRuntime<FlowerAppFunctionSpec, FlowerAppRunSpec, FlowerRunStatus, K8sRunnable> {
+    extends K8sFunctionBaseRuntime<FlowerAppFunctionSpec, FlowerAppRunSpec, FlowerRunStatus, K8sRunnable>
+{
 
     public static final String RUNTIME = "flower-app";
 
@@ -94,15 +95,14 @@ public class FlowerAppRuntime
         String kind = task.getKind();
 
         //build task spec as defined
-        Map<String, Serializable> taskSpec =
-            switch (kind) {
-                case FlowerAppTrainTaskSpec.KIND -> {
-                    yield new FlowerAppTrainTaskSpec(task.getSpec()).toMap();
-                }
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        Map<String, Serializable> taskSpec = switch (kind) {
+            case FlowerAppTrainTaskSpec.KIND -> {
+                yield new FlowerAppTrainTaskSpec(task.getSpec()).toMap();
+            }
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
@@ -130,20 +130,19 @@ public class FlowerAppRuntime
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
-        K8sRunnable runnable =
-            switch (runAccessor.getTask()) {
-                case FlowerAppTrainTaskSpec.KIND -> new FlowerAppTrainRunner(
-                    images.get("runner"),
-                    userId,
-                    groupId,
-                    k8sBuilderHelper
-                )
-                    .produce(
-                        run,
-                        secretService.getSecretData(run.getProject(), runFlowerSpec.getTaskTrainSpec().getSecrets())
-                    );
-                default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
-            };
+        K8sRunnable runnable = switch (runAccessor.getTask()) {
+            case FlowerAppTrainTaskSpec.KIND -> new FlowerAppTrainRunner(
+                images.get("runner"),
+                userId,
+                groupId,
+                k8sBuilderHelper,
+                k8sLabelHelper
+            ).produce(
+                run,
+                secretService.getSecretData(run.getProject(), runFlowerSpec.getTaskTrainSpec().getSecrets())
+            );
+            default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
+        };
 
         //extract auth from security context to inflate secured credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();

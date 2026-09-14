@@ -25,6 +25,7 @@ package it.smartcommunitylabdhub.runtime.python.build;
 
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileGenerator;
 import it.smartcommunitylabdhub.framework.kaniko.infrastructure.docker.DockerfileGeneratorFactory;
@@ -38,8 +39,12 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public abstract class PythonBaseBuildRunner extends PythonBaseRunner {
 
-    protected PythonBaseBuildRunner(PythonProperties properties, K8sBuilderHelper k8sBuilderHelper) {
-        super(properties, k8sBuilderHelper);
+    protected PythonBaseBuildRunner(
+        PythonProperties properties,
+        K8sBuilderHelper k8sBuilderHelper,
+        K8sLabelHelper k8sLabelHelper
+    ) {
+        super(properties, k8sBuilderHelper, k8sLabelHelper);
     }
 
     protected String generateDockerfile(
@@ -58,13 +63,15 @@ public abstract class PythonBaseBuildRunner extends PythonBaseRunner {
 
         String fromImage = StringUtils.hasText(baseImage)
             ? baseImage
-            : StringUtils.hasText(image) ? image : defaultBaseImage;
+            : StringUtils.hasText(image)
+                ? image
+                : defaultBaseImage;
 
         if (!StringUtils.hasText(fromImage)) {
             throw new CoreRuntimeException(
                 "no valid base image found for python version " +
-                String.valueOf(pythonVersion) +
-                " and no base image explicitly set"
+                    String.valueOf(pythonVersion) +
+                    " and no base image explicitly set"
             );
         }
 
@@ -108,11 +115,11 @@ public abstract class PythonBaseBuildRunner extends PythonBaseRunner {
             // install common requirements
             dockerfileGenerator.run(
                 "/opt/nuclio/uv/uv pip install --system --no-index --find-links /opt/nuclio/whl " +
-                "-r /opt/nuclio/requirements/nuclio.txt"
+                    "-r /opt/nuclio/requirements/nuclio.txt"
             );
             dockerfileGenerator.run(
                 "/opt/nuclio/uv/uv pip install --system --no-index --find-links /opt/nuclio/whl " +
-                "-r /opt/nuclio/requirements/common.txt"
+                    "-r /opt/nuclio/requirements/common.txt"
             );
         }
 

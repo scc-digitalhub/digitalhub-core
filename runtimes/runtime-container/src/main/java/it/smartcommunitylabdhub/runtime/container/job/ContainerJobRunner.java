@@ -27,6 +27,7 @@ import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.objects.SourceCode;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
@@ -49,9 +50,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class ContainerJobRunner {
 
     private final K8sBuilderHelper k8sBuilderHelper;
+    private final K8sLabelHelper k8sLabelHelper;
 
-    public ContainerJobRunner(K8sBuilderHelper k8sBuilderHelper) {
+    public ContainerJobRunner(K8sBuilderHelper k8sBuilderHelper, K8sLabelHelper k8sLabelHelper) {
         this.k8sBuilderHelper = k8sBuilderHelper;
+        this.k8sLabelHelper = k8sLabelHelper;
     }
 
     public K8sJobRunnable produce(Run run, Map<String, String> secretData) {
@@ -64,9 +67,14 @@ public class ContainerJobRunner {
         List<CoreEnv> coreEnvList = new ArrayList<>(
             List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))
         );
-        List<CoreEnv> coreSecrets = secretData == null
-            ? null
-            : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
+        List<CoreEnv> coreSecrets =
+            secretData == null
+                ? null
+                : secretData
+                      .entrySet()
+                      .stream()
+                      .map(e -> new CoreEnv(e.getKey(), e.getValue()))
+                      .toList();
 
         Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
 
@@ -75,8 +83,7 @@ public class ContainerJobRunner {
         );
 
         //check if scratch disk is requested as resource
-        Optional
-            .ofNullable(k8sBuilderHelper)
+        Optional.ofNullable(k8sBuilderHelper)
             .flatMap(helper -> Optional.ofNullable(taskSpec.getResources()))
             .filter(resources -> resources.getDisk() != null)
             .ifPresent(resources -> {
@@ -102,10 +109,9 @@ public class ContainerJobRunner {
                     //write as source
                     String path = source.getSource();
                     if (StringUtils.hasText(source.getBase64())) {
-                        contextSources =
-                            Collections.singletonList(
-                                (ContextSource.builder().name(path).base64(source.getBase64()).build())
-                            );
+                        contextSources = Collections.singletonList(
+                            (ContextSource.builder().name(path).base64(source.getBase64()).build())
+                        );
                     }
                 }
             } catch (IllegalArgumentException e) {
@@ -113,14 +119,13 @@ public class ContainerJobRunner {
             }
         }
 
-        K8sJobRunnable k8sJobRunnable = K8sJobRunnable
-            .builder()
+        K8sJobRunnable k8sJobRunnable = K8sJobRunnable.builder()
             .runtime(ContainerRuntime.RUNTIME)
             .task(ContainerJobTaskSpec.KIND)
             .state(State.READY.name())
             .labels(
-                k8sBuilderHelper != null
-                    ? List.of(new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction()))
+                k8sLabelHelper != null
+                    ? List.of(new CoreLabel(k8sLabelHelper.buildCoreLabel("function"), taskAccessor.getFunction()))
                     : null
             )
             //base

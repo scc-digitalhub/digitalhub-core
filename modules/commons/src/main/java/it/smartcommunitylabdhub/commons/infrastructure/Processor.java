@@ -28,10 +28,11 @@ import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
+import java.io.Serializable;
 import org.springframework.lang.Nullable;
 
 @FunctionalInterface
 public interface Processor<D extends BaseDTO & SpecDTO & StatusDTO, Z extends Spec> {
     @Nullable
-    <I> Z process(String stage, D dto, @Nullable I input) throws CoreRuntimeException;
+    <I extends Serializable> Z process(String stage, D dto, @Nullable I input) throws CoreRuntimeException;
 }
