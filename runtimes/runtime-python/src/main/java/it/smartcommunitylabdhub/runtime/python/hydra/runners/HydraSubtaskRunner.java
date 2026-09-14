@@ -94,9 +94,7 @@ public class HydraSubtaskRunner extends PythonBaseRunner {
             List<CoreVolume> coreVolumes = buildVolumes(run, taskSpec, pythonVersion, baseImage, userImage);
 
             String image = buildImage(pythonVersion, baseImage, userImage);
-            List<String> requirements = properties.installDependencies()
-                ? buildRequirements(image, functionSpec.getRequirements())
-                : List.of();
+            List<String> requirements = buildRequirements(image, functionSpec.getRequirements());
 
             List<ContextSource> contextSources = new ArrayList<>();
             List<ContextRef> contextRefs = new ArrayList<>();

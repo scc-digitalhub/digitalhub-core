@@ -117,9 +117,7 @@ public class HydraJobRunner extends PythonBaseRunner {
 
             List<String> args = buildArgs(pythonVersion, baseImage, userImage);
             String image = buildImage(pythonVersion, baseImage, userImage);
-            List<String> requirements = properties.installDependencies()
-                ? buildRequirements(image, functionSpec.getRequirements())
-                : List.of();
+            List<String> requirements = buildRequirements(image, functionSpec.getRequirements());
 
             //fetch source code
             HydraSourceCode sourceCode = functionSpec.getSource();

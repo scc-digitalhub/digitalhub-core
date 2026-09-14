@@ -287,7 +287,7 @@ public abstract class PythonBaseRunner {
             }
         }
 
-        if (functionRequirements != null) {
+        if (functionRequirements != null && properties.installDependencies()) {
             log.debug("Adding function dependencies to custom image {}", image);
             reqs.addAll(functionRequirements);
         }
