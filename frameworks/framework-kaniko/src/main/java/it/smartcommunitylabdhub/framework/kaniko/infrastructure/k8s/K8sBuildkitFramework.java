@@ -161,10 +161,15 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
         try {
             // Generate Config map
             V1ConfigMap configMap = buildInitConfigMap(runnable);
-            //patch dockerFile
-            configMap.data(
-                MapUtils.mergeMultipleMaps(configMap.getData(), Map.of("Dockerfile", runnable.getDockerFile()))
-            );
+            if (configMap != null) {
+                //patch dockerFile
+                configMap.data(
+                    MapUtils.mergeMultipleMaps(configMap.getData(), Map.of("Dockerfile", runnable.getDockerFile()))
+                );
+            } else {
+                //create with only the Dockerfile
+                configMap = buildInitConfigMap(runnable, Map.of("Dockerfile", runnable.getDockerFile()));
+            }
 
             coreV1Api.createNamespacedConfigMap(namespace, configMap, null, null, null, null);
             //clear data before storing

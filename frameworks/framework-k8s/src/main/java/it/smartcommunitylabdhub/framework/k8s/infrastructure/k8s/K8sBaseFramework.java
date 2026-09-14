@@ -1455,65 +1455,75 @@ public abstract class K8sBaseFramework<
             Optional<List<ContextRef>> contextRefsOpt = Optional.ofNullable(runnable.getContextRefs());
             Optional<List<ContextSource>> contextSourcesOpt = Optional.ofNullable(runnable.getContextSources());
 
+            Map<String, String> data = MapUtils.mergeMultipleMaps(
+                // Generate context-refs.txt if exist
+                contextRefsOpt
+                    .map(contextRefsList ->
+                        Map.of(
+                            "context-refs.txt",
+                            contextRefsList
+                                .stream()
+                                .map(v -> v.toCsv())
+                                .collect(Collectors.joining("\n"))
+                        )
+                    )
+                    .orElseGet(Map::of),
+                // Generate context-sources.txt if exist
+                contextSourcesOpt
+                    .map(contextSources ->
+                        contextSources
+                            .stream()
+                            .filter(e -> StringUtils.hasText(e.getBase64()))
+                            .collect(
+                                Collectors.toMap(
+                                    c -> Base64.getUrlEncoder().withoutPadding().encodeToString(c.getName().getBytes()),
+                                    c -> new String(Base64.getDecoder().decode(c.getBase64()), StandardCharsets.UTF_8)
+                                )
+                            )
+                    )
+                    .orElseGet(Map::of),
+                contextSourcesOpt
+                    .map(contextSources ->
+                        Map.of(
+                            "context-sources-map.txt",
+                            contextSources
+                                .stream()
+                                .filter(e -> StringUtils.hasText(e.getBase64()))
+                                .map(
+                                    c ->
+                                        Base64.getUrlEncoder().withoutPadding().encodeToString(c.getName().getBytes()) +
+                                        "," +
+                                        c.getName() +
+                                        "\n"
+                                )
+                                .collect(Collectors.joining(""))
+                        )
+                    )
+                    .orElseGet(Map::of)
+            );
+
+            V1ConfigMap configMap = buildInitConfigMap(runnable, data);
+            if (log.isTraceEnabled()) {
+                log.trace("configMap for {}: {}", runnable.getId(), configMap);
+            }
+
+            return configMap;
+        } catch (NullPointerException e) {
+            throw new K8sFrameworkException(e.getMessage());
+        }
+    }
+
+    public V1ConfigMap buildInitConfigMap(T runnable, Map<String, String> contextData) throws K8sFrameworkException {
+        //build and create configMap
+        log.debug("build initConfigMap for {}", runnable.getId());
+        if (log.isTraceEnabled()) {
+            log.trace("contextData {}", contextData);
+        }
+
+        try {
             V1ConfigMap configMap = new V1ConfigMap()
                 .metadata(new V1ObjectMeta().name("init-config-map-" + runnable.getId()).labels(buildLabels(runnable)))
-                .data(
-                    MapUtils.mergeMultipleMaps(
-                        // Generate context-refs.txt if exist
-                        contextRefsOpt
-                            .map(contextRefsList ->
-                                Map.of(
-                                    "context-refs.txt",
-                                    contextRefsList
-                                        .stream()
-                                        .map(v -> v.toCsv())
-                                        .collect(Collectors.joining("\n"))
-                                )
-                            )
-                            .orElseGet(Map::of),
-                        // Generate context-sources.txt if exist
-                        contextSourcesOpt
-                            .map(contextSources ->
-                                contextSources
-                                    .stream()
-                                    .filter(e -> StringUtils.hasText(e.getBase64()))
-                                    .collect(
-                                        Collectors.toMap(
-                                            c ->
-                                                Base64.getUrlEncoder()
-                                                    .withoutPadding()
-                                                    .encodeToString(c.getName().getBytes()),
-                                            c ->
-                                                new String(
-                                                    Base64.getDecoder().decode(c.getBase64()),
-                                                    StandardCharsets.UTF_8
-                                                )
-                                        )
-                                    )
-                            )
-                            .orElseGet(Map::of),
-                        contextSourcesOpt
-                            .map(contextSources ->
-                                Map.of(
-                                    "context-sources-map.txt",
-                                    contextSources
-                                        .stream()
-                                        .filter(e -> StringUtils.hasText(e.getBase64()))
-                                        .map(
-                                            c ->
-                                                Base64.getUrlEncoder()
-                                                    .withoutPadding()
-                                                    .encodeToString(c.getName().getBytes()) +
-                                                "," +
-                                                c.getName() +
-                                                "\n"
-                                        )
-                                        .collect(Collectors.joining(""))
-                                )
-                            )
-                            .orElseGet(Map::of)
-                    )
-                );
+                .data(contextData != null ? contextData : Map.of());
 
             if (log.isTraceEnabled()) {
                 log.trace("configMap for {}: {}", runnable.getId(), configMap);
