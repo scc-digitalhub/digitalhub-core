@@ -102,6 +102,10 @@ public class RunEntityFilter extends AbstractEntityFilter<Run> {
                 criteria.add(new BaseEntitySearchCriteria<>("function", value, SearchCriteria.Operation.equal));
             } else {
                 //like match
+                //NOTE: explicitly append separator to avoid partial (substring) name clashes
+                if (!value.endsWith(":")) {
+                    value = value + ":";
+                }
                 criteria.add(new BaseEntitySearchCriteria<>("function", value, SearchCriteria.Operation.like));
             }
         });
@@ -114,6 +118,10 @@ public class RunEntityFilter extends AbstractEntityFilter<Run> {
                 criteria.add(new BaseEntitySearchCriteria<>("workflow", value, SearchCriteria.Operation.equal));
             } else {
                 //like match
+                //NOTE: explicitly append separator to avoid partial (substring) name clashes
+                if (!value.endsWith(":")) {
+                    value = value + ":";
+                }
                 criteria.add(new BaseEntitySearchCriteria<>("workflow", value, SearchCriteria.Operation.like));
             }
         });
