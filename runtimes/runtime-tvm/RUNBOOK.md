@@ -11,13 +11,13 @@ valori di `RUNTIME_TVM_*`.
 
 ## 0. Cosa serve
 
-| Strumento | Note |
-|---|---|
-| **JDK 21** | `~/.sdkman/candidates/java/21.0.4-graal`. **Non** JDK 25: da `javac` 23 in poi Lombok è disabilitato e la compilazione fallisce con `cannot find symbol` incomprensibili |
-| docker | driver di minikube e builder delle immagini |
-| minikube | cluster locale |
-| cmake, ninja, `llvm-config-18`, g++, git | solo per compilare TVM |
-| conda (`converter_env`) | solo per convertire modelli ONNX → TFLite |
+| Strumento                                | Note                                                                                                                                                                     |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **JDK 21**                               | `~/.sdkman/candidates/java/21.0.4-graal`. **Non** JDK 25: da `javac` 23 in poi Lombok è disabilitato e la compilazione fallisce con `cannot find symbol` incomprensibili |
+| docker                                   | driver di minikube e builder delle immagini                                                                                                                              |
+| minikube                                 | cluster locale                                                                                                                                                           |
+| cmake, ninja, `llvm-config-18`, g++, git | solo per compilare TVM                                                                                                                                                   |
+| conda (`converter_env`)                  | solo per convertire modelli ONNX → TFLite                                                                                                                                |
 
 Verifica rapida:
 
@@ -31,7 +31,7 @@ for t in docker minikube cmake ninja llvm-config-18 g++ git; do command -v $t >/
 ## 1. Da cosa dipende cosa
 
 ```
-   TVM compilato da sorgente  (~/tvm/src/tvm-0.25.0)
+   TVM compilato da sorgente  (~/tvm/src/tvm-0.26.0)
         │  .so nativi + tree python/tvm
         ├────────────────┬────────────────────┐
         ▼                ▼                    ▼
@@ -56,8 +56,8 @@ Serve una sola volta per versione. È l'unico passo lungo: **20-60 minuti**.
 
 ```bash
 cd ~/IdeaProjects/digitalhub-tvm-toolkit
-./build-tvm.sh                      # versione di default (0.25.0)
-TVM_VERSION=0.25.0 ./build-tvm.sh   # esplicita
+./build-tvm.sh                      # versione stabile corrente (0.26.0)
+TVM_VERSION=0.26.0 ./build-tvm.sh   # esplicita
 FORCE=1 ./build-tvm.sh              # riconfigura e ricompila da capo
 ```
 
@@ -68,7 +68,7 @@ trova già `build/lib` esce subito.
 Al termine crea/aggiorna il symlink usato da tutti gli altri script:
 
 ```bash
-ls -l ~/tvm/src/tvm-current      # -> tvm-0.25.0
+ls -l ~/tvm/src/tvm-current      # -> tvm-0.26.0
 ```
 
 > ### ⚠️ `TVM_HOME` del profilo è rotto
@@ -116,7 +116,7 @@ TVM_HOME=~/tvm/src/tvm-current ./build-image.sh
 ```
 
 Prepara il contesto (`.so` strippati + `python/tvm`), **applica le patch in `patches/`**
-e costruisce `tvm-toolkit:0.25`. Il tag è derivato dalla major.minor della TVM
+e costruisce `tvm-toolkit:0.26`. Il tag è derivato dalla major.minor della TVM
 impacchettata, così contenuto e tag non divergono mai.
 
 Le patch sono obbligatorie: se una non applica il build **si interrompe**, di proposito.
@@ -144,10 +144,10 @@ sotto il riferimento esatto che CORE userà:
 
 ```bash
 for img in tvm-toolkit tvm-runtime-rust tvm-runtime-go; do
-  docker tag $img:0.25 192.168.49.1:5000/$img:0.25
-  docker tag $img:0.25 127.0.0.1:5000/$img:0.25
-  docker push 127.0.0.1:5000/$img:0.25          # push via 127, vedi §3.1
-  minikube image load 192.168.49.1:5000/$img:0.25
+  docker tag $img:0.26 192.168.49.1:5000/$img:0.26
+  docker tag $img:0.26 127.0.0.1:5000/$img:0.26
+  docker push 127.0.0.1:5000/$img:0.26          # push via 127, vedi §3.1
+  minikube image load 192.168.49.1:5000/$img:0.26
 done
 ```
 
@@ -160,7 +160,7 @@ minikube ssh -- 'sudo crictl images | grep tvm-'
 
 > ### ⚠️ Collisione di tag
 >
-> Il tag resta `0.25` mentre il contenuto cambia. Con `imagePullPolicy: IfNotPresent` il
+> Il tag resta `0.26` mentre il contenuto cambia. Con `imagePullPolicy: IfNotPresent` il
 > nodo **si tiene la sua copia** e i Job continuano a girare il codice vecchio, senza
 > alcun errore. È il modo più subdolo di perdere ore.
 >
@@ -210,10 +210,10 @@ DH_AUTH_BASIC_USER=admin
 DH_AUTH_BASIC_PASSWORD=admin
 
 # immagini dal registry locale (i default ghcr danno 403)
-RUNTIME_TVM_BUILDER_ONNX=192.168.49.1:5000/tvm-toolkit:0.25
-RUNTIME_TVM_BUILDER_TFLITE=192.168.49.1:5000/tvm-toolkit:0.25
-RUNTIME_TVM_COMPILER=192.168.49.1:5000/tvm-toolkit:0.25
-RUNTIME_TVM_SERVE=192.168.49.1:5000/tvm-runtime-go:0.25
+RUNTIME_TVM_BUILDER_ONNX=192.168.49.1:5000/tvm-toolkit:0.26
+RUNTIME_TVM_BUILDER_TFLITE=192.168.49.1:5000/tvm-toolkit:0.26
+RUNTIME_TVM_COMPILER=192.168.49.1:5000/tvm-toolkit:0.26
+RUNTIME_TVM_SERVE=192.168.49.1:5000/tvm-runtime-go:0.26
 
 # Kaniko (compile stage 2) + flag per il registry http
 IMAGE_REGISTRY=192.168.49.1:5000
@@ -261,10 +261,12 @@ Console su <http://localhost:8080/console/> (admin/admin).
 >
 > **Il build sporca file tracciati.** `openapi.json` e i vari `.flattened-pom.xml` sono
 > output di build ma versionati. Dopo un `./build.sh` completo:
+>
 > ```bash
 > git checkout -- modules/component-container-images/.flattened-pom.xml
 > rm -f modules/component-run-initializer/.flattened-pom.xml
 > ```
+>
 > Non usare mai `git add -A` in questo repo: c'è anche il submodule `frontend/console`
 > che risulta modificato di suo.
 
@@ -282,10 +284,10 @@ Sono cose diverse e vanno tenute separate, perché il codice le tratta separatam
 **Quantizzazione** è come sono rappresentati i numeri. Non ha niente a che vedere col
 formato: esistono tutte le combinazioni.
 
-| | float32 | int8 interno, bordi float32 | int8 anche ai bordi |
-|---|---|---|---|
-| **ONNX** | export normale | QDQ | QDQ con I/O int8 |
-| **TFLite** | `*_float32` | `*_integer_quant` | `*_full_integer_quant` |
+|            | float32        | int8 interno, bordi float32 | int8 anche ai bordi    |
+| ---------- | -------------- | --------------------------- | ---------------------- |
+| **ONNX**   | export normale | QDQ                         | QDQ con I/O int8       |
+| **TFLite** | `*_float32`    | `*_integer_quant`           | `*_full_integer_quant` |
 
 Le due colonne quantizzate contengono **gli stessi pesi int8** e pesano uguale: cambia
 solo dove avviene la conversione affine. In `integer_quant` il grafo ha un nodo
@@ -318,13 +320,13 @@ python convert.py --onnx ../model.onnx --out ./models --calib-images ~/mie_foto 
 L'INT8 è il comportamento **di default**: non c'è un flag da attivare, c'è `--no-int8` da
 non mettere. Produce sette varianti; quelle che interessano:
 
-| Variante | I/O | Stato con TVM 0.25 |
-|---|---|---|
-| `*_full_integer_quant.tflite` | int8 → int8 | ✅ validato end-to-end |
-| `*_integer_quant.tflite` | float32 → float32 (pesi int8) | ✅ build+compile |
-| `*_float32.tflite` | float32 | ✅ |
-| `*_dynamic_range_quant.tflite` | — | ❌ rifiutato da TVM, e correttamente: le scale delle attivazioni si calcolano a runtime e non stanno nel file |
-| `*_float16.tflite` | — | ❌ vedi §10 |
+| Variante                       | I/O                           | Stato con TVM 0.26                                                                                            |
+| ------------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `*_full_integer_quant.tflite`  | int8 → int8                   | ✅ validato end-to-end                                                                                        |
+| `*_integer_quant.tflite`       | float32 → float32 (pesi int8) | ✅ build+compile                                                                                              |
+| `*_float32.tflite`             | float32                       | ✅                                                                                                            |
+| `*_dynamic_range_quant.tflite` | —                             | ❌ rifiutato da TVM, e correttamente: le scale delle attivazioni si calcolano a runtime e non stanno nel file |
+| `*_float16.tflite`             | —                             | ❌ vedi §10                                                                                                   |
 
 Il set di calibrazione viene **letterboxato** (`build_calibration`), il che determina il
 preprocessing corretto in inferenza: vedi §7.
@@ -391,8 +393,9 @@ Payload minimi:
          "local_execution":false,"resources":{"cpu":"4","mem":"8Gi"}}}
 ```
 
-Per `tvm+compile` aggiungi `"target_architecture":"cpu"` (o `x86`, `arm64`, `armv7l`) e
-`"opt_level":3`. Per `tvm+serve` non serve indicare il modello: viene da
+Per `tvm+compile` aggiungi `"target_architecture":"cpu"` (o `x86`, `x86_native`, `arm64`, `arm64_pi5`, `armv7l`) e
+`"opt_level":3`. Su CPU usa anche `"target_num_cores":4` e `"exec_mode":"compiled"`.
+Per `tvm+serve` non serve indicare il modello: viene da
 `function.spec.so_model`, scritto automaticamente dal compile.
 
 Il concatenamento è automatico: build scrive `function.spec.ir_model`, compile legge
@@ -403,6 +406,55 @@ quello e scrive `so_model`, serve legge quello.
 > Con il default (**282 MB**) il compile va in OOM. Metti sempre
 > `resources: {cpu: "4", mem: "8Gi"}` su build e compile. Un IR quantizzato sta anche in
 > 4 GB; uno float32 di YOLO no.
+
+### 6.1 Ottimizzazione CPU standard con Apache TVM MetaSchedule
+
+Il compile normale (`tuning_mode` omesso oppure `off`) non esegue misurazioni e resta il
+percorso rapido. Per ottimizzare davvero i kernel CPU, crea un nuovo task compile:
+
+```json
+{
+  "kind": "tvm+compile",
+  "project": "tvm-rust",
+  "spec": {
+    "function": "tvm://tvm-rust/mia-funzione:<fid>",
+    "target_architecture": "x86_native",
+    "target_num_cores": 4,
+    "exec_mode": "compiled",
+    "tuning_mode": "tune",
+    "tuning_trials": 512,
+    "max_trials_per_task": 16,
+    "tuning_ops": ["conv2d"],
+    "tuning_alloc_repeat": 2,
+    "resources": { "cpu": "4", "mem": "8Gi" }
+  }
+}
+```
+
+Il Job estrae i task, compila ed esegue candidati, salva il database ufficiale JSON di
+MetaSchedule sotto `tuning/`, applica i record riusciti e pubblica tutto nel Model `tvm-so`.
+Il tempo di tuning non è tempo di inferenza: è un costo una tantum. `512/16` è soltanto uno
+smoke test del flusso. Per una ricerca prestazionale usa almeno
+`numero_task_selezionati × max_trials_per_task`; come punto di partenza produttivo TVM indica
+budget nell'ordine di `20000` trial. Aumenta anche `max_trials_per_task` (per esempio `64`) e
+ometti `tuning_ops` se vuoi ottimizzare tutti i task, non soltanto le convoluzioni.
+`tuning_alloc_repeat` alterna più set di allocazioni degli input per ridurre il bias della cache,
+aumentando in proporzione la memoria usata dal runner; il default TVM è `1`. TVM 0.26 espone
+`cooldown_sec` nella firma dei runner ma non esegue alcuna pausa, quindi CORE non pubblica quel
+parametro finché non sarà implementato upstream.
+
+Per riusare un risultato senza rimisurare imposta `"tuning_mode":"apply"` e
+`"tuning_model_path":"store://..."` al Model compilato precedente. Per proseguire il
+tuning usa ancora `tune` con lo stesso `tuning_model_path` e un nuovo budget.
+
+Il target, `target_num_cores` e il modello devono coincidere. Non si può misurare un target
+ARM dentro un Job x86 con il runner locale. Per misurare sul Raspberry Pi tramite il runner
+Apache TVM RPC configura `"tuning_runner":"rpc"`, `"rpc_tracker_host"`,
+`"rpc_tracker_port"` e `"rpc_tracker_key"`; `"rpc_session_timeout_sec"` è opzionale e vale
+`60` per default. Il database ottenuto si riapplica poi con `apply` durante la
+cross-compilazione. Il server RPC registrato deve usare la stessa revisione TVM attestata,
+essere compilato con `USE_RANDOM=ON` e partire con `TVM_NUM_THREADS` uguale a
+`target_num_cores`; il Job CORE non può verificare queste proprietà del device remoto.
 
 Stato di un run:
 
@@ -536,7 +588,7 @@ Per sapere subito quali mancano tutte, invece di scoprirle una alla volta:
 ```bash
 docker run --rm -v <dir-modelli>:/m:ro \
   -v ~/tvm/src/tvm-current/python/tvm/relax/frontend/tflite:/fe:ro \
-  --entrypoint python3 tvm-toolkit:0.25 -c "
+  --entrypoint python3 tvm-toolkit:0.26 -c "
 import re, tflite
 from tflite.BuiltinOperator import BuiltinOperator
 code2name={v:k for k,v in vars(BuiltinOperator).items() if not k.startswith('_')}
@@ -553,7 +605,7 @@ ridistribuisci il toolkit (§3.2, §3.5).
 ### Le patch TVM che portiamo
 
 `digitalhub-tvm-toolkit/patches/tflite-quantized-ops.patch`, applicata a ogni build.
-Tre correzioni al frontend Relax TFLite di TVM 0.25:
+Due correzioni locali ancora necessarie e applicabili a TVM 0.26:
 
 1. **Sei operazioni assenti dall'allowlist quantizzata** benché il converter le
    implementi: `MAX_POOL_2D`, `PAD`, `RESIZE_NEAREST_NEIGHBOR`, `STRIDED_SLICE`,
@@ -563,9 +615,8 @@ Tre correzioni al frontend Relax TFLite di TVM 0.25:
 2. **Scalari 0-d nel QDQ**: `relax.op.quantize/dequantize` validano
    `0 <= axis <= ndim-1`, e un operando scalare non ha assi validi. Sollevati a rango 1 e
    riportati indietro.
-3. **`relax.op.cast` / `relax.cast` non esistono** in TVM 0.25 (l'operazione è
-   `relax.op.astype`). Era codice morto raggiungibile solo dopo la correzione 1; sistemarlo
-   sblocca anche i modelli **float16**, che fallivano proprio lì.
+   La vecchia patch che sostituiva `relax.op.cast` con `relax.op.astype` non è più
+   necessaria: TVM 0.26 contiene già la forma corretta upstream ed è stata rimossa.
 
 Vanno riapplicate a ogni aggiornamento di TVM, finché non arrivano upstream.
 
@@ -595,8 +646,8 @@ cd ~/IdeaProjects/digitalhub-tvm-rust  && TVM_HOME=~/tvm/src/tvm-current ./build
 cd ~/IdeaProjects/digitalhub-serverless && TVM_HOME=~/tvm/src/tvm-current ./images/tvm/build.sh
 
 # distribuzione
-docker tag X:0.25 127.0.0.1:5000/X:0.25 && docker push 127.0.0.1:5000/X:0.25
-docker tag X:0.25 192.168.49.1:5000/X:0.25 && minikube image load 192.168.49.1:5000/X:0.25
+docker tag X:0.26 127.0.0.1:5000/X:0.26 && docker push 127.0.0.1:5000/X:0.26
+docker tag X:0.26 192.168.49.1:5000/X:0.26 && minikube image load 192.168.49.1:5000/X:0.26
 
 # infrastruttura
 docker start registry && minikube start
