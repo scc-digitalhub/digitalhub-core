@@ -106,62 +106,60 @@ public class Fsm<S, E, C> {
     public <I, R> Optional<R> goToState(S targetState, @Nullable I input) throws InvalidTransitionException {
         log.debug("transition to state {}", targetState);
 
-        return acquireLock()
-            .flatMap(lockAcquired -> {
-                if (Boolean.TRUE.equals(lockAcquired)) {
-                    log.debug("lock acquired for transition to {}", targetState);
+        return acquireLock().flatMap(lockAcquired -> {
+            if (Boolean.TRUE.equals(lockAcquired)) {
+                log.debug("lock acquired for transition to {}", targetState);
 
-                    try {
-                        //check if there is an adjacent state for target
-                        FsmState<S, E, C> stateDefinition = states.get(currentState);
-                        if (stateDefinition == null) {
-                            throw new InvalidTransitionException(currentState.toString(), targetState.toString());
-                        }
-
-                        Optional<Transition<S, E, C>> transition = stateDefinition.getTransitionForNext(targetState);
-                        if (transition.isEmpty()) {
-                            // No valid path exists; transition to the error state
-                            throw new InvalidTransitionException(currentState.toString(), targetState.toString());
-                        }
-
-                        // Execute the transition to next state and collect result.
-                        return execute(transition.get(), input);
-                    } finally {
-                        stateLock.unlock();
+                try {
+                    //check if there is an adjacent state for target
+                    FsmState<S, E, C> stateDefinition = states.get(currentState);
+                    if (stateDefinition == null) {
+                        throw new InvalidTransitionException(currentState.toString(), targetState.toString());
                     }
+
+                    Optional<Transition<S, E, C>> transition = stateDefinition.getTransitionForNext(targetState);
+                    if (transition.isEmpty()) {
+                        // No valid path exists; transition to the error state
+                        throw new InvalidTransitionException(currentState.toString(), targetState.toString());
+                    }
+
+                    // Execute the transition to next state and collect result.
+                    return execute(transition.get(), input);
+                } finally {
+                    stateLock.unlock();
                 }
-                return Optional.empty();
-            });
+            }
+            return Optional.empty();
+        });
     }
 
     public <I, R> Optional<R> perform(E event, @Nullable I input) throws InvalidTransitionException {
         log.debug("transition for event {}", event);
 
-        return acquireLock()
-            .flatMap(lockAcquired -> {
-                if (Boolean.TRUE.equals(lockAcquired)) {
-                    log.debug("lock acquired for transition for event {}", event);
-                    try {
-                        //check if there is a transition for this event connected to current state
-                        FsmState<S, E, C> stateDefinition = states.get(currentState);
-                        if (stateDefinition == null) {
-                            throw new InvalidTransitionException(currentState.toString(), null);
-                        }
-
-                        Optional<Transition<S, E, C>> transition = stateDefinition.getTransitionForEvent(event);
-                        if (transition.isEmpty()) {
-                            // No valid path exists; transition to the error state
-                            throw new InvalidTransitionException(currentState.toString(), null);
-                        }
-
-                        // Execute the transition to next state and collect result.
-                        return execute(transition.get(), input);
-                    } finally {
-                        stateLock.unlock();
+        return acquireLock().flatMap(lockAcquired -> {
+            if (Boolean.TRUE.equals(lockAcquired)) {
+                log.debug("lock acquired for transition for event {}", event);
+                try {
+                    //check if there is a transition for this event connected to current state
+                    FsmState<S, E, C> stateDefinition = states.get(currentState);
+                    if (stateDefinition == null) {
+                        throw new InvalidTransitionException(currentState.toString(), null);
                     }
+
+                    Optional<Transition<S, E, C>> transition = stateDefinition.getTransitionForEvent(event);
+                    if (transition.isEmpty()) {
+                        // No valid path exists; transition to the error state
+                        throw new InvalidTransitionException(currentState.toString(), null);
+                    }
+
+                    // Execute the transition to next state and collect result.
+                    return execute(transition.get(), input);
+                } finally {
+                    stateLock.unlock();
                 }
-                return Optional.empty();
-            });
+            }
+            return Optional.empty();
+        });
     }
 
     private <I, R> Optional<R> execute(@NotNull Transition<S, E, C> transition, @Nullable I input) {

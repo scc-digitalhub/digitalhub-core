@@ -8,6 +8,7 @@ package it.smartcommunitylabdhub.runtime.tvm.runners.build;
 
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
@@ -35,8 +36,13 @@ public class TvmBuildRunner extends TvmBaseBuildRunner {
 
     private final ModelManager modelManager;
 
-    public TvmBuildRunner(TvmProperties properties, K8sBuilderHelper k8sBuilderHelper, ModelManager modelManager) {
-        super(properties, k8sBuilderHelper);
+    public TvmBuildRunner(
+        TvmProperties properties,
+        K8sBuilderHelper k8sBuilderHelper,
+        K8sLabelHelper k8sLabelHelper,
+        ModelManager modelManager
+    ) {
+        super(properties, k8sBuilderHelper, k8sLabelHelper);
         this.modelManager = modelManager;
     }
 
@@ -52,16 +58,13 @@ public class TvmBuildRunner extends TvmBaseBuildRunner {
 
         // Unset counts as auto: detect the format from the source file extension.
         TvmFormat declared = functionSpec.getFormat();
-        TvmFormat format = (declared == null || declared == TvmFormat.auto)
-                ? TvmFormat.fromPath(inputUri)
-                : declared;
+        TvmFormat format = (declared == null || declared == TvmFormat.auto) ? TvmFormat.fromPath(inputUri) : declared;
 
         // Folder source (trailing slash) has no filename — its contents land in input/,
         // so fall back to model.<format>.
         String defaultInputFile = "model." + format.name();
-        String inputFile = inputUri != null && inputUri.endsWith("/")
-                ? defaultInputFile
-                : TvmRunnerHelper.extractFileName(inputUri);
+        String inputFile =
+            inputUri != null && inputUri.endsWith("/") ? defaultInputFile : TvmRunnerHelper.extractFileName(inputUri);
         if (!StringUtils.hasText(inputFile)) {
             inputFile = defaultInputFile;
         }
@@ -99,41 +102,46 @@ public class TvmBuildRunner extends TvmBaseBuildRunner {
         // classpath fallback only applies when builder-scripts.onnx is omitted from
         // config entirely.
         String script = loadClasspathScript(
-                properties.getBuilderScripts() != null
-                        ? properties.getBuilderScripts().getOrDefault(format.name(), BUILDER_SCRIPT_CLASSPATH)
-                        : BUILDER_SCRIPT_CLASSPATH);
+            properties.getBuilderScripts() != null
+                ? properties.getBuilderScripts().getOrDefault(format.name(), BUILDER_SCRIPT_CLASSPATH)
+                : BUILDER_SCRIPT_CLASSPATH
+        );
         List<ContextSource> contextSources = TvmRunnerHelper.createContextSources(entrypoint, script);
 
         // http(s) sources need a full FILE destination — the http downloader can't
         // write to a bare dir (s3 can).
-        String destination = inputUri != null && (inputUri.startsWith("http://") || inputUri.startsWith("https://"))
+        String destination =
+            inputUri != null && (inputUri.startsWith("http://") || inputUri.startsWith("https://"))
                 ? "input/" + inputFile
                 : "input/";
         List<ContextRef> contextRefs = Collections.singletonList(
-                TvmRunnerHelper.inputContextRef(inputUri, destination));
+            TvmRunnerHelper.inputContextRef(inputUri, destination)
+        );
 
         String image = resolveImage(
-                taskSpec.getImage(),
-                properties.getBuilders() != null ? properties.getBuilders().get(format.name()) : null,
-                "no builder image configured for format: " + format.name());
+            taskSpec.getImage(),
+            properties.getBuilders() != null ? properties.getBuilders().get(format.name()) : null,
+            "no builder image configured for format: " + format.name()
+        );
 
         List<CoreVolume> volumes = createVolumes(taskSpec);
         List<CoreEnv> coreSecrets = createSecrets(secretData);
 
         return applyCommon(
-                K8sJobRunnable.builder()
-                        .command("/bin/bash")
-                        .args(new String[] { homeDir + "/" + TvmRunnerHelper.ENTRYPOINT_NAME })
-                        .contextSources(contextSources)
-                        .build(),
-                run,
-                TvmBuildTaskSpec.KIND,
-                funcName,
-                image,
-                envs,
-                coreSecrets,
-                volumes,
-                contextRefs,
-                taskSpec);
+            K8sJobRunnable.builder()
+                .command("/bin/bash")
+                .args(new String[] { homeDir + "/" + TvmRunnerHelper.ENTRYPOINT_NAME })
+                .contextSources(contextSources)
+                .build(),
+            run,
+            TvmBuildTaskSpec.KIND,
+            funcName,
+            image,
+            envs,
+            coreSecrets,
+            volumes,
+            contextRefs,
+            taskSpec
+        );
     }
 }

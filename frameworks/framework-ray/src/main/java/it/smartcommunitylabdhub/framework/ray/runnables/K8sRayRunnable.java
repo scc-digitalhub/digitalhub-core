@@ -11,7 +11,6 @@ import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.ray.infrastructure.k8s.K8sRayJobFramework;
 import it.smartcommunitylabdhub.framework.ray.model.RayJobModel;
 import it.smartcommunitylabdhub.framework.ray.model.RayModel;
-
 import java.io.Serializable;
 import java.util.Map;
 import lombok.AllArgsConstructor;

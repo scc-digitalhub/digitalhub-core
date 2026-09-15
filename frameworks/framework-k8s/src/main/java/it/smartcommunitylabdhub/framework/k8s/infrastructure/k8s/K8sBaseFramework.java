@@ -100,6 +100,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.support.ResourcePatternResolver;
+import org.springframework.core.io.support.ResourcePatternUtils;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -333,7 +335,9 @@ public abstract class K8sBaseFramework<
     }
 
     @Autowired
-    public void setWorkflowPvcStorageClass(@Value("${kubernetes.resources.workflow.storage-class}") String pvcStorageClass) {
+    public void setWorkflowPvcStorageClass(
+        @Value("${kubernetes.resources.workflow.storage-class}") String pvcStorageClass
+    ) {
         if (StringUtils.hasText(pvcStorageClass)) {
             this.workflowPvcStorageClass = pvcStorageClass;
         }
@@ -343,7 +347,6 @@ public abstract class K8sBaseFramework<
     public void setWorkflowPvcAccessMode(@Value("${kubernetes.resources.workflow.access-mode}") String pvcAccessMode) {
         this.workflowPvcAccessMode = pvcAccessMode;
     }
-
 
     public void setEphemeralRequestResourceDefinition(CoreResourceDefinition ephemeralResourceDefinition) {
         this.ephemeralRequestResourceDefinition = ephemeralResourceDefinition;
@@ -432,35 +435,74 @@ public abstract class K8sBaseFramework<
         Map<String, K8sTemplate<T>> results = new HashMap<>();
         if (resourceLoader != null && templateKeys != null) {
             templateKeys.forEach(k -> {
-                try {
-                    String path = k;
-                    //check if we received a bare path and fix
-                    if (!path.startsWith("classpath:") && !path.startsWith("file:")) {
-                        path = "file:" + k;
+                //check if we received a bare path and fix
+                String path = k;
+                if (!path.startsWith("classpath:") && !path.startsWith("file:")) {
+                    path = "file:" + k;
+                }
+
+                if (path.endsWith("/")) {
+                    // folder: discover *.yaml, *.yml, *.json files
+                    ResourcePatternResolver resolver = ResourcePatternUtils.getResourcePatternResolver(resourceLoader);
+                    String[] patterns = { path + "*.yaml", path + "*.yml", path + "*.json" };
+                    for (String pattern : patterns) {
+                        try {
+                            Resource[] discovered = resolver.getResources(pattern);
+                            for (Resource res : discovered) {
+                                K8sTemplate<T> t = loadTemplate(res, clazz);
+                                if (t != null) {
+                                    results.put(t.getId(), t);
+                                }
+                            }
+                        } catch (IOException e) {
+                            log.error("Error discovering templates in {}: {}", path, e.getMessage());
+                        }
                     }
-
-                    // Load as resource and deserialize as template
-                    log.debug("Read template from {}", path);
-                    Resource res = resourceLoader.getResource(path);
-                    K8sTemplate<T> t = KubernetesMapper.readTemplate(
-                        res.getContentAsString(StandardCharsets.UTF_8),
-                        clazz
-                    );
-
-                    if (log.isTraceEnabled()) {
-                        log.trace("Template result {}:\n {}", t.getId(), t);
+                } else {
+                    K8sTemplate<T> t = loadTemplate(resourceLoader.getResource(path), clazz);
+                    if (t != null) {
+                        results.put(t.getId(), t);
                     }
-
-                    //TODO validate template via smartValidator
-                    results.put(t.getId(), t);
-                } catch (IOException | ClassCastException | IllegalArgumentException e) {
-                    //skip
-                    log.error("Error loading templates: " + e.getMessage());
                 }
             });
         }
 
         return results;
+    }
+
+    protected K8sTemplate<T> loadTemplate(Resource res, Class<T> clazz) {
+        try {
+            log.debug("Read template from {}", res);
+            K8sTemplate<T> t = KubernetesMapper.readTemplate(res.getContentAsString(StandardCharsets.UTF_8), clazz);
+
+            if (log.isTraceEnabled()) {
+                log.trace("Template result {}:\n {}", t.getId(), t);
+            }
+
+            //TODO validate template via smartValidator
+            return t;
+        } catch (IOException | ClassCastException | IllegalArgumentException e) {
+            //skip
+            log.error("Error loading template {}: {}", res, e.getMessage());
+            return null;
+        }
+    }
+
+    protected K8sTemplate<T> getTemplate(String templateId) {
+        if (StringUtils.hasText(templateId)) {
+            if (!templates.containsKey(templateId)) {
+                throw new IllegalArgumentException("Template " + templateId + " not found");
+            }
+
+            //use template
+            return templates.get(templateId);
+        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
+            //use default template
+            return templates.get(DEFAULT_TEMPLATE);
+        }
+
+        //no template found
+        return null;
     }
 
     /*
@@ -739,19 +781,21 @@ public abstract class K8sBaseFramework<
 
         //build template labels when defined
         Map<String, String> templateLabels = new HashMap<>();
-        K8sRunnable template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //add template
-            template = templates.get(runnable.getTemplate()).getProfile();
-            templateLabels.put(k8sLabelHelper.buildCoreLabel("template"), runnable.getTemplate());
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE).getProfile();
-        }
+        K8sTemplate<T> template = getTemplate(runnable.getTemplate());
 
-        if (template != null && template.getLabels() != null && !template.getLabels().isEmpty()) {
-            for (CoreLabel l : template.getLabels()) {
-                templateLabels.putIfAbsent(l.name(), K8sBuilderHelper.sanitizeNames(l.value()));
+        if (template != null) {
+            //inject template id as core label
+            templateLabels.put(k8sLabelHelper.buildCoreLabel("template"), template.getId());
+
+            if (
+                template.getProfile() != null &&
+                template.getProfile().getLabels() != null &&
+                !template.getProfile().getLabels().isEmpty()
+            ) {
+                //inject template labels
+                for (CoreLabel l : template.getProfile().getLabels()) {
+                    templateLabels.putIfAbsent(l.name(), K8sBuilderHelper.sanitizeNames(l.value()));
+                }
             }
         }
 
@@ -826,14 +870,9 @@ public abstract class K8sBaseFramework<
         }
 
         //volumes defined in template
-        K8sRunnable template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //add template
-            template = templates.get(runnable.getTemplate()).getProfile();
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE).getProfile();
-        }
+        K8sRunnable template = Optional.ofNullable(getTemplate(runnable.getTemplate()))
+            .map(K8sTemplate::getProfile)
+            .orElse(null);
 
         if (template != null && template.getVolumes() != null) {
             template
@@ -923,14 +962,9 @@ public abstract class K8sBaseFramework<
         }
 
         //volumes defined in template
-        K8sRunnable template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //add template
-            template = templates.get(runnable.getTemplate()).getProfile();
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE).getProfile();
-        }
+        K8sRunnable template = Optional.ofNullable(getTemplate(runnable.getTemplate()))
+            .map(K8sTemplate::getProfile)
+            .orElse(null);
 
         if (template != null && template.getVolumes() != null) {
             template
@@ -1013,14 +1047,9 @@ public abstract class K8sBaseFramework<
         V1ResourceRequirements resources = new V1ResourceRequirements();
 
         // template overrides user request
-        K8sRunnable template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //add template
-            template = templates.get(runnable.getTemplate()).getProfile();
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE).getProfile();
-        }
+        K8sRunnable template = Optional.ofNullable(getTemplate(runnable.getTemplate()))
+            .map(K8sTemplate::getProfile)
+            .orElse(null);
 
         //translate requests
         Map<String, Quantity> requests = new HashMap<>();
@@ -1303,14 +1332,9 @@ public abstract class K8sBaseFramework<
             );
         }
 
-        K8sRunnable template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //add template
-            template = templates.get(runnable.getTemplate()).getProfile();
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE).getProfile();
-        }
+        K8sRunnable template = Optional.ofNullable(getTemplate(runnable.getTemplate()))
+            .map(K8sTemplate::getProfile)
+            .orElse(null);
 
         if (template != null && template.getNodeSelector() != null && !template.getNodeSelector().isEmpty()) {
             selectors.putAll(
@@ -1340,14 +1364,9 @@ public abstract class K8sBaseFramework<
             );
         }
 
-        K8sRunnable template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //add template
-            template = templates.get(runnable.getTemplate()).getProfile();
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE).getProfile();
-        }
+        K8sRunnable template = Optional.ofNullable(getTemplate(runnable.getTemplate()))
+            .map(K8sTemplate::getProfile)
+            .orElse(null);
 
         if (template != null && template.getTolerations() != null && !template.getTolerations().isEmpty()) {
             tolerations.addAll(
@@ -1470,65 +1489,75 @@ public abstract class K8sBaseFramework<
             Optional<List<ContextRef>> contextRefsOpt = Optional.ofNullable(runnable.getContextRefs());
             Optional<List<ContextSource>> contextSourcesOpt = Optional.ofNullable(runnable.getContextSources());
 
+            Map<String, String> data = MapUtils.mergeMultipleMaps(
+                // Generate context-refs.txt if exist
+                contextRefsOpt
+                    .map(contextRefsList ->
+                        Map.of(
+                            "context-refs.txt",
+                            contextRefsList
+                                .stream()
+                                .map(v -> v.toCsv())
+                                .collect(Collectors.joining("\n"))
+                        )
+                    )
+                    .orElseGet(Map::of),
+                // Generate context-sources.txt if exist
+                contextSourcesOpt
+                    .map(contextSources ->
+                        contextSources
+                            .stream()
+                            .filter(e -> StringUtils.hasText(e.getBase64()))
+                            .collect(
+                                Collectors.toMap(
+                                    c -> Base64.getUrlEncoder().withoutPadding().encodeToString(c.getName().getBytes()),
+                                    c -> new String(Base64.getDecoder().decode(c.getBase64()), StandardCharsets.UTF_8)
+                                )
+                            )
+                    )
+                    .orElseGet(Map::of),
+                contextSourcesOpt
+                    .map(contextSources ->
+                        Map.of(
+                            "context-sources-map.txt",
+                            contextSources
+                                .stream()
+                                .filter(e -> StringUtils.hasText(e.getBase64()))
+                                .map(
+                                    c ->
+                                        Base64.getUrlEncoder().withoutPadding().encodeToString(c.getName().getBytes()) +
+                                        "," +
+                                        c.getName() +
+                                        "\n"
+                                )
+                                .collect(Collectors.joining(""))
+                        )
+                    )
+                    .orElseGet(Map::of)
+            );
+
+            V1ConfigMap configMap = buildInitConfigMap(runnable, data);
+            if (log.isTraceEnabled()) {
+                log.trace("configMap for {}: {}", runnable.getId(), configMap);
+            }
+
+            return configMap;
+        } catch (NullPointerException e) {
+            throw new K8sFrameworkException(e.getMessage());
+        }
+    }
+
+    public V1ConfigMap buildInitConfigMap(T runnable, Map<String, String> contextData) throws K8sFrameworkException {
+        //build and create configMap
+        log.debug("build initConfigMap for {}", runnable.getId());
+        if (log.isTraceEnabled()) {
+            log.trace("contextData {}", contextData);
+        }
+
+        try {
             V1ConfigMap configMap = new V1ConfigMap()
                 .metadata(new V1ObjectMeta().name("init-config-map-" + runnable.getId()).labels(buildLabels(runnable)))
-                .data(
-                    MapUtils.mergeMultipleMaps(
-                        // Generate context-refs.txt if exist
-                        contextRefsOpt
-                            .map(contextRefsList ->
-                                Map.of(
-                                    "context-refs.txt",
-                                    contextRefsList
-                                        .stream()
-                                        .map(v -> v.toCsv())
-                                        .collect(Collectors.joining("\n"))
-                                )
-                            )
-                            .orElseGet(Map::of),
-                        // Generate context-sources.txt if exist
-                        contextSourcesOpt
-                            .map(contextSources ->
-                                contextSources
-                                    .stream()
-                                    .filter(e -> StringUtils.hasText(e.getBase64()))
-                                    .collect(
-                                        Collectors.toMap(
-                                            c ->
-                                                Base64.getUrlEncoder()
-                                                    .withoutPadding()
-                                                    .encodeToString(c.getName().getBytes()),
-                                            c ->
-                                                new String(
-                                                    Base64.getDecoder().decode(c.getBase64()),
-                                                    StandardCharsets.UTF_8
-                                                )
-                                        )
-                                    )
-                            )
-                            .orElseGet(Map::of),
-                        contextSourcesOpt
-                            .map(contextSources ->
-                                Map.of(
-                                    "context-sources-map.txt",
-                                    contextSources
-                                        .stream()
-                                        .filter(e -> StringUtils.hasText(e.getBase64()))
-                                        .map(
-                                            c ->
-                                                Base64.getUrlEncoder()
-                                                    .withoutPadding()
-                                                    .encodeToString(c.getName().getBytes()) +
-                                                "," +
-                                                c.getName() +
-                                                "\n"
-                                        )
-                                        .collect(Collectors.joining(""))
-                                )
-                            )
-                            .orElseGet(Map::of)
-                    )
-                );
+                .data(contextData != null ? contextData : Map.of());
 
             if (log.isTraceEnabled()) {
                 log.trace("configMap for {}: {}", runnable.getId(), configMap);
@@ -1595,14 +1624,9 @@ public abstract class K8sBaseFramework<
     }
 
     public String buildPriorityClassName(T runnable) throws K8sFrameworkException {
-        K8sRunnable template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //use template
-            template = templates.get(runnable.getTemplate()).getProfile();
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE).getProfile();
-        }
+        K8sRunnable template = Optional.ofNullable(getTemplate(runnable.getTemplate()))
+            .map(K8sTemplate::getProfile)
+            .orElse(null);
 
         if (template != null) {
             return template.getPriorityClass();
@@ -1612,14 +1636,9 @@ public abstract class K8sBaseFramework<
     }
 
     public String buildRuntimeClassName(T runnable) throws K8sFrameworkException {
-        K8sRunnable template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //use template
-            template = templates.get(runnable.getTemplate()).getProfile();
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE).getProfile();
-        }
+        K8sRunnable template = Optional.ofNullable(getTemplate(runnable.getTemplate()))
+            .map(K8sTemplate::getProfile)
+            .orElse(null);
 
         if (template != null) {
             return template.getRuntimeClass();
@@ -1629,14 +1648,9 @@ public abstract class K8sBaseFramework<
     }
 
     public V1Affinity buildAffinity(T runnable) throws K8sFrameworkException {
-        K8sRunnable template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //use template
-            template = templates.get(runnable.getTemplate()).getProfile();
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE).getProfile();
-        }
+        K8sRunnable template = Optional.ofNullable(getTemplate(runnable.getTemplate()))
+            .map(K8sTemplate::getProfile)
+            .orElse(null);
 
         if (template != null) {
             return template.getAffinity();
@@ -1653,7 +1667,11 @@ public abstract class K8sBaseFramework<
                 .getVolumes()
                 .stream()
                 // PVC or worklfow volumes should be prepared for creation
-                .filter(v -> CoreVolume.VolumeType.persistent_volume_claim.equals(v.getVolumeType()) || CoreVolume.VolumeType.workflow_volume.equals(v.getVolumeType()))
+                .filter(
+                    v ->
+                        CoreVolume.VolumeType.persistent_volume_claim.equals(v.getVolumeType()) ||
+                        CoreVolume.VolumeType.workflow_volume.equals(v.getVolumeType())
+                )
                 .forEach(v -> {
                     //build claim
                     Map<String, String> spec = Optional.ofNullable(v.getSpec()).orElse(Collections.emptyMap());
@@ -1672,19 +1690,19 @@ public abstract class K8sBaseFramework<
                     }
 
                     boolean isWf = CoreVolume.VolumeType.workflow_volume.equals(v.getVolumeType());
-                    String name = isWf ? spec.getOrDefault("claimName", v.getName()) : k8sBuilderHelper.getVolumeName(runnable.getId(), v.getName());
+                    String name = isWf
+                        ? spec.getOrDefault("claimName", v.getName())
+                        : k8sBuilderHelper.getVolumeName(runnable.getId(), v.getName());
 
                     V1PersistentVolumeClaim claim = new V1PersistentVolumeClaim()
-                        .metadata(
-                            new V1ObjectMeta()
-                                .name(name)
-                                .labels(buildLabels(runnable))
-                        )
+                        .metadata(new V1ObjectMeta().name(name).labels(buildLabels(runnable)))
                         .spec(
                             new V1PersistentVolumeClaimSpec()
                                 .accessModes(Collections.singletonList(isWf ? workflowPvcAccessMode : "ReadWriteOnce"))
                                 .volumeMode("Filesystem")
-                                .storageClassName(spec.getOrDefault("storage_class", isWf ? workflowPvcStorageClass : pvcStorageClass))
+                                .storageClassName(
+                                    spec.getOrDefault("storage_class", isWf ? workflowPvcStorageClass : pvcStorageClass)
+                                )
                                 .resources(req)
                         );
 
@@ -1694,14 +1712,9 @@ public abstract class K8sBaseFramework<
 
         //volumes defined in template
         //TODO evaluate support
-        K8sRunnable template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //add template
-            template = templates.get(runnable.getTemplate()).getProfile();
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE).getProfile();
-        }
+        K8sRunnable template = Optional.ofNullable(getTemplate(runnable.getTemplate()))
+            .map(K8sTemplate::getProfile)
+            .orElse(null);
 
         if (template != null && template.getVolumes() != null) {
             template

@@ -64,8 +64,7 @@ public class HeraPipelineRunner {
             StandardCharsets.UTF_8
         );
 
-        K8sArgoWorkflowRunnable argoRunnable = K8sArgoWorkflowRunnable
-            .builder()
+        K8sArgoWorkflowRunnable argoRunnable = K8sArgoWorkflowRunnable.builder()
             .runtime(HeraRuntime.RUNTIME)
             .task(HeraPipelineTaskSpec.KIND)
             .state(State.READY.name())

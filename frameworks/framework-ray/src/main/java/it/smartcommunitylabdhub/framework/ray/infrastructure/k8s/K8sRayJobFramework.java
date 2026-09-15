@@ -6,6 +6,7 @@
 
 package it.smartcommunitylabdhub.framework.ray.infrastructure.k8s;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kubernetes.client.custom.Quantity;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
@@ -28,15 +29,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @FrameworkComponent(framework = K8sRayJobFramework.FRAMEWORK)
@@ -55,15 +52,12 @@ public class K8sRayJobFramework extends K8sRayBaseFramework<K8sRayJobRunnable> {
 
     protected static final ObjectMapper yamlMapper = JacksonMapper.YAML_OBJECT_MAPPER;
 
-
     public K8sRayJobFramework(ApiClient apiClient) {
         super(apiClient);
     }
 
     @Autowired
-    public void setActiveDeadlineSeconds(
-        @Value("${ray.job.active-deadline-seconds}") Integer activeDeadlineSeconds
-    ) {
+    public void setActiveDeadlineSeconds(@Value("${ray.job.active-deadline-seconds}") Integer activeDeadlineSeconds) {
         Assert.isTrue(activeDeadlineSeconds > DEADLINE_MIN, "Minimum deadline seconds is " + DEADLINE_MIN);
         this.activeDeadlineSeconds = activeDeadlineSeconds;
     }
@@ -78,9 +72,7 @@ public class K8sRayJobFramework extends K8sRayBaseFramework<K8sRayJobRunnable> {
     }
 
     @Autowired
-    public void setCpuLimitsResourceDefinition(
-        @Value("${ray.job.resources.cpu.limits}") String cpuResourceDefinition
-    ) {
+    public void setCpuLimitsResourceDefinition(@Value("${ray.job.resources.cpu.limits}") String cpuResourceDefinition) {
         if (StringUtils.hasText(cpuResourceDefinition)) {
             this.cpuLimitResourceDefinition.setValue(cpuResourceDefinition);
         }
@@ -105,9 +97,7 @@ public class K8sRayJobFramework extends K8sRayBaseFramework<K8sRayJobRunnable> {
     }
 
     @Autowired
-    public void setMemLimitsResourceDefinition(
-        @Value("${ray.job.resources.mem.limits}") String memResourceDefinition
-    ) {
+    public void setMemLimitsResourceDefinition(@Value("${ray.job.resources.mem.limits}") String memResourceDefinition) {
         if (StringUtils.hasText(memResourceDefinition)) {
             //check request is a valid measure for memory
             Quantity q = Quantity.fromString(memResourceDefinition);
@@ -146,7 +136,6 @@ public class K8sRayJobFramework extends K8sRayBaseFramework<K8sRayJobRunnable> {
         k8sProperties.setSharedVolume(
             new CoreVolume(CoreVolume.VolumeType.empty_dir, "/shared", "shared-dir", Map.of("sizeLimit", "500Mi"))
         );
-
     }
 
     @Override
@@ -160,12 +149,20 @@ public class K8sRayJobFramework extends K8sRayBaseFramework<K8sRayJobRunnable> {
     }
 
     @Override
-    protected Map<String, Serializable> getSpec(K8sRayJobRunnable runnable, RayClusterSpec clusterSpec) throws K8sFrameworkException {
+    protected Map<String, Serializable> getSpec(K8sRayJobRunnable runnable, RayClusterSpec clusterSpec)
+        throws K8sFrameworkException {
+        int backoffLimit = Optional.ofNullable(runnable.getSpec().getBackoffLimit())
+            .orElse(DEFAULT_BACKOFF_LIMIT)
+            .intValue();
 
-        int backoffLimit = Optional.ofNullable(runnable.getSpec().getBackoffLimit()).orElse(DEFAULT_BACKOFF_LIMIT).intValue();
-
-        // submitterPodTemplate: as head, with context refs and init container 
-        V1PodSpec submitter = convertPodModel(runnable, "submitter", runnable.getSpec().getCluster().getHeadSpec(), true, false);
+        // submitterPodTemplate: as head, with context refs and init container
+        V1PodSpec submitter = convertPodModel(
+            runnable,
+            "submitter",
+            runnable.getSpec().getCluster().getHeadSpec(),
+            true,
+            false
+        );
         submitter.setRestartPolicy("Never"); // important for job mode, to avoid unintended restarts from ray operator
 
         Map<String, String> podLabels = new HashMap<>();
@@ -184,9 +181,9 @@ public class K8sRayJobFramework extends K8sRayBaseFramework<K8sRayJobRunnable> {
             .ttlSecondsAfterFinished(runnable.getSpec().getTtlSecondsAfterFinished())
             .preRunningDeadlineSeconds(runnable.getSpec().getPreRunningDeadlineSeconds())
             .submissionMode(JobSubmissionMode.K8sJobMode)
-            .submitterPodTemplate(new V1PodTemplateSpec()
-                .metadata(new V1ObjectMeta().labels(podLabels))
-                .spec(submitter))
+            .submitterPodTemplate(
+                new V1PodTemplateSpec().metadata(new V1ObjectMeta().labels(podLabels)).spec(submitter)
+            )
             .build();
         return mapper.convertValue(spec, typeRef);
     }
@@ -204,7 +201,11 @@ public class K8sRayJobFramework extends K8sRayBaseFramework<K8sRayJobRunnable> {
     private String buildEnvYAML(K8sRayJobRunnable runnable) {
         Map<String, Object> map = new HashMap<>();
         map.put("working_dir", "/shared/");
-        if (runnable.getEnvs() != null && !runnable.getEnvs().isEmpty() && runnable.getSpec().getClusterSelector() != null) {
+        if (
+            runnable.getEnvs() != null &&
+            !runnable.getEnvs().isEmpty() &&
+            runnable.getSpec().getClusterSelector() != null
+        ) {
             map.put("env_vars", runnable.getEnvs());
         }
         if (runnable.getSpec().getDependencyFormat() != null && runnable.getSpec().getDependencySpec() != null) {
@@ -223,20 +224,25 @@ public class K8sRayJobFramework extends K8sRayBaseFramework<K8sRayJobRunnable> {
      */
     @Override
     public List<V1Pod> statusPods(List<V1Pod> pods, K8sRayJobRunnable runnable) throws K8sFrameworkException {
-        return pods.stream()
-        .filter(p -> p.getMetadata() != null && p.getMetadata().getLabels() != null && "submitter".equals(p.getMetadata().getLabels().get("ray.io/node-type")))
-        .toList();
+        return pods
+            .stream()
+            .filter(
+                p ->
+                    p.getMetadata() != null &&
+                    p.getMetadata().getLabels() != null &&
+                    "submitter".equals(p.getMetadata().getLabels().get("ray.io/node-type"))
+            )
+            .toList();
     }
 
     /**
      * Return the logs from the submitter pod only. By default, all the logs pass to the head and are collected by submitter.
-      * @param pods the list of pods to filter
-      * @param runnable the runnable context
-      * @return the logs from the submitter pod only
+     * @param pods the list of pods to filter
+     * @param runnable the runnable context
+     * @return the logs from the submitter pod only
      */
     public List<CoreLog> logs(List<V1Pod> pods, K8sRayJobRunnable runnable) throws K8sFrameworkException {
         // for job mode, we consider only logs from the submitter pod, which is the one responsible to run the job and report status
         return super.logs(statusPods(pods, runnable), runnable);
     }
-
 }

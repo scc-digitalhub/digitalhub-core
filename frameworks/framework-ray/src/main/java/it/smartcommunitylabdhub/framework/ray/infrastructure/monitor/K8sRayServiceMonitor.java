@@ -23,10 +23,7 @@ import org.springframework.stereotype.Component;
 @MonitorComponent(framework = K8sRayServiceFramework.FRAMEWORK)
 public class K8sRayServiceMonitor extends K8sRayBaseMonitor<K8sRayServiceRunnable> {
 
-    public K8sRayServiceMonitor(
-        RunnableStore<K8sRayServiceRunnable> runnableStore,
-        K8sRayServiceFramework framework
-    ) {
+    public K8sRayServiceMonitor(RunnableStore<K8sRayServiceRunnable> runnableStore, K8sRayServiceFramework framework) {
         super(runnableStore, framework);
     }
 
@@ -57,9 +54,7 @@ public class K8sRayServiceMonitor extends K8sRayBaseMonitor<K8sRayServiceRunnabl
         } else if (svc.toLowerCase().startsWith("failed")) {
             runnable.setState(K8sRunnableState.ERROR.name());
             Object reason = status.get("message");
-            runnable.setError(
-                "RayService failed: " + (reason != null ? reason.toString() : svc)
-            );
+            runnable.setError("RayService failed: " + (reason != null ? reason.toString() : svc));
         } else {
             //transitional states (WaitForServeDeploymentReady, Restarting, etc.)
             runnable.setState(K8sRunnableState.PENDING.name());

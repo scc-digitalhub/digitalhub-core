@@ -24,8 +24,7 @@ import it.smartcommunitylabdhub.runtime.python.hydra.specs.HydraRunStatus;
 import it.smartcommunitylabdhub.runtimes.lifecycle.RunLifecycleManager;
 
 @RuntimeComponent(runtime = HydraJobRunSpec.KIND)
-public class HydraJobLifecycleManager
-    extends RunLifecycleManager<HydraRunSpec, HydraRunStatus, K8sRunnable> {
+public class HydraJobLifecycleManager extends RunLifecycleManager<HydraRunSpec, HydraRunStatus, K8sRunnable> {
 
     HydraJobLifecycleManager(HydraRuntime runtime) {
         super(runtime);

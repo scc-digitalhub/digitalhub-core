@@ -146,9 +146,10 @@ public class K8sContainerBuilderMonitor extends K8sBaseMonitor<K8sContainerBuild
                             }
                         } catch (K8sFrameworkException e1) {
                             log.error(
-                                    "error collecting events for pod {}: {}",
-                                    pod.getMetadata().getName(),
-                                    e1.getMessage());
+                                "error collecting events for pod {}: {}",
+                                pod.getMetadata().getName(),
+                                e1.getMessage()
+                            );
                         }
                     }
                 }
@@ -156,8 +157,8 @@ public class K8sContainerBuilderMonitor extends K8sBaseMonitor<K8sContainerBuild
                 // If we have pods, check if any is running
                 if (K8sRunnableState.PENDING.name().equals(runnable.getState()) && pods != null) {
                     boolean running = pods
-                            .stream()
-                            .anyMatch(p -> p.getStatus() != null && "Running".equals(p.getStatus().getPhase()));
+                        .stream()
+                        .anyMatch(p -> p.getStatus() != null && "Running".equals(p.getStatus().getPhase()));
                     if (running) {
                         runnable.setState(K8sRunnableState.RUNNING.name());
                     }
@@ -174,13 +175,16 @@ public class K8sContainerBuilderMonitor extends K8sBaseMonitor<K8sContainerBuild
                 // update results
                 try {
                     runnable.setResults(
-                            MapUtils.mergeMultipleMaps(
-                                    runnable.getResults(),
-                                    Map.of(
-                                            "job",
-                                            mapper.convertValue(job, typeRef),
-                                            "pods",
-                                            pods != null ? mapper.convertValue(pods, arrayRef) : new ArrayList<>())));
+                        MapUtils.mergeMultipleMaps(
+                            runnable.getResults(),
+                            Map.of(
+                                "job",
+                                mapper.convertValue(job, typeRef),
+                                "pods",
+                                pods != null ? mapper.convertValue(pods, arrayRef) : new ArrayList<>()
+                            )
+                        )
+                    );
                 } catch (IllegalArgumentException e) {
                     log.error("error reading k8s results: {}", e.getMessage());
                 }

@@ -31,6 +31,7 @@ import it.smartcommunitylabdhub.logs.Log;
 import it.smartcommunitylabdhub.logs.LogService;
 import it.smartcommunitylabdhub.logs.local.persistence.LogEntity;
 import it.smartcommunitylabdhub.logs.local.persistence.LogRepository;
+import it.smartcommunitylabdhub.projects.Project;
 import it.smartcommunitylabdhub.runs.Run;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;

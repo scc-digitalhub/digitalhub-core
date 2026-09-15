@@ -23,6 +23,9 @@
 
 package it.smartcommunitylabdhub.files.config;
 
+import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
+import java.io.Serializable;
+import java.util.Map;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -40,5 +43,9 @@ public class FilesProperties {
 
     private Integer maxColumnSize = DEFAULT_MAX_COLUMN_SIZE;
 
-    private String defaultStore;
+    private String defaultFilesStore;
+
+    public static FilesProperties with(Map<String, Serializable> map) {
+        return JacksonMapper.CUSTOM_OBJECT_MAPPER.convertValue(map, FilesProperties.class);
+    }
 }

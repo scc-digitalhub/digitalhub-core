@@ -88,29 +88,27 @@ public class JdbcTriggerJobStore<T extends TriggerJob> implements TriggerJobStor
             Timestamp now = new Timestamp(Date.from(Instant.now()).getTime());
             SqlLobValue lob = new SqlLobValue(data);
 
-            Optional
-                .ofNullable(find(id))
-                .ifPresentOrElse(
-                    r ->
-                        jdbcTemplate.update(
-                            UPDATE_SQL,
-                            new Object[] { lob, now, id, clazz.getName() },
-                            new int[] { Types.BLOB, Types.TIMESTAMP, Types.VARCHAR, Types.VARCHAR }
-                        ),
-                    () ->
-                        jdbcTemplate.update(
-                            INSERT_SQL,
-                            new Object[] { id, e.getUser(), now, now, clazz.getName(), lob },
-                            new int[] {
-                                Types.VARCHAR,
-                                Types.VARCHAR,
-                                Types.TIMESTAMP,
-                                Types.TIMESTAMP,
-                                Types.VARCHAR,
-                                Types.BLOB,
-                            }
-                        )
-                );
+            Optional.ofNullable(find(id)).ifPresentOrElse(
+                r ->
+                    jdbcTemplate.update(
+                        UPDATE_SQL,
+                        new Object[] { lob, now, id, clazz.getName() },
+                        new int[] { Types.BLOB, Types.TIMESTAMP, Types.VARCHAR, Types.VARCHAR }
+                    ),
+                () ->
+                    jdbcTemplate.update(
+                        INSERT_SQL,
+                        new Object[] { id, e.getUser(), now, now, clazz.getName(), lob },
+                        new int[] {
+                            Types.VARCHAR,
+                            Types.VARCHAR,
+                            Types.TIMESTAMP,
+                            Types.TIMESTAMP,
+                            Types.VARCHAR,
+                            Types.BLOB,
+                        }
+                    )
+            );
         } catch (IOException ex) {
             // Handle serialization error
             log.error("error deserializing runnable: {}", ex.getMessage());

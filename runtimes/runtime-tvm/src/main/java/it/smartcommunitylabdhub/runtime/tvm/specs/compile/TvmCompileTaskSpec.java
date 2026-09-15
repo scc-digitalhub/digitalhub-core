@@ -39,7 +39,11 @@ public class TvmCompileTaskSpec extends K8sFunctionTaskBaseSpec {
     private String modelPath;
 
     @JsonProperty("target_architecture")
-    @Schema(title = "fields.tvm.compile.targetArchitecture.title", description = "fields.tvm.compile.targetArchitecture.description", defaultValue = "cpu")
+    @Schema(
+        title = "fields.tvm.compile.targetArchitecture.title",
+        description = "fields.tvm.compile.targetArchitecture.description",
+        defaultValue = "cpu"
+    )
     private TvmTargetArchitecture targetArchitecture;
 
     // Number of CPU cores assumed by generated schedules and used while tuning.
@@ -67,7 +71,10 @@ public class TvmCompileTaskSpec extends K8sFunctionTaskBaseSpec {
 
     // Named Relax optimization pipeline (default "default").
     @JsonProperty("relax_pipeline")
-    @Schema(title = "fields.tvm.compile.relaxPipeline.title", description = "fields.tvm.compile.relaxPipeline.description")
+    @Schema(
+        title = "fields.tvm.compile.relaxPipeline.title",
+        description = "fields.tvm.compile.relaxPipeline.description"
+    )
     private String relaxPipeline;
 
     // Named TIR optimization pipeline (default "default").

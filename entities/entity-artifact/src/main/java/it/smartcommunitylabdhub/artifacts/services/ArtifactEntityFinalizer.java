@@ -79,9 +79,8 @@ public class ArtifactEntityFinalizer implements EntityFinalizer<Artifact>, Initi
             if (StringUtils.hasText(path)) {
                 //try to resolve credentials
                 UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-                List<Credentials> credentials = auth != null && credentialsService != null
-                    ? credentialsService.getCredentials(auth)
-                    : null;
+                List<Credentials> credentials =
+                    auth != null && credentialsService != null ? credentialsService.getCredentials(auth) : null;
 
                 //delete files
                 filesService.remove(path, credentials);

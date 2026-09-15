@@ -54,8 +54,7 @@ public class ModelEntityBuilder implements Converter<Model, ModelEntity> {
         BaseMetadata metadata = BaseMetadata.from(dto.getMetadata());
         EmbeddableMetadata embeddable = EmbeddableMetadata.from(dto.getMetadata());
 
-        return ModelEntity
-            .builder()
+        return ModelEntity.builder()
             .id(dto.getId())
             .name(dto.getName())
             .kind(dto.getKind())

@@ -35,51 +35,50 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class TriggerStateRunning<X extends TriggerBaseSpec, Z extends TriggerRunBaseStatus>
-    extends TriggerBaseState<X, Z> {
+public class TriggerStateRunning<
+    X extends TriggerBaseSpec,
+    Z extends TriggerRunBaseStatus
+> extends TriggerBaseState<X, Z> {
 
     public TriggerStateRunning(Actuator<X, ?, Z> actuator) {
         super(TriggerState.RUNNING.name(), actuator);
         //transitions
-        txs =
-            List.of(
-                //(FIRE)->RUNNING
-                new Transition.Builder<String, String, Trigger>()
-                    .event(TriggerEvent.FIRE.name())
-                    .nextState(TriggerState.RUNNING.name())
-                    .<TriggerRun<? extends TriggerJob>, Z>withInternalLogic(
-                        (currentState, nextState, event, trigger, run) -> {
-                            //runtime callback
-                            return Optional.ofNullable(actuator.onFire(trigger, run));
-                        }
-                    )
-                    .build(),
-                //(STOP)->STOPPED
-                new Transition.Builder<String, String, Trigger>()
-                    .event(TriggerEvent.STOP.name())
-                    .nextState(TriggerState.STOPPED.name())
-                    .withInternalLogic((currentState, nextState, event, trigger, i) -> {
+        txs = List.of(
+            //(FIRE)->RUNNING
+            new Transition.Builder<String, String, Trigger>()
+                .event(TriggerEvent.FIRE.name())
+                .nextState(TriggerState.RUNNING.name())
+                .<TriggerRun<? extends TriggerJob>, Z>withInternalLogic(
+                    (currentState, nextState, event, trigger, run) -> {
                         //runtime callback
-                        Optional
-                            .ofNullable(actuator.stop(trigger))
-                            .ifPresent(status ->
-                                trigger.setStatus(MapUtils.mergeMultipleMaps(trigger.getStatus(), status.toMap()))
-                            );
+                        return Optional.ofNullable(actuator.onFire(trigger, run));
+                    }
+                )
+                .build(),
+            //(STOP)->STOPPED
+            new Transition.Builder<String, String, Trigger>()
+                .event(TriggerEvent.STOP.name())
+                .nextState(TriggerState.STOPPED.name())
+                .withInternalLogic((currentState, nextState, event, trigger, i) -> {
+                    //runtime callback
+                    Optional.ofNullable(actuator.stop(trigger)).ifPresent(status ->
+                        trigger.setStatus(MapUtils.mergeMultipleMaps(trigger.getStatus(), status.toMap()))
+                    );
 
-                        return Optional.empty();
-                    })
-                    .build(),
-                //(ERROR)->ERROR
-                new Transition.Builder<String, String, Trigger>()
-                    .event(TriggerEvent.ERROR.name())
-                    .nextState(TriggerState.ERROR.name())
-                    .withInternalLogic((currentState, nextState, event, trigger, i) -> {
-                        //no-op, nothing happened yet
-                        return Optional.empty();
-                    })
-                    .build(),
-                //(DELETE)->DELETED
-                toDelete().build()
-            );
+                    return Optional.empty();
+                })
+                .build(),
+            //(ERROR)->ERROR
+            new Transition.Builder<String, String, Trigger>()
+                .event(TriggerEvent.ERROR.name())
+                .nextState(TriggerState.ERROR.name())
+                .withInternalLogic((currentState, nextState, event, trigger, i) -> {
+                    //no-op, nothing happened yet
+                    return Optional.empty();
+                })
+                .build(),
+            //(DELETE)->DELETED
+            toDelete().build()
+        );
     }
 }

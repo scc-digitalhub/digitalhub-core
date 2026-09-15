@@ -66,14 +66,18 @@ public class KFPBuildRunner {
             )
         );
 
-        List<CoreEnv> coreSecrets = secretData == null
-            ? null
-            : secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
+        List<CoreEnv> coreSecrets =
+            secretData == null
+                ? null
+                : secretData
+                      .entrySet()
+                      .stream()
+                      .map(e -> new CoreEnv(e.getKey(), e.getValue()))
+                      .toList();
 
         Optional.ofNullable(taskSpec.getEnvs()).ifPresent(coreEnvList::addAll);
 
-        K8sRunnable k8sJobRunnable = K8sJobRunnable
-            .builder()
+        K8sRunnable k8sJobRunnable = K8sJobRunnable.builder()
             .runtime(KFPRuntime.RUNTIME)
             .task(KFPBuildTaskSpec.KIND)
             .image(image)

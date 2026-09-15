@@ -40,8 +40,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.Assert;
 
 @Slf4j
-public class BaseRunState<X extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable>
-    implements FsmState.Builder<String, String, Run> {
+public class BaseRunState<
+    X extends RunBaseSpec,
+    Z extends RunBaseStatus,
+    R extends RunRunnable
+> implements FsmState.Builder<String, String, Run> {
 
     protected final String state;
     protected final Runtime<X, Z, R> runtime;
@@ -73,9 +76,9 @@ public class BaseRunState<X extends RunBaseSpec, Z extends RunBaseStatus, R exte
                 }
 
                 //runtime callback
-                Optional
-                    .ofNullable(runtime.onError(run, runnable))
-                    .ifPresent(status -> run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), status.toMap())));
+                Optional.ofNullable(runtime.onError(run, runnable)).ifPresent(status ->
+                    run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), status.toMap()))
+                );
 
                 //final state, cleanup
                 if (runnable != null) {
@@ -115,9 +118,9 @@ public class BaseRunState<X extends RunBaseSpec, Z extends RunBaseStatus, R exte
                 }
 
                 //runtime callback
-                Optional
-                    .ofNullable(runtime.onDeleted(run, runnable))
-                    .ifPresent(status -> run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), status.toMap())));
+                Optional.ofNullable(runtime.onDeleted(run, runnable)).ifPresent(status ->
+                    run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), status.toMap()))
+                );
 
                 return Optional.empty();
             });
@@ -138,10 +141,9 @@ public class BaseRunState<X extends RunBaseSpec, Z extends RunBaseStatus, R exte
                 Optional<R> runnable = Optional.ofNullable(runtime.run(run));
                 runnable.ifPresent(r -> {
                     //runtime callback
-                    Optional
-                        .ofNullable(runtime.onReady(run, r))
-                        .ifPresent(status -> run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), status.toMap()))
-                        );
+                    Optional.ofNullable(runtime.onReady(run, r)).ifPresent(status ->
+                        run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), status.toMap()))
+                    );
                 });
                 return runnable;
             });
@@ -177,9 +179,9 @@ public class BaseRunState<X extends RunBaseSpec, Z extends RunBaseStatus, R exte
                 }
 
                 //runtime callback
-                Optional
-                    .ofNullable(runtime.onRunning(run, runnable))
-                    .ifPresent(status -> run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), status.toMap())));
+                Optional.ofNullable(runtime.onRunning(run, runnable)).ifPresent(status ->
+                    run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), status.toMap()))
+                );
 
                 return Optional.empty();
             });
@@ -197,9 +199,9 @@ public class BaseRunState<X extends RunBaseSpec, Z extends RunBaseStatus, R exte
                 }
 
                 //runtime callback
-                Optional
-                    .ofNullable(runtime.onRunning(run, runnable))
-                    .ifPresent(status -> run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), status.toMap())));
+                Optional.ofNullable(runtime.onRunning(run, runnable)).ifPresent(status ->
+                    run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), status.toMap()))
+                );
 
                 return Optional.empty();
             });
@@ -217,9 +219,9 @@ public class BaseRunState<X extends RunBaseSpec, Z extends RunBaseStatus, R exte
                 }
 
                 //runtime callback
-                Optional
-                    .ofNullable(runtime.onComplete(run, runnable))
-                    .ifPresent(status -> run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), status.toMap())));
+                Optional.ofNullable(runtime.onComplete(run, runnable)).ifPresent(status ->
+                    run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), status.toMap()))
+                );
 
                 //final state, cleanup
                 if (runnable != null) {
@@ -258,9 +260,9 @@ public class BaseRunState<X extends RunBaseSpec, Z extends RunBaseStatus, R exte
                 }
 
                 //runtime callback
-                Optional
-                    .ofNullable(runtime.onStopped(run, runnable))
-                    .ifPresent(status -> run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), status.toMap())));
+                Optional.ofNullable(runtime.onStopped(run, runnable)).ifPresent(status ->
+                    run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), status.toMap()))
+                );
 
                 return Optional.empty();
             });

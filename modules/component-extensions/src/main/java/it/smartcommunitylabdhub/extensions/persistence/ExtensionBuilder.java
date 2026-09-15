@@ -45,8 +45,7 @@ public class ExtensionBuilder implements Converter<ExtensionEntity, Extension> {
 
     @Override
     public Extension convert(@NonNull ExtensionEntity entity) {
-        return Extension
-            .builder()
+        return Extension.builder()
             .id(entity.getId())
             .entity(entity.getEntity())
             .project(entity.getProject())

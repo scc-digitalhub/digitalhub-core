@@ -107,8 +107,7 @@ public class AccessCredentialsProvider implements ConfigurationProvider, Credent
 
         Integer exp = jwtTokenService.getAccessTokenDuration();
         //response
-        AccessCredentialsBuilder response = AccessCredentials
-            .builder()
+        AccessCredentialsBuilder response = AccessCredentials.builder()
             .accessToken(accessToken)
             .refreshToken(refreshToken)
             .idToken(accessToken)
@@ -133,8 +132,7 @@ public class AccessCredentialsProvider implements ConfigurationProvider, Credent
         );
 
         //response
-        AccessCredentialsBuilder response = AccessCredentials
-            .builder()
+        AccessCredentialsBuilder response = AccessCredentials.builder()
             .accessToken(accessToken)
             .idToken(accessToken)
             .expiration(duration)

@@ -70,8 +70,7 @@ public class OAuth2EnvConfig extends AbstractConfiguration {
     private Set<String> scopesSupported;
 
     public static OAuth2EnvConfig from(OpenIdConfig config) {
-        return OAuth2EnvConfig
-            .builder()
+        return OAuth2EnvConfig.builder()
             .issuer(config.getIssuer())
             .jwksUri(config.getJwksUri())
             .authorizationEndpoint(config.getAuthorizationEndpoint())

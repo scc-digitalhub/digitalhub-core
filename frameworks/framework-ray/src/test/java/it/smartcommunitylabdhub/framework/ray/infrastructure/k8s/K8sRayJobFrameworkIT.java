@@ -18,7 +18,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.gson.Gson;
-
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.models.V1Affinity;
 import io.kubernetes.client.openapi.models.V1ConfigMap;
@@ -36,7 +35,6 @@ import io.kubernetes.client.openapi.models.V1VolumeMount;
 import io.kubernetes.client.util.generic.KubernetesApiResponse;
 import io.kubernetes.client.util.generic.dynamic.DynamicKubernetesApi;
 import io.kubernetes.client.util.generic.dynamic.DynamicKubernetesObject;
-
 import it.smartcommunitylabdhub.framework.k8s.config.KubernetesProperties;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
@@ -47,12 +45,10 @@ import it.smartcommunitylabdhub.framework.ray.model.PodModel;
 import it.smartcommunitylabdhub.framework.ray.model.RayJobModel;
 import it.smartcommunitylabdhub.framework.ray.model.WorkerGroupModel;
 import it.smartcommunitylabdhub.framework.ray.runnables.K8sRayJobRunnable;
-
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -83,12 +79,11 @@ class K8sRayJobFrameworkIT {
         dynamicApi = mock(DynamicKubernetesApi.class);
         KubernetesApiResponse<DynamicKubernetesObject> response = mock(KubernetesApiResponse.class);
         when(response.isSuccess()).thenReturn(true);
-        when(dynamicApi.create(anyString(), any(DynamicKubernetesObject.class), any()))
-            .thenAnswer(inv -> {
-                DynamicKubernetesObject cr = inv.getArgument(1);
-                when(response.getObject()).thenReturn(cr);
-                return response;
-            });
+        when(dynamicApi.create(anyString(), any(DynamicKubernetesObject.class), any())).thenAnswer(inv -> {
+            DynamicKubernetesObject cr = inv.getArgument(1);
+            when(response.getObject()).thenReturn(cr);
+            return response;
+        });
 
         framework = new TestableK8sRayJobFramework(apiClient, dynamicApi);
         framework.setNamespace("test-ns");
@@ -180,12 +175,7 @@ class K8sRayJobFrameworkIT {
     @DisplayName("RayJob with cluster selector targets an existing RayCluster")
     void clusterSelectorVariant() throws Exception {
         K8sRayJobRunnable runnable = baseRunnable("run-sel-1");
-        RayJobModel m = rayJobModel(
-            "python /shared/job.py",
-            Map.of("ray.io/cluster", "shared-cluster"),
-            null,
-            null
-        );
+        RayJobModel m = rayJobModel("python /shared/job.py", Map.of("ray.io/cluster", "shared-cluster"), null, null);
         runnable.setSpec(m);
 
         framework.run(runnable);
@@ -263,12 +253,7 @@ class K8sRayJobFrameworkIT {
         );
         runnable.setLabels(List.of(new CoreLabel("team", "ml")));
 
-        RayJobModel m = rayJobModel(
-            "python /shared/main.py",
-            Map.of("ray.io/cluster", "ext"),
-            null,
-            null
-        );
+        RayJobModel m = rayJobModel("python /shared/main.py", Map.of("ray.io/cluster", "ext"), null, null);
         runnable.setSpec(m);
 
         framework.run(runnable);
@@ -299,7 +284,12 @@ class K8sRayJobFrameworkIT {
         return r;
     }
 
-    private RayJobModel rayJobModel(String entrypoint, Map<String, String> selector, String depFmt, Serializable depSpec) {
+    private RayJobModel rayJobModel(
+        String entrypoint,
+        Map<String, String> selector,
+        String depFmt,
+        Serializable depSpec
+    ) {
         RayJobModel m = new RayJobModel();
         m.setCluster(baseCluster());
         m.setEntrypoint(entrypoint);
@@ -328,8 +318,7 @@ class K8sRayJobFrameworkIT {
     }
 
     private PodModel basePod(String image) {
-        return PodModel
-            .builder()
+        return PodModel.builder()
             .image(image)
             .startParams(Map.of("dashboard-host", "0.0.0.0"))
             .rayResources(Map.of("CPU", "1"))
@@ -396,10 +385,7 @@ class K8sRayJobFrameworkIT {
 
         @Override
         protected Map<String, String> buildLabels(K8sRayJobRunnable runnable) {
-            return Map.of(
-                "app", "ray",
-                "ray.io/run-id", runnable.getId() == null ? "unknown" : runnable.getId()
-            );
+            return Map.of("app", "ray", "ray.io/run-id", runnable.getId() == null ? "unknown" : runnable.getId());
         }
 
         @Override

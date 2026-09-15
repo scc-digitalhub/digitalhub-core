@@ -32,24 +32,33 @@ public class K8sRayFrameworkConfig {
     @Bean
     @ConditionalOnKubernetes
     public RunnableStore<K8sRayJobRunnable> k8sRayJobRunnableStoreService(
-            RunnableRepository runnableRepository,
-            PlatformTransactionManager transactionManager) {
+        RunnableRepository runnableRepository,
+        PlatformTransactionManager transactionManager
+    ) {
         RunnableStoreImpl<K8sRayJobRunnable> store = new RunnableStoreImpl<>(
-                K8sRayJobRunnable.class, runnableRepository, transactionManager);
+            K8sRayJobRunnable.class,
+            runnableRepository,
+            transactionManager
+        );
         store.setObjectMapper(KubernetesMapper.CBOR_OBJECT_MAPPER);
         return store;
     }
+
     @Bean
     @ConditionalOnKubernetes
     public RunnableStore<K8sRayServiceRunnable> k8sRayServiceRunnableStoreService(
-            RunnableRepository runnableRepository,
-            PlatformTransactionManager transactionManager) {
+        RunnableRepository runnableRepository,
+        PlatformTransactionManager transactionManager
+    ) {
         RunnableStoreImpl<K8sRayServiceRunnable> store = new RunnableStoreImpl<>(
-                K8sRayServiceRunnable.class, runnableRepository, transactionManager);
+            K8sRayServiceRunnable.class,
+            runnableRepository,
+            transactionManager
+        );
         store.setObjectMapper(KubernetesMapper.CBOR_OBJECT_MAPPER);
         return store;
     }
-    
+
     // ---- frameworks ----
 
     @Bean
@@ -68,10 +77,7 @@ public class K8sRayFrameworkConfig {
 
     @Bean
     @ConditionalOnKubernetes
-    public K8sRayJobListener k8sRayJobListener(
-        K8sRayJobFramework framework,
-        RunnableStore<K8sRayJobRunnable> store
-    ) {
+    public K8sRayJobListener k8sRayJobListener(K8sRayJobFramework framework, RunnableStore<K8sRayJobRunnable> store) {
         return new K8sRayJobListener(framework, store);
     }
 

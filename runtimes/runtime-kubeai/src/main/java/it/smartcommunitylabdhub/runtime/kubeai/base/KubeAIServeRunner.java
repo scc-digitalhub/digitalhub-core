@@ -51,6 +51,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 import org.springframework.util.StringUtils;
 
@@ -115,27 +116,31 @@ public class KubeAIServeRunner {
             if (!EntityUtils.getEntityName(Model.class).equalsIgnoreCase(keyAccessor.getType())) {
                 throw new CoreRuntimeException("invalid entity kind reference, expected model");
             }
-            Model model =
-                keyAccessor.getId() != null
-                    ? modelService.findModel(keyAccessor.getId())
-                    : modelService.getLatestModel(keyAccessor.getProject(), keyAccessor.getName());
-            if (model == null) {
-                throw new CoreRuntimeException("invalid entity reference, model not found");
-            }
-            if (!model.getKind().equals("huggingface")) {
-                throw new CoreRuntimeException("invalid entity reference, expected Hugginface model");
-            }
-            RelationshipDetail rel = new RelationshipDetail();
-            rel.setType(RelationshipName.CONSUMES);
-            rel.setSource(run.getKey());
-            rel.setDest(model.getKey());
-            RelationshipsMetadata relationships = RelationshipsMetadata.from(run.getMetadata());
-            relationships.getRelationships().add(rel);
-            run.getMetadata().putAll(relationships.toMap());
+            try {
+                Model model =
+                    keyAccessor.getId() != null
+                        ? modelService.findModel(keyAccessor.getId())
+                        : modelService.getLatestModel(keyAccessor.getProject(), keyAccessor.getName());
+                if (model == null) {
+                    throw new CoreRuntimeException("invalid entity reference, Huggingface model not found");
+                }
+                if (!model.getKind().equals("huggingface")) {
+                    throw new CoreRuntimeException("invalid entity reference, expected Huggingface model");
+                }
+                RelationshipDetail rel = new RelationshipDetail();
+                rel.setType(RelationshipName.CONSUMES);
+                rel.setSource(run.getKey());
+                rel.setDest(model.getKey());
+                RelationshipsMetadata relationships = RelationshipsMetadata.from(run.getMetadata());
+                relationships.getRelationships().add(rel);
+                run.getMetadata().putAll(relationships.toMap());
 
-            url = (String) model.getSpec().get("path");
-            if (!url.endsWith("/")) {
-                url += "/";
+                url = (String) model.getSpec().get("path");
+                if (!url.endsWith("/")) {
+                    url += "/";
+                }
+            } catch (NoSuchElementException e) {
+                throw new CoreRuntimeException("invalid entity reference, Huggingface model not found", e);
             }
         }
 

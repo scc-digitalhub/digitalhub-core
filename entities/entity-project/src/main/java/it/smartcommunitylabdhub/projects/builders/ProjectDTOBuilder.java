@@ -23,8 +23,8 @@
 
 package it.smartcommunitylabdhub.projects.builders;
 
-import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
+import it.smartcommunitylabdhub.projects.Project;
 import it.smartcommunitylabdhub.core.metadata.AuditMetadataBuilder;
 import it.smartcommunitylabdhub.core.metadata.BaseMetadataBuilder;
 import it.smartcommunitylabdhub.projects.persistence.ProjectEntity;
@@ -69,8 +69,7 @@ public class ProjectDTOBuilder implements Converter<ProjectEntity, Project> {
         Optional.ofNullable(baseMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
         Optional.ofNullable(auditingMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
 
-        return Project
-            .builder()
+        return Project.builder()
             .id(entity.getId())
             .name(entity.getName())
             .user(entity.getCreatedBy())

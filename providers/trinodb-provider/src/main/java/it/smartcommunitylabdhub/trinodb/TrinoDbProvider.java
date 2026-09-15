@@ -30,6 +30,7 @@ import it.smartcommunitylabdhub.commons.infrastructure.ConfigurationProvider;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.trinodb.config.TrinoDbProperties;
 import jakarta.validation.constraints.NotNull;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.lang.Nullable;
@@ -109,8 +110,7 @@ public class TrinoDbProvider implements CredentialsProvider, ConfigurationProvid
 
         //if core token is set, provider as user+token credentials
         if (Boolean.TRUE.equals(properties.getUseCoreCredentials()) && token instanceof UserAuthentication<?> auth) {
-            AccessCredentials credentials = auth
-                .getCredentials()
+            AccessCredentials credentials = Optional.ofNullable(auth.getCredentials())
                 .stream()
                 .filter(c -> c instanceof AccessCredentials)
                 .findFirst()

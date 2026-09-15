@@ -24,7 +24,9 @@ import it.smartcommunitylabdhub.runtime.servicegraph.specs.ServicegraphServeRunS
 import it.smartcommunitylabdhub.runtimes.lifecycle.RunLifecycleManager;
 
 @RuntimeComponent(runtime = ServicegraphServeRunSpec.KIND)
-public class ServicegraphServeLifecycleManager extends RunLifecycleManager<ServicegraphRunSpec, ServicegraphRunStatus, K8sRunnable> {
+public class ServicegraphServeLifecycleManager
+    extends RunLifecycleManager<ServicegraphRunSpec, ServicegraphRunStatus, K8sRunnable>
+{
 
     ServicegraphServeLifecycleManager(ServicegraphRuntime runtime) {
         super(runtime);

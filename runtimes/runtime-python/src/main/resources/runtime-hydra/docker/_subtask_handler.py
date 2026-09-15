@@ -104,6 +104,9 @@ def handler(context: Context, event: Event) -> Response:
     try:
         project: str = context.project.name
         context.logger.info("Executing function.")
+        from hydra.core.utils import  setup_globals
+        setup_globals()
+
 
         exec_result = context.user_function(**func_args)
         results = parse_outputs(exec_result, project, context.run.key)
@@ -140,9 +143,37 @@ def handler(context: Context, event: Event) -> Response:
 def compose_args(spec):
     # expect to be wrapped with hydra.main, 'cfg' is in the parameters, and Omecaconf is present
     from omegaconf import OmegaConf
+    from pathlib import Path
+    from hydra.core.utils import  setup_globals
+    from hydra import compose, initialize_config_dir
+    from hydra.core.hydra_config import HydraConfig
+
     args = {}
     try:
-        args["cfg_passthrough"] = OmegaConf.create(spec.get("parameters", {}).get("cfg_passthrough", {}))
+        params = spec.get("parameters", {})
+        job_dir = params.get("job_dir", ".")
+
+        setup_globals()
+        initialize_config_dir(job_dir)
+        base_cfg = compose(config_name="config", return_hydra_config=True)
+
+        hydra_cfg = OmegaConf.load(Path(job_dir) / "hydra.yaml")
+        conf = {
+            'hydra': {
+                'job': hydra_cfg.hydra.job,
+                'runtime': {
+                    'output_dir': hydra_cfg.hydra.runtime.output_dir
+                }
+            }
+        }
+        cfg = OmegaConf.merge(base_cfg, OmegaConf.create(conf))
+
+        HydraConfig.instance().set_config(cfg)
+
+        cfg = OmegaConf.to_container(cfg, resolve=True)
+
+
+        args["cfg_passthrough"] = OmegaConf.create(cfg)
     except Exception as e:
         print(f"Failed to convert cfg to container. Exception: {e.__class__}. Error: {e.args}")
         args["cfg_passthrough"] = {}

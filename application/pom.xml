@@ -263,6 +263,11 @@
             <artifactId>dh-run-initializer</artifactId>
             <version>${revision}</version>
         </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-autoscaler</artifactId>
+            <version>${revision}</version>
+        </dependency>
 
         <!-- ENTITIES  -->
         <dependency>

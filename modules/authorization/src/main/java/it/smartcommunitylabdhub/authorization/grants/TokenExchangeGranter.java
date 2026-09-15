@@ -299,9 +299,9 @@ public class TokenExchangeGranter implements TokenGranter, InitializingBean {
                     withCredentials =
                         withCredentials &&
                         principal.getAttribute(OAuth2ParameterNames.SCOPE) != null &&
-                        StringUtils
-                            .commaDelimitedListToSet(principal.getAttribute(OAuth2ParameterNames.SCOPE))
-                            .contains("credentials");
+                        StringUtils.commaDelimitedListToSet(
+                            principal.getAttribute(OAuth2ParameterNames.SCOPE)
+                        ).contains("credentials");
                 }
 
                 if (

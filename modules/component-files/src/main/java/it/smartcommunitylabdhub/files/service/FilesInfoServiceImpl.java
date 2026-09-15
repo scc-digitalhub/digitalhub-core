@@ -92,8 +92,7 @@ public class FilesInfoServiceImpl implements FilesInfoService {
     public FilesInfo saveFilesInfo(@NotNull String entityName, @NotNull String entityId, List<FileInfo> files)
         throws StoreException, SystemException {
         log.debug("save files info for entity {} id {}", entityName, entityId);
-        FilesInfo dto = FilesInfo
-            .builder()
+        FilesInfo dto = FilesInfo.builder()
             .entityName(entityName.toLowerCase())
             .entityId(entityId)
             .files(files)

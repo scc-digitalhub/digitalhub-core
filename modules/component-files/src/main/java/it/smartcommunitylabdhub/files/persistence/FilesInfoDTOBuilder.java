@@ -52,8 +52,7 @@ public class FilesInfoDTOBuilder implements Converter<FilesInfoEntity, FilesInfo
             log.error("FilesInfo build error: {}", e.getMessage());
         }
 
-        return FilesInfo
-            .builder()
+        return FilesInfo.builder()
             .id(entity.getId())
             .entityName(entity.getEntityName())
             .entityId(entity.getEntityId())

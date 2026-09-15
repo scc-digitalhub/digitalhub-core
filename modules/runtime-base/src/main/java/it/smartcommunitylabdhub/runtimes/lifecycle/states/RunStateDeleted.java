@@ -32,8 +32,11 @@ import java.util.Collections;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class RunStateDeleted<S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable>
-    extends BaseRunState<S, Z, R> {
+public class RunStateDeleted<
+    S extends RunBaseSpec,
+    Z extends RunBaseStatus,
+    R extends RunRunnable
+> extends BaseRunState<S, Z, R> {
 
     public RunStateDeleted(Runtime<S, Z, R> runtime) {
         super(RunState.DELETED.name(), runtime);

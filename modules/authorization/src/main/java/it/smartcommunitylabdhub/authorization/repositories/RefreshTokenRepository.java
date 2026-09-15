@@ -65,19 +65,18 @@ public class RefreshTokenRepository {
         Assert.notNull(dataSource, "DataSource required");
         this.jdbcTemplate = new JdbcTemplate(dataSource);
 
-        this.rowMapper =
-            (rs, rowNum) -> {
-                RefreshToken token = new RefreshToken();
-                token.setId(rs.getString("id"));
-                token.setUser(rs.getString("_user"));
-                token.setIssuedAt(rs.getTimestamp("issued_at"));
-                token.setExpiresAt(rs.getTimestamp("expires_at"));
-                token.setToken(rs.getString("token"));
-                token.setScopes(StringUtils.commaDelimitedListToSet(rs.getString("scope")));
-                token.setIpAddress(rs.getString("ip_addr"));
-                token.setAuth(rs.getBytes("_auth"));
-                return token;
-            };
+        this.rowMapper = (rs, rowNum) -> {
+            RefreshToken token = new RefreshToken();
+            token.setId(rs.getString("id"));
+            token.setUser(rs.getString("_user"));
+            token.setIssuedAt(rs.getTimestamp("issued_at"));
+            token.setExpiresAt(rs.getTimestamp("expires_at"));
+            token.setToken(rs.getString("token"));
+            token.setScopes(StringUtils.commaDelimitedListToSet(rs.getString("scope")));
+            token.setIpAddress(rs.getString("ip_addr"));
+            token.setAuth(rs.getBytes("_auth"));
+            return token;
+        };
     }
 
     public void store(@NotNull String id, @NotNull RefreshToken token) throws StoreException {
@@ -89,9 +88,10 @@ public class RefreshTokenRepository {
         log.debug("store refresh token {}", id);
 
         byte[] data = token.getAuth();
-        Timestamp createdAt = token.getIssuedAt() != null
-            ? new Timestamp(token.getIssuedAt().getTime())
-            : new Timestamp(Date.from(Instant.now()).getTime());
+        Timestamp createdAt =
+            token.getIssuedAt() != null
+                ? new Timestamp(token.getIssuedAt().getTime())
+                : new Timestamp(Date.from(Instant.now()).getTime());
         Timestamp expiresAt = token.getExpiresAt() != null ? new Timestamp(token.getExpiresAt().getTime()) : null;
         SqlLobValue lob = new SqlLobValue(data);
 

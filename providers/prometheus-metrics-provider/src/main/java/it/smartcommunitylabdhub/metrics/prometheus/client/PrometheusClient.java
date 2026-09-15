@@ -63,12 +63,7 @@ public class PrometheusClient {
         this.limit = limit;
     }
 
-    public QueryResult query(
-        @NotNull String query,
-        @Nullable Long start,
-        @Nullable Long end,
-        @Nullable Duration step
-    ) {
+    public QueryResult query(@NotNull String query, @Nullable Long start, @Nullable Long end, @Nullable Duration step) {
         log.debug("query prometheus for {} interval {} - {}", query, String.valueOf(start), String.valueOf(end));
         // parameters are unix seconds;
         long nowSeconds = Instant.now().getEpochSecond();

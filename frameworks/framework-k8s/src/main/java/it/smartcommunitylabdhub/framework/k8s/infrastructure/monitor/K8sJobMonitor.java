@@ -24,6 +24,8 @@
 package it.smartcommunitylabdhub.framework.k8s.infrastructure.monitor;
 
 import io.kubernetes.client.openapi.models.EventsV1Event;
+import io.kubernetes.client.openapi.models.V1ContainerStateTerminated;
+import io.kubernetes.client.openapi.models.V1ContainerStatus;
 import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1JobCondition;
 import io.kubernetes.client.openapi.models.V1Pod;
@@ -164,8 +166,54 @@ public class K8sJobMonitor extends K8sBaseMonitor<K8sJobRunnable> {
                         runnable.setState(K8sRunnableState.RUNNING.name());
                     }
                 }
+
+                //if we have an error, check for container status
+                if (K8sRunnableState.ERROR.name().equals(runnable.getState()) && pods != null) {
+                    for (V1Pod pod : pods) {
+                        if (pod.getStatus() != null && pod.getStatus().getContainerStatuses() != null) {
+                            for (V1ContainerStatus status : pod.getStatus().getContainerStatuses()) {
+                                if (status.getState() != null && status.getState().getTerminated() != null) {
+                                    V1ContainerStateTerminated terminated = status.getState().getTerminated();
+
+                                    StringBuilder containerError = new StringBuilder();
+                                    if (terminated.getMessage() != null) {
+                                        containerError.append(terminated.getMessage());
+                                    }
+
+                                    if (terminated.getExitCode() != null) {
+                                        containerError
+                                            .append(" exitCode: ")
+                                            .append(terminated.getExitCode())
+                                            .append(", ");
+                                    }
+
+                                    if (terminated.getReason() != null) {
+                                        containerError.append(" reason: ").append(terminated.getReason()).append(", ");
+                                    }
+
+                                    runnable.setError("Container error: " + containerError);
+                                }
+                            }
+                        }
+                    }
+                }
             } catch (K8sFrameworkException e1) {
                 log.error("error collecting pods for job {}: {}", runnable.getId(), e1.getMessage());
+            }
+
+            //also evaluate preemption with suspend and no pods
+            if (
+                K8sRunnableState.RUNNING.name().equals(runnable.getState()) &&
+                pods != null &&
+                job.getSpec() != null &&
+                job.getSpec().getSuspend() != null &&
+                Boolean.TRUE.equals(job.getSpec().getSuspend())
+            ) {
+                //previously runnning, now suspended if no pods are active
+                if (pods.isEmpty()) {
+                    runnable.setState(K8sRunnableState.ERROR.name());
+                    runnable.setError("Job error: suspended");
+                }
             }
 
             if (events != null) {

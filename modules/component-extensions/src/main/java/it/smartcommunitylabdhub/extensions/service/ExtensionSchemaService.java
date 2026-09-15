@@ -11,12 +11,15 @@ import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
+import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
+import it.smartcommunitylabdhub.commons.infrastructure.SpecFactory;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.schemas.Schema;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.core.services.EntityService;
 import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
+import it.smartcommunitylabdhub.extensions.annotations.ExtensionType;
 import it.smartcommunitylabdhub.extensions.config.ExtensionsProperties;
 import it.smartcommunitylabdhub.extensions.model.Extension;
 import it.smartcommunitylabdhub.extensions.model.ExtensionDefinition;
@@ -41,12 +44,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourcePatternResolver;
-import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.validation.annotation.Validated;
 
 @Service
 @Slf4j
+@Validated
 public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
 
     public static final long CACHE_TIMEOUT = 30; //seconds
@@ -57,6 +61,9 @@ public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
     private static final String KIND = "kind";
     private static final String SCHEMA = "schema";
     private static final String UI_SCHEMA = "uiSchema";
+    private static final String APPLIES_TO = "appliesTo";
+    private static final String APPLIES_NOT_TO = "appliesNotTo";
+    private static final String SHOW_IN = "showIn";
 
     protected ResourcePatternResolver resourceLoader;
     private List<String> extensionPaths;
@@ -64,8 +71,7 @@ public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
     private EntityService<ExtensionDefinition> extensionService;
 
     //loading cache
-    LoadingCache<String, Schema> extCache = CacheBuilder
-        .newBuilder()
+    LoadingCache<String, Schema> extCache = CacheBuilder.newBuilder()
         .expireAfterWrite(CACHE_TIMEOUT, TimeUnit.SECONDS)
         .build(
             new CacheLoader<String, Schema>() {
@@ -116,7 +122,11 @@ public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
     @Override
     public Collection<Schema> listSchemas() {
         List<Schema> result = new ArrayList<>();
-        registrations.values().stream().map(e -> e.schema()).forEach(result::add);
+        registrations
+            .values()
+            .stream()
+            .map(e -> e.schema())
+            .forEach(result::add);
 
         try {
             //pick from db
@@ -142,7 +152,7 @@ public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
     private Schema loadSchema(ExtensionDefinition ext) throws JsonProcessingException {
         ExtensionSpec spec = ExtensionSpec.from(ext.getSpec());
         JsonNode schemaNode = objectMapper.readTree(spec.getSchema());
-        return SchemaImpl.builder().entity("extension").kind(ext.getId()).schema(schemaNode).build();
+        return SchemaImpl.builder().entity(getEntityName(Extension.class)).kind(ext.getId()).schema(schemaNode).build();
     }
 
     public Set<ValidationMessage> validateSchema(@NotNull String kind, @Nullable Map<String, Serializable> map)
@@ -289,12 +299,22 @@ public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
             JsonNode schemaNode = objectMapper.readTree(res.getContentAsString(StandardCharsets.UTF_8));
             String kind = schemaNode.get(KIND).asText();
 
-            SchemaImpl schema = SchemaImpl
-                .builder()
+            SchemaImpl schema = SchemaImpl.builder()
                 .entity("extension")
                 .kind(kind)
                 .schema(schemaNode.get(SCHEMA))
                 .uiSchema(schemaNode.get(UI_SCHEMA))
+                .appliesTo(
+                    schemaNode.has(APPLIES_TO)
+                        ? objectMapper.convertValue(schemaNode.get(APPLIES_TO), String[].class)
+                        : null
+                )
+                .appliesNotTo(
+                    schemaNode.has(APPLIES_NOT_TO)
+                        ? objectMapper.convertValue(schemaNode.get(APPLIES_NOT_TO), String[].class)
+                        : null
+                )
+                .showIn(schemaNode.has(SHOW_IN) ? schemaNode.get(SHOW_IN).asText() : null)
                 .build();
             registerSpec(kind, schema);
 
@@ -302,5 +322,84 @@ public class ExtensionSchemaService extends SpecRegistryImpl<Extension> {
         } catch (IOException e) {
             log.error("cannot load extension schema from {}: {}", path, e.getMessage());
         }
+    }
+
+    @Override
+    public void registerSpec(SpecType type, Class<? extends Spec> spec, SpecFactory<? extends Spec> factory) {
+        super.registerSpec(type, spec, factory);
+        SpecRegistration registration = registrations.get(type.kind());
+        SchemaImpl.SchemaImplBuilder schema = SchemaImpl.builder()
+            .entity(registration.schema().entity())
+            .kind(registration.schema().kind())
+            .schema(registration.schema().schema())
+            .uiSchema(registration.schema().uiSchema());
+
+        ExtensionType et = spec.getAnnotation(ExtensionType.class);
+        if (et != null) {
+            if (et.appliesTo() != null && et.appliesTo().length > 0) {
+                schema.appliesTo(
+                    java.util.Arrays.stream(et.appliesTo())
+                        .map(e -> getEntityName(e))
+                        .toArray(String[]::new)
+                );
+            }
+            if (et.appliesNotTo() != null && et.appliesNotTo().length > 0) {
+                schema.appliesNotTo(
+                    java.util.Arrays.stream(et.appliesNotTo())
+                        .map(e -> getEntityName(e))
+                        .toArray(String[]::new)
+                );
+            }
+            if (et.showIn() != null && !et.showIn().isEmpty()) {
+                schema.showIn(et.showIn());
+            }
+        }
+
+        registrations.put(
+            type.kind(),
+            new SpecRegistration(
+                registration.kind(),
+                registration.runtime(),
+                registration.spec(),
+                registration.factory(),
+                schema.build()
+            )
+        );
+    }
+
+    public boolean appliesTo(Class<?> entity, String kind) {
+        String entityName = getEntityName(entity);
+        SpecRegistration reg = registrations.get(kind);
+        if (reg == null) {
+            return false;
+        }
+
+        Schema schema = reg.schema();
+
+        if (schema instanceof SchemaImpl schemaImpl) {
+            String[] appliesTo = schemaImpl.getAppliesTo();
+            String[] appliesNotTo = schemaImpl.getAppliesNotTo();
+
+            //if applies to is set applies only to matching
+            if (appliesTo != null && appliesTo.length > 0) {
+                for (String e : appliesTo) {
+                    if (e.equalsIgnoreCase(entityName)) {
+                        return true;
+                    }
+                }
+            }
+
+            //if applies not to is set applies only to non-matching
+            if (appliesNotTo != null && appliesNotTo.length > 0) {
+                for (String e : appliesNotTo) {
+                    if (e.equalsIgnoreCase(entityName)) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        //if no appliesTo/appliesNotTo defined, assume it applies to all
+        return true;
     }
 }

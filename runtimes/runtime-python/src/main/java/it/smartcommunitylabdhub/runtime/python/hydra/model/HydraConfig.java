@@ -49,5 +49,4 @@ public class HydraConfig implements Serializable {
 
     @Schema(title = "fields.hydra.config.base64.title", description = "fields.hydra.config.base64.description")
     private String base64;
-
 }

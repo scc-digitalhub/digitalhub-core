@@ -41,9 +41,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
 public abstract class AbstractWorkflowBaseRuntime<
-    F extends WorkflowBaseSpec, S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable
->
-    extends AbstractBaseRuntime<S, Z, R> {
+    F extends WorkflowBaseSpec,
+    S extends RunBaseSpec,
+    Z extends RunBaseStatus,
+    R extends RunRunnable
+> extends AbstractBaseRuntime<S, Z, R> {
 
     protected EntityRepository<Workflow> workflowRepository;
     protected EntityRepository<Task> taskRepository;

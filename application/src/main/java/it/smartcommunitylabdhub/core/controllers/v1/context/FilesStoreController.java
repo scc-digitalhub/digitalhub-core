@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.files.controller;
+package it.smartcommunitylabdhub.core.controllers.v1.context;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.CredentialsService;
 import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.commons.Keys;
+import it.smartcommunitylabdhub.commons.accessors.spec.ConfigSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
-import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.files.models.DownloadInfo;
 import it.smartcommunitylabdhub.files.models.FileInfo;
@@ -32,6 +32,7 @@ import it.smartcommunitylabdhub.files.models.TokenPageRequest;
 import it.smartcommunitylabdhub.files.models.UploadInfo;
 import it.smartcommunitylabdhub.files.service.FilesService;
 import it.smartcommunitylabdhub.files.service.FilesStore;
+import it.smartcommunitylabdhub.projects.Project;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -78,7 +79,10 @@ public class FilesStoreController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project
     ) throws NoSuchEntityException, StoreException {
         //TODO remove workaround and expose project file store as is
-        return Collections.singleton(filesService.getDefaultStore(projectService.get(project)) + "/" + project);
+        Project prj = projectService.get(project);
+        ConfigSpecAccessor cfg = ConfigSpecAccessor.with(prj.getSpec());
+
+        return Collections.singleton(filesService.getDefaultStore(cfg.getConfig()) + "/" + project);
     }
 
     @GetMapping(path = "/info", produces = "application/json; charset=UTF-8")

@@ -55,24 +55,20 @@ public class FunctionEntityFilter extends AbstractEntityFilter<Function> {
         filters.addAll(sf.getFilters());
 
         //labels in AND
-        Optional
-            .ofNullable(labels)
-            .ifPresent(value -> {
-                List<SearchCriteria<Function>> lcr = new ArrayList<>();
-                value.forEach(label ->
-                    lcr.add(new BaseEntitySearchCriteria<>("labels", label, SearchCriteria.Operation.like))
-                );
+        Optional.ofNullable(labels).ifPresent(value -> {
+            List<SearchCriteria<Function>> lcr = new ArrayList<>();
+            value.forEach(label ->
+                lcr.add(new BaseEntitySearchCriteria<>("labels", label, SearchCriteria.Operation.like))
+            );
 
-                BaseEntityFilter<Function> qf = BaseEntityFilter
-                    .<Function>builder()
-                    .condition(Condition.and)
-                    .criteria(lcr)
-                    .build();
-                filters.add(qf);
-            });
+            BaseEntityFilter<Function> qf = BaseEntityFilter.<Function>builder()
+                .condition(Condition.and)
+                .criteria(lcr)
+                .build();
+            filters.add(qf);
+        });
 
-        return BaseEntityFilter
-            .<Function>builder()
+        return BaseEntityFilter.<Function>builder()
             .criteria(criteria)
             .filters(filters)
             .condition(SearchFilter.Condition.and)

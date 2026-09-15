@@ -94,12 +94,10 @@ public class TokenEndpoint implements InitializingBean {
         // accessTokenAuthProvider.setJwtAuthenticationConverter(jwtConverter);
         // // refreshTokenAuthProvider = new JwtAuthenticationProvider(coreJwtDecoder(jwkSetKeyStore.getJwk(), true));
         // // refreshTokenAuthProvider.setJwtAuthenticationConverter(jwtConverter);
-
         // if (securityProperties.isJwtAuthEnabled()) {
         //     JwtAuthenticationProperties jwtProps = securityProperties.getJwt();
         //     externalTokenAuthProvider =
         //         new JwtAuthenticationProvider(externalJwtDecoder(jwtProps.getIssuerUri(), jwtProps.getAudience()));
-
         //     externalTokenAuthProvider.setJwtAuthenticationConverter(
         //         externalJwtAuthenticationConverter(jwtProps.getUsername(), jwtProps.getClaim(), projectAuthHelper)
         //     );

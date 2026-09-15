@@ -118,8 +118,8 @@ public class LifecycleTriggerListener {
             }
 
             //pick matching jobs
-            List<LifecycleTriggerJob> jobs = store.findMatching(j ->
-                matcher.match(j.getKey(), dto.getKey()) && j.getStates().contains(state)
+            List<LifecycleTriggerJob> jobs = store.findMatching(
+                j -> matcher.match(j.getKey(), dto.getKey()) && j.getStates().contains(state)
             );
 
             //submit fire for all these jobs
@@ -144,14 +144,12 @@ public class LifecycleTriggerListener {
                 //inflate job with relationships
                 job.setRelationships(List.of(new RelationshipDetail(RelationshipName.CONSUMES, null, dto.getKey())));
 
-                TriggerRun<LifecycleTriggerJob> run = TriggerRun
-                    .<LifecycleTriggerJob>builder()
+                TriggerRun<LifecycleTriggerJob> run = TriggerRun.<LifecycleTriggerJob>builder()
                     .job(job)
                     .details(details)
                     .build();
 
-                TriggerExecutionEvent<LifecycleTriggerJob> e = TriggerExecutionEvent
-                    .<LifecycleTriggerJob>builder()
+                TriggerExecutionEvent<LifecycleTriggerJob> e = TriggerExecutionEvent.<LifecycleTriggerJob>builder()
                     .run(run)
                     .event(TriggerEvent.FIRE)
                     .build();

@@ -25,7 +25,8 @@ import it.smartcommunitylabdhub.runtimes.lifecycle.RunLifecycleManager;
 
 @RuntimeComponent(runtime = GuardrailServeRunSpec.KIND)
 public class GuardrailServeLifecycleManager
-    extends RunLifecycleManager<GuardrailRunSpec, GuardrailRunStatus, K8sRunnable> {
+    extends RunLifecycleManager<GuardrailRunSpec, GuardrailRunStatus, K8sRunnable>
+{
 
     GuardrailServeLifecycleManager(GuardrailRuntime runtime) {
         super(runtime);

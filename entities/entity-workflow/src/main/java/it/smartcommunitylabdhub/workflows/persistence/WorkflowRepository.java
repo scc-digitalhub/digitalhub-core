@@ -34,15 +34,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface WorkflowRepository
-    extends JpaRepository<WorkflowEntity, String>, JpaSpecificationExecutor<WorkflowEntity> {
+    extends JpaRepository<WorkflowEntity, String>, JpaSpecificationExecutor<WorkflowEntity>
+{
     List<WorkflowEntity> findByProject(String project);
 
     Page<WorkflowEntity> findAll(Pageable pageable);
 
     @Query(
         "SELECT a FROM WorkflowEntity a WHERE (a.name, a.project, a.created) IN " +
-        "(SELECT a2.name, a2.project, MAX(a2.created) FROM WorkflowEntity a2 GROUP BY a2.name, a2.project) " +
-        "ORDER BY a.created DESC"
+            "(SELECT a2.name, a2.project, MAX(a2.created) FROM WorkflowEntity a2 GROUP BY a2.name, a2.project) " +
+            "ORDER BY a.created DESC"
     )
     List<WorkflowEntity> findAllLatestWorkflows();
 
@@ -52,8 +53,8 @@ public interface WorkflowRepository
 
     @Query(
         "SELECT a FROM WorkflowEntity a WHERE a.project = :project AND (a.name, a.project, a.created) IN " +
-        "(SELECT a2.name, a2.project, MAX(a2.created) FROM WorkflowEntity a2 WHERE a2.project = :project GROUP BY a2.name, a2.project) " +
-        "ORDER BY a.created DESC"
+            "(SELECT a2.name, a2.project, MAX(a2.created) FROM WorkflowEntity a2 WHERE a2.project = :project GROUP BY a2.name, a2.project) " +
+            "ORDER BY a.created DESC"
     )
     List<WorkflowEntity> findAllLatestWorkflowsByProject(@Param("project") String project);
 
@@ -65,7 +66,7 @@ public interface WorkflowRepository
 
     @Query(
         "SELECT a FROM WorkflowEntity a WHERE a.project = :project AND a.name = :name " +
-        "AND a.created = (SELECT MAX(a2.created) FROM WorkflowEntity a2 WHERE a2.project = :project AND a2.name = :name)"
+            "AND a.created = (SELECT MAX(a2.created) FROM WorkflowEntity a2 WHERE a2.project = :project AND a2.name = :name)"
     )
     Optional<WorkflowEntity> findLatestWorkflowByProjectAndName(
         @Param("project") String project,

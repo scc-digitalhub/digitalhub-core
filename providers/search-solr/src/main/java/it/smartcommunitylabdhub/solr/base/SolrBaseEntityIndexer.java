@@ -202,7 +202,10 @@ public class SolrBaseEntityIndexer<D extends BaseDTO> implements EntityIndexer<D
 
         if (solr != null) {
             try {
-                List<SolrInputDocument> docs = items.stream().map(e -> parse(e)).collect(Collectors.toList());
+                List<SolrInputDocument> docs = items
+                    .stream()
+                    .map(e -> parse(e))
+                    .collect(Collectors.toList());
 
                 solr.indexBounce(docs);
             } catch (StoreException e) {

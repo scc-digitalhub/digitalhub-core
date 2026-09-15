@@ -88,8 +88,7 @@ public class RunDTOBuilder implements Converter<RunEntity, Run> {
         Optional.ofNullable(baseMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
         Optional.ofNullable(auditingMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
 
-        return Run
-            .builder()
+        return Run.builder()
             .id(entity.getId())
             .name(name)
             .kind(entity.getKind())

@@ -1,0 +1,13 @@
+{
+  "ui:title@en": "Run Autoscaler",
+  "ui:description@en": "Autoscaler extension for automatic scaling of resources",
+  "ui:title@it": "Autoscaler di esecuzione",
+  "ui:description@it": "Estensione autoscaler per la scalabilità automatica delle risorse",
+
+  "auto_stop": {
+    "ui:title@en": "Auto Stop",
+    "ui:description@en": "Time in seconds after which the run will be automatically stopped",
+    "ui:title@it": "Arresto automatico",
+    "ui:description@it": "Tempo in secondi dopo il quale la run sarà arrestata automaticamente"
+  }
+}

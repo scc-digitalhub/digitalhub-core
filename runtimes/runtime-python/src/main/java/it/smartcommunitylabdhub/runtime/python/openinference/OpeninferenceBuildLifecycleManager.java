@@ -25,7 +25,8 @@ import it.smartcommunitylabdhub.runtimes.lifecycle.RunLifecycleManager;
 
 @RuntimeComponent(runtime = OpeninferenceBuildRunSpec.KIND)
 public class OpeninferenceBuildLifecycleManager
-    extends RunLifecycleManager<OpeninferenceRunSpec, OpeninferenceRunStatus, K8sRunnable> {
+    extends RunLifecycleManager<OpeninferenceRunSpec, OpeninferenceRunStatus, K8sRunnable>
+{
 
     OpeninferenceBuildLifecycleManager(OpeninferenceRuntime runtime) {
         super(runtime);

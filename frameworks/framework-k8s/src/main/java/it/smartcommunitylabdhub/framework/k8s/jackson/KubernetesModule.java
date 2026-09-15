@@ -49,6 +49,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.support.ResourcePatternResolver;
+import org.springframework.core.io.support.ResourcePatternUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -101,20 +103,44 @@ public class KubernetesModule implements com.github.victools.jsonschema.generato
         if (resourceLoader != null && templateKeys != null) {
             templateKeys.forEach(k -> {
                 try {
-                    String path = k;
                     //check if we received a bare path and fix
+                    String path = k;
                     if (!path.startsWith("classpath:") && !path.startsWith("file:")) {
                         path = "file:" + k;
                     }
 
-                    // Load as resource and deserialize as template
-                    Resource res = resourceLoader.getResource(path);
-                    K8sTemplate<K8sRunnable> t = KubernetesMapper.readTemplate(
-                        res.getContentAsString(StandardCharsets.UTF_8),
-                        K8sRunnable.class
-                    );
+                    if (path.endsWith("/")) {
+                        // folder: discover *.yaml, *.yml, *.json files
+                        ResourcePatternResolver resolver = ResourcePatternUtils.getResourcePatternResolver(
+                            resourceLoader
+                        );
+                        String[] patterns = { path + "*.yaml", path + "*.yml", path + "*.json" };
+                        for (String pattern : patterns) {
+                            try {
+                                Resource[] discovered = resolver.getResources(pattern);
+                                for (Resource res : discovered) {
+                                    // Load as resource and deserialize as template
+                                    K8sTemplate<K8sRunnable> t = KubernetesMapper.readTemplate(
+                                        res.getContentAsString(StandardCharsets.UTF_8),
+                                        K8sRunnable.class
+                                    );
 
-                    results.add(t);
+                                    results.add(t);
+                                }
+                            } catch (IOException e) {
+                                //skip
+                            }
+                        }
+                    } else {
+                        // Load as resource and deserialize as template
+                        Resource res = resourceLoader.getResource(path);
+                        K8sTemplate<K8sRunnable> t = KubernetesMapper.readTemplate(
+                            res.getContentAsString(StandardCharsets.UTF_8),
+                            K8sRunnable.class
+                        );
+
+                        results.add(t);
+                    }
                 } catch (IOException | ClassCastException | IllegalArgumentException e) {
                     //skip
                 }

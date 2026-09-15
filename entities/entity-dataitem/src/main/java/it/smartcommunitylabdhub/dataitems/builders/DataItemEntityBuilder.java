@@ -54,8 +54,7 @@ public class DataItemEntityBuilder implements Converter<DataItem, DataItemEntity
         BaseMetadata metadata = BaseMetadata.from(dto.getMetadata());
         EmbeddableMetadata embeddable = EmbeddableMetadata.from(dto.getMetadata());
 
-        return DataItemEntity
-            .builder()
+        return DataItemEntity.builder()
             .id(dto.getId())
             .name(dto.getName())
             .kind(dto.getKind())

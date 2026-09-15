@@ -1,0 +1,17 @@
+{
+  "ui:title@en": "Run Initializer",
+  "ui:description@en": "Initializer extension for preparing the environment before executing a run",
+  "ui:title@it": "Inizializzatore di esecuzione",
+  "ui:description@it": "Estensione inizializzatore per preparare l'ambiente prima di eseguire un run",
+  "files": {
+    "ui:title@en": "Files",
+    "ui:description@en": "List of files to be initialized for the run",
+    "ui:title@it": "Files",
+    "ui:description@it": "Elenco dei file da inizializzare per la run",
+    "items": {
+      "ui:title": "",
+      "ui:label": false,
+      "ui:layout": [6, 6]
+    }
+  }
+}

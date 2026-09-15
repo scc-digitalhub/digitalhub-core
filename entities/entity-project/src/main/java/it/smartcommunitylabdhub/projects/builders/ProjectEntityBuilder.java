@@ -26,9 +26,9 @@ package it.smartcommunitylabdhub.projects.builders;
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
-import it.smartcommunitylabdhub.commons.models.project.Project;
-import it.smartcommunitylabdhub.commons.models.project.ProjectBaseSpec;
+import it.smartcommunitylabdhub.projects.Project;
 import it.smartcommunitylabdhub.projects.persistence.ProjectEntity;
+import it.smartcommunitylabdhub.projects.specs.ProjectBaseSpec;
 import jakarta.persistence.AttributeConverter;
 import java.io.Serializable;
 import java.time.ZoneOffset;
@@ -63,8 +63,7 @@ public class ProjectEntityBuilder implements Converter<Project, ProjectEntity> {
         ProjectBaseSpec spec = new ProjectBaseSpec();
         spec.configure(dto.getSpec());
 
-        return ProjectEntity
-            .builder()
+        return ProjectEntity.builder()
             .id(dto.getId())
             .name(dto.getName())
             .kind(dto.getKind())

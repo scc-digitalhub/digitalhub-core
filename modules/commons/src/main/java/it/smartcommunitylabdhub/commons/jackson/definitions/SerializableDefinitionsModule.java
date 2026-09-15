@@ -42,10 +42,10 @@ public class SerializableDefinitionsModule implements com.github.victools.jsonsc
                 //redefine Serializable via mixin with annotations, and inline
                 return Serializable.class.equals(javaType.getErasedType())
                     ? new CustomDefinition(
-                        context.createDefinition(context.getTypeContext().resolve(SerializableMixin.class)),
-                        CustomDefinition.DefinitionType.STANDARD,
-                        CustomDefinition.AttributeInclusion.YES
-                    )
+                          context.createDefinition(context.getTypeContext().resolve(SerializableMixin.class)),
+                          CustomDefinition.DefinitionType.STANDARD,
+                          CustomDefinition.AttributeInclusion.YES
+                      )
                     : null;
             })
             .withCustomDefinitionProvider((javaType, context) -> {
@@ -66,21 +66,21 @@ public class SerializableDefinitionsModule implements com.github.victools.jsonsc
                 //redefine ArrayField with items
                 return SerializableMixin.ArrayField.class.equals(javaType.getErasedType())
                     ? new CustomDefinition(
-                        config
-                            .createObjectNode()
-                            .put(
-                                config.getKeyword(SchemaKeyword.TAG_TYPE),
-                                config.getKeyword(SchemaKeyword.TAG_TYPE_ARRAY)
-                            )
-                            .set(
-                                config.getKeyword(SchemaKeyword.TAG_ITEMS),
-                                config
-                                    .createObjectNode()
-                                    .put(config.getKeyword(SchemaKeyword.TAG_REF), "#/$defs/Serializable")
-                            ),
-                        CustomDefinition.DefinitionType.STANDARD,
-                        CustomDefinition.AttributeInclusion.YES
-                    )
+                          config
+                              .createObjectNode()
+                              .put(
+                                  config.getKeyword(SchemaKeyword.TAG_TYPE),
+                                  config.getKeyword(SchemaKeyword.TAG_TYPE_ARRAY)
+                              )
+                              .set(
+                                  config.getKeyword(SchemaKeyword.TAG_ITEMS),
+                                  config
+                                      .createObjectNode()
+                                      .put(config.getKeyword(SchemaKeyword.TAG_REF), "#/$defs/Serializable")
+                              ),
+                          CustomDefinition.DefinitionType.STANDARD,
+                          CustomDefinition.AttributeInclusion.YES
+                      )
                     : null;
             })
             .withTypeAttributeOverride((node, scope, context) -> {

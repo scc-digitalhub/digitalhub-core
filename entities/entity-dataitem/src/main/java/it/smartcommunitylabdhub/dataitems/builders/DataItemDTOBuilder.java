@@ -82,8 +82,7 @@ public class DataItemDTOBuilder implements Converter<DataItemEntity, DataItem> {
         Optional.ofNullable(auditingMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
         Optional.ofNullable(versioningMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
 
-        return DataItem
-            .builder()
+        return DataItem.builder()
             .id(entity.getId())
             .name(entity.getName())
             .kind(entity.getKind())

@@ -89,7 +89,12 @@ public class DockerfileGenerator {
         if (
             directives != null &&
             !directives.isEmpty() &&
-            directives.stream().map(d -> d.getDirective()).collect(Collectors.toSet()).size() < directives.size()
+            directives
+                .stream()
+                .map(d -> d.getDirective())
+                .collect(Collectors.toSet())
+                .size() <
+            directives.size()
         ) {
             //duplicated directives are illegal
             throw new IllegalArgumentException("duplicated directives found.");

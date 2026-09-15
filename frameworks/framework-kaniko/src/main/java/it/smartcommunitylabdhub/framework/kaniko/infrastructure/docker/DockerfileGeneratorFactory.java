@@ -93,7 +93,12 @@ public class DockerfileGeneratorFactory {
     public DockerfileGeneratorFactory entrypoint(List<String> entrypoint) {
         generator.addInstruction(
             DockerfileInstruction.Kind.ENTRYPOINT,
-            "[" + entrypoint.stream().map(s -> "\"" + s + "\"").collect(Collectors.joining(", ")) + "]"
+            "[" +
+                entrypoint
+                    .stream()
+                    .map(s -> "\"" + s + "\"")
+                    .collect(Collectors.joining(", ")) +
+                "]"
         );
         return this;
     }
@@ -101,7 +106,12 @@ public class DockerfileGeneratorFactory {
     public DockerfileGeneratorFactory cmd(List<String> command) {
         generator.addInstruction(
             DockerfileInstruction.Kind.CMD,
-            "[" + command.stream().map(s -> "\"" + s + "\"").collect(Collectors.joining(", ")) + "]"
+            "[" +
+                command
+                    .stream()
+                    .map(s -> "\"" + s + "\"")
+                    .collect(Collectors.joining(", ")) +
+                "]"
         );
         return this;
     }

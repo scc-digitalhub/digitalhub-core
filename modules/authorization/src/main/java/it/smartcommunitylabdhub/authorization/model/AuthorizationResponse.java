@@ -46,8 +46,7 @@ public class AuthorizationResponse {
             return null;
         }
 
-        return UriComponentsBuilder
-            .fromUriString(redirectUrl)
+        return UriComponentsBuilder.fromUriString(redirectUrl)
             .queryParam("code", code)
             .queryParam("state", state)
             .queryParam("issuer", issuer)

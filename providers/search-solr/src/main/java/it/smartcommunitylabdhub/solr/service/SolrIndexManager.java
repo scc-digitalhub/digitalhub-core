@@ -82,8 +82,10 @@ public class SolrIndexManager {
     private final Http2SolrClient solrClient;
     private final RestTemplate restTemplate;
 
-    private ObjectMapper mapper = new ObjectMapper()
-        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private ObjectMapper mapper = new ObjectMapper().configure(
+        DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
+        false
+    );
 
     public SolrIndexManager(SolrProperties props) {
         Assert.notNull(props, "solr properties can not be null");
@@ -94,8 +96,10 @@ public class SolrIndexManager {
 
         //build client
         log.debug("build solr client for {} collection {}", props.getUrl(), props.getCollection());
-        Builder builder = new Http2SolrClient.Builder(props.getUrl())
-            .withConnectionTimeout(props.getTimeout(), TimeUnit.MILLISECONDS);
+        Builder builder = new Http2SolrClient.Builder(props.getUrl()).withConnectionTimeout(
+            props.getTimeout(),
+            TimeUnit.MILLISECONDS
+        );
 
         if (StringUtils.hasLength(props.getUser()) && StringUtils.hasLength(props.getPassword())) {
             //add basic auth
@@ -417,7 +421,7 @@ public class SolrIndexManager {
             filters.put("q", Arrays.asList(q));
             String query = String.format(
                 "metadata.name:%1$s OR metadata.description:%1$s OR metadata.project:%1$s" +
-                " OR metadata.version:%1$s OR metadata.labels:%1$s",
+                    " OR metadata.version:%1$s OR metadata.labels:%1$s",
                 q.trim()
             );
             MultiMapSolrParams.addParam("q", query, queryParamMap);

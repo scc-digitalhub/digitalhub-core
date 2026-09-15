@@ -261,6 +261,8 @@ def _configure_execution(spec: dict, run: dict, ctx: Context) -> tuple[Callable,
         # download config to runtime dir
         elif "source" in config:
             path = runtime_dir / "config"
+            if "path" in config:
+                path = path / config["path"]
             sys.argv = args + [f"--config-path={path.absolute()}"]
         elif "path" in config:
             path = runtime_dir / config["path"]

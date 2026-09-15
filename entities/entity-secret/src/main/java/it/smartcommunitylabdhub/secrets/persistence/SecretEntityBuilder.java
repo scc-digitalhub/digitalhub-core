@@ -58,8 +58,7 @@ public class SecretEntityBuilder implements Converter<Secret, SecretEntity> {
         BaseMetadata metadata = BaseMetadata.from(dto.getMetadata());
         EmbeddableMetadata embeddable = EmbeddableMetadata.from(dto.getMetadata());
 
-        return SecretEntity
-            .builder()
+        return SecretEntity.builder()
             .id(dto.getId())
             .name(dto.getName())
             .kind(dto.getKind())

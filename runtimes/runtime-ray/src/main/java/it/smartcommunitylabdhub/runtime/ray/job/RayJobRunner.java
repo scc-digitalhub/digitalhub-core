@@ -6,11 +6,16 @@
 
 package it.smartcommunitylabdhub.runtime.ray.job;
 
+import com.github.mustachejava.DefaultMustacheFactory;
+import com.github.mustachejava.Mustache;
+import com.github.mustachejava.MustacheException;
+import com.github.mustachejava.MustacheFactory;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
@@ -28,7 +33,6 @@ import it.smartcommunitylabdhub.runtime.ray.model.RayDependencyFormat;
 import it.smartcommunitylabdhub.runtime.ray.model.RaySourceCode;
 import it.smartcommunitylabdhub.runtime.ray.specs.RayFunctionSpec;
 import jakarta.annotation.Nullable;
-
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Serializable;
@@ -44,17 +48,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
-
-import com.github.mustachejava.DefaultMustacheFactory;
-import com.github.mustachejava.Mustache;
-import com.github.mustachejava.MustacheException;
-import com.github.mustachejava.MustacheFactory;
 
 /**
  * Builds a {@link K8sRayJobRunnable} for the {@code ray+job} task.
@@ -84,19 +82,25 @@ public class RayJobRunner {
     private final RayProperties properties;
     private final K8sBuilderHelper k8sBuilderHelper;
     private Mustache handlerTemplate;
+    private K8sLabelHelper k8sLabelHelper;
 
     private CoreResource defaultCoreResource;
 
-    public RayJobRunner(RayProperties properties, @Nullable K8sBuilderHelper k8sBuilderHelper) {
+    public RayJobRunner(
+        RayProperties properties,
+        @Nullable K8sBuilderHelper k8sBuilderHelper,
+        @Nullable K8sLabelHelper k8sLabelHelper
+    ) {
         this.properties = properties;
         this.k8sBuilderHelper = k8sBuilderHelper;
+        this.k8sLabelHelper = k8sLabelHelper;
+
         setHandlerTemplate(new ClassPathResource("runtime-ray/docker/_job_handler.py"));
         defaultCoreResource = new CoreResource();
         defaultCoreResource.setCpu(properties.getHeadCpu() != null ? properties.getHeadCpu() : "1");
         defaultCoreResource.setMem(properties.getHeadMemory() != null ? properties.getHeadMemory() : "2Gi");
         defaultCoreResource.setDisk(properties.getHeadDiskSize() != null ? properties.getHeadDiskSize() : "2Gi");
     }
-
 
     public void setHandlerTemplate(Resource resource) {
         try {
@@ -107,6 +111,7 @@ public class RayJobRunner {
             throw new CoreRuntimeException("error with reading handler template for runtime");
         }
     }
+
     public K8sRayJobRunnable produce(Run run, Map<String, String> secretData) {
         RayJobRunSpec runSpec = new RayJobRunSpec(run.getSpec());
         RayJobTaskSpec taskSpec = runSpec.getTaskJobSpec();
@@ -115,7 +120,11 @@ public class RayJobRunner {
 
         //resolve images: head/worker overrides on task, then function image, then properties defaults
         String headImage = firstNonBlank(/*taskSpec.getHeadImage(),*/ functionSpec.getImage(), properties.getImage());
-        String workerImage = firstNonBlank(/*taskSpec.getWorkerImage(),*/ functionSpec.getImage(), properties.getWorkerImage(), headImage);
+        String workerImage = firstNonBlank(
+            /*taskSpec.getWorkerImage(),*/ functionSpec.getImage(),
+            properties.getWorkerImage(),
+            headImage
+        );
         if (!StringUtils.hasText(headImage)) {
             throw new IllegalArgumentException("No ray image configured: set runtime.ray.image or function.image");
         }
@@ -140,11 +149,10 @@ public class RayJobRunner {
             String handlerFile = buildHandler(functionSpec.getSource());
 
             contextSources.add(
-                ContextSource
-                .builder()
-                .name("handler.py")
-                .base64(Base64.getEncoder().encodeToString(handlerFile.getBytes(StandardCharsets.UTF_8)))
-                .build()
+                ContextSource.builder()
+                    .name("handler.py")
+                    .base64(Base64.getEncoder().encodeToString(handlerFile.getBytes(StandardCharsets.UTF_8)))
+                    .build()
             );
             entrypoint = "python handler.py";
         }
@@ -167,14 +175,13 @@ public class RayJobRunner {
         raySpec.setTtlSecondsAfterFinished(properties.getTtlSecondsAfterFinished());
         raySpec.setPreRunningDeadlineSeconds(properties.getPreRunningDeadlineSeconds());
 
-        K8sRayJobRunnable runnable = K8sRayJobRunnable
-            .builder()
+        K8sRayJobRunnable runnable = K8sRayJobRunnable.builder()
             .runtime(RayRuntime.RUNTIME)
             .task(RayJobTaskSpec.KIND)
             .state(State.READY.name())
             .labels(
                 k8sBuilderHelper != null
-                    ? List.of(new CoreLabel(k8sBuilderHelper.getLabelName("function"), taskAccessor.getFunction()))
+                    ? List.of(new CoreLabel(k8sLabelHelper.buildCoreLabel("function"), taskAccessor.getFunction()))
                     : null
             )
             .image(headImage)
@@ -196,8 +203,7 @@ public class RayJobRunner {
 
     private ClusterModel buildCluster(RayJobTaskSpec taskSpec, String headImage, String workerImage, String version) {
         //head pod: inherited k8s properties (resources, volumes) apply here
-        PodModel head = PodModel
-            .builder()
+        PodModel head = PodModel.builder()
             .image(headImage)
             .resources(k8sBuilderHelper.convertResources(defaultCoreResource))
             .volumes(taskSpec.getVolumes())
@@ -207,12 +213,13 @@ public class RayJobRunner {
             .build();
 
         //worker pod: dedicated worker_* fields
-        PodModel worker = PodModel
-            .builder()
+        PodModel worker = PodModel.builder()
             .image(workerImage)
-            .resources(taskSpec.getResources() != null && k8sBuilderHelper != null
-                ? k8sBuilderHelper.convertResources(taskSpec.getResources())
-                : null)
+            .resources(
+                taskSpec.getResources() != null && k8sBuilderHelper != null
+                    ? k8sBuilderHelper.convertResources(taskSpec.getResources())
+                    : null
+            )
             .volumes(taskSpec.getVolumes())
             .template(taskSpec.getProfile() != null ? taskSpec.getProfile() : properties.getWorkerProfile())
             .startParams(properties.getWorkerStartParams())
@@ -223,8 +230,7 @@ public class RayJobRunner {
         int minReplicas = Optional.ofNullable(taskSpec.getMinReplicas()).orElse(replicas);
         int maxReplicas = Optional.ofNullable(taskSpec.getMaxReplicas()).orElse(replicas);
 
-        WorkerGroupModel workerGroup = WorkerGroupModel
-            .builder()
+        WorkerGroupModel workerGroup = WorkerGroupModel.builder()
             .name(StringUtils.hasText(properties.getWorkerGroupName()) ? properties.getWorkerGroupName() : "workers")
             .replicas(replicas)
             .minReplicas(minReplicas)
@@ -232,12 +238,9 @@ public class RayJobRunner {
             .workerSpec(worker)
             .build();
 
-        String finalVersion = StringUtils.hasText(version)
-            ? version
-            : properties.getVersion();
+        String finalVersion = StringUtils.hasText(version) ? version : properties.getVersion();
 
-        return ClusterModel
-            .builder()
+        return ClusterModel.builder()
             .version(finalVersion)
             .headSpec(head)
             .workerGroups(new ArrayList<>(List.of(workerGroup)))
@@ -261,7 +264,11 @@ public class RayJobRunner {
         if (secretData == null || secretData.isEmpty()) {
             return null;
         }
-        return secretData.entrySet().stream().map(e -> new CoreEnv(e.getKey(), e.getValue())).toList();
+        return secretData
+            .entrySet()
+            .stream()
+            .map(e -> new CoreEnv(e.getKey(), e.getValue()))
+            .toList();
     }
 
     // ---------- source / context ----------
@@ -286,7 +293,7 @@ public class RayJobRunner {
                 if (StringUtils.hasText(p)) {
                     return p.startsWith("/") ? p.substring(1) : p;
                 }
-            // look at handler
+                // look at handler
             } else if (StringUtils.hasText(source.getHandler())) {
                 // handler may be in the form path/to/file.py or module.submodule:func; in both cases we take the file/module part and convert to a path
                 String file = source.getHandler();
@@ -308,9 +315,8 @@ public class RayJobRunner {
     private String deriveEntrypoint(@Nullable RaySourceCode source) {
         String file = resolveSourceFileName(source);
         //source language is python; use the python interpreter
-        return "python "  + file;
+        return "python " + file;
     }
-
 
     private String deriveHandlerMethod(@Nullable RaySourceCode source) {
         if (source != null && StringUtils.hasText(source.getHandler())) {
@@ -338,14 +344,12 @@ public class RayJobRunner {
         if (!reqs.isEmpty()) {
             String content = String.join("\n", reqs);
             sources.add(
-                ContextSource
-                    .builder()
+                ContextSource.builder()
                     .name(REQUIREMENTS_FILE)
                     .base64(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)))
                     .build()
             );
         }
-        
 
         return sources;
     }
@@ -385,7 +389,6 @@ public class RayJobRunner {
         }
     }
 
-    
     // ---------- dependencies ----------
 
     private Dependencies resolveDependencies(RayFunctionSpec functionSpec) {
@@ -398,9 +401,8 @@ public class RayJobRunner {
             return Dependencies.NONE;
         }
 
-        RayDependencyFormat fmt = properties.getDependencyFormat() != null
-            ? properties.getDependencyFormat()
-            : RayDependencyFormat.pip;
+        RayDependencyFormat fmt =
+            properties.getDependencyFormat() != null ? properties.getDependencyFormat() : RayDependencyFormat.pip;
         return new Dependencies(fmt.value(), new ArrayList<>(reqs));
     }
 
@@ -441,6 +443,7 @@ public class RayJobRunner {
     }
 
     public class NoEncodingMustacheFactory extends DefaultMustacheFactory {
+
         @Override
         public void encode(String value, Writer writer) {
             try {

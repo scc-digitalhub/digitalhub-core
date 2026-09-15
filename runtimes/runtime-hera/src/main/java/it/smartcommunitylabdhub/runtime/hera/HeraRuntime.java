@@ -126,28 +126,26 @@ public class HeraRuntime extends K8sWorkflowBaseRuntime<HeraWorkflowSpec, HeraRu
         }
 
         HeraWorkflowSpec workSpec = new HeraWorkflowSpec(workflow.getSpec());
-        HeraRunSpec runSpec =
-            switch (run.getKind()) {
-                case HeraPipelineRunSpec.KIND -> new HeraPipelineRunSpec(run.getSpec());
-                case HeraBuildRunSpec.KIND -> new HeraBuildRunSpec(run.getSpec());
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        HeraRunSpec runSpec = switch (run.getKind()) {
+            case HeraPipelineRunSpec.KIND -> new HeraPipelineRunSpec(run.getSpec());
+            case HeraBuildRunSpec.KIND -> new HeraBuildRunSpec(run.getSpec());
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //build task spec as defined
-        Map<String, Serializable> taskSpec =
-            switch (task.getKind()) {
-                case HeraPipelineTaskSpec.KIND -> {
-                    yield new HeraPipelineTaskSpec(task.getSpec()).toMap();
-                }
-                case HeraBuildTaskSpec.KIND -> {
-                    yield new HeraBuildTaskSpec(task.getSpec()).toMap();
-                }
-                default -> throw new IllegalArgumentException(
-                    "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
-                );
-            };
+        Map<String, Serializable> taskSpec = switch (task.getKind()) {
+            case HeraPipelineTaskSpec.KIND -> {
+                yield new HeraPipelineTaskSpec(task.getSpec()).toMap();
+            }
+            case HeraBuildTaskSpec.KIND -> {
+                yield new HeraBuildTaskSpec(task.getSpec()).toMap();
+            }
+            default -> throw new IllegalArgumentException(
+                "Kind not recognized. Cannot retrieve the right builder or specialize Spec for Run and Task."
+            );
+        };
 
         //build run merging task spec overrides
         Map<String, Serializable> map = new HashMap<>();
@@ -178,12 +176,11 @@ public class HeraRuntime extends K8sWorkflowBaseRuntime<HeraWorkflowSpec, HeraRu
         // Create string run accessor from task
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
-        K8sRunnable runnable =
-            switch (runAccessor.getTask()) {
-                case HeraPipelineTaskSpec.KIND -> new HeraPipelineRunner().produce(run);
-                case HeraBuildTaskSpec.KIND -> new HeraBuildRunner(image, secrets).produce(run);
-                default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
-            };
+        K8sRunnable runnable = switch (runAccessor.getTask()) {
+            case HeraPipelineTaskSpec.KIND -> new HeraPipelineRunner().produce(run);
+            case HeraBuildTaskSpec.KIND -> new HeraBuildRunner(image, secrets).produce(run);
+            default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
+        };
 
         //extract auth from security context to inflate secured credentials
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
@@ -235,9 +232,10 @@ public class HeraRuntime extends K8sWorkflowBaseRuntime<HeraWorkflowSpec, HeraRu
 
                 // extract workflow spec part and convert to String again
                 try {
-                    IoArgoprojWorkflowV1alpha1Workflow argoWorkflow = YamlMapperFactory
-                        .yamlObjectMapper()
-                        .readValue(workflow, IoArgoprojWorkflowV1alpha1Workflow.class);
+                    IoArgoprojWorkflowV1alpha1Workflow argoWorkflow = YamlMapperFactory.yamlObjectMapper().readValue(
+                        workflow,
+                        IoArgoprojWorkflowV1alpha1Workflow.class
+                    );
                     workflow = YamlMapperFactory.yamlObjectMapper().writeValueAsString(argoWorkflow.getSpec());
                 } catch (JsonProcessingException e) {
                     log.error("Error storing Workflow specification", e);

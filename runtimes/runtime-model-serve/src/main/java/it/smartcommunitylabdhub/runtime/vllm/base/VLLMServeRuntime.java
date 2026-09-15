@@ -56,7 +56,8 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public abstract class VLLMServeRuntime<F extends VLLMServeFunctionSpec, R extends VLLMServeRunSpec>
     extends K8sFunctionBaseRuntime<F, R, VLLMServeRunStatus, K8sRunnable>
-    implements InitializingBean {
+    implements InitializingBean
+{
 
     public static final String IMAGE = "vllm/vllm-openai";
 
@@ -122,8 +123,12 @@ public abstract class VLLMServeRuntime<F extends VLLMServeFunctionSpec, R extend
             openai.setFeatures(new LinkedList<>(getOpenAIFeatures().keySet()));
             status.setOpenai(openai);
             // TODO check
-            getOpenAIFeatures().values().forEach(url -> urls.add(baseUrl + url));
-            getExtraFeatures().values().forEach(url -> urls.add(baseUrl + url));
+            getOpenAIFeatures()
+                .values()
+                .forEach(url -> urls.add(baseUrl + url));
+            getExtraFeatures()
+                .values()
+                .forEach(url -> urls.add(baseUrl + url));
             urls.add(baseUrl + "/v1/models");
             service.setUrls(new ArrayList<>(urls));
             status.setService(service);

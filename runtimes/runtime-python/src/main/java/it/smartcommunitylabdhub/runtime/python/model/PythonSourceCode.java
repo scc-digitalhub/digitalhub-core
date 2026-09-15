@@ -39,7 +39,8 @@ import org.springframework.lang.Nullable;
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class PythonSourceCode
-    extends SourceCode<it.smartcommunitylabdhub.runtime.python.model.PythonSourceCode.PythonSourceCodeLanguages> {
+    extends SourceCode<it.smartcommunitylabdhub.runtime.python.model.PythonSourceCode.PythonSourceCodeLanguages>
+{
 
     @Nullable
     @Schema(

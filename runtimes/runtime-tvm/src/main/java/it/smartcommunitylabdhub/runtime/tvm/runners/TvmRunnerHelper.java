@@ -39,10 +39,7 @@ public final class TvmRunnerHelper {
     private TvmRunnerHelper() {}
 
     // Files injected into every TVM Job pod: entrypoint, per-task script (mounted as task.py), publish helper.
-    public static List<ContextSource> createContextSources(
-        @NotNull String entrypoint,
-        @NotNull String taskScript
-    ) {
+    public static List<ContextSource> createContextSources(@NotNull String entrypoint, @NotNull String taskScript) {
         List<ContextSource> sources = new ArrayList<>();
         sources.add(b64Source(ENTRYPOINT_NAME, entrypoint));
         sources.add(b64Source(TASK_SCRIPT_NAME, taskScript));
@@ -55,8 +52,7 @@ public final class TvmRunnerHelper {
 
     // ContextSource with base64-encoded UTF-8 content, as the injector expects.
     private static ContextSource b64Source(String name, String content) {
-        return ContextSource
-            .builder()
+        return ContextSource.builder()
             .name(name)
             .base64(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)))
             .build();
@@ -65,9 +61,7 @@ public final class TvmRunnerHelper {
     private static String loadClasspathStatic(String location) {
         try {
             return new String(
-                new org.springframework.core.io.DefaultResourceLoader()
-                    .getResource(location)
-                    .getContentAsByteArray(),
+                new org.springframework.core.io.DefaultResourceLoader().getResource(location).getContentAsByteArray(),
                 StandardCharsets.UTF_8
             );
         } catch (java.io.IOException e) {
@@ -79,12 +73,7 @@ public final class TvmRunnerHelper {
     public static ContextRef inputContextRef(String s3OrHttpUri, String destination) {
         if (!StringUtils.hasText(s3OrHttpUri)) return null;
         UriComponents uri = UriComponentsBuilder.fromUriString(s3OrHttpUri).build();
-        return ContextRef
-            .builder()
-            .source(s3OrHttpUri)
-            .protocol(uri.getScheme())
-            .destination(destination)
-            .build();
+        return ContextRef.builder().source(s3OrHttpUri).protocol(uri.getScheme()).destination(destination).build();
     }
 
     // Resolves a store:// key to the Model's S3 path; s3:// / https:// returned as-is.
@@ -102,9 +91,10 @@ public final class TvmRunnerHelper {
         }
         Model model;
         try {
-            model = ka.getId() != null
-                ? modelService.findModel(ka.getId())
-                : modelService.getLatestModel(ka.getProject(), ka.getName());
+            model =
+                ka.getId() != null
+                    ? modelService.findModel(ka.getId())
+                    : modelService.getLatestModel(ka.getProject(), ka.getName());
         } catch (NoSuchEntityException e) {
             model = null;
         }

@@ -39,8 +39,11 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class RunStateCreated<S extends RunBaseSpec, Z extends RunBaseStatus, R extends RunRunnable>
-    extends BaseRunState<S, Z, R> {
+public class RunStateCreated<
+    S extends RunBaseSpec,
+    Z extends RunBaseStatus,
+    R extends RunRunnable
+> extends BaseRunState<S, Z, R> {
 
     public RunStateCreated(Runtime<S, Z, R> runtime) {
         super(RunState.CREATED.name(), runtime);
@@ -79,9 +82,9 @@ public class RunStateCreated<S extends RunBaseSpec, Z extends RunBaseStatus, R e
                 Optional.ofNullable(runtime.build(run)).ifPresent(spec -> run.setSpec(spec.toMap()));
 
                 //callback for metadata update
-                Optional
-                    .ofNullable(runtime.onBuilt(run))
-                    .ifPresent(meta -> run.setMetadata(MapUtils.mergeMultipleMaps(run.getMetadata(), meta.toMap())));
+                Optional.ofNullable(runtime.onBuilt(run)).ifPresent(meta ->
+                    run.setMetadata(MapUtils.mergeMultipleMaps(run.getMetadata(), meta.toMap()))
+                );
 
                 return Optional.empty();
             });

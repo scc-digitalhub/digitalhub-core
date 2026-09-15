@@ -50,8 +50,10 @@ import java.util.HashMap;
 public class KubernetesMapper {
 
     //custom object mapper with mixIn for IntOrString
-    public static final ObjectMapper OBJECT_MAPPER = JacksonMapper.CUSTOM_OBJECT_MAPPER
-        .addMixIn(IntOrString.class, IntOrStringMixin.class)
+    public static final ObjectMapper OBJECT_MAPPER = JacksonMapper.CUSTOM_OBJECT_MAPPER.addMixIn(
+        IntOrString.class,
+        IntOrStringMixin.class
+    )
         .addMixIn(Quantity.class, QuantityMixin.class)
         .addMixIn(K8sRunnable.class, K8sRunnableMixin.class)
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);

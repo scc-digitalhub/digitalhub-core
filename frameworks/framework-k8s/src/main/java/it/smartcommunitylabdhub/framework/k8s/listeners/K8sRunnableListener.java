@@ -142,19 +142,21 @@ public abstract class K8sRunnableListener<
                 log.error("Error loading runnable {} {} from store: {}", clazz.getSimpleName(), id, e.getMessage());
             }
 
-            //if present update to new state now to avoid concurrency, we'll sync in finally
+            //if present and state is different update to new state now to avoid concurrency, we'll sync in finally
             if (stored != null) {
-                log.debug("update state for runnable {} {} to {}", clazz.getSimpleName(), id, state);
-                stored.setState(state);
-                try {
-                    runnableStore.store(id, stored);
-                } catch (StoreException e) {
-                    log.error(
-                        "Error updating state for runnable {} {} in store: {}",
-                        clazz.getSimpleName(),
-                        id,
-                        e.getMessage()
-                    );
+                if (!state.equals(stored.getState())) {
+                    log.debug("update state for runnable {} {} to {}", clazz.getSimpleName(), id, state);
+                    stored.setState(state);
+                    // try {
+                    //     runnableStore.store(id, stored);
+                    // } catch (StoreException e) {
+                    //     log.error(
+                    //         "Error updating state for runnable {} {} in store: {}",
+                    //         clazz.getSimpleName(),
+                    //         id,
+                    //         e.getMessage()
+                    //     );
+                    // }
                 }
             } else {
                 log.warn(
@@ -210,6 +212,10 @@ public abstract class K8sRunnableListener<
                         yield k8sFramework.delete(runnable);
                     }
                     default -> {
+                        //return null as no action is taken for unsupported states so no output is generated
+                        if (log.isTraceEnabled()) {
+                            log.trace("no action for runnable {} {} state {}", clazz.getSimpleName(), id, state);
+                        }
                         yield null;
                     }
                 };

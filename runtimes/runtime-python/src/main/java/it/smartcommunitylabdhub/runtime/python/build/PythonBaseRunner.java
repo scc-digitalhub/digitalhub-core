@@ -183,7 +183,7 @@ public abstract class PythonBaseRunner {
         );
     }
 
-     protected String buildNuclioFunction(
+    protected String buildNuclioFunction(
         @Nullable Map<String, Serializable> triggers,
         @Nullable Map<String, Serializable> event
     ) {
@@ -287,7 +287,7 @@ public abstract class PythonBaseRunner {
             }
         }
 
-        if (functionRequirements != null) {
+        if (functionRequirements != null && properties.installDependencies()) {
             log.debug("Adding function dependencies to custom image {}", image);
             reqs.addAll(functionRequirements);
         }

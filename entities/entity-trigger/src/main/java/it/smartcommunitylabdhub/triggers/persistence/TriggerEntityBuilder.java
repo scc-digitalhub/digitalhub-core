@@ -50,8 +50,7 @@ public class TriggerEntityBuilder implements Converter<Trigger, TriggerEntity> {
         BaseMetadata metadata = BaseMetadata.from(dto.getMetadata());
         StatusFieldAccessor statusFieldAccessor = StatusFieldAccessor.with(dto.getStatus());
 
-        return TriggerEntity
-            .builder()
+        return TriggerEntity.builder()
             .id(dto.getId())
             .name(dto.getName())
             .kind(dto.getKind())

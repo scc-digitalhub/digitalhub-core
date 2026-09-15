@@ -85,26 +85,23 @@ public class OAuth2ConfigurationEndpoint implements ConfigurationProvider {
         builder.jwksUri(baseUrl + JWKSEndpoint.JWKS_URL);
         builder.responseTypesSupported(Set.of("code"));
 
-        List<String> grantTypes = Stream
-            .of(
-                AuthorizationGrantType.CLIENT_CREDENTIALS,
-                AuthorizationGrantType.REFRESH_TOKEN,
-                AuthorizationGrantType.TOKEN_EXCHANGE
-            )
+        List<String> grantTypes = Stream.of(
+            AuthorizationGrantType.CLIENT_CREDENTIALS,
+            AuthorizationGrantType.REFRESH_TOKEN,
+            AuthorizationGrantType.TOKEN_EXCHANGE
+        )
             .map(t -> t.getValue())
             .toList();
 
         if (securityProperties.isOidcAuthEnabled()) {
-            grantTypes =
-                Stream
-                    .of(
-                        AuthorizationGrantType.CLIENT_CREDENTIALS,
-                        AuthorizationGrantType.REFRESH_TOKEN,
-                        AuthorizationGrantType.AUTHORIZATION_CODE,
-                        AuthorizationGrantType.TOKEN_EXCHANGE
-                    )
-                    .map(t -> t.getValue())
-                    .toList();
+            grantTypes = Stream.of(
+                AuthorizationGrantType.CLIENT_CREDENTIALS,
+                AuthorizationGrantType.REFRESH_TOKEN,
+                AuthorizationGrantType.AUTHORIZATION_CODE,
+                AuthorizationGrantType.TOKEN_EXCHANGE
+            )
+                .map(t -> t.getValue())
+                .toList();
 
             builder.authorizationEndpoint(baseUrl + AuthorizationEndpoint.AUTHORIZE_URL);
             builder.userinfoEndpoint(baseUrl + UserInfoEndpoint.USERINFO_URL);

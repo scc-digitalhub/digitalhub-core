@@ -38,4 +38,6 @@ public @interface SpecType {
     String kind();
 
     Class<?> entity();
+
+    String uiSchema() default "";
 }

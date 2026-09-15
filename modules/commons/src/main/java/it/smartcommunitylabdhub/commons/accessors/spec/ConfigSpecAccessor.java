@@ -21,25 +21,19 @@
  *
  */
 
-package it.smartcommunitylabdhub.commons.models.project;
+package it.smartcommunitylabdhub.commons.accessors.spec;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import it.smartcommunitylabdhub.commons.Fields;
+import it.smartcommunitylabdhub.commons.accessors.Accessor;
+import java.io.Serializable;
+import java.util.Map;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-public class ProjectConfig {
+public interface ConfigSpecAccessor extends Accessor<Serializable> {
+    default Map<String, Serializable> getConfig() {
+        return get(Fields.CONFIG);
+    }
 
-    @Schema(
-        title = "fields.config.defaultFilesStore.title",
-        description = "fields.config.defaultFilesStore.description"
-    )
-    @JsonProperty("default_files_store")
-    private String defaultFilesStore;
+    static ConfigSpecAccessor with(Map<String, Serializable> map) {
+        return () -> map;
+    }
 }

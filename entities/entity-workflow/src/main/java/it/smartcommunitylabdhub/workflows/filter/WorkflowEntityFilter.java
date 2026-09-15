@@ -55,24 +55,20 @@ public class WorkflowEntityFilter extends AbstractEntityFilter<Workflow> {
         filters.addAll(sf.getFilters());
 
         //labels in AND
-        Optional
-            .ofNullable(labels)
-            .ifPresent(value -> {
-                List<SearchCriteria<Workflow>> lcr = new ArrayList<>();
-                value.forEach(label ->
-                    lcr.add(new BaseEntitySearchCriteria<>("labels", label, SearchCriteria.Operation.like))
-                );
+        Optional.ofNullable(labels).ifPresent(value -> {
+            List<SearchCriteria<Workflow>> lcr = new ArrayList<>();
+            value.forEach(label ->
+                lcr.add(new BaseEntitySearchCriteria<>("labels", label, SearchCriteria.Operation.like))
+            );
 
-                BaseEntityFilter<Workflow> qf = BaseEntityFilter
-                    .<Workflow>builder()
-                    .condition(Condition.and)
-                    .criteria(lcr)
-                    .build();
-                filters.add(qf);
-            });
+            BaseEntityFilter<Workflow> qf = BaseEntityFilter.<Workflow>builder()
+                .condition(Condition.and)
+                .criteria(lcr)
+                .build();
+            filters.add(qf);
+        });
 
-        return BaseEntityFilter
-            .<Workflow>builder()
+        return BaseEntityFilter.<Workflow>builder()
             .criteria(criteria)
             .filters(filters)
             .condition(SearchFilter.Condition.and)

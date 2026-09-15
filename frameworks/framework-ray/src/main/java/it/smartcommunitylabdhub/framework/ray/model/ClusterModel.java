@@ -1,9 +1,8 @@
 package it.smartcommunitylabdhub.framework.ray.model;
 
-import java.util.List;
-
 import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreServiceType;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

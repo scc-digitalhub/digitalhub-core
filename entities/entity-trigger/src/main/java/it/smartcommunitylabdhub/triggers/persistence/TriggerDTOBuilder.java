@@ -68,8 +68,7 @@ public class TriggerDTOBuilder implements Converter<TriggerEntity, Trigger> {
         Optional.ofNullable(baseMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
         Optional.ofNullable(auditingMetadataBuilder.convert(entity)).ifPresent(m -> metadata.putAll(m.toMap()));
 
-        return Trigger
-            .builder()
+        return Trigger.builder()
             .id(entity.getId())
             .kind(entity.getKind())
             .name(entity.getName())

@@ -58,7 +58,13 @@ public class AuthorizationRequestStore implements Serializable {
     }
 
     public Collection<AuthorizationRequest> findAll() {
-        return Collections.unmodifiableCollection(requests.values().stream().map(p -> p.getFirst()).toList());
+        return Collections.unmodifiableCollection(
+            requests
+                .values()
+                .stream()
+                .map(p -> p.getFirst())
+                .toList()
+        );
     }
 
     public String store(AuthorizationRequest request, UserAuthentication<?> auth) {

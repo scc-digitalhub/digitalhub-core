@@ -1,11 +1,9 @@
 package it.smartcommunitylabdhub.framework.ray.model.ray;
 
-
-import java.io.Serializable;
-import java.util.Map;
-
 import io.kubernetes.client.openapi.models.V1PodSpec;
 import io.kubernetes.client.openapi.models.V1PodTemplateSpec;
+import java.io.Serializable;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

@@ -29,5 +29,4 @@ import org.springframework.context.annotation.PropertySource;
 
 @Configuration
 @PropertySource(value = "classpath:/runtime-servicegraph.yml", factory = YamlPropertySourceFactory.class)
-public class ServicegraphConfig {
-}
+public class ServicegraphConfig {}

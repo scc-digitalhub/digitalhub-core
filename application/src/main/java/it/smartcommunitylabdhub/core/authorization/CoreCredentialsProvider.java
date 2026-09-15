@@ -20,12 +20,12 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.authorization.providers;
+package it.smartcommunitylabdhub.core.authorization;
 
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.AuthorizableAwareEntityService;
 import it.smartcommunitylabdhub.authorization.services.CredentialsProvider;
-import it.smartcommunitylabdhub.commons.models.project.Project;
+import it.smartcommunitylabdhub.projects.Project;
 import jakarta.validation.constraints.NotNull;
 import java.util.HashSet;
 import java.util.Set;

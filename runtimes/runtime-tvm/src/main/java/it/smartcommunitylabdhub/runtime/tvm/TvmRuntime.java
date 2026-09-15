@@ -50,7 +50,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -61,8 +60,9 @@ import org.springframework.util.StringUtils;
 @Slf4j
 @RuntimeComponent(runtime = TvmRuntime.RUNTIME)
 public class TvmRuntime
-        extends K8sFunctionBaseRuntime<TvmFunctionSpec, TvmRunSpec, TvmRunStatus, K8sRunnable>
-        implements InitializingBean {
+    extends K8sFunctionBaseRuntime<TvmFunctionSpec, TvmRunSpec, TvmRunStatus, K8sRunnable>
+    implements InitializingBean
+{
 
     public static final String RUNTIME = "tvm";
     public static final String[] KINDS = { TvmBuildRunSpec.KIND, TvmCompileRunSpec.KIND, TvmServeRunSpec.KIND };
@@ -98,9 +98,15 @@ public class TvmRuntime
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        this.buildRunner = new TvmBuildRunner(properties, k8sBuilderHelper, modelManager);
-        this.compileRunner = new TvmCompileRunner(properties, k8sBuilderHelper, modelManager);
-        this.serveRunner = new TvmServeRunner(properties, k8sBuilderHelper, modelManager, functionService);
+        this.buildRunner = new TvmBuildRunner(properties, k8sBuilderHelper, k8sLabelHelper, modelManager);
+        this.compileRunner = new TvmCompileRunner(properties, k8sBuilderHelper, k8sLabelHelper, modelManager);
+        this.serveRunner = new TvmServeRunner(
+            properties,
+            k8sBuilderHelper,
+            k8sLabelHelper,
+            modelManager,
+            functionService
+        );
     }
 
     @Override
@@ -141,22 +147,21 @@ public class TvmRuntime
         TvmRunSpec runSpec = new TvmRunSpec(run.getSpec());
         if (runSpec.getInputs() != null && !runSpec.getInputs().isEmpty()) {
             RelationshipsMetadata lineage = RelationshipsMetadata.from(run.getMetadata());
-            List<RelationshipDetail> rels = lineage.getRelationships() != null
-                    ? new ArrayList<>(lineage.getRelationships())
-                    : new ArrayList<>();
+            List<RelationshipDetail> rels =
+                lineage.getRelationships() != null ? new ArrayList<>(lineage.getRelationships()) : new ArrayList<>();
 
             runSpec
-                    .getInputs()
-                    .forEach((name, input) -> {
-                        if (rels
-                                .stream()
-                                .noneMatch(
-                                        r -> r.getType() == RelationshipName.CONSUMES && r.getDest().equals(input))) {
-                            RelationshipDetail dr = new RelationshipDetail(RelationshipName.CONSUMES, run.getKey(),
-                                    input);
-                            rels.add(dr);
-                        }
-                    });
+                .getInputs()
+                .forEach((name, input) -> {
+                    if (
+                        rels
+                            .stream()
+                            .noneMatch(r -> r.getType() == RelationshipName.CONSUMES && r.getDest().equals(input))
+                    ) {
+                        RelationshipDetail dr = new RelationshipDetail(RelationshipName.CONSUMES, run.getKey(), input);
+                        rels.add(dr);
+                    }
+                });
 
             lineage.setRelationships(rels);
 
@@ -182,8 +187,7 @@ public class TvmRuntime
             case TvmBuildTaskSpec.KIND -> buildRunner.produce(run, secrets);
             case TvmCompileTaskSpec.KIND -> compileRunner.produce(run, secrets);
             case TvmServeTaskSpec.KIND -> serveRunner.produce(run, secrets);
-            default -> throw new IllegalArgumentException(
-                    "Unknown task kind in run spec: " + runAccessor.getTask());
+            default -> throw new IllegalArgumentException("Unknown task kind in run spec: " + runAccessor.getTask());
         };
 
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
@@ -201,13 +205,18 @@ public class TvmRuntime
     public TvmRunStatus onComplete(@NotNull Run run, RunRunnable runnable) {
         try {
             return switch (run.getKind()) {
-                case TvmBuildRunSpec.KIND ->
-                    writeModelKeyBack(run, "ir_module", TvmFunctionSpec::setIrModel, "ir_model");
+                case TvmBuildRunSpec.KIND -> writeModelKeyBack(
+                    run,
+                    "ir_module",
+                    TvmFunctionSpec::setIrModel,
+                    "ir_model"
+                );
                 case TvmCompileRunSpec.KIND -> writeModelKeyBack(
-                        run,
-                        "compiled_so",
-                        TvmFunctionSpec::setSoModel,
-                        "so_model");
+                    run,
+                    "compiled_so",
+                    TvmFunctionSpec::setSoModel,
+                    "so_model"
+                );
                 default -> null;
             };
         } catch (Exception e) {
@@ -219,10 +228,11 @@ public class TvmRuntime
     // Write the job's output model key back onto the parent function's spec so the
     // next task can resolve it.
     private TvmRunStatus writeModelKeyBack(
-            Run run,
-            String outputKey,
-            BiConsumer<TvmFunctionSpec, String> setter,
-            String specFieldLabel) {
+        Run run,
+        String outputKey,
+        BiConsumer<TvmFunctionSpec, String> setter,
+        String specFieldLabel
+    ) {
         RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
         String funcName = runAccessor.getFunction();
         String funcId = runAccessor.getFunctionId();
@@ -252,13 +262,11 @@ public class TvmRuntime
     }
 
     private String readOutput(Run run, String key) {
-        if (run.getStatus() == null)
-            return null;
+        if (run.getStatus() == null) return null;
         Object outs = run.getStatus().get("outputs");
         if (outs instanceof Map<?, ?> m) {
             Object v = m.get(key);
-            if (v instanceof String s)
-                return s;
+            if (v instanceof String s) return s;
         }
         return null;
     }

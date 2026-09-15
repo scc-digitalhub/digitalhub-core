@@ -50,9 +50,10 @@ public class RunnableStoreImpl<T extends RunRunnable> implements RunnableStore<T
     private ObjectMapper objectMapper;
 
     public RunnableStoreImpl(
-            Class<T> clazz,
-            RunnableRepository runnableRepository,
-            PlatformTransactionManager transactionManager) {
+        Class<T> clazz,
+        RunnableRepository runnableRepository,
+        PlatformTransactionManager transactionManager
+    ) {
         this.clazz = clazz;
         this.runnableRepository = runnableRepository;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
@@ -70,7 +71,12 @@ public class RunnableStoreImpl<T extends RunRunnable> implements RunnableStore<T
     }
 
     @Override
-    @Cacheable(cacheResolver = "resolvableTypeCacheResolver", value = "store.find", key = "#id", unless = "#result == null")
+    @Cacheable(
+        cacheResolver = "resolvableTypeCacheResolver",
+        value = "store.find",
+        key = "#id",
+        unless = "#result == null"
+    )
     public T find(String id) throws StoreException {
         log.debug("find runnable {} with id {}", clazz.getName(), id);
 
@@ -94,18 +100,18 @@ public class RunnableStoreImpl<T extends RunRunnable> implements RunnableStore<T
 
         List<RunnableEntity> entities = runnableRepository.findAll(clazz.getName());
         return entities
-                .stream()
-                .map(entity -> {
-                    try {
-                        return objectMapper.readValue(entity.getData(), clazz);
-                    } catch (IOException e) {
-                        // Handle deserialization error
-                        log.error("error deserializing runnable: {}", e.getMessage());
-                        return null;
-                    }
-                })
-                .filter(Objects::nonNull)
-                .toList();
+            .stream()
+            .map(entity -> {
+                try {
+                    return objectMapper.readValue(entity.getData(), clazz);
+                } catch (IOException e) {
+                    // Handle deserialization error
+                    log.error("error deserializing runnable: {}", e.getMessage());
+                    return null;
+                }
+            })
+            .filter(Objects::nonNull)
+            .toList();
     }
 
     @Override

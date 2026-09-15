@@ -56,6 +56,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponents;
@@ -152,26 +153,30 @@ public class HuggingfaceServeRunner {
             if (!EntityUtils.getEntityName(Model.class).equalsIgnoreCase(keyAccessor.getType())) {
                 throw new CoreRuntimeException("invalid entity kind reference, expected model");
             }
-            Model model =
-                keyAccessor.getId() != null
-                    ? modelService.findModel(keyAccessor.getId())
-                    : modelService.getLatestModel(keyAccessor.getProject(), keyAccessor.getName());
-            if (model == null) {
-                throw new CoreRuntimeException("invalid entity reference, HuggingFace model not found");
+            try {
+                Model model =
+                    keyAccessor.getId() != null
+                        ? modelService.findModel(keyAccessor.getId())
+                        : modelService.getLatestModel(keyAccessor.getProject(), keyAccessor.getName());
+                if (model == null) {
+                    throw new CoreRuntimeException("invalid entity reference, HuggingFace model not found");
+                }
+                if (!model.getKind().equals("huggingface") && !model.getKind().equals("hf")) {
+                    throw new CoreRuntimeException("invalid entity reference, expected HuggingFace model");
+                }
+                RelationshipDetail rel = new RelationshipDetail();
+                rel.setType(RelationshipName.CONSUMES);
+                rel.setSource(run.getKey());
+                rel.setDest(model.getKey());
+                RelationshipsMetadata relationships = RelationshipsMetadata.from(run.getMetadata());
+                relationships.getRelationships().add(rel);
+                run.getMetadata().putAll(relationships.toMap());
+                HuggingFaceModelSpec modelSpec = new HuggingFaceModelSpec();
+                modelSpec.configure(model.getSpec());
+                path = modelSpec.getPath();
+            } catch (NoSuchElementException e) {
+                throw new CoreRuntimeException("invalid entity reference, HuggingFace model not found", e);
             }
-            if (!model.getKind().equals("huggingface") && !model.getKind().equals("hf")) {
-                throw new CoreRuntimeException("invalid entity reference, expected HuggingFace model");
-            }
-            RelationshipDetail rel = new RelationshipDetail();
-            rel.setType(RelationshipName.CONSUMES);
-            rel.setSource(run.getKey());
-            rel.setDest(model.getKey());
-            RelationshipsMetadata relationships = RelationshipsMetadata.from(run.getMetadata());
-            relationships.getRelationships().add(rel);
-            run.getMetadata().putAll(relationships.toMap());
-            HuggingFaceModelSpec modelSpec = new HuggingFaceModelSpec();
-            modelSpec.configure(model.getSpec());
-            path = modelSpec.getPath();
         }
 
         UriComponents uri = UriComponentsBuilder.fromUriString(path).build();

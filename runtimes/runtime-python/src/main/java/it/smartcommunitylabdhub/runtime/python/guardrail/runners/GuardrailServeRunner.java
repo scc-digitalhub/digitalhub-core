@@ -103,9 +103,7 @@ public class GuardrailServeRunner extends PythonBaseRunner {
         String handler = buildHandler(sourceCode);
 
         //requirements
-        List<String> requirements = properties.installDependencies()
-            ? buildRequirements(image, functionSpec.getRequirements())
-            : List.of();
+        List<String> requirements = buildRequirements(image, functionSpec.getRequirements());
 
         //read source and build context
         List<ContextRef> contextRefs = PythonRunnerHelper.createContextRefs(sourceCode);

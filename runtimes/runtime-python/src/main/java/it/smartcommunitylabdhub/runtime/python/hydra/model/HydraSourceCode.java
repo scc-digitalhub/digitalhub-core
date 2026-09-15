@@ -38,9 +38,8 @@ import org.springframework.lang.Nullable;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class HydraSourceCode
-    extends PythonSourceCode {
-        
+public class HydraSourceCode extends PythonSourceCode {
+
     @Nullable
     @Schema(
         title = "fields.sourceCode.complete_function.title",
@@ -48,5 +47,4 @@ public class HydraSourceCode
     )
     @JsonProperty("complete_function")
     private String completeFunction;
-    
 }

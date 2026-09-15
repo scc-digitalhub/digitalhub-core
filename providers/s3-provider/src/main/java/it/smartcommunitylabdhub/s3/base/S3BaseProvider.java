@@ -43,8 +43,7 @@ public abstract class S3BaseProvider {
         this.properties = s3Properties;
 
         //build config
-        S3Config.S3ConfigBuilder builder = S3Config
-            .builder()
+        S3Config.S3ConfigBuilder builder = S3Config.builder()
             .endpoint(properties.getEndpoint())
             .bucket(properties.getBucket())
             .region(StringUtils.hasText(properties.getRegion()) ? properties.getRegion() : "us-east-1")

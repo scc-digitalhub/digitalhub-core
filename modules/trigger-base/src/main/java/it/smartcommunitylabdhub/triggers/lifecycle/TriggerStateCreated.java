@@ -34,40 +34,39 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class TriggerStateCreated<X extends TriggerBaseSpec, Z extends TriggerRunBaseStatus>
-    extends TriggerBaseState<X, Z> {
+public class TriggerStateCreated<
+    X extends TriggerBaseSpec,
+    Z extends TriggerRunBaseStatus
+> extends TriggerBaseState<X, Z> {
 
     public TriggerStateCreated(Actuator<X, ?, Z> actuator) {
         super(TriggerState.CREATED.name(), actuator);
         //transitions
-        txs =
-            List.of(
-                //(RUN)->RUNNING
-                new Transition.Builder<String, String, Trigger>()
-                    .event(TriggerEvent.RUN.name())
-                    .nextState(TriggerState.RUNNING.name())
-                    .withInternalLogic((currentState, nextState, event, trigger, i) -> {
-                        //runtime callback
-                        Optional
-                            .ofNullable(actuator.run(trigger))
-                            .ifPresent(status ->
-                                trigger.setStatus(MapUtils.mergeMultipleMaps(trigger.getStatus(), status.toMap()))
-                            );
+        txs = List.of(
+            //(RUN)->RUNNING
+            new Transition.Builder<String, String, Trigger>()
+                .event(TriggerEvent.RUN.name())
+                .nextState(TriggerState.RUNNING.name())
+                .withInternalLogic((currentState, nextState, event, trigger, i) -> {
+                    //runtime callback
+                    Optional.ofNullable(actuator.run(trigger)).ifPresent(status ->
+                        trigger.setStatus(MapUtils.mergeMultipleMaps(trigger.getStatus(), status.toMap()))
+                    );
 
-                        return Optional.empty();
-                    })
-                    .build(),
-                //(ERROR)->ERROR
-                new Transition.Builder<String, String, Trigger>()
-                    .event(TriggerEvent.ERROR.name())
-                    .nextState(TriggerState.ERROR.name())
-                    .withInternalLogic((currentState, nextState, event, trigger, i) -> {
-                        //no-op, nothing happened yet
-                        return Optional.empty();
-                    })
-                    .build(),
-                //(DELETE)->DELETED
-                toDelete().build()
-            );
+                    return Optional.empty();
+                })
+                .build(),
+            //(ERROR)->ERROR
+            new Transition.Builder<String, String, Trigger>()
+                .event(TriggerEvent.ERROR.name())
+                .nextState(TriggerState.ERROR.name())
+                .withInternalLogic((currentState, nextState, event, trigger, i) -> {
+                    //no-op, nothing happened yet
+                    return Optional.empty();
+                })
+                .build(),
+            //(DELETE)->DELETED
+            toDelete().build()
+        );
     }
 }

@@ -220,7 +220,10 @@ public class LuceneBaseEntityIndexer<D extends BaseDTO> implements EntityIndexer
         log.debug("index {} {}", items.size(), type);
 
         try {
-            List<Document> docs = items.stream().map(e -> parse(e)).collect(Collectors.toList());
+            List<Document> docs = items
+                .stream()
+                .map(e -> parse(e))
+                .collect(Collectors.toList());
             lucene.indexBounce(docs);
         } catch (StoreException e) {
             log.error("error with solr: {}", e.getMessage());

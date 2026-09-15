@@ -34,5 +34,4 @@ public record CoreMetric(
     String timestamp,
     String window,
     String namespace
-)
-    implements Serializable {}
+) implements Serializable {}

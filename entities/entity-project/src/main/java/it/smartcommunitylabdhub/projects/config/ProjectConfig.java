@@ -17,10 +17,10 @@
 
 package it.smartcommunitylabdhub.projects.config;
 
-import it.smartcommunitylabdhub.commons.models.project.Project;
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
+import it.smartcommunitylabdhub.projects.Project;
 import it.smartcommunitylabdhub.projects.persistence.ProjectEntity;
 import it.smartcommunitylabdhub.projects.persistence.ProjectRepository;
 import org.springframework.context.annotation.Bean;

@@ -48,6 +48,10 @@ public class SchemaImpl implements Schema, Serializable {
     @JsonIgnore
     private final JsonNode uiSchema;
 
+    private final String[] appliesTo;
+    private final String[] appliesNotTo;
+    private final String showIn;
+
     @Override
     public String kind() {
         return kind;
@@ -71,5 +75,17 @@ public class SchemaImpl implements Schema, Serializable {
     @Override
     public JsonNode uiSchema() {
         return uiSchema;
+    }
+
+    public String[] getAppliesTo() {
+        return appliesTo;
+    }
+
+    public String[] getAppliesNotTo() {
+        return appliesNotTo;
+    }
+
+    public String getShowIn() {
+        return showIn;
     }
 }

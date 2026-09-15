@@ -63,11 +63,10 @@ public class SecretEntityFilter implements SpecificationFilter<SecretEntity> {
 
         if (getCreatedDate() != null) {
             DateUtils.DateInterval dateInterval = DateUtils.parseDateIntervalFromTimestamps(getCreatedDate(), true);
-            predicate =
-                criteriaBuilder.and(
-                    predicate,
-                    criteriaBuilder.between(root.get("created"), dateInterval.startDate(), dateInterval.endDate())
-                );
+            predicate = criteriaBuilder.and(
+                predicate,
+                criteriaBuilder.between(root.get("created"), dateInterval.startDate(), dateInterval.endDate())
+            );
         }
 
         return predicate;

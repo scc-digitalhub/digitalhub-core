@@ -582,14 +582,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
         log.debug("build k8s service for {}", serviceName);
 
         //check template
-        K8sTemplate<K8sServeRunnable> template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //get template
-            template = templates.get(runnable.getTemplate());
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE);
-        }
+        K8sTemplate<K8sServeRunnable> template = getTemplate(runnable.getTemplate());
 
         Map<String, String> labels = buildLabels(runnable);
         // Create the V1 service
@@ -767,14 +760,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
         log.debug("build k8s deployment for {}", deploymentName);
 
         //check template
-        K8sTemplate<K8sServeRunnable> template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //get template
-            template = templates.get(runnable.getTemplate());
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE);
-        }
+        K8sTemplate<K8sServeRunnable> template = getTemplate(runnable.getTemplate());
 
         // Create labels for job
         Map<String, String> labels = buildLabels(runnable);

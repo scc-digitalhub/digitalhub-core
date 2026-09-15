@@ -1,10 +1,6 @@
 package it.smartcommunitylabdhub.framework.ray.model;
 
-import java.util.List;
-import java.util.Map;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreAffinity;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreImagePullPolicy;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
@@ -13,6 +9,8 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreResources;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreToleration;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
+import java.util.List;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -62,11 +60,10 @@ public class PodModel {
 
     private String[] args;
 
-
     /**
      * Convert this PodModel to a K8sRunnable using the provided builder and parent runnable.
-      * The name parameter is used to differentiate between different pods (e.g., head, worker) when constructing the runnable.
-      * From the parent runnable, it will inherit common properties such as project, runtime, user, secrets, envs, task, configurationMap, credentialsMap.
+     * The name parameter is used to differentiate between different pods (e.g., head, worker) when constructing the runnable.
+     * From the parent runnable, it will inherit common properties such as project, runtime, user, secrets, envs, task, configurationMap, credentialsMap.
      * @param <T>
      * @param parent
      * @param name
@@ -75,37 +72,41 @@ public class PodModel {
      * @return
      */
     @SuppressWarnings("unchecked")
-    public <T extends K8sRunnable> T toK8sRunnable(T parent, String name, K8sRunnable.K8sRunnableBuilder<?, ?> builder, boolean withContext) {
-        
+    public <T extends K8sRunnable> T toK8sRunnable(
+        T parent,
+        String name,
+        K8sRunnable.K8sRunnableBuilder<?, ?> builder,
+        boolean withContext
+    ) {
         return (T) builder
-        // .id(parent.getId() + "-" + name)
-        .id(parent.getId())
-        .configurationMap(parent.getConfigurationMap())
-        .credentialsMap(parent.getCredentialsMap())
-        .project(parent.getProject())
-        .runtime(parent.getRuntime())
-        .user(parent.getUser())
-        .secrets(parent.getSecrets())
-        .envs(parent.getEnvs())
-        .task(parent.getTask())
-        .template(template)
-        .command(command)
-        .args(args)
-        .image(image)
-        .resources(resources)
-        .volumes(volumes)
-        .nodeSelector(nodeSelector)
-        .affinity(affinity)
-        .tolerations(tolerations)
-        .runtimeClass(runtimeClass)
-        .priorityClass(priorityClass)
-        .imagePullPolicy(imagePullPolicy)
-        .runAsUser(runAsUser)
-        .runAsGroup(runAsGroup)
-        .fsGroup(fsGroup)
-        .labels(labels)
-        .contextRefs(withContext ? parent.getContextRefs() : null)
-        .contextSources(withContext ? parent.getContextSources() : null)
-        .build();
+            // .id(parent.getId() + "-" + name)
+            .id(parent.getId())
+            .configurationMap(parent.getConfigurationMap())
+            .credentialsMap(parent.getCredentialsMap())
+            .project(parent.getProject())
+            .runtime(parent.getRuntime())
+            .user(parent.getUser())
+            .secrets(parent.getSecrets())
+            .envs(parent.getEnvs())
+            .task(parent.getTask())
+            .template(template)
+            .command(command)
+            .args(args)
+            .image(image)
+            .resources(resources)
+            .volumes(volumes)
+            .nodeSelector(nodeSelector)
+            .affinity(affinity)
+            .tolerations(tolerations)
+            .runtimeClass(runtimeClass)
+            .priorityClass(priorityClass)
+            .imagePullPolicy(imagePullPolicy)
+            .runAsUser(runAsUser)
+            .runAsGroup(runAsGroup)
+            .fsGroup(fsGroup)
+            .labels(labels)
+            .contextRefs(withContext ? parent.getContextRefs() : null)
+            .contextSources(withContext ? parent.getContextSources() : null)
+            .build();
     }
 }

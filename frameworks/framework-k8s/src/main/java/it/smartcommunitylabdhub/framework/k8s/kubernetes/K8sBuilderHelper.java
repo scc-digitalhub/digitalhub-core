@@ -168,8 +168,9 @@ public class K8sBuilderHelper implements InitializingBean {
                                         new V1EnvVar()
                                             .name(key)
                                             .valueFrom(
-                                                new V1EnvVarSource()
-                                                    .configMapKeyRef(new V1ConfigMapKeySelector().name(c).key(key))
+                                                new V1EnvVarSource().configMapKeyRef(
+                                                    new V1ConfigMapKeySelector().name(c).key(key)
+                                                )
                                             )
                                     )
                                 );
@@ -224,8 +225,9 @@ public class K8sBuilderHelper implements InitializingBean {
                             new V1EnvVar()
                                 .name(key)
                                 .valueFrom(
-                                    new V1EnvVarSource()
-                                        .secretKeyRef(new V1SecretKeySelector().name(entry.getKey()).key(key))
+                                    new V1EnvVarSource().secretKeyRef(
+                                        new V1SecretKeySelector().name(entry.getKey()).key(key)
+                                    )
                                 )
                         )
                 )
@@ -265,13 +267,15 @@ public class K8sBuilderHelper implements InitializingBean {
             //     );
             case VolumeType.shared_volume:
                 return volume.persistentVolumeClaim(
-                    new V1PersistentVolumeClaimVolumeSource()
-                        .claimName(spec.getOrDefault("claimName", coreVolume.getName()))
+                    new V1PersistentVolumeClaimVolumeSource().claimName(
+                        spec.getOrDefault("claimName", coreVolume.getName())
+                    )
                 );
             case VolumeType.workflow_volume:
                 return volume.persistentVolumeClaim(
-                    new V1PersistentVolumeClaimVolumeSource()
-                        .claimName(spec.getOrDefault("claimName", coreVolume.getName()))
+                    new V1PersistentVolumeClaimVolumeSource().claimName(
+                        spec.getOrDefault("claimName", coreVolume.getName())
+                    )
                 );
             case VolumeType.persistent_volume_claim:
                 return volume.persistentVolumeClaim(
@@ -283,8 +287,9 @@ public class K8sBuilderHelper implements InitializingBean {
                 Quantity quantity = Quantity.fromString(
                     spec.getOrDefault("size", ephemeralResourceDefinition.getValue())
                 );
-                V1VolumeResourceRequirements req = new V1VolumeResourceRequirements()
-                    .requests(Map.of("storage", quantity));
+                V1VolumeResourceRequirements req = new V1VolumeResourceRequirements().requests(
+                    Map.of("storage", quantity)
+                );
 
                 //enforce limit
                 //TODO check if valid!
@@ -294,18 +299,17 @@ public class K8sBuilderHelper implements InitializingBean {
                 // }
 
                 return volume.ephemeral(
-                    new V1EphemeralVolumeSource()
-                        .volumeClaimTemplate(
-                            new V1PersistentVolumeClaimTemplate()
-                                .metadata(new V1ObjectMeta()) //ephemeral does not require a name
-                                .spec(
-                                    new V1PersistentVolumeClaimSpec()
-                                        .accessModes(Collections.singletonList("ReadWriteOnce"))
-                                        .volumeMode("Filesystem")
-                                        .storageClassName(spec.getOrDefault("storageClass", ephemeralStorageClass))
-                                        .resources(req)
-                                )
-                        )
+                    new V1EphemeralVolumeSource().volumeClaimTemplate(
+                        new V1PersistentVolumeClaimTemplate()
+                            .metadata(new V1ObjectMeta()) //ephemeral does not require a name
+                            .spec(
+                                new V1PersistentVolumeClaimSpec()
+                                    .accessModes(Collections.singletonList("ReadWriteOnce"))
+                                    .volumeMode("Filesystem")
+                                    .storageClassName(spec.getOrDefault("storageClass", ephemeralStorageClass))
+                                    .resources(req)
+                            )
+                    )
                 );
             case VolumeType.empty_dir:
                 return volume.emptyDir(

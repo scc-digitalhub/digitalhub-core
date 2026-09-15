@@ -211,8 +211,6 @@ public class PythonRunnerHelper {
     //     return contextSources;
     // }
 
-
-
     public static List<ContextSource> createContextSources(
         @NotNull String entrypoint,
         @NotNull String handlerFile,
@@ -223,8 +221,7 @@ public class PythonRunnerHelper {
         List<ContextSource> contextSources = new ArrayList<>();
 
         //write entrypoint
-        ContextSource entry = ContextSource
-            .builder()
+        ContextSource entry = ContextSource.builder()
             .name("entrypoint.sh")
             .base64(Base64.getEncoder().encodeToString(entrypoint.getBytes(StandardCharsets.UTF_8)))
             .build();
@@ -232,8 +229,7 @@ public class PythonRunnerHelper {
 
         //write handler file
         contextSources.add(
-            ContextSource
-                .builder()
+            ContextSource.builder()
                 .name("handler.py")
                 .base64(Base64.getEncoder().encodeToString(handlerFile.getBytes(StandardCharsets.UTF_8)))
                 .build()
@@ -241,8 +237,7 @@ public class PythonRunnerHelper {
 
         //write function file
         contextSources.add(
-            ContextSource
-                .builder()
+            ContextSource.builder()
                 .name("function.yaml")
                 .base64(Base64.getEncoder().encodeToString(nuclioFunction.getBytes(StandardCharsets.UTF_8)))
                 .build()
@@ -286,8 +281,7 @@ public class PythonRunnerHelper {
             String content = String.join("\n", requirements);
 
             contextSources.add(
-                ContextSource
-                    .builder()
+                ContextSource.builder()
                     .name(path)
                     .base64(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)))
                     .build()

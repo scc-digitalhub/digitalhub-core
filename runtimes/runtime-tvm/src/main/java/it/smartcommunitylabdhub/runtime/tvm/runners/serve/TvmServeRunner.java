@@ -9,6 +9,7 @@ package it.smartcommunitylabdhub.runtime.tvm.runners.serve;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
+import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
@@ -43,11 +44,13 @@ public class TvmServeRunner extends TvmBaseBuildRunner {
     private final FunctionManager functionService;
 
     public TvmServeRunner(
-            TvmProperties properties,
-            K8sBuilderHelper k8sBuilderHelper,
-            ModelManager modelManager,
-            FunctionManager functionService) {
-        super(properties, k8sBuilderHelper);
+        TvmProperties properties,
+        K8sBuilderHelper k8sBuilderHelper,
+        K8sLabelHelper k8sLabelHelper,
+        ModelManager modelManager,
+        FunctionManager functionService
+    ) {
+        super(properties, k8sBuilderHelper, k8sLabelHelper);
         this.modelManager = modelManager;
         this.functionService = functionService;
     }
@@ -60,18 +63,19 @@ public class TvmServeRunner extends TvmBaseBuildRunner {
         String funcName = taskAccessor.getFunction();
 
         String servedName = StringUtils.hasText(taskSpec.getServedName())
-                ? taskSpec.getServedName()
-                : TvmRunnerHelper.cleanName(funcName);
+            ? taskSpec.getServedName()
+            : TvmRunnerHelper.cleanName(funcName);
 
         // .so model to serve: explicit task.model_path wins, else the function's
         // so_model.
         String modelKey = StringUtils.hasText(taskSpec.getModelPath())
-                ? taskSpec.getModelPath()
-                : (functionSpec != null ? functionSpec.getSoModel() : null);
+            ? taskSpec.getModelPath()
+            : (functionSpec != null ? functionSpec.getSoModel() : null);
         if (!StringUtils.hasText(modelKey)) {
             throw new IllegalArgumentException(
-                    "tvm+serve needs a compiled .so model: set task.model_path or run tvm+compile first " +
-                            "(function.spec.so_model is empty)");
+                "tvm+serve needs a compiled .so model: set task.model_path or run tvm+compile first " +
+                    "(function.spec.so_model is empty)"
+            );
         }
         // Resolve store:// to the .so folder's S3 location (whole dir: model.so +
         // metadata + optional params).
@@ -90,20 +94,18 @@ public class TvmServeRunner extends TvmBaseBuildRunner {
             envs.add(new CoreEnv("TVM_SERVE_WORKERS", String.valueOf(taskSpec.getWorkers())));
         }
 
-        List<ContextRef> contextRefs = Collections.singletonList(
-                TvmRunnerHelper.inputContextRef(s3SoPath, "model/"));
+        List<ContextRef> contextRefs = Collections.singletonList(TvmRunnerHelper.inputContextRef(s3SoPath, "model/"));
 
         String image = resolveImage(
-                taskSpec.getImage(),
-                properties.getServe(),
-                "no serve image configured: set task.image or runtime.tvm.serve");
+            taskSpec.getImage(),
+            properties.getServe(),
+            "no serve image configured: set task.image or runtime.tvm.serve"
+        );
 
         List<CoreEnv> coreSecrets = createSecrets(secretData);
         List<CoreVolume> volumes = createVolumes(taskSpec);
 
-        List<CorePort> servicePorts = List.of(
-                new CorePort(HTTP_PORT, HTTP_PORT),
-                new CorePort(GRPC_PORT, GRPC_PORT));
+        List<CorePort> servicePorts = List.of(new CorePort(HTTP_PORT, HTTP_PORT), new CorePort(GRPC_PORT, GRPC_PORT));
 
         List<String> serviceNames = new ArrayList<>();
         if (StringUtils.hasText(taskSpec.getServiceName())) {
@@ -125,20 +127,21 @@ public class TvmServeRunner extends TvmBaseBuildRunner {
         // No command/args: the serve image's ENTRYPOINT launches tvm-serve; applyCommon
         // fills in the rest.
         return applyCommon(
-                K8sServeRunnable.builder()
-                        .replicas(taskSpec.getReplicas())
-                        .servicePorts(servicePorts)
-                        .serviceType(taskSpec.getServiceType())
-                        .serviceNames(serviceNames.isEmpty() ? null : serviceNames)
-                        .build(),
-                run,
-                TvmServeTaskSpec.KIND,
-                funcName,
-                image,
-                envs,
-                coreSecrets,
-                volumes,
-                contextRefs,
-                taskSpec);
+            K8sServeRunnable.builder()
+                .replicas(taskSpec.getReplicas())
+                .servicePorts(servicePorts)
+                .serviceType(taskSpec.getServiceType())
+                .serviceNames(serviceNames.isEmpty() ? null : serviceNames)
+                .build(),
+            run,
+            TvmServeTaskSpec.KIND,
+            funcName,
+            image,
+            envs,
+            coreSecrets,
+            volumes,
+            contextRefs,
+            taskSpec
+        );
     }
 }

@@ -23,12 +23,14 @@
 
 package it.smartcommunitylabdhub.core.specs;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.MissingNode;
 import com.github.victools.jsonschema.generator.SchemaGenerator;
 import com.github.victools.jsonschema.generator.SchemaGeneratorConfigBuilder;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.infrastructure.SpecFactory;
-import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
+import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.schemas.Schema;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.services.SchemaService;
@@ -55,6 +57,7 @@ import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
+import org.springframework.core.io.Resource;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
@@ -63,8 +66,9 @@ import org.springframework.validation.annotation.Validated;
 
 @Slf4j
 @Validated
-public class SpecRegistryImpl<D>
-    implements SpecRegistry<D>, SchemaService<D>, ApplicationContextAware, InitializingBean {
+public class SpecRegistryImpl<
+    D
+> implements SpecRegistry<D>, SchemaService<D>, ApplicationContextAware, InitializingBean {
 
     protected final Class<D> type;
     private ApplicationContext applicationContext;
@@ -145,19 +149,18 @@ public class SpecRegistryImpl<D>
                         c.newInstance();
 
                         //build a default factory
-                        factory =
-                            () -> {
-                                try {
-                                    return c.newInstance();
-                                } catch (
-                                    InstantiationException
-                                    | IllegalAccessException
-                                    | IllegalArgumentException
-                                    | InvocationTargetException e
-                                ) {
-                                    throw new IllegalArgumentException("error building spec");
-                                }
-                            };
+                        factory = () -> {
+                            try {
+                                return c.newInstance();
+                            } catch (
+                                InstantiationException
+                                | IllegalAccessException
+                                | IllegalArgumentException
+                                | InvocationTargetException e
+                            ) {
+                                throw new IllegalArgumentException("error building spec");
+                            }
+                        };
                     } catch (
                         NoSuchMethodException
                         | InstantiationException
@@ -192,7 +195,7 @@ public class SpecRegistryImpl<D>
         scanForSpecTypes();
     }
 
-    private String getEntityName(Class<?> clazz) {
+    protected String getEntityName(Class<?> clazz) {
         return clazz.getSimpleName().toUpperCase();
     }
 
@@ -219,14 +222,21 @@ public class SpecRegistryImpl<D>
         Class<? extends Spec> proxy = SchemaUtils.proxy(spec);
 
         // generate
-        SchemaImplBuilder builder = SchemaImpl
-            .builder()
+        SchemaImplBuilder builder = SchemaImpl.builder()
             .entity(getEntityName(entity))
             .kind(kind)
             .schema(generator.generateSchema(proxy));
+
         if (StringUtils.hasText(type.runtime())) {
             builder.runtime(type.runtime());
         }
+
+        //there are refs to resources, we'll load them as json
+        String uiSchema = type.uiSchema();
+        if (uiSchema != null && !uiSchema.isEmpty()) {
+            builder.uiSchema(loadJsonResource(uiSchema));
+        }
+
         SchemaImpl schema = builder.build();
 
         log.debug("register spec for {}:{} with class {}", entity, kind, spec.getName());
@@ -283,15 +293,51 @@ public class SpecRegistryImpl<D>
 
     @Override
     public Collection<Schema> listSchemas() {
-        return registrations.values().stream().map(e -> e.schema()).toList();
+        return registrations
+            .values()
+            .stream()
+            .map(e -> e.schema())
+            .toList();
     }
 
     @Override
     public Collection<Schema> listSchemas(@NotNull String runtime) {
-        return registrations.values().stream().filter(e -> runtime.equals(e.runtime())).map(e -> e.schema()).toList();
+        return registrations
+            .values()
+            .stream()
+            .filter(e -> runtime.equals(e.runtime()))
+            .map(e -> e.schema())
+            .toList();
     }
 
-    protected record SpecRegistration(
+    private JsonNode loadJsonResource(String uri) {
+        if (uri == null || uri.isBlank()) {
+            return null;
+        }
+
+        try {
+            if (!uri.contains("://") && !uri.startsWith("classpath:")) {
+                uri = "classpath:" + uri;
+            }
+
+            Resource res = applicationContext.getResource(uri);
+            JsonNode node = JacksonMapper.OBJECT_MAPPER.readTree(res.getInputStream());
+            if (node == null || node.isNull()) {
+                return null;
+            }
+
+            if (node instanceof MissingNode) {
+                log.warn("Json resource {} missing", uri);
+                return null;
+            }
+
+            return node;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("invalid uiSchema: " + e.getMessage());
+        }
+    }
+
+    public record SpecRegistration(
         String kind,
         String runtime,
         Class<? extends Spec> spec,

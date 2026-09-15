@@ -37,8 +37,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.Assert;
 
 @Slf4j
-public class BaseEntityRelationshipsManager<D extends BaseDTO & MetadataDTO>
-    implements EntityRelationshipsManager<D>, InitializingBean {
+public class BaseEntityRelationshipsManager<
+    D extends BaseDTO & MetadataDTO
+> implements EntityRelationshipsManager<D>, InitializingBean {
 
     protected final Class<D> type;
     protected EntityRelationshipsService service;

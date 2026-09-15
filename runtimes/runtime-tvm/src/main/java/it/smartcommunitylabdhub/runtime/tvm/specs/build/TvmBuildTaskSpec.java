@@ -49,7 +49,10 @@ public class TvmBuildTaskSpec extends K8sFunctionTaskBaseSpec {
 
     // ONNX only: use strict mode during ONNX shape inference.
     @JsonProperty("strict_shape_inference")
-    @Schema(title = "fields.tvm.strictShapeInference.title", description = "fields.tvm.strictShapeInference.description")
+    @Schema(
+        title = "fields.tvm.strictShapeInference.title",
+        description = "fields.tvm.strictShapeInference.description"
+    )
     private Boolean strictShapeInference;
 
     // ONNX only: enable data propagation during ONNX shape inference.

@@ -51,7 +51,8 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public abstract class KubeAIRuntime<F extends KubeAIServeFunctionSpec, R extends KubeAIServeRunSpec>
     extends K8sFunctionBaseRuntime<F, R, KubeAIServeRunStatus, K8sCRRunnable>
-    implements InitializingBean {
+    implements InitializingBean
+{
 
     @Value("${runtime.kubeai.endpoint}")
     protected String kubeAiEndpoint;
@@ -139,7 +140,6 @@ public abstract class KubeAIRuntime<F extends KubeAIServeFunctionSpec, R extends
             //TODO fetch status to read replicas
             // K8sCRRunnable crRunnable = (K8sCRRunnable) runnable;
             // crRunnable.getStatus();
-
         }
 
         return status;
@@ -150,8 +150,7 @@ public abstract class KubeAIRuntime<F extends KubeAIServeFunctionSpec, R extends
         //update state every time
         if (k8sRunnable != null) {
             //check model replication status
-            Optional<ModelStatus> status = Optional
-                .ofNullable(k8sRunnable.getResults())
+            Optional<ModelStatus> status = Optional.ofNullable(k8sRunnable.getResults())
                 .map(s -> s.get("Model"))
                 .map(m -> ((Map<String, Serializable>) m).get("status"))
                 .map(m -> ((Map<String, Serializable>) m).get("replicas"))

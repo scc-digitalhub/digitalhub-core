@@ -24,6 +24,8 @@
 package it.smartcommunitylabdhub.framework.k8s.infrastructure.monitor;
 
 import io.kubernetes.client.openapi.models.EventsV1Event;
+import io.kubernetes.client.openapi.models.V1ContainerStateTerminated;
+import io.kubernetes.client.openapi.models.V1ContainerStatus;
 import io.kubernetes.client.openapi.models.V1Deployment;
 import io.kubernetes.client.openapi.models.V1Pod;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.MonitorComponent;
@@ -140,17 +142,24 @@ public class K8sDeploymentMonitor extends K8sBaseMonitor<K8sDeploymentRunnable> 
                 boolean hasRestarts = pods
                     .stream()
                     .anyMatch(pod ->
-                        Optional
-                            .ofNullable(pod.getStatus())
+                        Optional.ofNullable(pod.getStatus())
                             .map(status -> {
-                                boolean initRestarts = Optional
-                                    .ofNullable(status.getInitContainerStatuses())
-                                    .map(s -> s.stream().map(i -> i.getRestartCount()).anyMatch(r -> r > 1))
+                                boolean initRestarts = Optional.ofNullable(status.getInitContainerStatuses())
+                                    .map(s ->
+                                        s
+                                            .stream()
+                                            .map(i -> i.getRestartCount())
+                                            .anyMatch(r -> r > 1)
+                                    )
                                     .orElse(false);
 
-                                boolean restarts = Optional
-                                    .ofNullable(status.getContainerStatuses())
-                                    .map(s -> s.stream().map(i -> i.getRestartCount()).anyMatch(r -> r > 1))
+                                boolean restarts = Optional.ofNullable(status.getContainerStatuses())
+                                    .map(s ->
+                                        s
+                                            .stream()
+                                            .map(i -> i.getRestartCount())
+                                            .anyMatch(r -> r > 1)
+                                    )
                                     .orElse(false);
 
                                 return initRestarts || restarts;
@@ -164,6 +173,34 @@ public class K8sDeploymentMonitor extends K8sBaseMonitor<K8sDeploymentRunnable> 
                     log.error("Multiple restarts observed {}", runnable.getId());
                     runnable.setState(K8sRunnableState.ERROR.name());
                     runnable.setError("Multiple pod restarts");
+                }
+            }
+
+            //if we have an error, check for container status
+            if (K8sRunnableState.ERROR.name().equals(runnable.getState()) && pods != null) {
+                for (V1Pod pod : pods) {
+                    if (pod.getStatus() != null && pod.getStatus().getContainerStatuses() != null) {
+                        for (V1ContainerStatus status : pod.getStatus().getContainerStatuses()) {
+                            if (status.getState() != null && status.getState().getTerminated() != null) {
+                                V1ContainerStateTerminated terminated = status.getState().getTerminated();
+
+                                StringBuilder containerError = new StringBuilder();
+                                if (terminated.getMessage() != null) {
+                                    containerError.append(terminated.getMessage());
+                                }
+
+                                if (terminated.getExitCode() != null) {
+                                    containerError.append(" exitCode: ").append(terminated.getExitCode()).append(", ");
+                                }
+
+                                if (terminated.getReason() != null) {
+                                    containerError.append(" reason: ").append(terminated.getReason()).append(", ");
+                                }
+
+                                runnable.setError("Container error: " + containerError);
+                            }
+                        }
+                    }
                 }
             }
 

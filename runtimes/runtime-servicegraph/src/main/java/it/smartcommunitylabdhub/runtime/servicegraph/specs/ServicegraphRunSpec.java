@@ -27,7 +27,6 @@ import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
-
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;

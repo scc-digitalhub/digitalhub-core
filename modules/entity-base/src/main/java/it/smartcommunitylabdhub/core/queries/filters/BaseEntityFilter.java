@@ -51,17 +51,23 @@ public class BaseEntityFilter<T> implements SearchFilter<T> {
     public Specification<T> toSpecification() {
         List<Specification<T>> specs = new ArrayList<>();
 
-        Optional
-            .ofNullable(criteria)
-            .ifPresent(criteria -> {
-                specs.addAll(criteria.stream().map(f -> f.toSpecification()).collect(Collectors.toList()));
-            });
+        Optional.ofNullable(criteria).ifPresent(criteria -> {
+            specs.addAll(
+                criteria
+                    .stream()
+                    .map(f -> f.toSpecification())
+                    .collect(Collectors.toList())
+            );
+        });
 
-        Optional
-            .ofNullable(filters)
-            .ifPresent(filters -> {
-                specs.addAll(filters.stream().map(f -> f.toSpecification()).collect(Collectors.toList()));
-            });
+        Optional.ofNullable(filters).ifPresent(filters -> {
+            specs.addAll(
+                filters
+                    .stream()
+                    .map(f -> f.toSpecification())
+                    .collect(Collectors.toList())
+            );
+        });
 
         if (specs == null || specs.isEmpty()) {
             return null;

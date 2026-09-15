@@ -36,6 +36,7 @@ public class Fields {
     public static final String TYPE = "type";
     public static final String WORKFLOW = "workflow";
     public static final String STATE = "state";
+    public static final String CONFIG = "config";
 
     private Fields() {}
 }

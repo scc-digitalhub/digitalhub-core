@@ -24,7 +24,7 @@
         </dependency>
         <dependency>
             <groupId>it.smartcommunitylabdhub</groupId>
-            <artifactId>dh-entity-base</artifactId>
+            <artifactId>dh-extensions</artifactId>
             <version>${revision}</version>
         </dependency>
 

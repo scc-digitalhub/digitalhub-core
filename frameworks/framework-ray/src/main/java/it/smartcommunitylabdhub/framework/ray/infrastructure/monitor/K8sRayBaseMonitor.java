@@ -73,9 +73,7 @@ public abstract class K8sRayBaseMonitor<T extends K8sRayRunnable<?>> extends K8s
             //expose CR spec/status snapshot in results
             try {
                 HashMap<String, Serializable> crMap = K8sRayBaseFramework.jsonElementToMap(cr.getRaw());
-                runnable.setResults(
-                    MapUtils.mergeMultipleMaps(runnable.getResults(), Map.of(cr.getKind(), crMap))
-                );
+                runnable.setResults(MapUtils.mergeMultipleMaps(runnable.getResults(), Map.of(cr.getKind(), crMap)));
             } catch (Exception e) {
                 log.error("error reading CR raw: {}", e.getMessage());
             }
@@ -101,7 +99,10 @@ public abstract class K8sRayBaseMonitor<T extends K8sRayRunnable<?>> extends K8s
                 runnable.setResults(
                     MapUtils.mergeMultipleMaps(
                         runnable.getResults(),
-                        Map.of("pods", statusPods != null ? mapper.convertValue(statusPods, arrayRef) : new ArrayList<>())
+                        Map.of(
+                            "pods",
+                            statusPods != null ? mapper.convertValue(statusPods, arrayRef) : new ArrayList<>()
+                        )
                     )
                 );
             } catch (IllegalArgumentException e) {

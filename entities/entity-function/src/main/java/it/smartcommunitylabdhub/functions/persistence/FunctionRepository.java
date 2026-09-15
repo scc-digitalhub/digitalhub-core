@@ -34,20 +34,21 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface FunctionRepository
-    extends JpaRepository<FunctionEntity, String>, JpaSpecificationExecutor<FunctionEntity> {
+    extends JpaRepository<FunctionEntity, String>, JpaSpecificationExecutor<FunctionEntity>
+{
     List<FunctionEntity> findByProject(String project);
 
     @Query(
         "SELECT a FROM FunctionEntity a WHERE (a.name, a.project, a.created) IN " +
-        "(SELECT a2.name, a2.project, MAX(a2.created) FROM FunctionEntity a2 GROUP BY a2.name, a2.project) " +
-        "ORDER BY a.created DESC"
+            "(SELECT a2.name, a2.project, MAX(a2.created) FROM FunctionEntity a2 GROUP BY a2.name, a2.project) " +
+            "ORDER BY a.created DESC"
     )
     List<FunctionEntity> findAllLatestFunctions();
 
     @Query(
         "SELECT a FROM FunctionEntity a WHERE a.project = :project AND (a.name, a.project, a.created) IN " +
-        "(SELECT a2.name, a2.project, MAX(a2.created) FROM FunctionEntity a2 WHERE a2.project = :project GROUP BY a2.name, a2.project) " +
-        "ORDER BY a.created DESC"
+            "(SELECT a2.name, a2.project, MAX(a2.created) FROM FunctionEntity a2 WHERE a2.project = :project GROUP BY a2.name, a2.project) " +
+            "ORDER BY a.created DESC"
     )
     List<FunctionEntity> findAllLatestFunctionsByProject(@Param("project") String project);
 
@@ -67,7 +68,7 @@ public interface FunctionRepository
 
     @Query(
         "SELECT a FROM FunctionEntity a WHERE a.project = :project AND a.name = :name " +
-        "AND a.created = (SELECT MAX(a2.created) FROM FunctionEntity a2 WHERE a2.project = :project AND a2.name = :name)"
+            "AND a.created = (SELECT MAX(a2.created) FROM FunctionEntity a2 WHERE a2.project = :project AND a2.name = :name)"
     )
     Optional<FunctionEntity> findLatestFunctionByProjectAndName(
         @Param("project") String project,
@@ -76,7 +77,7 @@ public interface FunctionRepository
 
     @Query(
         "SELECT a FROM FunctionEntity a WHERE a.project = :project AND a.id = :id " +
-        "AND a.created = (SELECT MAX(a2.created) FROM FunctionEntity a2 WHERE a2.project = :project AND a2.id = :id)"
+            "AND a.created = (SELECT MAX(a2.created) FROM FunctionEntity a2 WHERE a2.project = :project AND a2.id = :id)"
     )
     Optional<FunctionEntity> findLatestFunctionByProjectAndId(@Param("project") String project, @Param("id") String id);
 

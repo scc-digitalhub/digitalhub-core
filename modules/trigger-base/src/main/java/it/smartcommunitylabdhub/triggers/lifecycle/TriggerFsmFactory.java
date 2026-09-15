@@ -32,8 +32,11 @@ import it.smartcommunitylabdhub.triggers.specs.TriggerBaseStatus;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class TriggerFsmFactory<S extends TriggerBaseSpec, Z extends TriggerBaseStatus, R extends TriggerRunBaseStatus>
-    extends BaseFsmFactory<Trigger> {
+public class TriggerFsmFactory<
+    S extends TriggerBaseSpec,
+    Z extends TriggerBaseStatus,
+    R extends TriggerRunBaseStatus
+> extends BaseFsmFactory<Trigger> {
 
     public TriggerFsmFactory(Actuator<S, Z, R> actuator) {
         super(

@@ -161,10 +161,15 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
         try {
             // Generate Config map
             V1ConfigMap configMap = buildInitConfigMap(runnable);
-            //patch dockerFile
-            configMap.data(
-                MapUtils.mergeMultipleMaps(configMap.getData(), Map.of("Dockerfile", runnable.getDockerFile()))
-            );
+            if (configMap != null) {
+                //patch dockerFile
+                configMap.data(
+                    MapUtils.mergeMultipleMaps(configMap.getData(), Map.of("Dockerfile", runnable.getDockerFile()))
+                );
+            } else {
+                //create with only the Dockerfile
+                configMap = buildInitConfigMap(runnable, Map.of("Dockerfile", runnable.getDockerFile()));
+            }
 
             coreV1Api.createNamespacedConfigMap(namespace, configMap, null, null, null, null);
             //clear data before storing
@@ -299,14 +304,7 @@ public class K8sBuildkitFramework extends K8sBaseFramework<K8sContainerBuilderRu
         log.debug("build k8s job for {}", jobName);
 
         //check template
-        K8sTemplate<K8sContainerBuilderRunnable> template = null;
-        if (StringUtils.hasText(runnable.getTemplate()) && templates.containsKey(runnable.getTemplate())) {
-            //get template
-            template = templates.get(runnable.getTemplate());
-        } else if (templates.containsKey(DEFAULT_TEMPLATE)) {
-            //use default template
-            template = templates.get(DEFAULT_TEMPLATE);
-        }
+        K8sTemplate<K8sContainerBuilderRunnable> template = getTemplate(runnable.getTemplate());
 
         //build destination image name and set to runnable
         String prefix =

@@ -50,7 +50,7 @@ public class K8sRayJobMonitor extends K8sRayBaseMonitor<K8sRayJobRunnable> {
         String message = messageObj != null ? messageObj.toString() : null;
         if (message != null) {
             // truncate
-            message = message.length() > 500 ? message.substring(0, 500) + "..." : message; 
+            message = message.length() > 500 ? message.substring(0, 500) + "..." : message;
             runnable.setMessage(message);
         }
 
