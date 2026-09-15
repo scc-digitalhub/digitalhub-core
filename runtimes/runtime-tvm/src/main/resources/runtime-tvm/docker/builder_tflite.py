@@ -2,6 +2,7 @@
 """TFLite -> Relax IR builder (from_tflite + metadata extraction, as CLI args)."""
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -73,7 +74,8 @@ def main():
         sys.exit(2)
 
     print(f"[1/4] Loading TFLite model from {in_path}")
-    model = tflite.Model.GetRootAsModel(in_path.read_bytes(), 0)
+    model_bytes = in_path.read_bytes()
+    model = tflite.Model.GetRootAsModel(model_bytes, 0)
 
     print("[2/4] TFLite -> Relax IR")
     mod: Any = from_tflite(model)
@@ -102,6 +104,8 @@ def main():
     meta = {
         "entry": "main",
         "source_format": "tflite",
+        "source_sha256": hashlib.sha256(model_bytes).hexdigest(),
+        "tvm_version": tvm.__version__,
         "model_name": args.name,
         "inputs": inputs,
         "outputs": outputs,

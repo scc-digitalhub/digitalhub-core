@@ -32,7 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 
 // K8s serving deployment for tvm+serve: init container drops the tvm-so Model into TVM_MODEL_DIR,
-// a swappable base serve image (default rust tvm-runtime-rust) serves it.
+// a swappable base serve image (default Go tvm-runtime-go; Rust is optional) serves it.
 @Slf4j
 public class TvmServeRunner extends TvmBaseBuildRunner {
 

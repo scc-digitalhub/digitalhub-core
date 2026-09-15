@@ -92,7 +92,8 @@ def publish_model_and_register_output(
 
 def _patch_run_status_outputs(project: str, run_id: str, output_key: str, value: str) -> None:
     """PATCH-merge run.status.outputs.<output_key> = value via REST. Auth
-    priority: DHCORE_ACCESS_TOKEN (JWT), then DHCORE_USER+PASSWORD (basic).
+    priority: DHCORE_ACCESS_TOKEN (JWT), then DHCORE_USER+PASSWORD (basic),
+    otherwise an unauthenticated request for local/no-auth Core instances.
     """
     import time
 
@@ -135,9 +136,7 @@ def _build_auth_headers():
     password = os.environ.get("DHCORE_PASSWORD")
     if user and password:
         return (user, password), {}
-    raise RuntimeError(
-        "no DHCORE auth: set DHCORE_ACCESS_TOKEN, or DHCORE_USER+DHCORE_PASSWORD"
-    )
+    return None, {}
 
 
 def _sanitize(name: str) -> str:

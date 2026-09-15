@@ -7,17 +7,17 @@ runtime:
 
     # format -> builder image for tvm+build (onnx, tflite).
     builders:
-      onnx: ${RUNTIME_TVM_BUILDER_ONNX:ghcr.io/scc-digitalhub/tvm-toolkit:0.25}
-      tflite: ${RUNTIME_TVM_BUILDER_TFLITE:ghcr.io/scc-digitalhub/tvm-toolkit:0.25}
+      onnx: ${RUNTIME_TVM_BUILDER_ONNX:ghcr.io/scc-digitalhub/tvm-toolkit:0.26}
+      tflite: ${RUNTIME_TVM_BUILDER_TFLITE:ghcr.io/scc-digitalhub/tvm-toolkit:0.26}
 
     # image running compiler.py for tvm+compile (IR -> model.so)
-    compiler: ${RUNTIME_TVM_COMPILER:ghcr.io/scc-digitalhub/tvm-toolkit:0.25}
+    compiler: ${RUNTIME_TVM_COMPILER:ghcr.io/scc-digitalhub/tvm-toolkit:0.26}
 
     # base serving image for tvm+serve (selectable). The .so Model is downloaded into
     # it by an init container at deploy time. Default: the native Go runtime from
     # digitalhub-serverless; the Rust one (tvm-runtime-rust) honours the same env
     # contract and can be swapped in via RUNTIME_TVM_SERVE or the task `image`.
-    serve: ${RUNTIME_TVM_SERVE:ghcr.io/scc-digitalhub/tvm-runtime-go:0.25}
+    serve: ${RUNTIME_TVM_SERVE:ghcr.io/scc-digitalhub/tvm-runtime-go:0.26}
 
     entrypoint: classpath:/runtime-tvm/docker/entrypoint.sh
     builder-scripts:

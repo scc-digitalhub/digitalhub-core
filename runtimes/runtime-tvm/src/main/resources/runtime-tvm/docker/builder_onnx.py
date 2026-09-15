@@ -2,6 +2,7 @@
 """ONNX -> Relax IR builder (from_onnx + ONNX preprocessing, as CLI args)."""
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -153,11 +154,19 @@ def main():
             print("[3/7] Running onnxsim.simplify")
             model_simp, ok = onnx_simplify(model)
             if not ok:
-                print("      simplify validation failed, using original", file=sys.stderr)
-            else:
-                model = model_simp
-        except ImportError:
-            print("      onnxsim not installed, skipping simplify", file=sys.stderr)
+                print("ERROR: onnxsim validation failed", file=sys.stderr)
+                sys.exit(4)
+            model = model_simp
+            print(f"      simplified graph: {len(model.graph.node)} nodes")
+        except ImportError as error:
+            print(
+                "ERROR: --simplify=true requires onnxsim in the builder image",
+                file=sys.stderr,
+            )
+            raise SystemExit(4) from error
+        except Exception as error:  # noqa: BLE001
+            print(f"ERROR: ONNX simplification failed: {error}", file=sys.stderr)
+            raise SystemExit(4) from error
     else:
         print("[3/7] (simplify disabled)")
 
@@ -221,13 +230,18 @@ def main():
     print("[6/7] Extracting metadata")
     inputs = extract_input_specs(model)
     outputs = extract_output_specs(model)
+    with in_path.open("rb") as source_stream:
+        source_sha256 = hashlib.file_digest(source_stream, "sha256").hexdigest()
     meta = {
         "entry": "main",
         "source_format": "onnx",
+        "source_sha256": source_sha256,
+        "tvm_version": tvm.__version__,
         "opset": model.opset_import[0].version,
         "model_name": args.name,
         "keep_params_in_input": keep_params,
         "sanitize_input_names": sanitize_names,
+        "simplify": do_simplify,
         "inputs": inputs,
         "outputs": outputs,
     }
@@ -258,6 +272,7 @@ def main():
             "parameters": {
                 "opset": meta["opset"],
                 "model_name": meta["model_name"],
+                "simplify": meta["simplify"],
             },
         },
     )
