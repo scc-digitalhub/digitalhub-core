@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """ONNX -> Relax IR builder (from_onnx + ONNX preprocessing, as CLI args)."""
 
 import argparse

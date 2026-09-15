@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Shared helper used by builders and compiler.py to publish a Model entity via
 the digitalhub SDK and record its key in run.status.outputs (same pattern as
 digitalhub_runtime_python.utils.outputs.build_status).

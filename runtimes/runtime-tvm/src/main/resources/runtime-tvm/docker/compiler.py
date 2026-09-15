@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Relax IR -> model.so. --target is forwarded as-is to tvm.target.Target; external libs (cuDNN/cuBLAS) go inline in the target string."""
 
 import argparse
