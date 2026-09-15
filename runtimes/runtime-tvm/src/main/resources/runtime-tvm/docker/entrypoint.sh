@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+#
+# SPDX-License-Identifier: Apache-2.0
+
 # Entrypoint for tvm+build and tvm+compile; dispatches on TVM_TASK_KIND to task.py with the right CLI args.
 set -euo pipefail
 

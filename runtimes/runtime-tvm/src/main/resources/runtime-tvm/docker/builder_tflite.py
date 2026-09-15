@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """TFLite -> Relax IR builder (from_tflite + metadata extraction, as CLI args)."""
 
 import argparse
