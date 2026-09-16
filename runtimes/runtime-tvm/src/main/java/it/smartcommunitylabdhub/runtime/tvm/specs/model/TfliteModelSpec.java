@@ -21,7 +21,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@SpecType(kind = TfliteModelSpec.KIND, entity = Model.class)
+@SpecType(kind = TfliteModelSpec.KIND, entity = Model.class, uiSchema = "runtime-tvm/tflite/uiSchema.json")
 public class TfliteModelSpec extends TvmSourceModelSpec {
 
     public static final String KIND = "tflite";

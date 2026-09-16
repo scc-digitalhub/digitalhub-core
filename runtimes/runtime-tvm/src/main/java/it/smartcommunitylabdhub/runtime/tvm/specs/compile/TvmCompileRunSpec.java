@@ -23,7 +23,12 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = TvmRuntime.RUNTIME, kind = TvmCompileRunSpec.KIND, entity = Run.class)
+@SpecType(
+    runtime = TvmRuntime.RUNTIME,
+    kind = TvmCompileRunSpec.KIND,
+    entity = Run.class,
+    uiSchema = "runtime-tvm/tvm-compile-run/uiSchema.json"
+)
 public final class TvmCompileRunSpec extends TvmRunSpec {
 
     public static final String KIND = TvmCompileTaskSpec.KIND + ":run";

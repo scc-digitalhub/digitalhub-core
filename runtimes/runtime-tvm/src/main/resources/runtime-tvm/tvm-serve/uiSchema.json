@@ -1,0 +1,48 @@
+{
+  "ui:title@en": "TVM serve",
+  "ui:description@en": "Serves the compiled model over Open Inference v2.",
+  "ui:title@it": "Serve TVM",
+  "ui:description@it": "Serve il modello compilato con Open Inference v2.",
+  "model_path": {
+    "ui:title@en": "Compiled Model",
+    "ui:description@en": "The tvm-so Model to serve; empty uses the one written by tvm+compile in the function.",
+    "ui:title@it": "Modello compilato",
+    "ui:description@it": "Il Model tvm-so da servire; vuoto usa quello scritto da tvm+compile nella funzione."
+  },
+  "served_name": {
+    "ui:title@en": "Served Model Name",
+    "ui:description@en": "Name of the model in the API, /v2/models/<name>; empty uses the function name.",
+    "ui:title@it": "Nome modello servito",
+    "ui:description@it": "Nome del modello nell'API, /v2/models/<nome>; vuoto usa il nome della funzione."
+  },
+  "image": {
+    "ui:title@en": "Serve Image",
+    "ui:description@en": "Image that serves the model; empty uses the serve image configured on the platform (Go).",
+    "ui:title@it": "Immagine di serve",
+    "ui:description@it": "Immagine che serve il modello; vuoto usa l'immagine di serve configurata sulla piattaforma (Go)."
+  },
+  "replicas": {
+    "ui:title@en": "Replicas",
+    "ui:description@en": "Number of pods that serve the model.",
+    "ui:title@it": "Repliche",
+    "ui:description@it": "Numero di pod che servono il modello."
+  },
+  "workers": {
+    "ui:title@en": "Workers",
+    "ui:description@en": "Requests handled in parallel by each pod; each worker loads its own copy of the model.",
+    "ui:title@it": "Worker",
+    "ui:description@it": "Richieste gestite in parallelo da ogni pod; ogni worker carica la propria copia del modello."
+  },
+  "service_type": {
+    "ui:title@en": "Service Type",
+    "ui:description@en": "Kubernetes Service type: ClusterIP, NodePort or LoadBalancer.",
+    "ui:title@it": "Tipo di servizio",
+    "ui:description@it": "Tipo di Service Kubernetes: ClusterIP, NodePort o LoadBalancer."
+  },
+  "service_name": {
+    "ui:title@en": "Service Name",
+    "ui:description@en": "Extra Service name, <function>-<service name>.",
+    "ui:title@it": "Nome del servizio",
+    "ui:description@it": "Nome aggiuntivo del Service, <funzione>-<nome servizio>."
+  }
+}

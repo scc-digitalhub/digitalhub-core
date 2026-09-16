@@ -23,30 +23,48 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = TvmRuntime.RUNTIME, kind = TvmRuntime.RUNTIME, entity = Function.class)
+@SpecType(
+    runtime = TvmRuntime.RUNTIME,
+    kind = TvmRuntime.RUNTIME,
+    entity = Function.class,
+    uiSchema = "runtime-tvm/tvm/uiSchema.json"
+)
 public class TvmFunctionSpec extends FunctionBaseSpec {
 
     // Source model: an s3:// or https:// path, or the store:// key of a Model. Upload the
     // file as a Model of kind onnx or tflite and tvm+build knows its format right away.
     @JsonProperty("model")
     @NotNull
-    @Schema(title = "fields.tvm.model.title", description = "fields.tvm.model.description")
+    @Schema(
+        title = "Source Model",
+        description = "The ONNX or TFLite model to convert: the store:// key of a Model, or an s3:// or https:// path."
+    )
     private String model;
 
     // Source format (onnx, tflite). "auto" takes it from the kind of the referenced Model,
     // or from the file extension for generic models and plain paths.
     @JsonProperty("format")
-    @Schema(title = "fields.tvm.format.title", description = "fields.tvm.format.description", defaultValue = "auto")
+    @Schema(
+        title = "Model Format",
+        description = "Format of the source model: auto takes it from the Model kind or the file extension; onnx or tflite set it.",
+        defaultValue = "auto"
+    )
     private TvmFormat format;
 
     // store:// key of the built Relax IR model (tvm-ir), set on build completion.
     @JsonProperty("ir_model")
-    @Schema(title = "fields.tvm.irModel.title", description = "fields.tvm.irModel.description")
+    @Schema(
+        title = "Relax IR Model",
+        description = "Key of the tvm-ir Model written by tvm+build and compiled by tvm+compile. Leave it empty."
+    )
     private String irModel;
 
     // store:// key of the compiled model.so (tvm-so), set on compile completion.
     @JsonProperty("so_model")
-    @Schema(title = "fields.tvm.soModel.title", description = "fields.tvm.soModel.description")
+    @Schema(
+        title = "Compiled Model",
+        description = "Key of the tvm-so Model written by tvm+compile and deployed by tvm+serve. Leave it empty."
+    )
     private String soModel;
 
     @Override

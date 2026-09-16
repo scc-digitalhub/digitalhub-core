@@ -1,0 +1,30 @@
+{
+  "ui:title@en": "TVM function",
+  "ui:description@en": "A model compiled with Apache TVM and served over Open Inference v2.",
+  "ui:title@it": "Funzione TVM",
+  "ui:description@it": "Un modello compilato con Apache TVM e servito con Open Inference v2.",
+  "model": {
+    "ui:title@en": "Source Model",
+    "ui:description@en": "The ONNX or TFLite model to convert: the store:// key of a Model, or an s3:// or https:// path.",
+    "ui:title@it": "Modello sorgente",
+    "ui:description@it": "Il modello ONNX o TFLite da convertire: la chiave store:// di un Model, oppure un percorso s3:// o https://."
+  },
+  "format": {
+    "ui:title@en": "Model Format",
+    "ui:description@en": "Format of the source model: auto takes it from the Model kind or the file extension; onnx or tflite set it.",
+    "ui:title@it": "Formato del modello",
+    "ui:description@it": "Formato del modello sorgente: auto lo ricava dal kind del Model o dall'estensione del file; onnx o tflite lo impostano."
+  },
+  "ir_model": {
+    "ui:title@en": "Relax IR Model",
+    "ui:description@en": "Key of the tvm-ir Model written by tvm+build and compiled by tvm+compile. Leave it empty.",
+    "ui:title@it": "Modello Relax IR",
+    "ui:description@it": "Chiave del Model tvm-ir scritto da tvm+build e compilato da tvm+compile. Lascialo vuoto."
+  },
+  "so_model": {
+    "ui:title@en": "Compiled Model",
+    "ui:description@en": "Key of the tvm-so Model written by tvm+compile and deployed by tvm+serve. Leave it empty.",
+    "ui:title@it": "Modello compilato",
+    "ui:description@it": "Chiave del Model tvm-so scritto da tvm+compile e servito da tvm+serve. Lascialo vuoto."
+  }
+}
