@@ -187,6 +187,14 @@ public class MlflowServeRunner {
 
         UriComponents uri = UriComponentsBuilder.fromUriString(path).build();
 
+        //let's make sure we have a valid model uri
+        if (uri.getScheme() == null || !StringUtils.hasText(uri.getScheme())) {
+            throw new IllegalArgumentException("invalid model url, missing scheme");
+        }
+        if (uri.getHost() == null || !StringUtils.hasText(uri.getHost())) {
+            throw new IllegalArgumentException("invalid model url");
+        }
+
         //read source and build context
         List<ContextRef> contextRefs = Collections.singletonList(
             ContextRef.builder().source(path).protocol(uri.getScheme()).destination("model/").build()

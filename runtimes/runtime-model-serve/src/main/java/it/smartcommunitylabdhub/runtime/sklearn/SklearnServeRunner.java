@@ -186,6 +186,18 @@ public class SklearnServeRunner {
 
         //read source and build context
         UriComponents uri = UriComponentsBuilder.fromUriString(path).build();
+        
+        //let's make sure we have a valid model uri
+        if (uri.getScheme() == null || !StringUtils.hasText(uri.getScheme())) {
+            throw new IllegalArgumentException("invalid model url, missing scheme");
+        }
+        if (uri.getHost() == null || !StringUtils.hasText(uri.getHost())) {
+            throw new IllegalArgumentException("invalid model url");
+        }
+        if (uri.getPathSegments() == null || uri.getPathSegments().isEmpty()) {
+            throw new IllegalArgumentException("invalid model url");
+        }
+
         String fileName = uri.getPathSegments().getLast();
         String mlName = StringUtils.hasText(functionSpec.getModelName()) ? functionSpec.getModelName() : "model";
 

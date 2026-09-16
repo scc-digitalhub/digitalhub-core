@@ -191,14 +191,16 @@ public class VLLMServeRunner {
             taskSpec.getVolumes() != null ? taskSpec.getVolumes() : List.of()
         );
 
-        //define resources: we need RAM size to evaluate cache if cpu is used, otherwise VLLM will take 50% of the whole node RAM as cache
+        //define resources: we need RAM size to evaluate cache if cpu is used
+        // otherwise VLLM will take 50% of the whole node RAM as cache
         CoreResource resources = taskSpec.getResources() != null ? taskSpec.getResources() : new CoreResource();
         String memSize = resources != null && resources.getMem() != null ? resources.getMem() : memSizeSpec;
 
         if (Boolean.TRUE.equals(runSpec.getUseCpuImage())) {
             coreEnvList.add(new CoreEnv("VLLM_BACKEND", "cpu"));
 
-            // define VLLM_CPU_KVCACHE_SPACE as 50% of mem size if not defined, to avoid using too much memory for caching and OOM
+            // define VLLM_CPU_KVCACHE_SPACE as 50% of mem size if not defined,
+            // to avoid using too much memory for caching and OOM
             Integer cacheSize = calculateCacheSize(memSize);
             Optional.ofNullable(cacheSize).ifPresent(size ->
                 coreEnvList.add(new CoreEnv("VLLM_CPU_KVCACHE_SPACE", String.valueOf(size)))
@@ -241,6 +243,14 @@ public class VLLMServeRunner {
         url = linkToModel(run, url);
 
         UriComponents uri = UriComponentsBuilder.fromUriString(url).build();
+
+        //let's make sure we have a valid model uri
+        if (uri.getScheme() == null || !StringUtils.hasText(uri.getScheme())) {
+            throw new IllegalArgumentException("invalid model url, missing scheme");
+        }
+        if (uri.getHost() == null || !StringUtils.hasText(uri.getHost())) {
+            throw new IllegalArgumentException("invalid model url");
+        }
 
         List<String> args = new ArrayList<>();
 

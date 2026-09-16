@@ -46,6 +46,10 @@ public class ContextRef implements Serializable {
     private String source;
 
     public String toCsv() {
+        if (source == null || protocol == null) {
+            throw new IllegalArgumentException("source and protocol must not be null");
+        }
+        
         return StringUtils.hasText(destination)
             ? String.join(",", List.of(protocol, destination, source))
             : String.join(",", List.of(protocol, "", source));

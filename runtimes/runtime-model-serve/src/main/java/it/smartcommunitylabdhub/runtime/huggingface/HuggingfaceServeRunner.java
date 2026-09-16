@@ -181,6 +181,14 @@ public class HuggingfaceServeRunner {
 
         UriComponents uri = UriComponentsBuilder.fromUriString(path).build();
 
+        //let's make sure we have a valid model uri
+        if (uri.getScheme() == null || !StringUtils.hasText(uri.getScheme())) {
+            throw new IllegalArgumentException("invalid model url, missing scheme");
+        }
+        if (uri.getHost() == null || !StringUtils.hasText(uri.getHost())) {
+            throw new IllegalArgumentException("invalid model url");
+        }
+
         List<String> args = new ArrayList<>(
             List.of(
                 "-m",
