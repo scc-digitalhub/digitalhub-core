@@ -31,7 +31,8 @@ import org.springframework.util.StringUtils;
 // variables, the scratch volume and the fields common to every runnable.
 public abstract class TvmBaseRunner {
 
-    private static final String DEFAULT_ENTRYPOINT = "classpath:/runtime-tvm/docker/entrypoint.sh";
+    private static final String DEFAULT_ENTRYPOINT =
+        TvmRunnerHelper.SCRIPTS_CLASSPATH + TvmRunnerHelper.ENTRYPOINT_NAME;
 
     protected final TvmProperties properties;
     protected final K8sBuilderHelper k8sBuilderHelper;

@@ -24,6 +24,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponents;
@@ -33,28 +35,38 @@ import org.springframework.web.util.UriComponentsBuilder;
 // CPU quantities.
 public final class TvmRunnerHelper {
 
+    // Folder of the pod scripts on the classpath.
+    public static final String SCRIPTS_CLASSPATH = "classpath:/runtime-tvm/scripts/";
     public static final String ENTRYPOINT_NAME = "entrypoint.sh";
-    public static final String TASK_SCRIPT_NAME = "task.py";
-    // Shared SDK helper (publishes the Model, records the run output) injected into every pod.
-    public static final String DH_PUBLISH_SCRIPT_NAME = "_dh_publish.py";
-    public static final String DH_PUBLISH_CLASSPATH = "classpath:/runtime-tvm/docker/_dh_publish.py";
+    // Modules imported by the task scripts: options and IR helpers, Model publishing,
+    // MetaSchedule tuning and the benchmark.
+    public static final List<String> SHARED_SCRIPTS = List.of("common.py", "publish.py", "tuning.py", "benchmark.py");
 
     private static final DefaultResourceLoader RESOURCE_LOADER = new DefaultResourceLoader();
-    private static String dhPublishScriptCache;
+    private static final Map<String, String> SHARED_SCRIPT_CACHE = new ConcurrentHashMap<>();
 
     private TvmRunnerHelper() {}
 
-    // Files injected into every TVM Job pod: the entrypoint, the task script (always
-    // mounted as task.py) and the publish helper.
-    public static List<ContextSource> createContextSources(@NotNull String entrypoint, @NotNull String taskScript) {
-        if (dhPublishScriptCache == null) {
-            dhPublishScriptCache = loadClasspath(DH_PUBLISH_CLASSPATH);
-        }
+    // Files mounted in every TVM Job pod: the entrypoint, the task script under its own name
+    // (the entrypoint runs the one named in TVM_TASK_SCRIPT) and the shared modules it imports.
+    public static List<ContextSource> createContextSources(
+        @NotNull String entrypoint,
+        @NotNull String taskScriptName,
+        @NotNull String taskScript
+    ) {
         List<ContextSource> sources = new ArrayList<>();
         sources.add(base64Source(ENTRYPOINT_NAME, entrypoint));
-        sources.add(base64Source(TASK_SCRIPT_NAME, taskScript));
-        sources.add(base64Source(DH_PUBLISH_SCRIPT_NAME, dhPublishScriptCache));
+        sources.add(base64Source(taskScriptName, taskScript));
+        for (String name : SHARED_SCRIPTS) {
+            String content = SHARED_SCRIPT_CACHE.computeIfAbsent(name, n -> loadClasspath(SCRIPTS_CLASSPATH + n));
+            sources.add(base64Source(name, content));
+        }
         return sources;
+    }
+
+    // File name of a script location, e.g. build_onnx.py for classpath:/runtime-tvm/scripts/build_onnx.py.
+    public static String scriptName(String location) {
+        return location.substring(location.lastIndexOf('/') + 1);
     }
 
     // Text content of a classpath resource, e.g. one of the pod scripts.

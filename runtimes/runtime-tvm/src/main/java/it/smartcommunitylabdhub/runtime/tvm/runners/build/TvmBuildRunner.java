@@ -57,8 +57,7 @@ public class TvmBuildRunner extends TvmBaseRunner {
         envs.add(new CoreEnv("TVM_TASK_KIND", TvmBuildTaskSpec.KIND));
         envs.add(new CoreEnv("TVM_FUNCTION_NAME", funcName));
         envs.add(new CoreEnv("TVM_INPUT_FILE", inputFile));
-        // Conversion options. They are all ONNX options except keep/sanitize, and the TFLite
-        // builder simply ignores the ones it does not use.
+        // Conversion options, read by build_onnx.py; build_tflite.py has none of its own.
         addEnv(envs, "TVM_KEEP_PARAMS_IN_INPUT", taskSpec.getKeepParamsInInput());
         addEnv(envs, "TVM_SANITIZE_INPUT_NAMES", taskSpec.getSanitizeInputNames());
         addEnv(envs, "TVM_SIMPLIFY", taskSpec.getSimplify());
@@ -67,8 +66,14 @@ public class TvmBuildRunner extends TvmBaseRunner {
         addEnv(envs, "TVM_STRICT_SHAPE_INFER", taskSpec.getStrictShapeInference());
         addEnv(envs, "TVM_DATA_PROP", taskSpec.getDataProp());
 
-        String builderScript = TvmRunnerHelper.loadClasspath(builderScriptLocation(format));
-        List<ContextSource> contextSources = TvmRunnerHelper.createContextSources(entrypoint, builderScript);
+        String scriptLocation = builderScriptLocation(format);
+        String scriptName = TvmRunnerHelper.scriptName(scriptLocation);
+        envs.add(new CoreEnv("TVM_TASK_SCRIPT", scriptName));
+        List<ContextSource> contextSources = TvmRunnerHelper.createContextSources(
+            entrypoint,
+            scriptName,
+            TvmRunnerHelper.loadClasspath(scriptLocation)
+        );
 
         // The init container downloads the source into input/. The http downloader needs a
         // file name as destination, while s3 can write straight into the folder.
@@ -112,16 +117,16 @@ public class TvmBuildRunner extends TvmBaseRunner {
     }
 
     // File the builder reads from input/. A folder has no file name of its own: the pod
-    // entrypoint then looks for the single model file with the format's extension.
+    // build script then looks for the single model file with the format's extension.
     static String inputFileName(String sourceUri, TvmFormat format) {
         String name = sourceUri.endsWith("/") ? "" : TvmRunnerHelper.extractFileName(sourceUri);
         return StringUtils.hasText(name) ? name : "model." + format.name();
     }
 
-    // Builder script of a format: runtime.tvm.builder-scripts.<format>, else the bundled
-    // builder_<format>.py.
+    // Build script of a format: runtime.tvm.builder-scripts.<format>, else the bundled
+    // build_<format>.py.
     private String builderScriptLocation(TvmFormat format) {
-        String bundled = "classpath:/runtime-tvm/docker/builder_" + format.name() + ".py";
+        String bundled = TvmRunnerHelper.SCRIPTS_CLASSPATH + "build_" + format.name() + ".py";
         Map<String, String> configured = properties.getBuilderScripts();
         return configured != null ? configured.getOrDefault(format.name(), bundled) : bundled;
     }
