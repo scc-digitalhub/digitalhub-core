@@ -331,3 +331,10 @@ Test the pod scripts inside the toolkit image:
 docker run --rm -v "$PWD/runtimes/runtime-tvm/src":/src -w /src/test/python \
   ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0 python3 -m unittest -v test_compiler
 ```
+
+## Copyright and license
+
+Copyright © 2025 DSLab – Fondazione Bruno Kessler and individual contributors.
+
+This project is licensed under the Apache License, Version 2.0.
+You may not use this file except in compliance with the License. Ownership of contributions remains with the original authors and is governed by the terms of the Apache 2.0 License, including the requirement to grant a license to the project.
