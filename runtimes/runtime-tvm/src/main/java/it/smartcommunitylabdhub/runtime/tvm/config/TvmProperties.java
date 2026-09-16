@@ -27,17 +27,17 @@ public class TvmProperties {
     private String homeDir;
     private String volumeSize;
 
-    // Source format (onnx) -> builder image used by tvm+build.
+    // Source format (onnx, tflite) -> builder image used by tvm+build.
     private Map<String, String> builders;
 
     // Image running compiler.py for tvm+compile (Relax IR -> model.so).
     private String compiler;
 
-    // Base serving image for tvm+serve (defaults to the rust runtime); init
-    // container injects the .so Model.
+    // Generic serve image for tvm+serve (the Go runtime by default); an init container
+    // drops the tvm-so Model into it.
     private String serve;
 
-    // entrypoint.sh and the per-format builder scripts injected into build pods.
+    // entrypoint.sh and the per-format builder scripts injected into the Job pods.
     private String entrypoint;
     private Map<String, String> builderScripts;
 }

@@ -18,7 +18,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-// Task spec for tvm+build: source ONNX -> Relax IR, carrying the frontend conversion knobs.
+// Task spec for tvm+build: source model (ONNX or TFLite) -> Relax IR. Most options tune the
+// ONNX conversion; the TFLite builder ignores them.
 @Getter
 @Setter
 @NoArgsConstructor

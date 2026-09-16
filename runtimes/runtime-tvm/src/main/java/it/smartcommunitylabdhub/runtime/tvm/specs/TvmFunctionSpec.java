@@ -26,13 +26,15 @@ import lombok.Setter;
 @SpecType(runtime = TvmRuntime.RUNTIME, kind = TvmRuntime.RUNTIME, entity = Function.class)
 public class TvmFunctionSpec extends FunctionBaseSpec {
 
-    // Source model: a path or a store:// key to the ONNX model.
+    // Source model: an s3:// or https:// path, or the store:// key of a Model. Upload the
+    // file as a Model of kind onnx or tflite and tvm+build knows its format right away.
     @JsonProperty("model")
     @NotNull
     @Schema(title = "fields.tvm.model.title", description = "fields.tvm.model.description")
     private String model;
 
-    // Source format; "auto" lets the build task infer it from the model.
+    // Source format (onnx, tflite). "auto" takes it from the kind of the referenced Model,
+    // or from the file extension for generic models and plain paths.
     @JsonProperty("format")
     @Schema(title = "fields.tvm.format.title", description = "fields.tvm.format.description", defaultValue = "auto")
     private TvmFormat format;

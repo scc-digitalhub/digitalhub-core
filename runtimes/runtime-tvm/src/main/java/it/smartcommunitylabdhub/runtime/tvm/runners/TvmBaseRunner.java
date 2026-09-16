@@ -6,7 +6,6 @@
 
 package it.smartcommunitylabdhub.runtime.tvm.runners;
 
-import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
@@ -20,20 +19,19 @@ import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.tvm.TvmRuntime;
 import it.smartcommunitylabdhub.runtime.tvm.config.TvmProperties;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import org.springframework.core.io.DefaultResourceLoader;
-import org.springframework.core.io.Resource;
+import java.util.Objects;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
-// Base for all TVM runners: resolves pod identity from TvmProperties (TvmRuntime defaults),
-// loads the entrypoint, and provides the shared env/secret/volume/label/image + applyCommon helpers.
-public abstract class TvmBaseBuildRunner {
+// Base class of the three TVM runners (build, compile, serve). It holds what every TVM
+// pod shares: the pod identity, the home folder, the entrypoint script, the standard env
+// variables, the scratch volume and the fields common to every runnable.
+public abstract class TvmBaseRunner {
+
+    private static final String DEFAULT_ENTRYPOINT = "classpath:/runtime-tvm/docker/entrypoint.sh";
 
     protected final TvmProperties properties;
     protected final K8sBuilderHelper k8sBuilderHelper;
@@ -43,11 +41,9 @@ public abstract class TvmBaseBuildRunner {
     protected final int groupId;
     protected final String homeDir;
     protected final String volumeSizeSpec;
-
-    private final DefaultResourceLoader loader = new DefaultResourceLoader();
     protected final String entrypoint;
 
-    protected TvmBaseBuildRunner(
+    protected TvmBaseRunner(
         TvmProperties properties,
         K8sBuilderHelper k8sBuilderHelper,
         K8sLabelHelper k8sLabelHelper
@@ -57,32 +53,44 @@ public abstract class TvmBaseBuildRunner {
         this.k8sBuilderHelper = k8sBuilderHelper;
         this.k8sLabelHelper = k8sLabelHelper;
 
-        this.userId = properties.getUserId() != null ? properties.getUserId() : TvmRuntime.UID;
-        this.groupId = properties.getGroupId() != null ? properties.getGroupId() : TvmRuntime.GID;
-        this.homeDir = properties.getHomeDir() != null ? properties.getHomeDir() : TvmRuntime.HOME_DIR;
+        // Pod identity and storage: runtime-tvm.yml wins, TvmRuntime holds the defaults.
+        this.userId = Objects.requireNonNullElse(properties.getUserId(), TvmRuntime.UID);
+        this.groupId = Objects.requireNonNullElse(properties.getGroupId(), TvmRuntime.GID);
+        this.homeDir = Objects.requireNonNullElse(properties.getHomeDir(), TvmRuntime.HOME_DIR);
         this.volumeSizeSpec = properties.getVolumeSize();
-
-        String path =
-            properties.getEntrypoint() != null
-                ? properties.getEntrypoint()
-                : "classpath:/runtime-tvm/docker/entrypoint.sh";
-        this.entrypoint = readResource(loader.getResource(path));
+        this.entrypoint = TvmRunnerHelper.loadClasspath(
+            Objects.requireNonNullElse(properties.getEntrypoint(), DEFAULT_ENTRYPOINT)
+        );
     }
 
-    protected String loadClasspathScript(String classpathLocation) {
-        return readResource(loader.getResource(classpathLocation));
-    }
-
-    private String readResource(Resource resource) {
-        try {
-            return new String(resource.getContentAsByteArray(), StandardCharsets.UTF_8);
-        } catch (IOException ioe) {
-            throw new CoreRuntimeException("error reading classpath resource: " + resource);
+    // Adds NAME=value to the pod env only when the value is set. Unset values (null or
+    // blank) are skipped, so the pod scripts keep their own defaults.
+    protected static void addEnv(List<CoreEnv> envs, String name, Object value) {
+        if (value != null && StringUtils.hasText(String.valueOf(value))) {
+            envs.add(new CoreEnv(name, String.valueOf(value)));
         }
     }
 
-    // Standard TVM_* env contract read by the pod scripts; task envs appended last
-    // so they can override.
+    // True when the task sets this env variable itself through spec.envs.
+    protected static boolean hasTaskEnv(K8sFunctionTaskBaseSpec taskSpec, String name) {
+        return (
+            taskSpec.getEnvs() != null &&
+            taskSpec
+                .getEnvs()
+                .stream()
+                .anyMatch(env -> name.equals(env.name()))
+        );
+    }
+
+    // CPU cores requested through resources.cpu (rounded up), or null when not set.
+    protected static Integer requestedCpuCores(K8sFunctionTaskBaseSpec taskSpec) {
+        if (taskSpec.getResources() == null || !StringUtils.hasText(taskSpec.getResources().getCpu())) {
+            return null;
+        }
+        return TvmRunnerHelper.parseCpuCores(taskSpec.getResources().getCpu());
+    }
+
+    // Env variables every TVM pod receives, followed by the task's own spec.envs.
     protected List<CoreEnv> createEnvList(Run run, K8sFunctionTaskBaseSpec taskSpec) {
         List<CoreEnv> envs = new ArrayList<>();
         envs.add(new CoreEnv("PROJECT_NAME", run.getProject()));
@@ -90,49 +98,53 @@ public abstract class TvmBaseBuildRunner {
         envs.add(new CoreEnv("TVM_HOME_DIR", homeDir));
         envs.add(new CoreEnv("TVM_INPUT_DIR", homeDir + "/input"));
         envs.add(new CoreEnv("TVM_OUTPUT_DIR", homeDir + "/output"));
-        Optional.ofNullable(taskSpec.getEnvs()).ifPresent(envs::addAll);
+        if (taskSpec.getEnvs() != null) {
+            envs.addAll(taskSpec.getEnvs());
+        }
         return envs;
     }
 
+    // Project secrets become plain env variables of the pod.
     protected List<CoreEnv> createSecrets(Map<String, String> secretData) {
-        return secretData == null
-            ? null
-            : secretData
-                  .entrySet()
-                  .stream()
-                  .map(e -> new CoreEnv(e.getKey(), e.getValue()))
-                  .toList();
+        if (secretData == null) {
+            return null;
+        }
+        return secretData
+            .entrySet()
+            .stream()
+            .map(e -> new CoreEnv(e.getKey(), e.getValue()))
+            .toList();
     }
 
-    // Task volumes plus a shared scratch volume for input/output, sized from task
-    // disk or the default.
+    // The task volumes plus a shared scratch volume for input/ and output/, sized from
+    // resources.disk or the runtime default.
     protected List<CoreVolume> createVolumes(K8sFunctionTaskBaseSpec taskSpec) {
         List<CoreVolume> volumes = new ArrayList<>(taskSpec.getVolumes() != null ? taskSpec.getVolumes() : List.of());
-        String size =
+        if (k8sBuilderHelper == null) {
+            return volumes;
+        }
+        CoreResource disk = new CoreResource();
+        disk.setDisk(
             taskSpec.getResources() != null && taskSpec.getResources().getDisk() != null
                 ? taskSpec.getResources().getDisk()
-                : volumeSizeSpec;
-        CoreResource diskResource = new CoreResource();
-        diskResource.setDisk(size);
-        if (k8sBuilderHelper != null) {
-            CoreVolume shared = k8sBuilderHelper.buildSharedVolume(diskResource);
-            if (shared != null) {
-                volumes.add(shared);
-            }
+                : volumeSizeSpec
+        );
+        CoreVolume shared = k8sBuilderHelper.buildSharedVolume(disk);
+        if (shared != null) {
+            volumes.add(shared);
         }
         return volumes;
     }
 
-    // The `function=<name>` label on every TVM runnable (null without a
-    // K8sBuilderHelper, e.g. in tests).
+    // The function=<name> label put on every TVM runnable (null without a label helper,
+    // e.g. in unit tests).
     protected List<CoreLabel> functionLabels(String funcName) {
         return k8sLabelHelper != null
             ? List.of(new CoreLabel(k8sLabelHelper.buildCoreLabel("function"), funcName))
             : null;
     }
 
-    // Effective image: task override wins, else the default; throws missingMessage
-    // when neither is set.
+    // The image to run: the task override wins over the configured default.
     protected String resolveImage(String taskImage, String defaultImage, String missingMessage) {
         String image = StringUtils.hasText(taskImage) ? taskImage : defaultImage;
         if (!StringUtils.hasText(image)) {
@@ -141,8 +153,8 @@ public abstract class TvmBaseBuildRunner {
         return image;
     }
 
-    // Applies the config shared by every TVM runnable (Job and Serve); caller sets
-    // only type-specific fields.
+    // Fills the fields shared by the Job and Serve runnables; each runner only sets its
+    // own specific fields before calling this.
     protected <T extends K8sRunnable> T applyCommon(
         T runnable,
         Run run,
