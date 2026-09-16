@@ -28,12 +28,15 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.core.runs.lifecycle.KindAwareRunLifecycleManager;
+import it.smartcommunitylabdhub.metrics.ResourceMetrics;
+import it.smartcommunitylabdhub.metrics.ResourceMetricsService;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.RunManager;
 import it.smartcommunitylabdhub.runs.filters.RunEntityFilter;
@@ -81,6 +84,9 @@ public class RunController {
 
     @Autowired
     KindAwareRunLifecycleManager lifecycleManager;
+
+    @Autowired(required = false)
+    private ResourceMetricsService resourceMetricsService;
 
     @Operation(summary = "Create run and exec", description = "Create a run and exec")
     @PostMapping(
@@ -164,5 +170,18 @@ public class RunController {
 
         // via manager
         return lifecycleManager.perform(run, action.toUpperCase());
+    }
+
+    @Operation(summary = "Get resource metrics", description = "Get metrics for a run")
+    @GetMapping(path = "/{id}/resource_metrics", produces = "application/json; charset=UTF-8")
+    public ResourceMetrics getResourceMetrics(
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
+    ) throws NoSuchEntityException, StoreException {
+        if (resourceMetricsService == null) {
+            throw new StoreException("metrics service not available");
+        }
+
+        Run run = runManager.getRun(id);
+        return resourceMetricsService.getResourceMetricsByRun(run.getProject(), id);
     }
 }
