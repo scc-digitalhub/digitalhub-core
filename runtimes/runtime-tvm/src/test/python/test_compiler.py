@@ -33,6 +33,10 @@ class Tiny:
             R.output(output)
         return output
 """
+TINY_INPUTS = [
+    {"name": "x", "shape": [1, 8], "dtype": "float32"},
+    {"name": "weight", "shape": [8, 8], "dtype": "float32"},
+]
 
 
 class CompilerLifecycleTest(unittest.TestCase):
@@ -44,7 +48,7 @@ class CompilerLifecycleTest(unittest.TestCase):
         module = tvm.script.from_source(TINY_MODULE, {"I": I, "R": R})
         (self.ir_dir / "model.relax.json").write_text(tvm.ir.save_json(module))
         (self.ir_dir / "metadata.json").write_text(
-            json.dumps({"entry": "main", "source_sha256": "fixture-source"})
+            json.dumps({"entry": "main", "source_sha256": "fixture-source", "inputs": TINY_INPUTS})
         )
 
         publisher = types.ModuleType("_dh_publish")
@@ -67,6 +71,8 @@ class CompilerLifecycleTest(unittest.TestCase):
             '{"kind":"llvm","num-cores":1}',
             "--exec-mode",
             "compiled",
+            "--benchmark-runs",
+            "0",
             *arguments,
         ]
         with mock.patch.object(sys, "argv", argv), contextlib.redirect_stdout(io.StringIO()):
@@ -77,6 +83,7 @@ class CompilerLifecycleTest(unittest.TestCase):
     def test_off_tune_resume_apply_lifecycle(self):
         off = self.run_compiler(self.root / "off")
         self.assertNotIn("meta_schedule", off)
+        self.assertNotIn("benchmark", off)
         if "TVM_GIT_COMMIT" in os.environ:
             self.assertEqual(os.environ["TVM_GIT_COMMIT"], off["tvm_git_commit"])
 
@@ -102,6 +109,11 @@ class CompilerLifecycleTest(unittest.TestCase):
         tuned = self.run_compiler(tuned_dir, *tuning_arguments)
         self.assertEqual("tune", tuned["meta_schedule"]["mode"])
         self.assertEqual(2, tuned["meta_schedule"]["alloc_repeat"])
+        self.assertEqual(64, tuned["meta_schedule"]["trials_per_iter"])
+        # LLVM targets are tuned with weight prepacking, and the database records it.
+        self.assertTrue(tuned["meta_schedule"]["weight_prepack"])
+        manifest = json.loads((tuned_dir / "tuning" / "manifest.json").read_text())
+        self.assertTrue(manifest["cpu_weight_prepack"])
         self.assertEqual(1, tuned["meta_schedule"]["covered_function_count"])
         self.assertEqual([], tuned["meta_schedule"]["missing_functions"])
 
@@ -113,6 +125,7 @@ class CompilerLifecycleTest(unittest.TestCase):
             str(tuned_dir),
         )
         self.assertTrue(resumed["meta_schedule"]["database_reused"])
+        self.assertTrue(resumed["meta_schedule"]["weight_prepack"])
 
         applied = self.run_compiler(
             self.root / "applied",
@@ -123,6 +136,36 @@ class CompilerLifecycleTest(unittest.TestCase):
         )
         self.assertEqual("apply", applied["meta_schedule"]["mode"])
         self.assertEqual(1, applied["meta_schedule"]["covered_function_count"])
+
+    def test_records_a_benchmark_of_the_library(self):
+        compiled = self.run_compiler(self.root / "bench", "--benchmark-runs", "3")
+        benchmark = compiled["benchmark"]
+        self.assertEqual(3, benchmark["runs"])
+        self.assertGreater(benchmark["mean_ms"], 0)
+        self.assertLessEqual(benchmark["min_ms"], benchmark["p90_ms"])
+
+    def test_skips_the_benchmark_of_cross_compiled_libraries(self):
+        args = types.SimpleNamespace(benchmark_runs=5, cross_cc="aarch64-linux-gnu-g++", system_lib=False)
+        result = COMPILER["benchmark_library"](self.root / "model.so", {"inputs": TINY_INPUTS}, args)
+        self.assertIn("cross-compiled", result["skipped"])
+
+    def test_first_round_budget_uses_the_smaller_batch(self):
+        budget = COMPILER["first_round_budget"]
+        self.assertEqual(65 * 64, budget(65, 256, 64))
+        self.assertEqual(65 * 16, budget(65, 16, 64))
+
+    def test_databases_without_the_prepack_flag_are_applied_without_it(self):
+        database = self.root / "legacy" / "tuning"
+        database.mkdir(parents=True)
+        (database / "database_workload.json").write_text("")
+        (database / "database_tuning_record.json").write_text("")
+        identity = {"tvm_version": tvm.__version__, "target": "llvm"}
+        (database / "manifest.json").write_text(json.dumps(identity))
+
+        opened = COMPILER["open_tuning_database"](self.root / "out", str(database), identity, True)
+
+        self.assertTrue(opened.reused)
+        self.assertFalse(opened.weight_prepack)
 
     def test_rejects_incompatible_database(self):
         database = self.root / "database" / "tuning"
