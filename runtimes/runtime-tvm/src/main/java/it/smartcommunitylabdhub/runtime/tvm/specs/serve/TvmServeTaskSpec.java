@@ -54,6 +54,7 @@ public class TvmServeTaskSpec extends K8sFunctionTaskBaseSpec {
     private Integer replicas;
 
     // In-process inference workers per replica (each loads its own model copy) -> TVM_SERVE_WORKERS.
+    // The requested CPU cores are split among them through TVM_NUM_THREADS.
     @JsonProperty("workers")
     @Min(1)
     private Integer workers;

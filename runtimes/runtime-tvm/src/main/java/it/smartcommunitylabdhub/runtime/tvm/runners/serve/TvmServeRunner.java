@@ -21,7 +21,7 @@ import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.models.ModelManager;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.tvm.config.TvmProperties;
-import it.smartcommunitylabdhub.runtime.tvm.runners.TvmBaseBuildRunner;
+import it.smartcommunitylabdhub.runtime.tvm.runners.TvmBaseRunner;
 import it.smartcommunitylabdhub.runtime.tvm.runners.TvmRunnerHelper;
 import it.smartcommunitylabdhub.runtime.tvm.specs.TvmFunctionSpec;
 import it.smartcommunitylabdhub.runtime.tvm.specs.serve.TvmServeRunSpec;
@@ -33,10 +33,11 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 
-// K8s serving deployment for tvm+serve: init container drops the tvm-so Model into TVM_MODEL_DIR,
-// a swappable base serve image (default Go tvm-runtime-go; Rust is optional) serves it.
+// K8s Deployment for tvm+serve: an init container drops the tvm-so Model into
+// TVM_MODEL_DIR and a generic serve image (Go by default, Rust as an alternative) serves it
+// over Open Inference v2.
 @Slf4j
-public class TvmServeRunner extends TvmBaseBuildRunner {
+public class TvmServeRunner extends TvmBaseRunner {
 
     private static final int HTTP_PORT = 8080;
     private static final int GRPC_PORT = 9000;
@@ -67,8 +68,7 @@ public class TvmServeRunner extends TvmBaseBuildRunner {
             ? taskSpec.getServedName()
             : TvmRunnerHelper.cleanName(funcName);
 
-        // .so model to serve: explicit task.model_path wins, else the function's
-        // so_model.
+        // The compiled model: task.model_path wins over the function's so_model.
         String modelKey = StringUtils.hasText(taskSpec.getModelPath())
             ? taskSpec.getModelPath()
             : (functionSpec != null ? functionSpec.getSoModel() : null);
@@ -78,24 +78,24 @@ public class TvmServeRunner extends TvmBaseBuildRunner {
                     "(function.spec.so_model is empty)"
             );
         }
-        // Resolve store:// to the .so folder's S3 location (whole dir: model.so +
-        // metadata + optional params).
-        String s3SoPath = TvmRunnerHelper.resolveModelDir(modelKey, modelManager);
-
-        // init container drops the model here; tvm-serve reads it via TVM_MODEL_DIR.
+        String modelFolder = TvmRunnerHelper.resolveModelDir(modelKey, modelManager);
         String modelDir = homeDir + "/model";
 
         List<CoreEnv> envs = createEnvList(run, taskSpec);
         envs.add(new CoreEnv("TVM_TASK_KIND", TvmServeTaskSpec.KIND));
         envs.add(new CoreEnv("TVM_MODEL_DIR", modelDir));
         envs.add(new CoreEnv("TVM_MODEL_NAME", servedName));
-        // Per-pod worker count; only set when specified so each image keeps its own
-        // default of 1.
-        if (taskSpec.getWorkers() != null) {
-            envs.add(new CoreEnv("TVM_SERVE_WORKERS", String.valueOf(taskSpec.getWorkers())));
+        // Only set when given, so each serve image keeps its own default of one worker.
+        addEnv(envs, "TVM_SERVE_WORKERS", taskSpec.getWorkers());
+        // Size the TVM thread pools to the pod CPUs unless the task sets them itself.
+        Integer threads = threadsPerWorker(requestedCpuCores(taskSpec), taskSpec.getWorkers());
+        if (!hasTaskEnv(taskSpec, "TVM_NUM_THREADS")) {
+            addEnv(envs, "TVM_NUM_THREADS", threads);
         }
 
-        List<ContextRef> contextRefs = Collections.singletonList(TvmRunnerHelper.inputContextRef(s3SoPath, "model/"));
+        List<ContextRef> contextRefs = Collections.singletonList(
+            TvmRunnerHelper.inputContextRef(modelFolder, "model/")
+        );
 
         String image = resolveImage(
             taskSpec.getImage(),
@@ -142,10 +142,21 @@ public class TvmServeRunner extends TvmBaseBuildRunner {
             funcName,
             image,
             envs,
-            coreSecrets,
-            volumes,
+            createSecrets(secretData),
+            createVolumes(taskSpec),
             contextRefs,
             taskSpec
         );
+    }
+
+    // TVM threads for each inference worker. Every worker owns a model copy and TVM gives
+    // each of them its own thread pool, so the requested cores are split among the
+    // workers. Null when the task requests no CPU: TVM then picks its own default.
+    static Integer threadsPerWorker(Integer cpuCores, Integer workers) {
+        if (cpuCores == null) {
+            return null;
+        }
+        int workerCount = workers != null && workers > 0 ? workers : 1;
+        return Math.max(1, cpuCores / workerCount);
     }
 }

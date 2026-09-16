@@ -56,7 +56,9 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
-// TVM runtime: three K8s tasks — tvm+build (ONNX->IR), tvm+compile (IR->model.so), tvm+serve.
+// TVM runtime: three K8s tasks chained through the function spec. tvm+build turns the source
+// model (ONNX, TFLite) into Relax IR, tvm+compile turns the IR into model.so, and tvm+serve
+// exposes model.so over Open Inference v2.
 @Slf4j
 @RuntimeComponent(runtime = TvmRuntime.RUNTIME)
 public class TvmRuntime

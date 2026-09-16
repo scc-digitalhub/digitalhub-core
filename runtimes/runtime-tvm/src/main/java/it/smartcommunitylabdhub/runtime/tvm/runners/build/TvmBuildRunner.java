@@ -12,12 +12,11 @@ import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
-import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
 import it.smartcommunitylabdhub.models.ModelManager;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.tvm.config.TvmProperties;
-import it.smartcommunitylabdhub.runtime.tvm.runners.TvmBaseBuildRunner;
+import it.smartcommunitylabdhub.runtime.tvm.runners.TvmBaseRunner;
 import it.smartcommunitylabdhub.runtime.tvm.runners.TvmRunnerHelper;
 import it.smartcommunitylabdhub.runtime.tvm.specs.TvmFunctionSpec;
 import it.smartcommunitylabdhub.runtime.tvm.specs.build.TvmBuildRunSpec;
@@ -28,11 +27,9 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.util.StringUtils;
 
-// K8s Job for tvm+build: source model -> Relax IR via the per-format builder script,
-// published as a tvm-ir Model.
-public class TvmBuildRunner extends TvmBaseBuildRunner {
-
-    private static final String BUILDER_SCRIPT_CLASSPATH = "classpath:/runtime-tvm/docker/builder_onnx.py";
+// K8s Job for tvm+build: converts the source model (ONNX or TFLite) into Relax IR with the
+// builder script of its format, and publishes the result as a tvm-ir Model.
+public class TvmBuildRunner extends TvmBaseRunner {
 
     private final ModelManager modelManager;
 
@@ -50,72 +47,34 @@ public class TvmBuildRunner extends TvmBaseBuildRunner {
         TvmBuildRunSpec runSpec = TvmBuildRunSpec.with(run.getSpec());
         TvmFunctionSpec functionSpec = runSpec.getFunctionSpec();
         TvmBuildTaskSpec taskSpec = runSpec.getTaskBuildSpec();
-        TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
-        String funcName = taskAccessor.getFunction();
+        String funcName = TaskSpecAccessor.with(taskSpec.toMap()).getFunction();
 
-        // Resolve model uri
-        String inputUri = TvmRunnerHelper.resolveModelPath(functionSpec.getModel(), modelManager);
-
-        // Unset counts as auto: detect the format from the source file extension.
-        TvmFormat declared = functionSpec.getFormat();
-        TvmFormat format = (declared == null || declared == TvmFormat.auto) ? TvmFormat.fromPath(inputUri) : declared;
-
-        // Folder source (trailing slash) has no filename — its contents land in input/,
-        // so fall back to model.<format>.
-        String defaultInputFile = "model." + format.name();
-        String inputFile =
-            inputUri != null && inputUri.endsWith("/") ? defaultInputFile : TvmRunnerHelper.extractFileName(inputUri);
-        if (!StringUtils.hasText(inputFile)) {
-            inputFile = defaultInputFile;
-        }
+        String sourceUri = TvmRunnerHelper.resolveModelPath(functionSpec.getModel(), modelManager);
+        TvmFormat format = resolveFormat(functionSpec.getFormat(), functionSpec.getModel(), sourceUri);
+        String inputFile = inputFileName(sourceUri, format);
 
         List<CoreEnv> envs = createEnvList(run, taskSpec);
         envs.add(new CoreEnv("TVM_TASK_KIND", TvmBuildTaskSpec.KIND));
         envs.add(new CoreEnv("TVM_FUNCTION_NAME", funcName));
         envs.add(new CoreEnv("TVM_INPUT_FILE", inputFile));
+        // Conversion options. They are all ONNX options except keep/sanitize, and the TFLite
+        // builder simply ignores the ones it does not use.
+        addEnv(envs, "TVM_KEEP_PARAMS_IN_INPUT", taskSpec.getKeepParamsInInput());
+        addEnv(envs, "TVM_SANITIZE_INPUT_NAMES", taskSpec.getSanitizeInputNames());
+        addEnv(envs, "TVM_SIMPLIFY", taskSpec.getSimplify());
+        addEnv(envs, "TVM_TARGET_OPSET", taskSpec.getTargetOpset());
+        addEnv(envs, "TVM_OPSET_OVERRIDE", taskSpec.getOpsetOverride());
+        addEnv(envs, "TVM_STRICT_SHAPE_INFER", taskSpec.getStrictShapeInference());
+        addEnv(envs, "TVM_DATA_PROP", taskSpec.getDataProp());
 
-        // from_onnx() conversion flags
-        if (taskSpec.getKeepParamsInInput() != null) {
-            envs.add(new CoreEnv("TVM_KEEP_PARAMS_IN_INPUT", String.valueOf(taskSpec.getKeepParamsInInput())));
-        }
-        if (taskSpec.getSanitizeInputNames() != null) {
-            envs.add(new CoreEnv("TVM_SANITIZE_INPUT_NAMES", String.valueOf(taskSpec.getSanitizeInputNames())));
-        }
+        String builderScript = TvmRunnerHelper.loadClasspath(builderScriptLocation(format));
+        List<ContextSource> contextSources = TvmRunnerHelper.createContextSources(entrypoint, builderScript);
 
-        // ONNX preprocessing applied before conversion (simplify + shape inference)
-        if (Boolean.TRUE.equals(taskSpec.getSimplify())) {
-            envs.add(new CoreEnv("TVM_SIMPLIFY", "true"));
-        }
-        if (taskSpec.getTargetOpset() != null) {
-            envs.add(new CoreEnv("TVM_TARGET_OPSET", String.valueOf(taskSpec.getTargetOpset())));
-        }
-        if (taskSpec.getOpsetOverride() != null) {
-            envs.add(new CoreEnv("TVM_OPSET_OVERRIDE", String.valueOf(taskSpec.getOpsetOverride())));
-        }
-        if (Boolean.TRUE.equals(taskSpec.getStrictShapeInference())) {
-            envs.add(new CoreEnv("TVM_STRICT_SHAPE_INFER", "true"));
-        }
-        if (Boolean.TRUE.equals(taskSpec.getDataProp())) {
-            envs.add(new CoreEnv("TVM_DATA_PROP", "true"));
-        }
-
-        // classpath fallback only applies when builder-scripts.onnx is omitted from
-        // config entirely.
-        String script = loadClasspathScript(
-            properties.getBuilderScripts() != null
-                ? properties.getBuilderScripts().getOrDefault(format.name(), BUILDER_SCRIPT_CLASSPATH)
-                : BUILDER_SCRIPT_CLASSPATH
-        );
-        List<ContextSource> contextSources = TvmRunnerHelper.createContextSources(entrypoint, script);
-
-        // http(s) sources need a full FILE destination — the http downloader can't
-        // write to a bare dir (s3 can).
-        String destination =
-            inputUri != null && (inputUri.startsWith("http://") || inputUri.startsWith("https://"))
-                ? "input/" + inputFile
-                : "input/";
+        // The init container downloads the source into input/. The http downloader needs a
+        // file name as destination, while s3 can write straight into the folder.
+        boolean http = sourceUri.startsWith("http://") || sourceUri.startsWith("https://");
         List<ContextRef> contextRefs = Collections.singletonList(
-            TvmRunnerHelper.inputContextRef(inputUri, destination)
+            TvmRunnerHelper.inputContextRef(sourceUri, http ? "input/" + inputFile : "input/")
         );
 
         String image = resolveImage(
@@ -123,9 +82,6 @@ public class TvmBuildRunner extends TvmBaseBuildRunner {
             properties.getBuilders() != null ? properties.getBuilders().get(format.name()) : null,
             "no builder image configured for format: " + format.name()
         );
-
-        List<CoreVolume> volumes = createVolumes(taskSpec);
-        List<CoreEnv> coreSecrets = createSecrets(secretData);
 
         return applyCommon(
             K8sJobRunnable.builder()
@@ -138,10 +94,35 @@ public class TvmBuildRunner extends TvmBaseBuildRunner {
             funcName,
             image,
             envs,
-            coreSecrets,
-            volumes,
+            createSecrets(secretData),
+            createVolumes(taskSpec),
             contextRefs,
             taskSpec
         );
+    }
+
+    // Source format, in order of precedence: spec.format when set explicitly, then the kind
+    // of the referenced Model (onnx, tflite), then the file extension.
+    static TvmFormat resolveFormat(TvmFormat declared, String modelReference, String sourceUri) {
+        if (declared != null && declared != TvmFormat.auto) {
+            return declared;
+        }
+        TvmFormat fromKind = TvmFormat.fromModelKind(TvmRunnerHelper.modelKindOf(modelReference));
+        return fromKind != null ? fromKind : TvmFormat.fromPath(sourceUri);
+    }
+
+    // File the builder reads from input/. A folder has no file name of its own: the pod
+    // entrypoint then looks for the single model file with the format's extension.
+    static String inputFileName(String sourceUri, TvmFormat format) {
+        String name = sourceUri.endsWith("/") ? "" : TvmRunnerHelper.extractFileName(sourceUri);
+        return StringUtils.hasText(name) ? name : "model." + format.name();
+    }
+
+    // Builder script of a format: runtime.tvm.builder-scripts.<format>, else the bundled
+    // builder_<format>.py.
+    private String builderScriptLocation(TvmFormat format) {
+        String bundled = "classpath:/runtime-tvm/docker/builder_" + format.name() + ".py";
+        Map<String, String> configured = properties.getBuilderScripts();
+        return configured != null ? configured.getOrDefault(format.name(), bundled) : bundled;
     }
 }
