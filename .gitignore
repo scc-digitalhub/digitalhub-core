@@ -51,5 +51,4 @@ node_modules
 /runtimes/runtime-tvm/docs/
 
 ### runtime-tvm test client (not part of the shipped code) ##
-/runtimes/runtime-tvm/test_infer/
 /runtimes/runtime-tvm/test_infer.zip
