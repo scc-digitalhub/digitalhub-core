@@ -1,0 +1,72 @@
+{
+  "ui:title@en": "TVM serve run",
+  "ui:description@en": "Serves the compiled model over Open Inference v2.",
+  "ui:title@it": "Run di serve TVM",
+  "ui:description@it": "Serve il modello compilato con Open Inference v2.",
+  "model": {
+    "ui:title@en": "Source Model",
+    "ui:description@en": "The ONNX or TFLite model to convert: the store:// key of a Model, or an s3:// or https:// path.",
+    "ui:title@it": "Modello sorgente",
+    "ui:description@it": "Il modello ONNX o TFLite da convertire: la chiave store:// di un Model, oppure un percorso s3:// o https://."
+  },
+  "format": {
+    "ui:title@en": "Model Format",
+    "ui:description@en": "Format of the source model: auto takes it from the Model kind or the file extension; onnx or tflite set it.",
+    "ui:title@it": "Formato del modello",
+    "ui:description@it": "Formato del modello sorgente: auto lo ricava dal kind del Model o dall'estensione del file; onnx o tflite lo impostano."
+  },
+  "ir_model": {
+    "ui:title@en": "Relax IR Model",
+    "ui:description@en": "Key of the tvm-ir Model written by tvm+build and compiled by tvm+compile. Leave it empty.",
+    "ui:title@it": "Modello Relax IR",
+    "ui:description@it": "Chiave del Model tvm-ir scritto da tvm+build e compilato da tvm+compile. Lascialo vuoto."
+  },
+  "so_model": {
+    "ui:title@en": "Compiled Model",
+    "ui:description@en": "Key of the tvm-so Model written by tvm+compile and deployed by tvm+serve. Leave it empty.",
+    "ui:title@it": "Modello compilato",
+    "ui:description@it": "Chiave del Model tvm-so scritto da tvm+compile e servito da tvm+serve. Lascialo vuoto."
+  },
+  "model_path": {
+    "ui:title@en": "Compiled Model",
+    "ui:description@en": "The tvm-so Model to serve; empty uses the one written by tvm+compile in the function.",
+    "ui:title@it": "Modello compilato",
+    "ui:description@it": "Il Model tvm-so da servire; vuoto usa quello scritto da tvm+compile nella funzione."
+  },
+  "served_name": {
+    "ui:title@en": "Served Model Name",
+    "ui:description@en": "Name of the model in the API, /v2/models/<name>; empty uses the function name.",
+    "ui:title@it": "Nome modello servito",
+    "ui:description@it": "Nome del modello nell'API, /v2/models/<nome>; vuoto usa il nome della funzione."
+  },
+  "image": {
+    "ui:title@en": "Serve Image",
+    "ui:description@en": "Image that serves the model; empty uses the serve image configured on the platform (Go).",
+    "ui:title@it": "Immagine di serve",
+    "ui:description@it": "Immagine che serve il modello; vuoto usa l'immagine di serve configurata sulla piattaforma (Go)."
+  },
+  "replicas": {
+    "ui:title@en": "Replicas",
+    "ui:description@en": "Number of pods that serve the model.",
+    "ui:title@it": "Repliche",
+    "ui:description@it": "Numero di pod che servono il modello."
+  },
+  "workers": {
+    "ui:title@en": "Workers",
+    "ui:description@en": "Requests handled in parallel by each pod; each worker loads its own copy of the model.",
+    "ui:title@it": "Worker",
+    "ui:description@it": "Richieste gestite in parallelo da ogni pod; ogni worker carica la propria copia del modello."
+  },
+  "service_type": {
+    "ui:title@en": "Service Type",
+    "ui:description@en": "Kubernetes Service type: ClusterIP, NodePort or LoadBalancer.",
+    "ui:title@it": "Tipo di servizio",
+    "ui:description@it": "Tipo di Service Kubernetes: ClusterIP, NodePort o LoadBalancer."
+  },
+  "service_name": {
+    "ui:title@en": "Service Name",
+    "ui:description@en": "Extra Service name, <function>-<service name>.",
+    "ui:title@it": "Nome del servizio",
+    "ui:description@it": "Nome aggiuntivo del Service, <funzione>-<nome servizio>."
+  }
+}

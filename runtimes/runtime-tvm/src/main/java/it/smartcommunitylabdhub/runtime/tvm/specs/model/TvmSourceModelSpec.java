@@ -28,20 +28,20 @@ public abstract class TvmSourceModelSpec extends ModelBaseSpec {
 
     // Input tensors as declared by the model (name, dtype, shape, quantization).
     @JsonProperty("inputs")
-    @Schema(title = "fields.tvm.sourceModel.inputs.title", description = "fields.tvm.sourceModel.inputs.description")
+    @Schema(
+        title = "Inputs",
+        description = "Input tensors of the model: name, data type, shape and, when quantized, scale and zero point."
+    )
     private List<TvmTensorSpec> inputs;
 
     // Output tensors as declared by the model.
     @JsonProperty("outputs")
-    @Schema(title = "fields.tvm.sourceModel.outputs.title", description = "fields.tvm.sourceModel.outputs.description")
+    @Schema(title = "Outputs", description = "Output tensors of the model.")
     private List<TvmTensorSpec> outputs;
 
     // Free-form extra information, e.g. the training dataset or the export tool.
     @JsonProperty("parameters")
-    @Schema(
-        title = "fields.tvm.sourceModel.parameters.title",
-        description = "fields.tvm.sourceModel.parameters.description"
-    )
+    @Schema(title = "Parameters", description = "Free-form extra information, e.g. the dataset or the export tool.")
     private Map<String, Serializable> parameters;
 
     @Override

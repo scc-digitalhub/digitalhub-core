@@ -1,0 +1,78 @@
+{
+  "ui:title@en": "TVM build run",
+  "ui:description@en": "Converts the source model into Relax IR.",
+  "ui:title@it": "Run di build TVM",
+  "ui:description@it": "Converte il modello sorgente in Relax IR.",
+  "model": {
+    "ui:title@en": "Source Model",
+    "ui:description@en": "The ONNX or TFLite model to convert: the store:// key of a Model, or an s3:// or https:// path.",
+    "ui:title@it": "Modello sorgente",
+    "ui:description@it": "Il modello ONNX o TFLite da convertire: la chiave store:// di un Model, oppure un percorso s3:// o https://."
+  },
+  "format": {
+    "ui:title@en": "Model Format",
+    "ui:description@en": "Format of the source model: auto takes it from the Model kind or the file extension; onnx or tflite set it.",
+    "ui:title@it": "Formato del modello",
+    "ui:description@it": "Formato del modello sorgente: auto lo ricava dal kind del Model o dall'estensione del file; onnx o tflite lo impostano."
+  },
+  "ir_model": {
+    "ui:title@en": "Relax IR Model",
+    "ui:description@en": "Key of the tvm-ir Model written by tvm+build and compiled by tvm+compile. Leave it empty.",
+    "ui:title@it": "Modello Relax IR",
+    "ui:description@it": "Chiave del Model tvm-ir scritto da tvm+build e compilato da tvm+compile. Lascialo vuoto."
+  },
+  "so_model": {
+    "ui:title@en": "Compiled Model",
+    "ui:description@en": "Key of the tvm-so Model written by tvm+compile and deployed by tvm+serve. Leave it empty.",
+    "ui:title@it": "Modello compilato",
+    "ui:description@it": "Chiave del Model tvm-so scritto da tvm+compile e servito da tvm+serve. Lascialo vuoto."
+  },
+  "image": {
+    "ui:title@en": "Container Image",
+    "ui:description@en": "Image of the build Job; empty uses the TVM toolkit image configured on the platform.",
+    "ui:title@it": "Immagine container",
+    "ui:description@it": "Immagine del Job di build; vuoto usa l'immagine TVM toolkit configurata sulla piattaforma."
+  },
+  "simplify": {
+    "ui:title@en": "Simplify ONNX Model",
+    "ui:description@en": "Runs ONNX Simplifier to pre-compute constant operations and remove redundant nodes before the conversion.",
+    "ui:title@it": "Semplifica modello ONNX",
+    "ui:description@it": "Esegue ONNX Simplifier per precalcolare le operazioni costanti e rimuovere i nodi ridondanti prima della conversione."
+  },
+  "target_opset": {
+    "ui:title@en": "Target Opset Version",
+    "ui:description@en": "Converts the ONNX model to this opset version first; leave empty to keep the original.",
+    "ui:title@it": "Versione opset di destinazione",
+    "ui:description@it": "Converte prima il modello ONNX a questa versione di opset; lascia vuoto per mantenere quella originale."
+  },
+  "opset_override": {
+    "ui:title@en": "Opset Override",
+    "ui:description@en": "Makes the TVM importer use this opset instead of the one declared by the model, without changing the model.",
+    "ui:title@it": "Forza versione opset",
+    "ui:description@it": "Fa usare all'importatore TVM questa versione di opset al posto di quella dichiarata dal modello, senza modificarlo."
+  },
+  "strict_shape_inference": {
+    "ui:title@en": "Strict Shape Inference",
+    "ui:description@en": "Runs the ONNX shape inference in strict mode: an error skips the whole inference instead of single nodes.",
+    "ui:title@it": "Inferenza shape rigorosa",
+    "ui:description@it": "Esegue l'inferenza delle shape ONNX in modalità rigorosa: un errore salta tutta l'inferenza invece dei singoli nodi."
+  },
+  "data_prop": {
+    "ui:title@en": "Data Propagation",
+    "ui:description@en": "Lets the shape inference compute values for a limited set of operators, to work out more tensor shapes.",
+    "ui:title@it": "Propagazione dei dati",
+    "ui:description@it": "Permette all'inferenza delle shape di calcolare i valori di alcuni operatori, così da ricavare più shape dei tensori."
+  },
+  "keep_params_in_input": {
+    "ui:title@en": "Keep Params in Input",
+    "ui:description@en": "Treats the weights as input variables saved in params.bin instead of folding them into the graph; tvm+compile embeds them again.",
+    "ui:title@it": "Parametri come input",
+    "ui:description@it": "Tratta i pesi come variabili di input salvate in params.bin invece di incorporarli nel grafo; tvm+compile li incorpora di nuovo."
+  },
+  "sanitize_input_names": {
+    "ui:title@en": "Sanitize Input Names",
+    "ui:description@en": "Rewrites the input names so they are valid Relax identifiers.",
+    "ui:title@it": "Normalizza nomi di input",
+    "ui:description@it": "Riscrive i nomi degli input perché siano identificatori Relax validi."
+  }
+}

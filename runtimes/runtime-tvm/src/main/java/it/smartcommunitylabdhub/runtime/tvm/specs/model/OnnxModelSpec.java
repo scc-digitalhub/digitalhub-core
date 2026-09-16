@@ -24,7 +24,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@SpecType(kind = OnnxModelSpec.KIND, entity = Model.class)
+@SpecType(kind = OnnxModelSpec.KIND, entity = Model.class, uiSchema = "runtime-tvm/onnx/uiSchema.json")
 public class OnnxModelSpec extends TvmSourceModelSpec {
 
     public static final String KIND = "onnx";
@@ -32,7 +32,7 @@ public class OnnxModelSpec extends TvmSourceModelSpec {
     // Default ONNX operator set version the model was exported with, e.g. 17.
     @JsonProperty("opset")
     @Min(1)
-    @Schema(title = "fields.tvm.onnxModel.opset.title", description = "fields.tvm.onnxModel.opset.description")
+    @Schema(title = "Opset Version", description = "ONNX operator set version the model was exported with, e.g. 17.")
     private Integer opset;
 
     @Override
