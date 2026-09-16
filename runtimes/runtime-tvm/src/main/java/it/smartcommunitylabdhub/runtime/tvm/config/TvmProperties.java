@@ -30,7 +30,7 @@ public class TvmProperties {
     // Source format (onnx, tflite) -> builder image used by tvm+build.
     private Map<String, String> builders;
 
-    // Image running compiler.py for tvm+compile (Relax IR -> model.so).
+    // Image running compile_model.py for tvm+compile (Relax IR -> model.so).
     private String compiler;
 
     // Generic serve image for tvm+serve (the Go runtime by default); an init container

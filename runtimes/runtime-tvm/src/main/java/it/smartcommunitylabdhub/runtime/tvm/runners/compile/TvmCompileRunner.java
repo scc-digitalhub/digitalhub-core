@@ -31,11 +31,11 @@ import java.util.Map;
 import java.util.Objects;
 import org.springframework.util.StringUtils;
 
-// K8s Job for tvm+compile: compiler.py turns the Relax IR into model.so for the chosen
+// K8s Job for tvm+compile: compile_model.py turns the Relax IR into model.so for the chosen
 // target (optionally tuned with MetaSchedule) and publishes it as a tvm-so Model.
 public class TvmCompileRunner extends TvmBaseRunner {
 
-    private static final String COMPILER_SCRIPT = "classpath:/runtime-tvm/docker/compiler.py";
+    private static final String COMPILE_SCRIPT = "compile_model.py";
 
     private final ModelManager modelManager;
 
@@ -93,7 +93,7 @@ public class TvmCompileRunner extends TvmBaseRunner {
         addEnv(envs, "TVM_TIR_PIPELINE", taskSpec.getTirPipeline());
         addEnv(envs, "TVM_CROSS_CC", crossCc);
         addEnv(envs, "TVM_SYSTEM_LIB", taskSpec.getSystemLib());
-        // In-pod path only: the entrypoint forwards it verbatim as --params-file.
+        // In-pod path only: compile_model.py reads it as it is.
         addEnv(envs, "TVM_PARAMS_FILE", taskSpec.getParamsPath());
         addEnv(envs, "TVM_TAG", taskSpec.getTag());
         addEnv(envs, "TVM_BENCHMARK_RUNS", taskSpec.getBenchmarkRuns());
@@ -103,8 +103,12 @@ public class TvmCompileRunner extends TvmBaseRunner {
             envs.add(new CoreEnv("TVM_SOURCE_IR_KEY", irModelKey));
         }
 
-        String compilerScript = TvmRunnerHelper.loadClasspath(COMPILER_SCRIPT);
-        List<ContextSource> contextSources = TvmRunnerHelper.createContextSources(entrypoint, compilerScript);
+        envs.add(new CoreEnv("TVM_TASK_SCRIPT", COMPILE_SCRIPT));
+        List<ContextSource> contextSources = TvmRunnerHelper.createContextSources(
+            entrypoint,
+            COMPILE_SCRIPT,
+            TvmRunnerHelper.loadClasspath(TvmRunnerHelper.SCRIPTS_CLASSPATH + COMPILE_SCRIPT)
+        );
 
         List<ContextRef> contextRefs = new ArrayList<>();
         contextRefs.add(TvmRunnerHelper.inputContextRef(irFolder, "input/"));
@@ -202,8 +206,8 @@ public class TvmCompileRunner extends TvmBaseRunner {
         }
     }
 
-    // MetaSchedule settings forwarded to compiler.py. Unset fields are not exported, so
-    // compiler.py applies its own defaults.
+    // MetaSchedule settings read by compile_model.py. Unset fields are not exported, so
+    // the script applies its own defaults.
     static void addTuningEnvironment(List<CoreEnv> envs, TvmCompileTaskSpec taskSpec, Integer resourceCpuCores) {
         addEnv(envs, "TVM_TUNING_MODE", taskSpec.getTuningMode());
         addEnv(envs, "TVM_TUNING_TRIALS", taskSpec.getTuningTrials());

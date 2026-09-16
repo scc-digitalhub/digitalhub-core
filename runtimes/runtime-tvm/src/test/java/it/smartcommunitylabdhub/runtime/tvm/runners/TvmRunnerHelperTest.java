@@ -9,7 +9,10 @@ package it.smartcommunitylabdhub.runtime.tvm.runners;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class TvmRunnerHelperTest {
@@ -39,5 +42,22 @@ class TvmRunnerHelperTest {
         assertEquals("model.onnx", TvmRunnerHelper.extractFileName("s3://bucket/a/model.onnx"));
         assertEquals("folder", TvmRunnerHelper.extractFileName("s3://bucket/a/folder/"));
         assertEquals("", TvmRunnerHelper.extractFileName(null));
+    }
+
+    @Test
+    void mountsTheTaskScriptWithTheSharedModules() {
+        String script = TvmRunnerHelper.loadClasspath(TvmRunnerHelper.SCRIPTS_CLASSPATH + "compile_model.py");
+        List<ContextSource> sources = TvmRunnerHelper.createContextSources("#!/bin/sh", "compile_model.py", script);
+
+        List<String> names = sources.stream().map(ContextSource::getName).toList();
+        assertEquals(
+            List.of("entrypoint.sh", "compile_model.py", "common.py", "publish.py", "tuning.py", "benchmark.py"),
+            names
+        );
+        // Every mounted file exists on the classpath and is not empty.
+        sources.forEach(source ->
+            assertTrue(source.getBase64() != null && !source.getBase64().isEmpty(), source.getName())
+        );
+        assertEquals("build_onnx.py", TvmRunnerHelper.scriptName("classpath:/runtime-tvm/scripts/build_onnx.py"));
     }
 }

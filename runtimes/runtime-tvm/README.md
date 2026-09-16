@@ -295,12 +295,15 @@ setting of its own. The defaults live in `src/main/resources/runtime-tvm.yml`.
   `so_model` back to the function; one runner per task (`TvmBuildRunner`,
   `TvmCompileRunner`, `TvmServeRunner`) turns a run into a Kubernetes Job or Deployment;
   `specs/` holds the function, task and Model kind definitions.
-- **Pod scripts** (`src/main/resources/runtime-tvm/docker`), injected into the Jobs at run
-  time and not baked into the image:
-  - `entrypoint.sh` turns the `TVM_*` variables set by CORE into command-line flags;
-  - `builder_onnx.py` and `builder_tflite.py` convert the source model;
-  - `compiler.py` compiles, tunes and benchmarks the model;
-  - `_dh_publish.py` uploads the result as a Model with the DigitalHub SDK.
+- **Pod scripts** (`src/main/resources/runtime-tvm/scripts`), injected into the Jobs at run
+  time and not baked into the image. Each script reads its options from the `TVM_*`
+  variables set by CORE, and also accepts them as command-line flags:
+  - `entrypoint.sh` prepares the working folders and starts the task script;
+  - `build_onnx.py` and `build_tflite.py` convert the source model into Relax IR;
+  - `compile_model.py` compiles the IR into `model.so`, with `tuning.py` (MetaSchedule)
+    and `benchmark.py`;
+  - `publish.py` uploads the result as a `tvm-ir` or `tvm-so` Model with the DigitalHub SDK;
+  - `common.py` holds the helpers shared by the other scripts.
 - **Serving**: an init container downloads the `tvm-so` Model into the serve pod, and the
   serve image loads it. No image is built per model.
 
@@ -328,8 +331,8 @@ mvn -pl runtimes/runtime-tvm install
 Test the pod scripts inside the toolkit image:
 
 ```bash
-docker run --rm -v "$PWD/runtimes/runtime-tvm/src":/src -w /src/test/python \
-  ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0 python3 -m unittest -v test_compiler
+docker run --rm -v "$PWD/runtimes/runtime-tvm":/work -w /work \
+  ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0 python3 -m unittest discover -s src/test/python -v
 ```
 
 ## Copyright and license

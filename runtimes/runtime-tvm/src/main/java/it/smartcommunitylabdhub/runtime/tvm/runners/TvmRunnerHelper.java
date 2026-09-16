@@ -21,6 +21,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -28,30 +31,51 @@ import org.springframework.web.util.UriComponentsBuilder;
 // Stateless helpers shared by the TVM runners: ContextSources, model/S3 path resolution, name cleanup.
 public final class TvmRunnerHelper {
 
+    // Folder of the pod scripts on the classpath.
+    public static final String SCRIPTS_CLASSPATH = "classpath:/runtime-tvm/scripts/";
     public static final String ENTRYPOINT_NAME = "entrypoint.sh";
-    public static final String TASK_SCRIPT_NAME = "task.py";
-    // Shared SDK helper (dh.log_model + run.set_status) injected into every pod.
-    public static final String DH_PUBLISH_SCRIPT_NAME = "_dh_publish.py";
-    public static final String DH_PUBLISH_CLASSPATH = "classpath:/runtime-tvm/docker/_dh_publish.py";
+    // Modules imported by the task scripts: options and IR helpers, Model publishing,
+    // MetaSchedule tuning and the benchmark.
+    public static final List<String> SHARED_SCRIPTS = List.of("common.py", "publish.py", "tuning.py", "benchmark.py");
 
-    private static String dhPublishScriptCache;
+    private static final DefaultResourceLoader RESOURCE_LOADER = new DefaultResourceLoader();
+    private static final Map<String, String> SHARED_SCRIPT_CACHE = new ConcurrentHashMap<>();
 
     private TvmRunnerHelper() {}
 
-    // Files injected into every TVM Job pod: entrypoint, per-task script (mounted as task.py), publish helper.
-    public static List<ContextSource> createContextSources(@NotNull String entrypoint, @NotNull String taskScript) {
+    // Files mounted in every TVM Job pod: the entrypoint, the task script under its own name
+    // (the entrypoint runs the one named in TVM_TASK_SCRIPT) and the shared modules it imports.
+    public static List<ContextSource> createContextSources(
+        @NotNull String entrypoint,
+        @NotNull String taskScriptName,
+        @NotNull String taskScript
+    ) {
         List<ContextSource> sources = new ArrayList<>();
-        sources.add(b64Source(ENTRYPOINT_NAME, entrypoint));
-        sources.add(b64Source(TASK_SCRIPT_NAME, taskScript));
-        if (dhPublishScriptCache == null) {
-            dhPublishScriptCache = loadClasspathStatic(DH_PUBLISH_CLASSPATH);
+        sources.add(base64Source(ENTRYPOINT_NAME, entrypoint));
+        sources.add(base64Source(taskScriptName, taskScript));
+        for (String name : SHARED_SCRIPTS) {
+            String content = SHARED_SCRIPT_CACHE.computeIfAbsent(name, n -> loadClasspath(SCRIPTS_CLASSPATH + n));
+            sources.add(base64Source(name, content));
         }
-        sources.add(b64Source(DH_PUBLISH_SCRIPT_NAME, dhPublishScriptCache));
         return sources;
     }
 
-    // ContextSource with base64-encoded UTF-8 content, as the injector expects.
-    private static ContextSource b64Source(String name, String content) {
+    // File name of a script location, e.g. build_onnx.py for classpath:/runtime-tvm/scripts/build_onnx.py.
+    public static String scriptName(String location) {
+        return location.substring(location.lastIndexOf('/') + 1);
+    }
+
+    // Text content of a classpath resource, e.g. one of the pod scripts.
+    public static String loadClasspath(String location) {
+        try {
+            return new String(RESOURCE_LOADER.getResource(location).getContentAsByteArray(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new CoreRuntimeException("error reading classpath resource: " + location);
+        }
+    }
+
+    // The context injector expects the file content base64-encoded.
+    private static ContextSource base64Source(String name, String content) {
         return ContextSource.builder()
             .name(name)
             .base64(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)))
