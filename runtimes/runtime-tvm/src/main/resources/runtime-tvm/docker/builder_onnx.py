@@ -3,7 +3,16 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""ONNX -> Relax IR builder (from_onnx + ONNX preprocessing, as CLI args)."""
+"""tvm+build for ONNX models: ONNX -> Relax IR.
+
+The steps, in order:
+1. load the ONNX file;
+2. optionally convert it to another opset and simplify it with onnxsim;
+3. run ONNX shape inference, which from_onnx needs for the intermediate shapes;
+4. convert it to Relax IR with from_onnx;
+5. save model.relax.json (plus params.bin when the weights stay separate) and metadata.json;
+6. publish the folder as a tvm-ir Model.
+"""
 
 import argparse
 import hashlib
@@ -14,7 +23,7 @@ from typing import Any, Dict, Optional
 
 import onnx
 from onnx import shape_inference
-import tvm  # noqa: F401  (side-effect: register ops)
+import tvm  # noqa: F401  (importing registers the Relax operators)
 from tvm import relax
 from tvm.relax.frontend.onnx import from_onnx
 
@@ -27,215 +36,230 @@ _DTYPE_MAP = {
 }
 
 
-def _tensor_spec(value_info):
-    shape = []
-    for dim in value_info.type.tensor_type.shape.dim:
-        # dim_value == 0 means symbolic (e.g. "batch"); mark -1.
-        shape.append(dim.dim_value if dim.dim_value > 0 else -1)
-    dtype = _DTYPE_MAP.get(value_info.type.tensor_type.elem_type, "float32")
-    return {"name": value_info.name, "shape": shape, "dtype": dtype}
-
-
-def _quant_params(model, tensor_name, is_output):
-    """Affine quantization params of a quantized boundary tensor, from its QDQ node.
-
-    Quantization and source format are independent axes: an ONNX carries the same
-    information a TFLite model does, only in a different place. In TFLite the params sit
-    on the tensor; in ONNX QDQ they sit on the node — an int8 graph input is consumed by
-    a DequantizeLinear, an int8 graph output is produced by a QuantizeLinear, and in both
-    inputs 1 and 2 are scale and zero_point, held as initializers.
-    """
-    from onnx import numpy_helper
-
-    op = "QuantizeLinear" if is_output else "DequantizeLinear"
-    inits = {i.name: i for i in model.graph.initializer}
-    for node in model.graph.node:
-        edge = node.output[0] if is_output else (node.input[0] if node.input else None)
-        if node.op_type != op or edge != tensor_name or len(node.input) < 2:
-            continue
-        scale = inits.get(node.input[1])
-        if scale is None:
-            continue
-        out = {"scale": [float(v) for v in numpy_helper.to_array(scale).reshape(-1)]}
-        zp = inits.get(node.input[2]) if len(node.input) > 2 else None
-        if zp is not None:
-            out["zero_point"] = [int(v) for v in numpy_helper.to_array(zp).reshape(-1)]
-        axis = next((a.i for a in node.attribute if a.name == "axis"), 0)
-        if axis:
-            out["quantized_dimension"] = int(axis)
-        return out
-    return {}
-
-
-def _with_quant(model, spec, is_output):
-    """Adds the quantization params when the boundary tensor is itself quantized."""
-    if spec.get("dtype") in ("int8", "uint8"):
-        spec.update(_quant_params(model, spec["name"], is_output))
-    return spec
-
-
-def extract_input_specs(model):
-    """Real inputs (excludes weights that ONNX also lists in graph.input).
-    Relax requires static shapes at build time, so unknown dims default to 1.
-    """
-    weight_names = {init.name for init in model.graph.initializer}
-    inputs = []
-    for inp in model.graph.input:
-        if inp.name in weight_names:
-            continue
-        spec = _tensor_spec(inp)
-        spec["shape"] = [d if d > 0 else 1 for d in spec["shape"]]
-        inputs.append(_with_quant(model, spec, is_output=False))
-    return inputs
-
-
-def extract_output_specs(model):
-    return [_with_quant(model, _tensor_spec(out), is_output=True) for out in model.graph.output]
-
-
-def parse_bool(value: str, default: bool) -> bool:
+def parse_bool(value: Optional[str], default: bool) -> bool:
+    """Reads the true/false strings forwarded by entrypoint.sh ("true", "1", "yes", ...)."""
     if value is None:
         return default
     return value.lower() in ("1", "true", "yes", "y", "on")
 
 
-def main():
+def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser(description="ONNX -> Relax IR + metadata.json")
     ap.add_argument("--input", required=True)
     ap.add_argument("--output", required=True)
     ap.add_argument("--name", default="model")
 
-    # from_onnx parameters
-    ap.add_argument("--opset", type=int, default=None,
-                    help="opset override forwarded to from_onnx")
+    # from_onnx options
+    ap.add_argument("--opset", type=int, default=None, help="opset override forwarded to from_onnx")
     ap.add_argument("--keep-params-in-input", type=str, default="false",
-                    help="if true, weights stay as variable inputs (need --params-file at compile)")
+                    help="if true, weights stay as separate inputs saved in params.bin")
     ap.add_argument("--sanitize-input-names", type=str, default="true")
 
-    # ONNX preprocessing (runs before from_onnx)
+    # ONNX preprocessing, applied before from_onnx
     ap.add_argument("--target-opset", type=int, default=None,
-                    help="convert to this opset via onnx.version_converter before from_onnx")
-    ap.add_argument("--simplify", type=str, default="false",
-                    help="run onnxsim.simplify (requires onnxsim)")
+                    help="convert to this opset with onnx.version_converter first")
+    ap.add_argument("--simplify", type=str, default="false", help="run onnxsim.simplify")
     ap.add_argument("--strict-shape-inference", type=str, default="false")
     ap.add_argument("--data-prop", type=str, default="false")
 
     args = ap.parse_args()
+    args.keep_params_in_input = parse_bool(args.keep_params_in_input, False)
+    args.sanitize_input_names = parse_bool(args.sanitize_input_names, True)
+    args.simplify = parse_bool(args.simplify, False)
+    args.strict_shape_inference = parse_bool(args.strict_shape_inference, False)
+    args.data_prop = parse_bool(args.data_prop, False)
+    return args
 
-    in_path = Path(args.input).resolve()
-    out_dir = Path(args.output)
-    out_dir.mkdir(parents=True, exist_ok=True)
 
-    if not in_path.exists():
-        print(f"ERROR: {in_path} not found", file=sys.stderr)
-        sys.exit(2)
+# --------------------------------------------------------------------------- tensor signatures
 
-    keep_params = parse_bool(args.keep_params_in_input, False)
-    sanitize_names = parse_bool(args.sanitize_input_names, True)
-    do_simplify = parse_bool(args.simplify, False)
-    strict_shape = parse_bool(args.strict_shape_inference, False)
-    data_prop = parse_bool(args.data_prop, False)
 
-    print(f"[1/7] Loading {in_path}")
-    model = onnx.load(str(in_path))
-    print(f"      nodes={len(model.graph.node)} opset={model.opset_import[0].version}")
+def _tensor_spec(value_info) -> dict:
+    """name, shape and dtype of an ONNX graph input or output. Symbolic dims become -1."""
+    shape = [dim.dim_value if dim.dim_value > 0 else -1 for dim in value_info.type.tensor_type.shape.dim]
+    dtype = _DTYPE_MAP.get(value_info.type.tensor_type.elem_type, "float32")
+    return {"name": value_info.name, "shape": shape, "dtype": dtype}
 
-    # opset conversion runs before shape inference (which is opset-aware)
+
+def _quant_params(model, tensor_name: str, is_output: bool) -> dict:
+    """Affine quantization params of a quantized boundary tensor, read from its QDQ node.
+
+    Quantization and source format are independent: ONNX carries the same information as
+    TFLite, only in a different place. TFLite keeps the params on the tensor; ONNX QDQ keeps
+    them on the node. An int8 graph input feeds a DequantizeLinear, an int8 graph output
+    comes out of a QuantizeLinear, and inputs 1 and 2 of both are scale and zero_point.
+    """
+    from onnx import numpy_helper
+
+    op = "QuantizeLinear" if is_output else "DequantizeLinear"
+    initializers = {init.name: init for init in model.graph.initializer}
+    for node in model.graph.node:
+        edge = node.output[0] if is_output else (node.input[0] if node.input else None)
+        if node.op_type != op or edge != tensor_name or len(node.input) < 2:
+            continue
+        scale = initializers.get(node.input[1])
+        if scale is None:
+            continue
+        params = {"scale": [float(v) for v in numpy_helper.to_array(scale).reshape(-1)]}
+        zero_point = initializers.get(node.input[2]) if len(node.input) > 2 else None
+        if zero_point is not None:
+            params["zero_point"] = [int(v) for v in numpy_helper.to_array(zero_point).reshape(-1)]
+        axis = next((attr.i for attr in node.attribute if attr.name == "axis"), 0)
+        if axis:
+            params["quantized_dimension"] = int(axis)
+        return params
+    return {}
+
+
+def _with_quant(model, spec: dict, is_output: bool) -> dict:
+    """Adds the quantization params when the boundary tensor itself is quantized."""
+    if spec.get("dtype") in ("int8", "uint8"):
+        spec.update(_quant_params(model, spec["name"], is_output))
+    return spec
+
+
+def extract_input_specs(model) -> list:
+    """The real inputs, without the weights some exporters also list in graph.input.
+
+    Relax needs static shapes at build time, so unknown dims default to 1.
+    """
+    weight_names = {init.name for init in model.graph.initializer}
+    inputs = []
+    for graph_input in model.graph.input:
+        if graph_input.name in weight_names:
+            continue
+        spec = _tensor_spec(graph_input)
+        spec["shape"] = [dim if dim > 0 else 1 for dim in spec["shape"]]
+        inputs.append(_with_quant(model, spec, is_output=False))
+    return inputs
+
+
+def extract_output_specs(model) -> list:
+    return [_with_quant(model, _tensor_spec(output), is_output=True) for output in model.graph.output]
+
+
+# --------------------------------------------------------------------------- steps
+
+
+def preprocess(model, args: argparse.Namespace):
+    """Opset conversion, onnxsim simplification and shape inference, each only when asked
+    (shape inference always runs). The opset conversion comes first because shape
+    inference depends on the opset."""
     if args.target_opset is not None:
         try:
             from onnx import version_converter
-            print(f"[2/7] Converting opset → {args.target_opset}")
+
+            print(f"[2/7] Converting opset -> {args.target_opset}")
             model = version_converter.convert_version(model, args.target_opset)
-        except Exception as e:  # noqa: BLE001
-            print(f"      version_converter failed: {e}", file=sys.stderr)
+        except Exception as error:  # noqa: BLE001
+            print(f"      version_converter failed: {error}", file=sys.stderr)
             sys.exit(3)
     else:
         print("[2/7] (no opset conversion requested)")
 
-    if do_simplify:
+    if args.simplify:
         try:
             from onnxsim import simplify as onnx_simplify
-            print("[3/7] Running onnxsim.simplify")
-            model_simp, ok = onnx_simplify(model)
-            if not ok:
-                print("ERROR: onnxsim validation failed", file=sys.stderr)
-                sys.exit(4)
-            model = model_simp
-            print(f"      simplified graph: {len(model.graph.node)} nodes")
         except ImportError as error:
-            print(
-                "ERROR: --simplify=true requires onnxsim in the builder image",
-                file=sys.stderr,
-            )
+            print("ERROR: --simplify=true requires onnxsim in the builder image", file=sys.stderr)
             raise SystemExit(4) from error
+        print("[3/7] Running onnxsim.simplify")
+        try:
+            simplified, valid = onnx_simplify(model)
         except Exception as error:  # noqa: BLE001
             print(f"ERROR: ONNX simplification failed: {error}", file=sys.stderr)
             raise SystemExit(4) from error
+        if not valid:
+            print("ERROR: onnxsim validation failed", file=sys.stderr)
+            sys.exit(4)
+        model = simplified
+        print(f"      simplified graph: {len(model.graph.node)} nodes")
     else:
         print("[3/7] (simplify disabled)")
 
-    # populates intermediate shapes (required by from_onnx)
-    print(f"[4/7] shape_inference (strict={strict_shape}, data_prop={data_prop})")
+    print(f"[4/7] shape_inference (strict={args.strict_shape_inference}, data_prop={args.data_prop})")
     try:
         model = shape_inference.infer_shapes(
-            model,
-            check_type=False,
-            strict_mode=strict_shape,
-            data_prop=data_prop,
+            model, check_type=False, strict_mode=args.strict_shape_inference, data_prop=args.data_prop
         )
-    except Exception as e:  # noqa: BLE001
-        print(f"      shape_inference skipped: {e}", file=sys.stderr)
+    except Exception as error:  # noqa: BLE001
+        print(f"      shape_inference skipped: {error}", file=sys.stderr)
+    return model
 
-    print(f"[5/7] ONNX -> Relax IR (opset={args.opset}, "
-          f"keep_params_in_input={keep_params}, sanitize_input_names={sanitize_names})")
+
+def convert(model, args: argparse.Namespace):
+    """ONNX -> Relax IR. Returns (module, weights or None).
+
+    With keep_params_in_input the weights are detached from the module and returned, so
+    they can be saved in params.bin; otherwise they stay inside as constants.
+    """
+    print(f"[5/7] ONNX -> Relax IR (opset={args.opset}, keep_params_in_input={args.keep_params_in_input}, "
+          f"sanitize_input_names={args.sanitize_input_names})")
     mod: Any = from_onnx(
         model,
         shape_dict=None,
         dtype_dict="float32",
         opset=args.opset,
-        keep_params_in_input=keep_params,
-        sanitize_input_names=sanitize_names,
+        keep_params_in_input=args.keep_params_in_input,
+        sanitize_input_names=args.sanitize_input_names,
     )
+    if not args.keep_params_in_input:
+        return mod, None
+    try:
+        return relax.frontend.detach_params(mod)
+    except Exception as error:  # noqa: BLE001
+        print(f"      detach_params failed: {error}", file=sys.stderr)
+        return mod, None
 
-    # with keep_params_in_input=True, params live inside the module; detach them
-    params: Optional[Dict[str, Any]] = None
-    if keep_params:
-        try:
-            mod, params_dict = relax.frontend.detach_params(mod)
-            params = params_dict
-        except Exception as e:  # noqa: BLE001
-            print(f"      detach_params failed: {e}", file=sys.stderr)
-            params = None
 
-    # model.relax.json is round-trip safe; the .ir TVMScript dump is debug-only (can't reload with const params).
+def save_ir(mod, params: Optional[Dict[str, Any]], out_dir: Path) -> None:
+    """Writes model.relax.json, the debug dump model.relax.ir and, when given, params.bin."""
     ir_json = out_dir / "model.relax.json"
-    ir_text = out_dir / "model.relax.ir"
     ir_json.write_text(tvm.ir.save_json(mod))
     try:
-        ir_text.write_text(mod.script())
-    except Exception as e:  # noqa: BLE001
-        print(f"      (skipping mod.script() debug dump: {e})")
+        # For people only: the TVMScript text cannot be loaded back with constant weights.
+        (out_dir / "model.relax.ir").write_text(mod.script())
+    except Exception as error:  # noqa: BLE001
+        print(f"      (skipping mod.script() debug dump: {error})")
     print(f"      IR written: {ir_json}")
 
-    if params is not None:
-        try:
-            from tvm.runtime import save_param_dict
-            params_bin = out_dir / "params.bin"
-            # save_param_dict is per-function; flatten entries
-            flat = {}
-            for fn_name, lst in params.items():
-                for i, v in enumerate(lst):
-                    flat[f"{fn_name}.{i}"] = v
-            params_bin.write_bytes(save_param_dict(flat))
-            print(f"      params written: {params_bin}")
-        except Exception as e:  # noqa: BLE001
-            print(f"      save_param_dict failed: {e}", file=sys.stderr)
+    if params is None:
+        return
+    try:
+        from tvm.runtime import save_param_dict
+
+        # save_param_dict wants a flat dict: key each weight as "<function>.<position>",
+        # the positional form compiler.py binds back in order.
+        flat = {f"{fn_name}.{i}": value for fn_name, values in params.items() for i, value in enumerate(values)}
+        params_bin = out_dir / "params.bin"
+        params_bin.write_bytes(save_param_dict(flat))
+        print(f"      params written: {params_bin}")
+    except Exception as error:  # noqa: BLE001
+        print(f"      save_param_dict failed: {error}", file=sys.stderr)
+
+
+def main() -> None:
+    args = parse_args()
+    in_path = Path(args.input).resolve()
+    out_dir = Path(args.output)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    if not in_path.exists():
+        print(f"ERROR: {in_path} not found", file=sys.stderr)
+        sys.exit(2)
+
+    print(f"[1/7] Loading {in_path}")
+    model = onnx.load(str(in_path))
+    print(f"      nodes={len(model.graph.node)} opset={model.opset_import[0].version}")
+
+    model = preprocess(model, args)
+    mod, params = convert(model, args)
+    save_ir(mod, params, out_dir)
 
     print("[6/7] Extracting metadata")
     inputs = extract_input_specs(model)
     outputs = extract_output_specs(model)
-    with in_path.open("rb") as source_stream:
-        source_sha256 = hashlib.file_digest(source_stream, "sha256").hexdigest()
+    with in_path.open("rb") as source:
+        source_sha256 = hashlib.file_digest(source, "sha256").hexdigest()
     meta = {
         "entry": "main",
         "source_format": "onnx",
@@ -243,19 +267,19 @@ def main():
         "tvm_version": tvm.__version__,
         "opset": model.opset_import[0].version,
         "model_name": args.name,
-        "keep_params_in_input": keep_params,
-        "sanitize_input_names": sanitize_names,
-        "simplify": do_simplify,
+        "keep_params_in_input": args.keep_params_in_input,
+        "sanitize_input_names": args.sanitize_input_names,
+        "simplify": args.simplify,
         "inputs": inputs,
         "outputs": outputs,
     }
     (out_dir / "metadata.json").write_text(json.dumps(meta, indent=2))
-    for i in inputs:
-        print(f"      in  '{i['name']}': {i['dtype']} {i['shape']}")
-    for o in outputs:
-        print(f"      out '{o['name']}': {o['dtype']} {o['shape']}")
+    for spec in inputs:
+        print(f"      in  '{spec['name']}': {spec['dtype']} {spec['shape']}")
+    for spec in outputs:
+        print(f"      out '{spec['name']}': {spec['dtype']} {spec['shape']}")
 
-    print("[7/7] publishing Model entity via digitalhub SDK")
+    print("[7/7] Publishing the tvm-ir Model via the digitalhub SDK")
     sys.path.insert(0, str(Path(__file__).parent))
     from _dh_publish import publish_model_and_register_output
 
@@ -271,8 +295,8 @@ def main():
             "inputs": inputs,
             "outputs": outputs,
             "source_format": meta["source_format"],
-            "keep_params_in_input": keep_params,
-            "sanitize_input_names": sanitize_names,
+            "keep_params_in_input": args.keep_params_in_input,
+            "sanitize_input_names": args.sanitize_input_names,
             "parameters": {
                 "opset": meta["opset"],
                 "model_name": meta["model_name"],
@@ -280,7 +304,6 @@ def main():
             },
         },
     )
-
     print("Done")
 
 
