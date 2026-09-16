@@ -192,11 +192,23 @@ def build_library(mod, args: argparse.Namespace, target, out_dir: Path, pass_ctx
     return so_path
 
 
-def compiled_metadata(ir_metadata: dict, args: argparse.Namespace, effective_target: str,
+def target_triple(target) -> Optional[str]:
+    """LLVM triple of the generated code. A target without mtriple builds for the machine
+    running the compile, so that machine's triple is returned: CORE reads it to run the
+    serve pod on a node of the same architecture."""
+    if target.kind.name != "llvm":
+        return None
+    return str(target.attrs.get("mtriple") or tvm.target.codegen.llvm_get_system_triple())
+
+
+def compiled_metadata(ir_metadata: dict, args: argparse.Namespace, target, effective_target: str,
                       tuning_summary: Optional[dict], benchmark: Optional[dict]) -> dict:
     """metadata.json of the compiled model: the IR metadata (entry, inputs, outputs, ...)
     plus how the library was built. The serve images read it at startup."""
     metadata = {**ir_metadata, "target": effective_target, "tvm_version": tvm.__version__}
+    triple = target_triple(target)
+    if triple:
+        metadata["target_triple"] = triple
     if os.environ.get("TVM_GIT_COMMIT"):
         metadata["tvm_git_commit"] = os.environ["TVM_GIT_COMMIT"]
     if effective_target != args.target:
@@ -253,7 +265,7 @@ def main(argv: Optional[list[str]] = None) -> None:
     print(f"      {json.dumps(benchmark) if benchmark is not None else 'off'}")
 
     step(6, STEPS, "writing metadata.json")
-    metadata = compiled_metadata(ir_metadata, args, effective_target, tuning_summary, benchmark)
+    metadata = compiled_metadata(ir_metadata, args, target, effective_target, tuning_summary, benchmark)
     write_json(out_dir / "metadata.json", metadata)
 
     step(7, STEPS, "publishing the Model (kind tvm-so)")

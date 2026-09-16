@@ -128,6 +128,16 @@ class CompileModelTest(unittest.TestCase):
         self.assertTrue(args.allow_partial_tuning)
         self.assertEqual(1, overridden.opt_level)
 
+    def test_records_the_triple_the_library_runs_on(self):
+        host = self.compile(self.root / "host")
+        self.assertEqual(tvm.target.codegen.llvm_get_system_triple(), host["target_triple"])
+
+        cross = tvm.target.Target({"kind": "llvm", "mtriple": "aarch64-linux-gnu"})
+        self.assertEqual("aarch64-linux-gnu", compile_model.target_triple(cross))
+        # A target with mcpu but no mtriple has no triple attribute: the host one is used.
+        x86 = tvm.target.Target({"kind": "llvm", "mcpu": "x86-64-v2"})
+        self.assertEqual(host["target_triple"], compile_model.target_triple(x86))
+
     def test_rejects_an_unknown_mode_from_the_environment(self):
         with mock.patch.dict(os.environ, {"TVM_TUNING_MODE": "fast"}), contextlib.redirect_stderr(io.StringIO()):
             with self.assertRaises(SystemExit):

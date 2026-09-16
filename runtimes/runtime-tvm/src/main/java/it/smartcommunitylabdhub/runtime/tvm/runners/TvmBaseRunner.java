@@ -13,6 +13,7 @@ import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreNodeSelector;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreResource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
@@ -142,6 +143,14 @@ public abstract class TvmBaseRunner {
     protected List<CoreLabel> functionLabels(String funcName) {
         return k8sLabelHelper != null
             ? List.of(new CoreLabel(k8sLabelHelper.buildCoreLabel("function"), funcName))
+            : null;
+    }
+
+    // Keeps the pod on the nodes of one CPU architecture (amd64, arm64, arm); null, so any
+    // node, when the architecture is unknown. The node selector of a profile wins over it.
+    protected static List<CoreNodeSelector> architectureSelector(String architecture) {
+        return architecture != null
+            ? List.of(new CoreNodeSelector(TvmRunnerHelper.NODE_ARCH_LABEL, architecture))
             : null;
     }
 

@@ -127,6 +127,7 @@ public class TvmCompileRunner extends TvmBaseRunner {
 
         return applyCommon(
             K8sJobRunnable.builder()
+                .nodeSelector(architectureSelector(jobArchitecture(architecture)))
                 .command("/bin/bash")
                 .args(new String[] { homeDir + "/" + TvmRunnerHelper.ENTRYPOINT_NAME })
                 .contextSources(contextSources)
@@ -141,6 +142,16 @@ public class TvmCompileRunner extends TvmBaseRunner {
             contextRefs,
             taskSpec
         );
+    }
+
+    // Node architecture the compile Job needs. The x86 targets are generated and linked by
+    // the native toolchain of the node, so they need an amd64 node; the ARM targets are
+    // cross-compiled on any node, and cpu builds for the node the Job runs on.
+    static String jobArchitecture(TvmTargetArchitecture architecture) {
+        return switch (architecture) {
+            case x86, x86_v3, x86_native -> "amd64";
+            default -> null;
+        };
     }
 
     // Cross C++ compiler that links model.so for an ARM target; null for the targets the
