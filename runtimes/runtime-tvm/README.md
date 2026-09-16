@@ -210,6 +210,14 @@ each worker gets `resources.cpu / workers` TVM threads (`TVM_NUM_THREADS`); set
 The serve images only load models compiled with the same TVM build and for their CPU
 architecture: recompile the models after upgrading the images.
 
+**Architecture.** The serve pod runs only on the nodes whose `kubernetes.io/arch` label
+matches the architecture of `model.so` (`amd64`, `arm64` or `arm`), read from the Model:
+the `target_triple` written by `tvm+compile`, or the target of older Models. The serve
+images are multi-architecture, so each node pulls its own variant. An ARM model can then
+be served on the ARM nodes of the cluster, such as a Raspberry Pi joined as a node; with
+no matching node the pod stays pending. A `profile` with its own node selector overrides
+this choice.
+
 ## Targets
 
 | `target_architecture` | Runs on                                                         |
@@ -224,6 +232,10 @@ architecture: recompile the models after upgrading the images.
 
 The more specific the target, the faster the code, but it only runs on that kind of CPU.
 The serve images exist for `linux/amd64`, `linux/arm64` and `linux/arm/v7`.
+
+The compile Job of the `x86` targets runs on an `amd64` node, because the library is
+generated and linked by the native toolchain. The ARM targets are cross-compiled on any
+node, and `cpu` builds for the node where the Job runs.
 
 ---
 

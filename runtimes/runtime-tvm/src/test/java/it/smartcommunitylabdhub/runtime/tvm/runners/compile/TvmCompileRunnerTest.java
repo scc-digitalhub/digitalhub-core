@@ -57,6 +57,16 @@ class TvmCompileRunnerTest {
     }
 
     @Test
+    void runsTheX86CompilesOnAmd64Nodes() {
+        assertEquals("amd64", TvmCompileRunner.jobArchitecture(TvmTargetArchitecture.x86));
+        assertEquals("amd64", TvmCompileRunner.jobArchitecture(TvmTargetArchitecture.x86_v3));
+        assertEquals("amd64", TvmCompileRunner.jobArchitecture(TvmTargetArchitecture.x86_native));
+        assertNull(TvmCompileRunner.jobArchitecture(TvmTargetArchitecture.cpu));
+        assertNull(TvmCompileRunner.jobArchitecture(TvmTargetArchitecture.arm64));
+        assertNull(TvmCompileRunner.jobArchitecture(TvmTargetArchitecture.armv7l));
+    }
+
+    @Test
     void requiresDatabaseModelForApply() {
         TvmCompileTaskSpec spec = new TvmCompileTaskSpec();
         spec.setTuningMode(TvmTuningMode.apply);

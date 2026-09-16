@@ -6,6 +6,7 @@
 
 package it.smartcommunitylabdhub.runtime.tvm.runners.serve;
 
+import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
@@ -33,7 +34,8 @@ import org.springframework.util.StringUtils;
 
 // K8s Deployment for tvm+serve: an init container drops the tvm-so Model into
 // TVM_MODEL_DIR and a generic serve image (Go by default, Rust as an alternative) serves it
-// over Open Inference v2.
+// over Open Inference v2. The pod runs on a node of the architecture model.so was compiled
+// for, where the multi-arch serve image starts in its matching variant.
 @Slf4j
 public class TvmServeRunner extends TvmBaseRunner {
 
@@ -78,6 +80,7 @@ public class TvmServeRunner extends TvmBaseRunner {
         }
         String modelFolder = TvmRunnerHelper.resolveModelDir(modelKey, modelManager);
         String modelDir = homeDir + "/model";
+        String architecture = modelArchitecture(modelKey);
 
         List<CoreEnv> envs = createEnvList(run, taskSpec);
         envs.add(new CoreEnv("TVM_TASK_KIND", TvmServeTaskSpec.KIND));
@@ -104,6 +107,7 @@ public class TvmServeRunner extends TvmBaseRunner {
         // The serve image's ENTRYPOINT starts the server, so the runnable sets no command.
         return applyCommon(
             K8sServeRunnable.builder()
+                .nodeSelector(architectureSelector(architecture))
                 .replicas(taskSpec.getReplicas())
                 .servicePorts(List.of(new CorePort(HTTP_PORT, HTTP_PORT), new CorePort(GRPC_PORT, GRPC_PORT)))
                 .serviceType(taskSpec.getServiceType())
@@ -119,6 +123,22 @@ public class TvmServeRunner extends TvmBaseRunner {
             contextRefs,
             taskSpec
         );
+    }
+
+    // Node architecture of the compiled Model (see TvmRunnerHelper.modelArchitecture). When
+    // it is unknown the pod may land on any node, and the serve image refuses a model.so
+    // built for another architecture.
+    private String modelArchitecture(String modelKey) {
+        if (!modelKey.startsWith(Keys.STORE_PREFIX)) {
+            return null;
+        }
+        String architecture = TvmRunnerHelper.modelArchitecture(
+            TvmRunnerHelper.resolveModel(modelKey, modelManager).getSpec()
+        );
+        if (architecture == null) {
+            log.warn("no target architecture in {}: the serve pod can run on any node", modelKey);
+        }
+        return architecture;
     }
 
     // TVM threads for each inference worker. Every worker owns a model copy and TVM gives

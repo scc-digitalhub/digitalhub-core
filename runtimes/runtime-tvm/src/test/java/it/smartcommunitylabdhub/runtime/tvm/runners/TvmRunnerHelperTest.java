@@ -12,7 +12,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
+import it.smartcommunitylabdhub.runtime.tvm.specs.model.TvmTargetArchitecture;
+import java.io.Serializable;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class TvmRunnerHelperTest {
@@ -25,6 +29,34 @@ class TvmRunnerHelperTest {
         assertEquals(1, TvmRunnerHelper.parseCpuCores("0.25"));
         assertThrows(IllegalArgumentException.class, () -> TvmRunnerHelper.parseCpuCores("0"));
         assertThrows(IllegalArgumentException.class, () -> TvmRunnerHelper.parseCpuCores("invalid"));
+    }
+
+    @Test
+    void mapsEveryCompileTargetToItsNodeArchitecture() {
+        assertNull(TvmRunnerHelper.targetArchitecture(TvmTargetArchitecture.cpu.getValue()));
+        assertEquals("amd64", TvmRunnerHelper.targetArchitecture(TvmTargetArchitecture.x86.getValue()));
+        assertEquals("amd64", TvmRunnerHelper.targetArchitecture(TvmTargetArchitecture.x86_v3.getValue()));
+        assertEquals("arm64", TvmRunnerHelper.targetArchitecture(TvmTargetArchitecture.arm64.getValue()));
+        assertEquals("arm64", TvmRunnerHelper.targetArchitecture(TvmTargetArchitecture.arm64_pi5.getValue()));
+        assertEquals("arm", TvmRunnerHelper.targetArchitecture(TvmTargetArchitecture.armv7l.getValue()));
+        assertEquals("arm64", TvmRunnerHelper.targetArchitecture("llvm -mtriple=aarch64-linux-gnu -mcpu=cortex-a76"));
+        assertNull(TvmRunnerHelper.tripleArchitecture("riscv64-unknown-linux-gnu"));
+    }
+
+    @Test
+    void readsTheModelArchitectureFromTheTripleWrittenByTheCompile() {
+        Map<String, Serializable> spec = new HashMap<>();
+        assertNull(TvmRunnerHelper.modelArchitecture(null));
+        assertNull(TvmRunnerHelper.modelArchitecture(spec));
+
+        // Models compiled before target_triple: only the target tells the architecture.
+        spec.put("target", TvmTargetArchitecture.armv7l.getValue());
+        assertEquals("arm", TvmRunnerHelper.modelArchitecture(spec));
+
+        // A plain llvm target builds for the compile node, whose triple is in the manifest.
+        spec.put("target", "llvm");
+        spec.put("manifest", new HashMap<>(Map.of("target_triple", "aarch64-unknown-linux-gnu")));
+        assertEquals("arm64", TvmRunnerHelper.modelArchitecture(spec));
     }
 
     @Test
