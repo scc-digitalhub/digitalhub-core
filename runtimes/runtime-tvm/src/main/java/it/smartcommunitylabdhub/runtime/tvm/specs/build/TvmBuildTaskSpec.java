@@ -41,11 +41,12 @@ public class TvmBuildTaskSpec extends K8sFunctionTaskBaseSpec {
     )
     private String image;
 
-    // ONNX only: run onnxsim.simplify on the graph before converting to Relax IR.
+    // ONNX only: run onnxsim.simplify on the graph before converting to Relax IR. build_onnx.py
+    // also runs it by itself when the converted outputs have no shape.
     @JsonProperty("simplify")
     @Schema(
         title = "Simplify ONNX Model",
-        description = "Runs ONNX Simplifier to pre-compute constant operations and remove redundant nodes before the conversion."
+        description = "Runs ONNX Simplifier to pre-compute constant operations and remove redundant nodes before the conversion. When off, it still runs by itself if the converted model has outputs without a shape, which TVM cannot compile."
     )
     private Boolean simplify;
 

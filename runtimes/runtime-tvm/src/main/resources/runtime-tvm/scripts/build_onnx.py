@@ -9,7 +9,9 @@ Model of kind tvm-ir.
 1. load the ONNX file;
 2. optionally convert it to another opset and simplify it with onnxsim;
 3. run the ONNX shape inference;
-4. convert it into Relax IR (weights inside as constants, or apart in params.bin);
+4. convert it into Relax IR (weights inside as constants, or apart in params.bin); when some
+   outputs come out without a shape, which TVM cannot compile, convert again after
+   simplifying the graph with onnxsim;
 5. write model.relax.json and metadata.json;
 6. publish the folder as a tvm-ir Model.
 """
@@ -126,9 +128,29 @@ def signature(model) -> tuple[list, list]:
 # --------------------------------------------------------------------------- steps
 
 
-def prepare(model, args: argparse.Namespace):
-    """Opset conversion and simplification when asked, then shape inference. The opset
-    comes first because shape inference depends on it."""
+class SimplifyError(Exception):
+    """onnxsim is missing or could not simplify the graph."""
+
+
+def simplify_graph(model):
+    """The graph simplified by onnxsim, which also computes in advance every value that
+    depends only on the shapes."""
+    try:
+        from onnxsim import simplify
+    except ImportError as error:
+        raise SimplifyError("simplify needs onnxsim in the builder image") from error
+    try:
+        simplified, valid = simplify(model)
+    except Exception as error:  # noqa: BLE001
+        raise SimplifyError(f"ONNX simplification failed: {error}") from error
+    if not valid:
+        raise SimplifyError("onnxsim could not validate the simplified graph")
+    return simplified
+
+
+def prepare(model, args: argparse.Namespace, simplify: bool):
+    """Opset conversion, simplification when asked, then shape inference. The opset comes
+    first because shape inference depends on it. Raises SimplifyError."""
     from onnx import shape_inference, version_converter
 
     if args.target_opset is not None:
@@ -138,19 +160,9 @@ def prepare(model, args: argparse.Namespace):
         except Exception as error:  # noqa: BLE001
             fail(f"opset conversion to {args.target_opset} failed: {error}", code=3)
 
-    if args.simplify:
-        try:
-            from onnxsim import simplify
-        except ImportError:
-            fail("simplify=true needs onnxsim in the builder image", code=4)
+    if simplify:
         print("      simplifying the graph with onnxsim")
-        try:
-            simplified, valid = simplify(model)
-        except Exception as error:  # noqa: BLE001
-            fail(f"ONNX simplification failed: {error}", code=4)
-        if not valid:
-            fail("onnxsim could not validate the simplified graph", code=4)
-        model = simplified
+        model = simplify_graph(model)
         print(f"      simplified graph: {len(model.graph.node)} nodes")
 
     print(f"      shape inference (strict={args.strict_shape_inference}, data_prop={args.data_prop})")
@@ -187,6 +199,16 @@ def convert(model, args: argparse.Namespace):
         return mod, None
 
 
+def outputs_without_shape(mod) -> list[int]:
+    """Positions of the IR outputs that have only a rank and no shape. TVM cannot generate
+    code for the operations that produce them, so tvm+compile would fail on them."""
+    from tvm import relax
+
+    returned = mod["main"].ret_ty
+    outputs = list(returned.fields) if isinstance(returned, relax.TupleType) else [returned]
+    return [index for index, output in enumerate(outputs) if isinstance(output, relax.TensorType) and output.shape is None]
+
+
 def main(argv=None) -> None:
     args = parse_args(argv)
     import onnx
@@ -201,27 +223,47 @@ def main(argv=None) -> None:
     print(f"      {len(model.graph.node)} nodes, opset {model.opset_import[0].version}")
 
     step(2, STEPS, "preparing the ONNX graph")
-    model = prepare(model, args)
+    try:
+        prepared = prepare(model, args, simplify=args.simplify)
+    except SimplifyError as error:
+        fail(str(error), code=4)
 
     step(3, STEPS, f"converting to Relax IR (opset={args.opset}, keep_params_in_input={args.keep_params_in_input}, "
                    f"sanitize_input_names={args.sanitize_input_names})")
-    mod, weights = convert(model, args)
+    mod, weights = convert(prepared, args)
+    simplified = args.simplify
+    if not simplified and outputs_without_shape(mod):
+        # TVM 0.26 imports some shape arithmetic, such as the box decoding of YOLOv8, as slices
+        # sized at run time: the outputs lose their shape and the compile fails. onnxsim
+        # computes those values in advance, so the graph is simplified and converted again.
+        print("      some outputs have no shape: simplifying the graph with onnxsim and converting again")
+        try:
+            prepared = prepare(onnx.load(str(source)), args, simplify=True)
+        except SimplifyError as error:
+            print(f"WARN: {error}; keeping the first conversion")
+        else:
+            mod, weights = convert(prepared, args)
+            simplified = True
+    missing = outputs_without_shape(mod)
+    if missing:
+        print(f"WARN: outputs {missing} still have no shape: tvm+compile will probably fail on them")
 
     step(4, STEPS, "writing the IR")
     save_relax_ir(mod, out_dir, weights)
 
     step(5, STEPS, "writing metadata.json")
-    inputs, outputs = signature(model)
+    inputs, outputs = signature(prepared)
     metadata = {
         "entry": "main",
         "source_format": "onnx",
         "source_sha256": sha256_of(source),
         "tvm_version": tvm.__version__,
-        "opset": model.opset_import[0].version,
+        "opset": prepared.opset_import[0].version,
         "model_name": args.name,
         "keep_params_in_input": args.keep_params_in_input,
         "sanitize_input_names": args.sanitize_input_names,
-        "simplify": args.simplify,
+        "simplify": simplified,
+        "simplified_automatically": simplified and not args.simplify,
         "inputs": inputs,
         "outputs": outputs,
     }
@@ -232,7 +274,7 @@ def main(argv=None) -> None:
     from publish import publish_ir_model
 
     publish_ir_model(out_dir, args.name, metadata,
-                     parameters={"opset": metadata["opset"], "model_name": args.name, "simplify": args.simplify})
+                     parameters={"opset": metadata["opset"], "model_name": args.name, "simplify": simplified})
     print("Done")
 
 

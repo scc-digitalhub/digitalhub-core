@@ -35,9 +35,9 @@
   },
   "simplify": {
     "ui:title@en": "Simplify ONNX Model",
-    "ui:description@en": "Runs ONNX Simplifier to pre-compute constant operations and remove redundant nodes before the conversion.",
+    "ui:description@en": "Runs ONNX Simplifier to pre-compute constant operations and remove redundant nodes before the conversion. When off, it still runs by itself if the converted model has outputs without a shape, which TVM cannot compile.",
     "ui:title@it": "Semplifica modello ONNX",
-    "ui:description@it": "Esegue ONNX Simplifier per precalcolare le operazioni costanti e rimuovere i nodi ridondanti prima della conversione."
+    "ui:description@it": "Esegue ONNX Simplifier per precalcolare le operazioni costanti e rimuovere i nodi ridondanti prima della conversione. Se disattivato, viene eseguito comunque in automatico quando il modello convertito ha uscite senza forma, che TVM non può compilare."
   },
   "target_opset": {
     "ui:title@en": "Target Opset Version",
