@@ -7,7 +7,7 @@ runtime:
     user-id: ${RUNTIME_RAY_USER_ID:${kubernetes.security.user}}
     group-id: ${RUNTIME_RAY_GROUP_ID:${kubernetes.security.group}}
     passwd-template: classpath:/runtime-ray/docker/passwd.template
-    dependencies: ${RUNTIME_RAY_DEPENDENCIES:digitalhub[full],digitalhub-runtime-python}
+    dependencies: ${RUNTIME_RAY_DEPENDENCIES:digitalhub-runtime-ray}
     dependency-format: ${RUNTIME_RAY_DEPENDENCY_FORMAT:pip}
     head-start-params: {num-cpus: "0"}
     head-ray-resources: {}

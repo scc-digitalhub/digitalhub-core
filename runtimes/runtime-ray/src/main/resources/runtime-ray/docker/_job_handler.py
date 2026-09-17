@@ -45,7 +45,7 @@ if __name__ == "__main__":
     # default_py_file filename is "main.py", source is the
     # function source
     source = {{source}}
-    func, _ = import_function_and_init_from_source(source)
+    func, _ = import_function_and_init_from_source(source, ".")
 
     func_args = {}
 

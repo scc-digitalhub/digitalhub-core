@@ -1,6 +1,9 @@
 package it.smartcommunitylabdhub.framework.ray.model.ray;
 
 import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -12,6 +15,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class RayClusterSpec {
 
     // TODO: upgradeStrategy, authOptions, managedBy, headServiceAnnotations
