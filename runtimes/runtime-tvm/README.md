@@ -264,8 +264,11 @@ The weights are also rearranged for that code.
      resources: { cpu: "4", mem: 8Gi }
    ```
 
-2. **Reuse the result** to recompile the same IR for the same target, without measuring
-   again:
+   The tuned Model (here `yolov8n-so`) keeps the database in its `tuning/` folder.
+
+2. **Reuse the result** to recompile without measuring again. This is **not automatic**:
+   a compile never looks for earlier tunings, so set `tuning_mode: apply` and put the key
+   of the tuned Model in `tuning_model_path`:
 
    ```yaml
    kind: tvm+compile
@@ -275,6 +278,14 @@ The weights are also rearranged for that code.
      tuning_mode: apply
      tuning_model_path: store://my-project/model/tvm-so/yolov8n-so:<id>
    ```
+
+   The database is accepted only for the same TVM build, the same target (including
+   `target_num_cores`, which defaults to `resources.cpu`) and the same IR; otherwise the run
+   stops with `incompatible MetaSchedule database`. `metadata.json` then shows
+   `"mode": "apply"` and `"database_reused": true`.
+
+3. **Continue a tuning** with `tuning_mode: tune` and the same `tuning_model_path`: the
+   search starts from the variants already measured.
 
 Tips:
 
