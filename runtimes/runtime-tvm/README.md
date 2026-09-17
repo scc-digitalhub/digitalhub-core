@@ -128,15 +128,20 @@ Every option is optional unless marked as required.
 
 The conversion options apply to **ONNX** only; the TFLite builder ignores them.
 
-| Option                   | Default | Description                                                                                                     |
-| ------------------------ | ------- | --------------------------------------------------------------------------------------------------------------- |
-| `simplify`               | `false` | Simplify the graph with onnxsim before converting.                                                              |
-| `target_opset`           | —       | Convert the model to this opset first. Fails when ONNX has no converter for an operator (e.g. `Split` 18 → 17). |
-| `opset_override`         | model   | Opset the TVM importer uses instead of the one declared by the model.                                           |
-| `strict_shape_inference` | `false` | Strict ONNX shape inference: an error skips the whole inference (logged) instead of single nodes.               |
-| `data_prop`              | `false` | Propagate constant values during shape inference, to resolve more shapes.                                       |
-| `keep_params_in_input`   | `false` | Keep the weights out of the graph, in `params.bin`, instead of embedding them as constants.                     |
-| `sanitize_input_names`   | `true`  | Rewrite the input names into valid identifiers.                                                                 |
+| Option                   | Default | Description                                                                                                      |
+| ------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------- |
+| `simplify`               | `false` | Simplify the graph with onnxsim before converting. Done anyway when the converted outputs have no shape (below). |
+| `target_opset`           | —       | Convert the model to this opset first. Fails when ONNX has no converter for an operator (e.g. `Split` 18 → 17).  |
+| `opset_override`         | model   | Opset the TVM importer uses instead of the one declared by the model.                                            |
+| `strict_shape_inference` | `false` | Strict ONNX shape inference: an error skips the whole inference (logged) instead of single nodes.                |
+| `data_prop`              | `false` | Propagate constant values during shape inference, to resolve more shapes.                                        |
+| `keep_params_in_input`   | `false` | Keep the weights out of the graph, in `params.bin`, instead of embedding them as constants.                      |
+| `sanitize_input_names`   | `true`  | Rewrite the input names into valid identifiers.                                                                  |
+
+**Outputs without a shape.** TVM 0.26 imports some shape arithmetic, such as the box decoding
+of YOLOv8, as slices sized at run time: the IR outputs lose their shape and `tvm+compile`
+cannot build them. When this happens with `simplify` off, the build simplifies the graph with
+onnxsim and converts it again, and `metadata.json` records `simplified_automatically: true`.
 
 ### `tvm+compile`
 
