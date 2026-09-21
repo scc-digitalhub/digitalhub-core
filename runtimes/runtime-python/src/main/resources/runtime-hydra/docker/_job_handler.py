@@ -240,6 +240,11 @@ def _configure_execution(spec: dict, run: dict, ctx: Context) -> tuple[Callable,
         "function": spec.get("function", "hydra"),
         "project_name": ctx.project.name,
         "local_execution": False,
+        "volumes": spec.get("volumes", []),
+        "resources": spec.get("resources", {}),
+        "envs": spec.get("envs", []),
+        "secrets": spec.get("secrets", []),
+        "profile": spec.get("profile", None),
     }
 
     runtime_dir = DEFAULT_PATH

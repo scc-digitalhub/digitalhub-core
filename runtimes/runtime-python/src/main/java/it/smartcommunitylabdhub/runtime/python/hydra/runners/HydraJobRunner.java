@@ -38,6 +38,8 @@ import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreResource;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreResources;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sJobRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
@@ -181,7 +183,8 @@ public class HydraJobRunner extends PythonBaseRunner {
                 .secrets(coreSecrets)
                 .resources(k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(taskSpec.getResources()) : null)
                 .volumes(coreVolumes)
-                .template(taskSpec.getProfile())
+                // ignore template for Job
+                // .template(taskSpec.getProfile())
                 //securityContext
                 .fsGroup(groupId)
                 .runAsGroup(groupId)
