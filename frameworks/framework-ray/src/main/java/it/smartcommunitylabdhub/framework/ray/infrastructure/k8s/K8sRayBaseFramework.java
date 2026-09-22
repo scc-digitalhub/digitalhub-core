@@ -313,6 +313,10 @@ public abstract class K8sRayBaseFramework<
 
         log.info("create Ray {} for {}", getKind(), String.valueOf(cr.getMetadata().getName()));
         DynamicKubernetesApi dynamicApi = getDynamicKubernetesApi();
+        if (log.isTraceEnabled()) {
+            log.trace("Ray CR: {}", cr.getRaw());
+        }
+
         cr = create(cr, dynamicApi);
 
         try {
