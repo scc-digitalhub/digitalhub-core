@@ -190,6 +190,7 @@ public class RayJobRunner {
             .envs(envs)
             .secrets(secrets)
             .template(taskSpec.getProfile())
+            .volumes(taskSpec.getVolumes())
             .spec(raySpec)
             .build();
 
