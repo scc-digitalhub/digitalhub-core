@@ -25,6 +25,8 @@ package it.smartcommunitylabdhub.functions.persistence;
 
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.metadata.EmbeddableMetadata;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
+import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.metadata.AuditMetadataBuilder;
 import it.smartcommunitylabdhub.core.metadata.BaseMetadataBuilder;
@@ -36,6 +38,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -65,7 +68,8 @@ public class FunctionDTOBuilder implements Converter<FunctionEntity, Function> {
         this.versioningMetadataBuilder = versioningMetadataBuilder;
     }
 
-    public Function build(FunctionEntity entity) {
+    @Override
+    public Function convert(@NonNull FunctionEntity entity) {
         //read metadata map as-is
         Map<String, Serializable> meta = converter.convertToEntityAttribute(entity.getMetadata());
 
@@ -86,6 +90,17 @@ public class FunctionDTOBuilder implements Converter<FunctionEntity, Function> {
             .name(entity.getName())
             .kind(entity.getKind())
             .project(entity.getProject())
+            .key(
+                entity.getKey() != null
+                    ? entity.getKey()
+                    : KeyUtils.buildKey(
+                          entity.getProject(),
+                          EntityUtils.getEntityName(Function.class).toLowerCase(),
+                          entity.getKind(),
+                          entity.getName(),
+                          entity.getId()
+                      )
+            )
             .user(entity.getCreatedBy())
             .metadata(metadata)
             .spec(converter.convertToEntityAttribute(entity.getSpec()))
@@ -96,10 +111,5 @@ public class FunctionDTOBuilder implements Converter<FunctionEntity, Function> {
                 )
             )
             .build();
-    }
-
-    @Override
-    public Function convert(FunctionEntity source) {
-        return build(source);
     }
 }

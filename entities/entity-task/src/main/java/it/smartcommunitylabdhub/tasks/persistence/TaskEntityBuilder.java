@@ -26,10 +26,13 @@ package it.smartcommunitylabdhub.tasks.persistence;
 import it.smartcommunitylabdhub.commons.models.function.FunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.workflow.WorkflowTaskBaseSpec;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
+import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import jakarta.persistence.AttributeConverter;
 import java.io.Serializable;
 import java.util.Map;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -41,27 +44,26 @@ public class TaskEntityBuilder implements Converter<Task, TaskEntity> {
         this.converter = cborConverter;
     }
 
-    /**
-     * Build a Task from a TaskDTO and store extra values as a cbor
-     * <p>
-     *
-     * @param dto TaskDTO
-     * @return Task the task entity
-     */
-    public TaskEntity build(Task dto) {
+    @Override
+    public TaskEntity convert(@NonNull Task dto) {
+        //build key
+        String key = KeyUtils.buildKey(
+            dto.getProject(),
+            EntityUtils.getEntityName(Task.class).toLowerCase(),
+            dto.getKind(),
+            dto.getName(),
+            dto.getId()
+        );
+
         return TaskEntity.builder()
             .id(dto.getId())
             .kind(dto.getKind())
             .project(dto.getProject())
+            .key(key)
             .spec(converter.convertToDatabaseColumn(dto.getSpec()))
             //extract refs from specs
             .function(FunctionTaskBaseSpec.from(dto.getSpec()).getFunction())
             .workflow(WorkflowTaskBaseSpec.from(dto.getSpec()).getWorkflow())
             .build();
-    }
-
-    @Override
-    public TaskEntity convert(Task source) {
-        return build(source);
     }
 }

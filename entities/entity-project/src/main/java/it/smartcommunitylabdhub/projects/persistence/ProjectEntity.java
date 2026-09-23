@@ -24,6 +24,7 @@
 package it.smartcommunitylabdhub.projects.persistence;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.core.persistence.MetadataEntity;
 import it.smartcommunitylabdhub.core.persistence.SpecEntity;
@@ -118,5 +119,10 @@ public class ProjectEntity implements BaseEntity, MetadataEntity, SpecEntity, St
     @Override
     public @NotNull String getKind() {
         return "project";
+    }
+
+    @Override
+    public String getKey() {
+        return (Keys.STORE_PREFIX + getProject());
     }
 }

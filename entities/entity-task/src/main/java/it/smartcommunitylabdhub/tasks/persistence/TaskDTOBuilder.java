@@ -24,10 +24,13 @@
 package it.smartcommunitylabdhub.tasks.persistence;
 
 import it.smartcommunitylabdhub.commons.models.task.Task;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
+import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import jakarta.persistence.AttributeConverter;
 import java.io.Serializable;
 import java.util.Map;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -39,18 +42,25 @@ public class TaskDTOBuilder implements Converter<TaskEntity, Task> {
         this.converter = cborConverter;
     }
 
-    public Task build(TaskEntity entity) {
+    @Override
+    public Task convert(@NonNull TaskEntity entity) {
         return Task.builder()
             .id(entity.getId())
             .kind(entity.getKind())
             .project(entity.getProject())
+            .key(
+                entity.getKey() != null
+                    ? entity.getKey()
+                    : KeyUtils.buildKey(
+                          entity.getProject(),
+                          EntityUtils.getEntityName(Task.class).toLowerCase(),
+                          entity.getKind(),
+                          entity.getName(),
+                          entity.getId()
+                      )
+            )
             .user(entity.getCreatedBy())
             .spec(converter.convertToEntityAttribute(entity.getSpec()))
             .build();
-    }
-
-    @Override
-    public Task convert(TaskEntity source) {
-        return build(source);
     }
 }

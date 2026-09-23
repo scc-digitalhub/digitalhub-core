@@ -180,7 +180,17 @@ public interface WorkflowManager {
      * @return
      * @throws NoSuchEntityException
      */
-    Workflow getLatestWorkflow(@NotNull String project, @NotNull String name)
+    Workflow getLatestWorkflowByName(@NotNull String project, @NotNull String name)
+        throws NoSuchEntityException, SystemException;
+
+    /**
+     * Get the latest version of a given workflow
+     * @param project
+     * @param key
+     * @return
+     * @throws NoSuchEntityException
+     */
+    Workflow getLatestWorkflowByKey(@NotNull String project, @NotNull String key)
         throws NoSuchEntityException, SystemException;
 
     /**

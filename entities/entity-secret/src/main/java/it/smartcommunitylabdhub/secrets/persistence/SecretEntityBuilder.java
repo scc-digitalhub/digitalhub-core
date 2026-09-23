@@ -28,12 +28,15 @@ import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
 import it.smartcommunitylabdhub.commons.models.metadata.EmbeddableMetadata;
 import it.smartcommunitylabdhub.commons.models.secret.Secret;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
+import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import jakarta.persistence.AttributeConverter;
 import java.io.Serializable;
 import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.Map;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -45,24 +48,28 @@ public class SecretEntityBuilder implements Converter<Secret, SecretEntity> {
         this.converter = converter;
     }
 
-    /**
-     * Build a secret from a secretDTO and store extra values as f cbor
-     * <p>
-     *
-     * @param dto the secretDTO that need to be stored
-     * @return Secret
-     */
-    public SecretEntity build(Secret dto) {
+    @Override
+    public SecretEntity convert(@NonNull Secret dto) {
         // Extract data
         StatusFieldAccessor statusFieldAccessor = StatusFieldAccessor.with(dto.getStatus());
         BaseMetadata metadata = BaseMetadata.from(dto.getMetadata());
         EmbeddableMetadata embeddable = EmbeddableMetadata.from(dto.getMetadata());
+
+        //build key
+        String key = KeyUtils.buildKey(
+            dto.getProject(),
+            EntityUtils.getEntityName(Secret.class).toLowerCase(),
+            dto.getKind(),
+            dto.getName(),
+            dto.getId()
+        );
 
         return SecretEntity.builder()
             .id(dto.getId())
             .name(dto.getName())
             .kind(dto.getKind())
             .project(dto.getProject())
+            .key(key)
             .metadata(converter.convertToDatabaseColumn(dto.getMetadata()))
             .spec(converter.convertToDatabaseColumn(dto.getSpec()))
             .status(converter.convertToDatabaseColumn(dto.getStatus()))
@@ -85,10 +92,5 @@ public class SecretEntityBuilder implements Converter<Secret, SecretEntity> {
                     : null
             )
             .build();
-    }
-
-    @Override
-    public SecretEntity convert(Secret source) {
-        return build(source);
     }
 }

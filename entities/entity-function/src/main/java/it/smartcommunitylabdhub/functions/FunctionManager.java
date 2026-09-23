@@ -180,7 +180,17 @@ public interface FunctionManager {
      * @return
      * @throws NoSuchEntityException
      */
-    Function getLatestFunction(@NotNull String project, @NotNull String name)
+    Function getLatestFunctionByName(@NotNull String project, @NotNull String name)
+        throws NoSuchEntityException, SystemException;
+
+    /**
+     * Get the latest version of a given function
+     * @param project
+     * @param key
+     * @return
+     * @throws NoSuchEntityException
+     */
+    Function getLatestFunctionByKey(@NotNull String project, @NotNull String key)
         throws NoSuchEntityException, SystemException;
 
     /**

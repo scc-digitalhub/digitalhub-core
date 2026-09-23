@@ -30,6 +30,9 @@ public class Keys {
     public static final String RFC_1123_PATTERN = "^[a-z0-9-]+$";
     public static final String SLUG_PATTERN = "^[a-zA-Z0-9._+-]+$";
     public static final String KIND_PATTERN = "^[a-zA-Z0-9._+-:]+$";
+    // public static final String NAME_PATTERN = "^[a-zA-Z0-9._+-]+$";
+    // public static final String NAME_PATTERN = "^(?!\\.\\.?$)[\\p{L}\\p{N}._~!$'()+,;=@\\-\\s\\p{Zs}]+$";
+    public static final String NAME_PATTERN = "^(?!\\.\\.?$)(?!.*__)[\\p{L}\\p{N}._~!$'()+,;=@\\-\\s\\p{Zs}]+$";
     public static final String FUNCTION_PATTERN = "([^:/]+)://([^/]+)/([^:]+):(.+)";
     public static final String WORKFLOW_PATTERN = "([^:/]+)://([^/]+)/([^:]+):(.+)";
     public static final String TASK_PATTERN = "([^:/]+)://([^/]+)/([^:]+)";

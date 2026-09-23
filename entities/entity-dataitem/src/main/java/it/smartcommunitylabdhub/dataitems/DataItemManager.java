@@ -179,7 +179,17 @@ public interface DataItemManager {
      * @return
      * @throws NoSuchEntityException
      */
-    DataItem getLatestDataItem(@NotNull String project, @NotNull String name)
+    DataItem getLatestDataItemByName(@NotNull String project, @NotNull String name)
+        throws NoSuchEntityException, SystemException;
+
+    /**
+     * Get the latest version of a given dataItem by key
+     * @param project
+     * @param key
+     * @return
+     * @throws NoSuchEntityException
+     */
+    DataItem getLatestDataItemByKey(@NotNull String project, @NotNull String key)
         throws NoSuchEntityException, SystemException;
 
     /**

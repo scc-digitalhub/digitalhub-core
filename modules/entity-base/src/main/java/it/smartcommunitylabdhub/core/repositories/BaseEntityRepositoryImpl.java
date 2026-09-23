@@ -54,6 +54,7 @@ import org.springframework.core.ResolvableType;
 import org.springframework.core.ResolvableTypeProvider;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -61,6 +62,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.util.Pair;
+import org.springframework.lang.NonNull;
 import org.springframework.security.crypto.keygen.StringKeyGenerator;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -230,6 +232,9 @@ public abstract class BaseEntityRepositoryImpl<
 
         //build entity
         E entity = entityBuilder.convert(dto);
+        if (entity == null) {
+            throw new StoreException("failed to convert dto to entity");
+        }
 
         //check for existing ids
         if (entity.getId() != null && (repository.existsById(entity.getId()))) {
@@ -556,6 +561,24 @@ public abstract class BaseEntityRepositoryImpl<
         throw new UnsupportedOperationException();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<D> search(Example<E> example, Pageable pageable) {
+        log.debug("search with example {} page {}", example, pageable);
+
+        if (pageable.getPageSize() > PAGE_MAX_SIZE) {
+            throw new IllegalArgumentException("max page size exceeded");
+        }
+
+        Page<E> page = repository.findBy(example, query -> query.page(pageable));
+        List<D> content = page
+            .stream()
+            .map(e -> dtoBuilder.convert(e))
+            .collect(Collectors.toList());
+
+        return new PageImpl<>(content, pageable, page.getTotalElements());
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     @Transactional(readOnly = true)
@@ -570,6 +593,41 @@ public abstract class BaseEntityRepositoryImpl<
         }
 
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<D> searchAll(Example<E> example) {
+        log.debug("search all with example {} ", example);
+
+        return repository
+            .findAll(example)
+            .stream()
+            .map(e -> dtoBuilder.convert(e))
+            .collect(Collectors.toList());
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    @Transactional(readOnly = true)
+    public <T> List<T> searchAll(Specification<E> specification, @NonNull Class<T> projection) {
+        log.debug("search all with spec {} ", specification);
+
+        if (repository instanceof JpaSpecificationExecutor) {
+            return ((JpaSpecificationExecutor<E>) repository).findBy(Specification.allOf(specification), query ->
+                query.as(projection).all()
+            );
+        }
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public <T> List<T> searchAll(Example<E> example, @NonNull Class<T> projection) {
+        log.debug("search all with example {} ", example);
+
+        return repository.findBy(example, query -> query.as(projection).all());
     }
 
     @Transactional
@@ -648,5 +706,42 @@ public abstract class BaseEntityRepositoryImpl<
         }
 
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(cacheResolver = "resolvableTypeCacheResolver", value = "repository.find", allEntries = true)
+    public long deleteAll(Example<E> example) {
+        log.debug("delete all with example {} ", example);
+
+        //collect all via search
+        List<E> entities = repository.findAll(example);
+
+        //NOTE: to avoid issues with entity manager owned objs
+        //we clone entities to detach and keep the version
+        //sent as event payload immutable
+        List<E> prevs = entities
+            .stream()
+            .map(entity -> entityBuilder.convert(dtoBuilder.convert(entity)))
+            .toList();
+
+        //remove in batch
+        repository.deleteAllInBatch(entities);
+
+        //publish
+        if (eventPublisher != null) {
+            prevs.forEach(entity -> {
+                log.debug("publish event: delete for {}", entity.getId());
+
+                EntityEvent<E> event = new EntityEvent<>(entity, EntityAction.DELETE);
+                if (log.isTraceEnabled()) {
+                    log.trace("event: {}", String.valueOf(event));
+                }
+
+                eventPublisher.publishEvent(event);
+            });
+        }
+
+        return entities.size();
     }
 }

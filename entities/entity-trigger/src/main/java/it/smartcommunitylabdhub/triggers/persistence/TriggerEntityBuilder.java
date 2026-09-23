@@ -25,6 +25,8 @@ package it.smartcommunitylabdhub.triggers.persistence;
 
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
+import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import it.smartcommunitylabdhub.triggers.Trigger;
 import it.smartcommunitylabdhub.triggers.lifecycle.TriggerState;
 import it.smartcommunitylabdhub.triggers.specs.TriggerBaseSpec;
@@ -34,6 +36,7 @@ import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.Map;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -45,16 +48,27 @@ public class TriggerEntityBuilder implements Converter<Trigger, TriggerEntity> {
         this.converter = cborConverter;
     }
 
-    public TriggerEntity build(Trigger dto) {
+    @Override
+    public TriggerEntity convert(@NonNull Trigger dto) {
         // Extract data
         BaseMetadata metadata = BaseMetadata.from(dto.getMetadata());
         StatusFieldAccessor statusFieldAccessor = StatusFieldAccessor.with(dto.getStatus());
+
+        //build key
+        String key = KeyUtils.buildKey(
+            dto.getProject(),
+            EntityUtils.getEntityName(Trigger.class).toLowerCase(),
+            dto.getKind(),
+            dto.getName(),
+            dto.getId()
+        );
 
         return TriggerEntity.builder()
             .id(dto.getId())
             .name(dto.getName())
             .kind(dto.getKind())
             .project(dto.getProject())
+            .key(key)
             .metadata(converter.convertToDatabaseColumn(dto.getMetadata()))
             .spec(converter.convertToDatabaseColumn(dto.getSpec()))
             .status(converter.convertToDatabaseColumn(dto.getStatus()))
@@ -76,10 +90,5 @@ public class TriggerEntityBuilder implements Converter<Trigger, TriggerEntity> {
                     : null
             )
             .build();
-    }
-
-    @Override
-    public TriggerEntity convert(Trigger source) {
-        return build(source);
     }
 }

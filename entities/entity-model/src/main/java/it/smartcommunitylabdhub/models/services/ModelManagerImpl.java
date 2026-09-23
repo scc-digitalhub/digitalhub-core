@@ -250,10 +250,33 @@ public class ModelManagerImpl implements ModelManager {
     }
 
     @Override
-    public Model getLatestModel(@NotNull String project, @NotNull String name) throws NoSuchEntityException {
+    public Model getLatestModelByName(@NotNull String project, @NotNull String name) throws NoSuchEntityException {
         log.debug("get latest model for project {} with name {}", project, name);
 
         try {
+            return versionableService.getLatest(project, name);
+        } catch (StoreException e) {
+            log.error("store error: {}", e.getMessage());
+            throw new SystemException(e.getMessage());
+        }
+    }
+
+    @Override
+    public Model getLatestModelByKey(@NotNull String project, @NotNull String key) throws NoSuchEntityException {
+        log.debug("get latest model for project {} with key {}", project, key);
+        try {
+            //resolve name
+            Page<Model> models = entityService.listByKey(key, Pageable.ofSize(1));
+            if (models.isEmpty()) {
+                throw new NoSuchEntityException("Model not found for key: " + key);
+            }
+
+            String name = models
+                .get()
+                .findFirst()
+                .orElseThrow(() -> new NoSuchEntityException("Model not found for key: " + key))
+                .getName();
+
             return versionableService.getLatest(project, name);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());

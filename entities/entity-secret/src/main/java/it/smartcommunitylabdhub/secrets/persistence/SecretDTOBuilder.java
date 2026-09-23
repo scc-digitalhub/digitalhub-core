@@ -25,6 +25,8 @@ package it.smartcommunitylabdhub.secrets.persistence;
 
 import it.smartcommunitylabdhub.commons.models.metadata.EmbeddableMetadata;
 import it.smartcommunitylabdhub.commons.models.secret.Secret;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
+import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.metadata.AuditMetadataBuilder;
 import it.smartcommunitylabdhub.core.metadata.BaseMetadataBuilder;
@@ -36,6 +38,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -61,7 +64,8 @@ public class SecretDTOBuilder implements Converter<SecretEntity, Secret> {
         this.auditingMetadataBuilder = auditingMetadataBuilder;
     }
 
-    public Secret build(SecretEntity entity) {
+    @Override
+    public Secret convert(@NonNull SecretEntity entity) {
         //read metadata map as-is
         Map<String, Serializable> meta = converter.convertToEntityAttribute(entity.getMetadata());
 
@@ -81,6 +85,17 @@ public class SecretDTOBuilder implements Converter<SecretEntity, Secret> {
             .name(entity.getName())
             .kind(entity.getKind())
             .project(entity.getProject())
+            .key(
+                entity.getKey() != null
+                    ? entity.getKey()
+                    : KeyUtils.buildKey(
+                          entity.getProject(),
+                          EntityUtils.getEntityName(Secret.class).toLowerCase(),
+                          entity.getKind(),
+                          entity.getName(),
+                          entity.getId()
+                      )
+            )
             .user(entity.getCreatedBy())
             .metadata(metadata)
             .spec(converter.convertToEntityAttribute(entity.getSpec()))
@@ -91,10 +106,5 @@ public class SecretDTOBuilder implements Converter<SecretEntity, Secret> {
                 )
             )
             .build();
-    }
-
-    @Override
-    public Secret convert(SecretEntity source) {
-        return build(source);
     }
 }

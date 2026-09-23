@@ -29,7 +29,6 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
-import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
@@ -76,23 +75,13 @@ public class Extension implements BaseDTO, SpecDTO {
     @Pattern(regexp = Keys.SLUG_PATTERN)
     private String project;
 
+    @Nullable
+    @Pattern(regexp = Keys.KEY_PATTERN)
+    private String key;
+
     private String user;
 
     @Builder.Default
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Map<String, Serializable> spec = new HashMap<>();
-
-    @Override
-    public String getKey() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(Keys.STORE_PREFIX).append(getProject());
-        sb.append(Keys.PATH_DIVIDER).append(EntityUtils.getEntityName(Extension.class).toLowerCase());
-        sb.append(Keys.PATH_DIVIDER).append(getKind());
-        sb.append(Keys.PATH_DIVIDER).append(getName());
-        if (getId() != null) {
-            sb.append(Keys.ID_DIVIDER).append(getId());
-        }
-
-        return sb.toString();
-    }
 }

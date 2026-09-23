@@ -24,10 +24,12 @@
 package it.smartcommunitylabdhub.core.services;
 
 import it.smartcommunitylabdhub.commons.Fields;
+import it.smartcommunitylabdhub.commons.accessors.fields.KeyAccessor;
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
+import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
 import it.smartcommunitylabdhub.commons.models.metadata.VersioningMetadata;
@@ -37,9 +39,12 @@ import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.services.SpecValidator;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
+import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.events.EntityOperationsListener;
 import it.smartcommunitylabdhub.core.events.EntityOperationsPublisher;
+import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.core.persistence.SpecEntity;
 import it.smartcommunitylabdhub.core.persistence.StatusEntity;
@@ -53,9 +58,14 @@ import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,7 +73,11 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.ResolvableTypeProvider;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.ExampleMatcher;
+import org.springframework.data.domain.ExampleMatcher.GenericPropertyMatcher;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.lang.Nullable;
@@ -273,6 +287,55 @@ public abstract class BaseEntityServiceImpl<
         String projectId = dto.getProject();
         if (!StringUtils.hasText(projectId)) {
             throw new IllegalArgumentException("invalid or missing project");
+        }
+
+        //check for colliding names in the same project
+        if (dto.getName() != null) {
+            String key = KeyUtils.encode(dto.getName());
+
+            Collection<String> existingNames = Collections.emptySet();
+
+            try {
+                // try specification-based search first, more efficient
+                String likePattern = key.replaceAll("%[0-9A-Fa-f]{2}", "%").replace("__", "%");
+
+                existingNames = repository
+                    .searchAll(
+                        (root, query, cb) -> {
+                            query.distinct(true);
+                            return cb.and(
+                                cb.equal(root.get(AbstractEntity_.PROJECT), projectId),
+                                cb.like(root.get("name"), likePattern)
+                            );
+                        },
+                        NameOnly.class
+                    )
+                    .stream()
+                    .map(NameOnly::getName)
+                    .collect(Collectors.toSet());
+            } catch (UnsupportedOperationException | IllegalArgumentException e) {
+                //fallback to example-based search
+                //workaround to implement a projection for NameOnly on baseJpa
+                Map<String, Serializable> probeData = Map.of(AbstractEntity_.PROJECT, projectId);
+
+                E probe = JacksonMapper.OBJECT_MAPPER.convertValue(probeData, clazz);
+                Example<E> example = Example.of(probe);
+
+                existingNames = repository
+                    .searchAll(example, NameOnly.class)
+                    .stream()
+                    .map(NameOnly::getName)
+                    .collect(Collectors.toSet());
+            }
+
+            //check for existing entities with the same encoded name but different actual name
+            boolean collision = existingNames
+                .stream()
+                .anyMatch(n -> !dto.getName().equals(n) && key.equals(KeyUtils.encode(n)));
+
+            if (collision) {
+                throw new DuplicatedEntityException(type, dto.getName());
+            }
         }
 
         if (getSpecRegistry() != null) {
@@ -629,63 +692,252 @@ public abstract class BaseEntityServiceImpl<
     }
 
     @Override
+    public List<D> listByKey(@NotNull String key) throws StoreException {
+        log.debug("list all by key {}", key);
+
+        KeyAccessor accessor = KeyAccessor.with(key);
+
+        //validate entity
+        if (!EntityUtils.getEntityName(this.type).toLowerCase().equals(accessor.getType())) {
+            throw new IllegalArgumentException("Invalid key for entity type " + EntityUtils.getEntityName(this.type));
+        }
+
+        if (StringUtils.hasText(accessor.getId())) {
+            D dto = repository.find(accessor.getId());
+            if (dto == null) {
+                return List.of();
+            }
+
+            if (
+                !accessor.getProject().equals(dto.getProject()) ||
+                !accessor.getKind().equals(dto.getKind()) ||
+                !KeyUtils.encode(dto.getName()).equals(accessor.getName())
+            ) {
+                //wrong key for this entry
+                return List.of();
+            }
+
+            //single match
+            return List.of(dto);
+        } else {
+            //pick partial match
+            try {
+                List<D> list = repository.searchAll((root, query, cb) -> {
+                    query.orderBy(cb.asc(root.get("name")));
+                    return cb.and(
+                        cb.equal(root.get(AbstractEntity_.PROJECT), accessor.getProject()),
+                        cb.equal(root.get(AbstractEntity_.KIND), accessor.getKind()),
+                        cb.like(root.get(AbstractEntity_.KEY), key + ":%")
+                    );
+                });
+
+                log.debug("found {} entities", list.size());
+                return list;
+            } catch (UnsupportedOperationException | IllegalArgumentException ex) {
+                //fallback to example-based search
+                Map<String, Serializable> probeData = Map.of(
+                    AbstractEntity_.PROJECT,
+                    accessor.getProject(),
+                    AbstractEntity_.KIND,
+                    accessor.getKind()
+                );
+
+                E probe = JacksonMapper.OBJECT_MAPPER.convertValue(probeData, clazz);
+                ExampleMatcher matcher = ExampleMatcher.matching().withMatcher(
+                    AbstractEntity_.KEY,
+                    GenericPropertyMatcher::startsWith
+                );
+
+                List<D> list = repository.searchAll(Example.of(probe, matcher));
+
+                log.debug("found {} entities", list.size());
+                return list;
+            }
+        }
+    }
+
+    @Override
+    public Page<D> listByKey(@NotNull String key, Pageable pageable) throws StoreException {
+        log.debug("list page {} by key {}", pageable.getPageNumber(), key);
+        KeyAccessor accessor = KeyAccessor.with(key);
+
+        //validate entity
+        if (!EntityUtils.getEntityName(this.type).toLowerCase().equals(accessor.getType())) {
+            throw new IllegalArgumentException("Invalid key for entity type " + EntityUtils.getEntityName(this.type));
+        }
+
+        if (StringUtils.hasText(accessor.getId())) {
+            D dto = repository.find(accessor.getId());
+            if (dto == null) {
+                return Page.empty();
+            }
+
+            if (
+                !accessor.getProject().equals(dto.getProject()) ||
+                !accessor.getKind().equals(dto.getKind()) ||
+                !KeyUtils.encode(dto.getName()).equals(accessor.getName())
+            ) {
+                //wrong key for this entry
+                return Page.empty();
+            }
+
+            //single match
+            return new PageImpl<>(List.of(dto), pageable, 1);
+        } else {
+            //pick partial match
+            try {
+                Page<D> list = repository.search(
+                    (root, query, cb) -> {
+                        query.orderBy(cb.asc(root.get("name")));
+                        return cb.and(
+                            cb.equal(root.get(AbstractEntity_.PROJECT), accessor.getProject()),
+                            cb.equal(root.get(AbstractEntity_.KIND), accessor.getKind()),
+                            cb.like(root.get(AbstractEntity_.KEY), key + ":%")
+                        );
+                    },
+                    pageable
+                );
+
+                log.debug("found {} entities", list.getTotalElements());
+                return list;
+            } catch (UnsupportedOperationException | IllegalArgumentException ex) {
+                //fallback to example-based search
+                Map<String, Serializable> probeData = Map.of(
+                    AbstractEntity_.PROJECT,
+                    accessor.getProject(),
+                    AbstractEntity_.KIND,
+                    accessor.getKind()
+                );
+
+                E probe = JacksonMapper.OBJECT_MAPPER.convertValue(probeData, clazz);
+                ExampleMatcher matcher = ExampleMatcher.matching().withMatcher(
+                    AbstractEntity_.KEY,
+                    GenericPropertyMatcher::startsWith
+                );
+
+                Page<D> list = repository.search(Example.of(probe, matcher), pageable);
+
+                log.debug("found {} entities", list.getTotalElements());
+                return list;
+            }
+        }
+    }
+
+    @Override
     public List<D> listByUser(@NotNull String user) throws StoreException {
         log.debug("list all by user {}", user);
 
-        List<D> list = repository.searchAll(CommonSpecification.createdByEquals(user));
-        log.debug("found {} entities", list.size());
+        try {
+            List<D> list = repository.searchAll(CommonSpecification.createdByEquals(user));
+            log.debug("found {} entities", list.size());
+            return list;
+        } catch (UnsupportedOperationException ex) {
+            //fallback to example-based search
+            Map<String, Serializable> probeData = Map.of(AbstractEntity_.CREATED_BY, user);
 
-        return list;
+            E probe = JacksonMapper.OBJECT_MAPPER.convertValue(probeData, clazz);
+            List<D> list = repository.searchAll(Example.of(probe));
+            log.debug("found {} entities", list.size());
+
+            return list;
+        }
     }
 
     @Override
     public Page<D> listByUser(@NotNull String user, Pageable pageable) throws StoreException {
         log.debug("list page {} by user {}", pageable.getPageNumber(), user);
 
-        Page<D> page = repository.search(CommonSpecification.createdByEquals(user), pageable);
-        log.debug("found {} entities in total", page.getTotalElements());
+        try {
+            Page<D> page = repository.search(CommonSpecification.createdByEquals(user), pageable);
+            log.debug("found {} entities in total", page.getTotalElements());
+            return page;
+        } catch (UnsupportedOperationException ex) {
+            //fallback to example-based search
+            Map<String, Serializable> probeData = Map.of(AbstractEntity_.CREATED_BY, user);
 
-        return page;
+            E probe = JacksonMapper.OBJECT_MAPPER.convertValue(probeData, clazz);
+            Page<D> page = repository.search(Example.of(probe), pageable);
+            log.debug("found {} entities in total", page.getTotalElements());
+            return page;
+        }
     }
 
     @Override
     public List<D> listByProject(@NotNull String project) throws StoreException {
         log.debug("list all by project {}", project);
+        try {
+            List<D> list = repository.searchAll(CommonSpecification.projectEquals(project));
+            log.debug("found {} entities", list.size());
 
-        List<D> list = repository.searchAll(CommonSpecification.projectEquals(project));
-        log.debug("found {} entities", list.size());
+            return list;
+        } catch (UnsupportedOperationException ex) {
+            //fallback to example-based search
+            Map<String, Serializable> probeData = Map.of(AbstractEntity_.PROJECT, project);
 
-        return list;
+            E probe = JacksonMapper.OBJECT_MAPPER.convertValue(probeData, clazz);
+            List<D> list = repository.searchAll(Example.of(probe));
+            log.debug("found {} entities", list.size());
+
+            return list;
+        }
     }
 
     @Override
     public Page<D> listByProject(@NotNull String project, Pageable pageable) throws StoreException {
         log.debug("list page {} by project {}", pageable.getPageNumber(), project);
 
-        Page<D> page = repository.search(CommonSpecification.projectEquals(project), pageable);
-        log.debug("found {} entities in total", page.getTotalElements());
+        try {
+            Page<D> page = repository.search(CommonSpecification.projectEquals(project), pageable);
+            log.debug("found {} entities in total", page.getTotalElements());
+            return page;
+        } catch (UnsupportedOperationException ex) {
+            //fallback to example-based search
+            Map<String, Serializable> probeData = Map.of(AbstractEntity_.PROJECT, project);
 
-        return page;
+            E probe = JacksonMapper.OBJECT_MAPPER.convertValue(probeData, clazz);
+            Page<D> page = repository.search(Example.of(probe), pageable);
+            log.debug("found {} entities in total", page.getTotalElements());
+            return page;
+        }
     }
 
     @Override
     public List<D> listByKind(@NotNull String kind) throws StoreException {
         log.debug("list all by kind {}", kind);
+        try {
+            List<D> list = repository.searchAll(CommonSpecification.kindEquals(kind));
+            log.debug("found {} entities", list.size());
+            return list;
+        } catch (UnsupportedOperationException ex) {
+            //fallback to example-based search
+            Map<String, Serializable> probeData = Map.of(AbstractEntity_.KIND, kind);
 
-        List<D> list = repository.searchAll(CommonSpecification.kindEquals(kind));
-        log.debug("found {} entities", list.size());
+            E probe = JacksonMapper.OBJECT_MAPPER.convertValue(probeData, clazz);
+            List<D> list = repository.searchAll(Example.of(probe));
+            log.debug("found {} entities", list.size());
 
-        return list;
+            return list;
+        }
     }
 
     @Override
     public Page<D> listByKind(@NotNull String kind, Pageable pageable) throws StoreException {
         log.debug("list page {} by kind {}", pageable.getPageNumber(), kind);
 
-        Page<D> page = repository.search(CommonSpecification.kindEquals(kind), pageable);
-        log.debug("found {} entities in total", page.getTotalElements());
+        try {
+            Page<D> page = repository.search(CommonSpecification.kindEquals(kind), pageable);
+            log.debug("found {} entities in total", page.getTotalElements());
+            return page;
+        } catch (UnsupportedOperationException ex) {
+            //fallback to example-based search
+            Map<String, Serializable> probeData = Map.of(AbstractEntity_.KIND, kind);
 
-        return page;
+            E probe = JacksonMapper.OBJECT_MAPPER.convertValue(probeData, clazz);
+            Page<D> page = repository.search(Example.of(probe), pageable);
+            log.debug("found {} entities in total", page.getTotalElements());
+
+            return page;
+        }
     }
 
     @Override
@@ -763,5 +1015,9 @@ public abstract class BaseEntityServiceImpl<
         log.debug("found {} entities in total", page.getTotalElements());
 
         return page;
+    }
+
+    private interface NameOnly {
+        String getName();
     }
 }

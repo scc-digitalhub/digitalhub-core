@@ -26,6 +26,8 @@ package it.smartcommunitylabdhub.runs.persistence;
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
+import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.lifecycle.RunState;
 import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
@@ -34,8 +36,8 @@ import java.io.Serializable;
 import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -43,19 +45,12 @@ public class RunEntityBuilder implements Converter<Run, RunEntity> {
 
     private final AttributeConverter<Map<String, Serializable>, byte[]> converter;
 
-    public RunEntityBuilder(
-        @Qualifier("cborMapConverter") AttributeConverter<Map<String, Serializable>, byte[]> cborConverter
-    ) {
+    public RunEntityBuilder(AttributeConverter<Map<String, Serializable>, byte[]> cborConverter) {
         this.converter = cborConverter;
     }
 
-    /**
-     * Build a Run from a RunDTO and store extra values as a cbor
-     *
-     * @param dto the run dto
-     * @return Run
-     */
-    public RunEntity build(Run dto) {
+    @Override
+    public RunEntity convert(@NonNull Run dto) {
         // Extract data
         StatusFieldAccessor statusFieldAccessor = StatusFieldAccessor.with(dto.getStatus());
         BaseMetadata metadata = BaseMetadata.from(dto.getMetadata());
@@ -66,11 +61,21 @@ public class RunEntityBuilder implements Converter<Run, RunEntity> {
         // Extract task
         TaskSpecAccessor taskSpecAccessor = TaskSpecAccessor.with(dto.getSpec());
 
+        //build key
+        String key = KeyUtils.buildKey(
+            dto.getProject(),
+            EntityUtils.getEntityName(Run.class).toLowerCase(),
+            dto.getKind(),
+            dto.getName(),
+            dto.getId()
+        );
+
         return RunEntity.builder()
             .id(dto.getId())
             .name(dto.getName())
             .kind(dto.getKind())
             .project(dto.getProject())
+            .key(key)
             .metadata(converter.convertToDatabaseColumn(dto.getMetadata()))
             .spec(converter.convertToDatabaseColumn(dto.getSpec()))
             .status(converter.convertToDatabaseColumn(dto.getStatus()))
@@ -94,10 +99,5 @@ public class RunEntityBuilder implements Converter<Run, RunEntity> {
                     : null
             )
             .build();
-    }
-
-    @Override
-    public RunEntity convert(Run source) {
-        return build(source);
     }
 }

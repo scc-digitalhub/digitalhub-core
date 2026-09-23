@@ -251,10 +251,34 @@ public class ArtifactManagerImpl implements ArtifactManager {
     }
 
     @Override
-    public Artifact getLatestArtifact(@NotNull String project, @NotNull String name) throws NoSuchEntityException {
+    public Artifact getLatestArtifactByName(@NotNull String project, @NotNull String name)
+        throws NoSuchEntityException {
         log.debug("get latest artifact for project {} with name {}", project, name);
 
         try {
+            return versionableService.getLatest(project, name);
+        } catch (StoreException e) {
+            log.error("store error: {}", e.getMessage());
+            throw new SystemException(e.getMessage());
+        }
+    }
+
+    @Override
+    public Artifact getLatestArtifactByKey(@NotNull String project, @NotNull String key) throws NoSuchEntityException {
+        log.debug("get latest artifact for project {} with key {}", project, key);
+        try {
+            //resolve name
+            Page<Artifact> artifacts = entityService.listByKey(key, Pageable.ofSize(1));
+            if (artifacts.isEmpty()) {
+                throw new NoSuchEntityException("Artifact not found for key: " + key);
+            }
+
+            String name = artifacts
+                .get()
+                .findFirst()
+                .orElseThrow(() -> new NoSuchEntityException("Artifact not found for key: " + key))
+                .getName();
+
             return versionableService.getLatest(project, name);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
