@@ -23,6 +23,8 @@
 
 package it.smartcommunitylabdhub.extensions.persistence;
 
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
+import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import it.smartcommunitylabdhub.extensions.model.Extension;
 import jakarta.persistence.AttributeConverter;
 import java.io.Serializable;
@@ -44,6 +46,15 @@ public class ExtensionEntityBuilder implements Converter<Extension, ExtensionEnt
 
     @Override
     public ExtensionEntity convert(@NonNull Extension dto) {
+        //build key
+        String key = KeyUtils.buildKey(
+            dto.getProject(),
+            EntityUtils.getEntityName(Extension.class).toLowerCase(),
+            dto.getKind(),
+            dto.getName(),
+            dto.getId()
+        );
+
         return ExtensionEntity.builder()
             .id(dto.getId())
             .entity(dto.getEntity())
@@ -51,6 +62,7 @@ public class ExtensionEntityBuilder implements Converter<Extension, ExtensionEnt
             .parent(dto.getParent())
             .name(dto.getName())
             .kind(dto.getKind())
+            .key(key)
             .spec(converter.convertToDatabaseColumn(dto.getSpec()))
             .build();
     }

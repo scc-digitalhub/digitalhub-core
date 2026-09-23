@@ -268,9 +268,33 @@ public class WorkflowManagerImpl implements WorkflowManager {
     }
 
     @Override
-    public Workflow getLatestWorkflow(@NotNull String project, @NotNull String name) throws NoSuchEntityException {
+    public Workflow getLatestWorkflowByName(@NotNull String project, @NotNull String name)
+        throws NoSuchEntityException {
         log.debug("get latest workflow for project {} with name {}", project, name);
         try {
+            return versionableService.getLatest(project, name);
+        } catch (StoreException e) {
+            log.error("store error: {}", e.getMessage());
+            throw new SystemException(e.getMessage());
+        }
+    }
+
+    @Override
+    public Workflow getLatestWorkflowByKey(@NotNull String project, @NotNull String key) throws NoSuchEntityException {
+        log.debug("get latest workflow for project {} with key {}", project, key);
+        try {
+            //resolve name
+            Page<Workflow> workflows = entityService.listByKey(key, Pageable.ofSize(1));
+            if (workflows.isEmpty()) {
+                throw new NoSuchEntityException("Workflow not found for key: " + key);
+            }
+
+            String name = workflows
+                .get()
+                .findFirst()
+                .orElseThrow(() -> new NoSuchEntityException("Workflow not found for key: " + key))
+                .getName();
+
             return versionableService.getLatest(project, name);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
@@ -363,14 +387,13 @@ public class WorkflowManagerImpl implements WorkflowManager {
             }
 
             //define a spec for tasks building workflow path
-            String path =
-                (workflow.getKind() +
-                    "://" +
-                    workflow.getProject() +
-                    "/" +
-                    workflow.getName() +
-                    ":" +
-                    workflow.getId());
+            String path = (workflow.getKind() +
+                "://" +
+                workflow.getProject() +
+                "/" +
+                workflow.getName() +
+                ":" +
+                workflow.getId());
 
             Specification<TaskEntity> where = Specification.allOf(
                 CommonSpecification.projectEquals(workflow.getProject()),

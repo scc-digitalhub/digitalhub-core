@@ -174,7 +174,18 @@ public interface ModelManager {
      * @return
      * @throws NoSuchEntityException
      */
-    Model getLatestModel(@NotNull String project, @NotNull String name) throws NoSuchEntityException, SystemException;
+    Model getLatestModelByName(@NotNull String project, @NotNull String name)
+        throws NoSuchEntityException, SystemException;
+
+    /**
+     * Get the latest version of a given model by its key
+     * @param project
+     * @param key
+     * @return
+     * @throws NoSuchEntityException
+     */
+    Model getLatestModelByKey(@NotNull String project, @NotNull String key)
+        throws NoSuchEntityException, SystemException;
 
     /**
      * Create a new model and store it

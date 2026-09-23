@@ -28,13 +28,22 @@ import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import java.util.List;
+import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.lang.NonNull;
 
 public interface SearchableEntityRepository<E extends BaseEntity, D extends BaseDTO> extends EntityRepository<D> {
     List<D> searchAll(Specification<E> specification) throws StoreException;
+    List<D> searchAll(Example<E> example) throws StoreException;
+
+    <T> List<T> searchAll(Specification<E> specification, @NonNull Class<T> projection) throws StoreException;
+    <T> List<T> searchAll(Example<E> example, @NonNull Class<T> projection) throws StoreException;
+
     Page<D> search(Specification<E> specification, Pageable page) throws StoreException;
+    Page<D> search(Example<E> example, Pageable page) throws StoreException;
 
     long deleteAll(Specification<E> specification) throws StoreException;
+    long deleteAll(Example<E> example) throws StoreException;
 }

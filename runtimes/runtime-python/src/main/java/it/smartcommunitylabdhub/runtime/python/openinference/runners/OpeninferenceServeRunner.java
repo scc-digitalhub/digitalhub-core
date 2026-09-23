@@ -132,7 +132,7 @@ public class OpeninferenceServeRunner extends PythonBaseRunner {
 
         if (functionService != null) {
             //check if latest
-            Function latest = functionService.getLatestFunction(run.getProject(), taskAccessor.getFunction());
+            Function latest = functionService.getLatestFunctionByName(run.getProject(), taskAccessor.getFunction());
             if (taskAccessor.getFunctionId().equals(latest.getId())) {
                 //prepend with function name
                 serviceNames.add(taskAccessor.getFunction() + "-latest");

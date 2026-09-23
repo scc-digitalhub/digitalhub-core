@@ -25,6 +25,8 @@ package it.smartcommunitylabdhub.containerimage.persistence;
 
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
+import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import it.smartcommunitylabdhub.containerimage.ContainerImage;
 import it.smartcommunitylabdhub.containerimage.lifecycle.ContainerImageState;
 import it.smartcommunitylabdhub.containerimage.specs.ContainerImageBaseSpec;
@@ -54,11 +56,21 @@ public class ContainerImageEntityBuilder implements Converter<ContainerImage, Co
         ContainerImageBaseSpec spec = new ContainerImageBaseSpec();
         spec.configure(dto.getSpec());
 
+        //build key
+        String key = KeyUtils.buildKey(
+            dto.getProject(),
+            EntityUtils.getEntityName(ContainerImage.class).toLowerCase(),
+            dto.getKind(),
+            dto.getName(),
+            dto.getId()
+        );
+
         return ContainerImageEntity.builder()
             .id(dto.getId())
             .name(dto.getName())
             .kind(dto.getKind())
             .project(dto.getProject())
+            .key(key)
             .image(spec.getImage())
             .metadata(converter.convertToDatabaseColumn(dto.getMetadata()))
             .spec(converter.convertToDatabaseColumn(dto.getSpec()))

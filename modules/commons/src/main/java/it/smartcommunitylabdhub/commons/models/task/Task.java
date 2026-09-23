@@ -28,7 +28,6 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
-import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
@@ -59,6 +58,10 @@ public class Task implements BaseDTO, SpecDTO {
     @Pattern(regexp = Keys.SLUG_PATTERN)
     private String project;
 
+    @Nullable
+    @Pattern(regexp = Keys.KEY_PATTERN)
+    private String key;
+
     private String user;
 
     @NotNull
@@ -72,19 +75,5 @@ public class Task implements BaseDTO, SpecDTO {
     @Override
     public String getName() {
         return id;
-    }
-
-    @Override
-    public String getKey() {
-        return (
-            Keys.STORE_PREFIX +
-            getProject() +
-            Keys.PATH_DIVIDER +
-            EntityUtils.getEntityName(Task.class).toLowerCase() +
-            Keys.PATH_DIVIDER +
-            getKind() +
-            Keys.PATH_DIVIDER +
-            getId()
-        );
     }
 }

@@ -31,6 +31,8 @@ public interface BaseEntity extends Serializable {
 
     String getName();
 
+    String getKey();
+
     String getKind();
 
     String getProject();

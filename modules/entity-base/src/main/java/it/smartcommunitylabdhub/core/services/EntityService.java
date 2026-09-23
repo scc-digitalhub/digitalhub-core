@@ -62,6 +62,9 @@ public interface EntityService<D extends BaseDTO> {
     List<D> listAll() throws StoreException;
     Page<D> list(Pageable page) throws StoreException;
 
+    List<D> listByKey(@NotNull String key) throws StoreException;
+    Page<D> listByKey(@NotNull String key, Pageable page) throws StoreException;
+
     List<D> listByUser(@NotNull String user) throws StoreException;
     Page<D> listByUser(@NotNull String user, Pageable page) throws StoreException;
 

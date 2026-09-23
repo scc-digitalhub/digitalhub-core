@@ -24,6 +24,8 @@
 package it.smartcommunitylabdhub.dataitems.builders;
 
 import it.smartcommunitylabdhub.commons.models.metadata.EmbeddableMetadata;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
+import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.metadata.AuditMetadataBuilder;
 import it.smartcommunitylabdhub.core.metadata.BaseMetadataBuilder;
@@ -37,6 +39,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -66,7 +69,8 @@ public class DataItemDTOBuilder implements Converter<DataItemEntity, DataItem> {
         this.versioningMetadataBuilder = versioningMetadataBuilder;
     }
 
-    public DataItem build(DataItemEntity entity) {
+    @Override
+    public DataItem convert(@NonNull DataItemEntity entity) {
         //read metadata map as-is
         Map<String, Serializable> meta = converter.convertToEntityAttribute(entity.getMetadata());
 
@@ -88,6 +92,17 @@ public class DataItemDTOBuilder implements Converter<DataItemEntity, DataItem> {
             .kind(entity.getKind())
             .project(entity.getProject())
             .user(entity.getCreatedBy())
+            .key(
+                entity.getKey() != null
+                    ? entity.getKey()
+                    : KeyUtils.buildKey(
+                          entity.getProject(),
+                          EntityUtils.getEntityName(DataItem.class).toLowerCase(),
+                          entity.getKind(),
+                          entity.getName(),
+                          entity.getId()
+                      )
+            )
             .metadata(metadata)
             .spec(converter.convertToEntityAttribute(entity.getSpec()))
             .status(
@@ -97,10 +112,5 @@ public class DataItemDTOBuilder implements Converter<DataItemEntity, DataItem> {
                 )
             )
             .build();
-    }
-
-    @Override
-    public DataItem convert(DataItemEntity source) {
-        return build(source);
     }
 }

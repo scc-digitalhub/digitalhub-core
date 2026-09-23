@@ -57,7 +57,7 @@ public class Template implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO {
     private String id;
 
     @NotNull
-    @Pattern(regexp = Keys.SLUG_PATTERN)
+    @Pattern(regexp = Keys.NAME_PATTERN)
     private String name;
 
     @NotNull

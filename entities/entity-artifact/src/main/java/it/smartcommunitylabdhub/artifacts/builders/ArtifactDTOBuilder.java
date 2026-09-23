@@ -26,6 +26,8 @@ package it.smartcommunitylabdhub.artifacts.builders;
 import it.smartcommunitylabdhub.artifacts.Artifact;
 import it.smartcommunitylabdhub.artifacts.persistence.ArtifactEntity;
 import it.smartcommunitylabdhub.commons.models.metadata.EmbeddableMetadata;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
+import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.metadata.AuditMetadataBuilder;
 import it.smartcommunitylabdhub.core.metadata.BaseMetadataBuilder;
@@ -37,6 +39,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -66,7 +69,8 @@ public class ArtifactDTOBuilder implements Converter<ArtifactEntity, Artifact> {
         this.versioningMetadataBuilder = versioningMetadataBuilder;
     }
 
-    public Artifact build(ArtifactEntity entity) {
+    @Override
+    public Artifact convert(@NonNull ArtifactEntity entity) {
         //read metadata map as-is
         Map<String, Serializable> meta = converter.convertToEntityAttribute(entity.getMetadata());
 
@@ -87,6 +91,17 @@ public class ArtifactDTOBuilder implements Converter<ArtifactEntity, Artifact> {
             .name(entity.getName())
             .kind(entity.getKind())
             .project(entity.getProject())
+            .key(
+                entity.getKey() != null
+                    ? entity.getKey()
+                    : KeyUtils.buildKey(
+                          entity.getProject(),
+                          EntityUtils.getEntityName(Artifact.class).toLowerCase(),
+                          entity.getKind(),
+                          entity.getName(),
+                          entity.getId()
+                      )
+            )
             .user(entity.getCreatedBy())
             .metadata(metadata)
             .spec(converter.convertToEntityAttribute(entity.getSpec()))
@@ -97,10 +112,5 @@ public class ArtifactDTOBuilder implements Converter<ArtifactEntity, Artifact> {
                 )
             )
             .build();
-    }
-
-    @Override
-    public Artifact convert(ArtifactEntity source) {
-        return build(source);
     }
 }

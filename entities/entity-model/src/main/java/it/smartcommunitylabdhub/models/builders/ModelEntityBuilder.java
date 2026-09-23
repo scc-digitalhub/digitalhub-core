@@ -26,6 +26,8 @@ package it.smartcommunitylabdhub.models.builders;
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
 import it.smartcommunitylabdhub.commons.models.metadata.EmbeddableMetadata;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
+import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import it.smartcommunitylabdhub.models.Model;
 import it.smartcommunitylabdhub.models.lifecycle.ModelState;
 import it.smartcommunitylabdhub.models.persistence.ModelEntity;
@@ -54,11 +56,21 @@ public class ModelEntityBuilder implements Converter<Model, ModelEntity> {
         BaseMetadata metadata = BaseMetadata.from(dto.getMetadata());
         EmbeddableMetadata embeddable = EmbeddableMetadata.from(dto.getMetadata());
 
+        //build key
+        String key = KeyUtils.buildKey(
+            dto.getProject(),
+            EntityUtils.getEntityName(Model.class).toLowerCase(),
+            dto.getKind(),
+            dto.getName(),
+            dto.getId()
+        );
+
         return ModelEntity.builder()
             .id(dto.getId())
             .name(dto.getName())
             .kind(dto.getKind())
             .project(dto.getProject())
+            .key(key)
             .metadata(converter.convertToDatabaseColumn(dto.getMetadata()))
             .spec(converter.convertToDatabaseColumn(dto.getSpec()))
             .status(converter.convertToDatabaseColumn(dto.getStatus()))

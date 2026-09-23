@@ -24,6 +24,8 @@
 package it.smartcommunitylabdhub.runs.persistence;
 
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
+import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.metadata.AuditMetadataBuilder;
 import it.smartcommunitylabdhub.core.metadata.BaseMetadataBuilder;
@@ -36,6 +38,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -62,7 +65,8 @@ public class RunDTOBuilder implements Converter<RunEntity, Run> {
         this.auditingMetadataBuilder = auditingMetadataBuilder;
     }
 
-    public Run build(RunEntity entity) {
+    @Override
+    public Run convert(@NonNull RunEntity entity) {
         //extract spec now
         Map<String, Serializable> spec = converter.convertToEntityAttribute(entity.getSpec());
         RunSpecAccessor accessor = RunSpecAccessor.with(spec);
@@ -92,6 +96,17 @@ public class RunDTOBuilder implements Converter<RunEntity, Run> {
             .id(entity.getId())
             .name(name)
             .kind(entity.getKind())
+            .key(
+                entity.getKey() != null
+                    ? entity.getKey()
+                    : KeyUtils.buildKey(
+                          entity.getProject(),
+                          EntityUtils.getEntityName(Run.class).toLowerCase(),
+                          entity.getKind(),
+                          entity.getName(),
+                          entity.getId()
+                      )
+            )
             .project(entity.getProject())
             .user(entity.getCreatedBy())
             .metadata(metadata)
@@ -103,10 +118,5 @@ public class RunDTOBuilder implements Converter<RunEntity, Run> {
                 )
             )
             .build();
-    }
-
-    @Override
-    public Run convert(RunEntity source) {
-        return build(source);
     }
 }

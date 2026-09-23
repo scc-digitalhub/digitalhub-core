@@ -57,7 +57,7 @@ public abstract class AbstractEntityFilter<T extends BaseDTO> {
     protected String q;
 
     @Nullable
-    @Pattern(regexp = Keys.SLUG_PATTERN)
+    @Pattern(regexp = Keys.NAME_PATTERN)
     @Schema(example = "my-function-1", defaultValue = "", description = "Name identifier")
     protected String name;
 
@@ -69,6 +69,11 @@ public abstract class AbstractEntityFilter<T extends BaseDTO> {
     @Nullable
     @Pattern(regexp = Keys.SLUG_PATTERN)
     protected String project;
+
+    @Nullable
+    @Pattern(regexp = Keys.KEY_PATTERN)
+    @Schema(example = "store://project/artifact/name:id", defaultValue = "", description = "Key identifier")
+    protected String key;
 
     @Nullable
     protected String user;
@@ -106,6 +111,10 @@ public abstract class AbstractEntityFilter<T extends BaseDTO> {
 
         Optional.ofNullable(project).ifPresent(value ->
             criteria.add(new BaseEntitySearchCriteria<>("project", value, SearchCriteria.Operation.equal))
+        );
+
+        Optional.ofNullable(key).ifPresent(value ->
+            criteria.add(new BaseEntitySearchCriteria<>("key", value, SearchCriteria.Operation.equal))
         );
 
         Optional.ofNullable(user).ifPresent(value ->

@@ -30,7 +30,6 @@ import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
-import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.extensions.model.ExtensibleDTO;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -61,6 +60,10 @@ public class Run implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO, Extensible
     @Pattern(regexp = Keys.SLUG_PATTERN)
     private String id;
 
+    @NotNull
+    @Pattern(regexp = Keys.KIND_PATTERN)
+    private String kind;
+
     @Nullable
     @Pattern(regexp = Keys.SLUG_PATTERN)
     private String name;
@@ -69,11 +72,11 @@ public class Run implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO, Extensible
     @Pattern(regexp = Keys.SLUG_PATTERN)
     private String project;
 
-    private String user;
+    @Nullable
+    @Pattern(regexp = Keys.KEY_PATTERN)
+    private String key;
 
-    @NotNull
-    @Pattern(regexp = Keys.KIND_PATTERN)
-    private String kind;
+    private String user;
 
     @Builder.Default
     private Map<String, Serializable> metadata = new HashMap<>();
@@ -92,21 +95,5 @@ public class Run implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO, Extensible
     @Override
     public String getName() {
         return StringUtils.hasText(name) ? name : id;
-    }
-
-    @Override
-    public String getKey() {
-        return (
-            Keys.STORE_PREFIX +
-            getProject() +
-            Keys.PATH_DIVIDER +
-            EntityUtils.getEntityName(Run.class).toLowerCase() +
-            Keys.PATH_DIVIDER +
-            getKind() +
-            Keys.PATH_DIVIDER +
-            getId() +
-            Keys.ID_DIVIDER +
-            getId()
-        );
     }
 }

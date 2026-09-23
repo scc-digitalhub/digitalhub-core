@@ -115,7 +115,7 @@ public class TvmServeRunner extends TvmBaseBuildRunner {
         // best-effort, must not fail serve.
         if (functionService != null) {
             try {
-                Function latest = functionService.getLatestFunction(run.getProject(), funcName);
+                Function latest = functionService.getLatestFunctionByName(run.getProject(), funcName);
                 if (latest != null && latest.getId().equals(taskAccessor.getFunctionId())) {
                     serviceNames.add(funcName + "-latest");
                 }

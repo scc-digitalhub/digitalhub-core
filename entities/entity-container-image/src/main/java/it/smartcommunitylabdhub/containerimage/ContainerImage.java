@@ -30,7 +30,6 @@ import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
-import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
@@ -58,7 +57,7 @@ public class ContainerImage implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO 
     private String id;
 
     @NotNull
-    @Pattern(regexp = Keys.SLUG_PATTERN)
+    @Pattern(regexp = Keys.NAME_PATTERN)
     private String name;
 
     @NotNull
@@ -68,6 +67,10 @@ public class ContainerImage implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO 
     @NotNull
     @Pattern(regexp = Keys.SLUG_PATTERN)
     private String project;
+
+    @Nullable
+    @Pattern(regexp = Keys.KEY_PATTERN)
+    private String key;
 
     private String user;
 
@@ -83,18 +86,4 @@ public class ContainerImage implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO 
     @Nullable
     @Builder.Default
     private Map<String, Serializable> status = new HashMap<>();
-
-    @Override
-    public String getKey() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(Keys.STORE_PREFIX).append(getProject());
-        sb.append(Keys.PATH_DIVIDER).append(EntityUtils.getEntityName(ContainerImage.class).toLowerCase());
-        sb.append(Keys.PATH_DIVIDER).append(getKind());
-        sb.append(Keys.PATH_DIVIDER).append(getName());
-        if (getId() != null) {
-            sb.append(Keys.ID_DIVIDER).append(getId());
-        }
-
-        return sb.toString();
-    }
 }

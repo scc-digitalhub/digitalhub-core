@@ -131,7 +131,7 @@ public class MlflowBuildRunner {
                 Model model =
                     keyAccessor.getId() != null
                         ? modelService.findModel(keyAccessor.getId())
-                        : modelService.getLatestModel(keyAccessor.getProject(), keyAccessor.getName());
+                        : modelService.getLatestModelByKey(keyAccessor.getProject(), path);
                 if (model == null) {
                     throw new CoreRuntimeException("invalid entity reference, MLFlow model not found");
                 }

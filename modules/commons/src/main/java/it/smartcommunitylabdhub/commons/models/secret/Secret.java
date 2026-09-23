@@ -30,7 +30,6 @@ import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
-import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
@@ -69,6 +68,10 @@ public class Secret implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO {
     @Pattern(regexp = Keys.SLUG_PATTERN)
     private String project;
 
+    @Nullable
+    @Pattern(regexp = Keys.KEY_PATTERN)
+    private String key;
+
     private String user;
 
     @Builder.Default
@@ -80,18 +83,4 @@ public class Secret implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO {
 
     @Builder.Default
     private Map<String, Serializable> status = new HashMap<>();
-
-    @Override
-    public String getKey() {
-        return (
-            Keys.STORE_PREFIX +
-            getProject() +
-            Keys.PATH_DIVIDER +
-            EntityUtils.getEntityName(Secret.class).toLowerCase() +
-            Keys.PATH_DIVIDER +
-            getKind() +
-            Keys.PATH_DIVIDER +
-            getName()
-        );
-    }
 }

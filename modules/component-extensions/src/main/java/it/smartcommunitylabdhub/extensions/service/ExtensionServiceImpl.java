@@ -531,6 +531,18 @@ public class ExtensionServiceImpl implements EntityService<Extension>, Extension
     }
 
     @Override
+    public List<Extension> listByKey(@NotNull String key) throws StoreException {
+        log.debug("list extensions by key {}", key);
+        return entityRepository.searchAll(CommonSpecification.keyEquals(key));
+    }
+
+    @Override
+    public Page<Extension> listByKey(@NotNull String key, Pageable page) throws StoreException {
+        log.debug("list extensions by key {} page {}", key, page);
+        return entityRepository.search(CommonSpecification.keyEquals(key), page);
+    }
+
+    @Override
     public List<Extension> listByUser(@NotNull String user) throws StoreException {
         log.debug("list extensions by user {}", user);
         return entityRepository.searchAll(CommonSpecification.createdByEquals(user));

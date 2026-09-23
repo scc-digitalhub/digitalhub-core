@@ -250,10 +250,34 @@ public class DataItemManagerImpl implements DataItemManager {
     }
 
     @Override
-    public DataItem getLatestDataItem(@NotNull String project, @NotNull String name) throws NoSuchEntityException {
+    public DataItem getLatestDataItemByName(@NotNull String project, @NotNull String name)
+        throws NoSuchEntityException {
         log.debug("get latest dataItem for project {} with name {}", project, name);
 
         try {
+            return versionableService.getLatest(project, name);
+        } catch (StoreException e) {
+            log.error("store error: {}", e.getMessage());
+            throw new SystemException(e.getMessage());
+        }
+    }
+
+    @Override
+    public DataItem getLatestDataItemByKey(@NotNull String project, @NotNull String key) throws NoSuchEntityException {
+        log.debug("get latest dataItem for project {} with key {}", project, key);
+        try {
+            //resolve name
+            Page<DataItem> dataItems = entityService.listByKey(key, Pageable.ofSize(1));
+            if (dataItems.isEmpty()) {
+                throw new NoSuchEntityException("DataItem not found for key: " + key);
+            }
+
+            String name = dataItems
+                .get()
+                .findFirst()
+                .orElseThrow(() -> new NoSuchEntityException("Function not found for key: " + key))
+                .getName();
+
             return versionableService.getLatest(project, name);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());

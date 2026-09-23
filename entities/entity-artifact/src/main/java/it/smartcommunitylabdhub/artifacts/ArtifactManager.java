@@ -179,9 +179,18 @@ public interface ArtifactManager {
      * @return
      * @throws NoSuchEntityException
      */
-    Artifact getLatestArtifact(@NotNull String project, @NotNull String name)
+    Artifact getLatestArtifactByName(@NotNull String project, @NotNull String name)
         throws NoSuchEntityException, SystemException;
 
+    /**
+     * Get the latest version of a given artifact by its key
+     * @param project
+     * @param key
+     * @return
+     * @throws NoSuchEntityException
+     */
+    Artifact getLatestArtifactByKey(@NotNull String project, @NotNull String key)
+        throws NoSuchEntityException, SystemException;
     /**
      * Create a new artifact and store it
      * @param artifactDTO

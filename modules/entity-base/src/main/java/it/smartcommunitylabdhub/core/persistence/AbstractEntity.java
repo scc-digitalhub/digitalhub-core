@@ -65,6 +65,9 @@ public abstract class AbstractEntity implements BaseEntity {
     @Column(nullable = false, updatable = false)
     protected String project;
 
+    @Column(unique = true, updatable = false, name = "entity_key")
+    protected String key;
+
     @CreatedDate
     @Column(updatable = false)
     protected Date created;

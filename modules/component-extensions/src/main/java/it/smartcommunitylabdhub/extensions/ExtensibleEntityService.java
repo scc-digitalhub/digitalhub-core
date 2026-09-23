@@ -328,6 +328,16 @@ public class ExtensibleEntityService<D extends ExtensibleDTO & BaseDTO> implemen
     }
 
     @Override
+    public List<D> listByKey(@NotNull String key) throws StoreException {
+        return delegate.listByKey(key);
+    }
+
+    @Override
+    public Page<D> listByKey(@NotNull String key, Pageable page) throws StoreException {
+        return delegate.listByKey(key, page);
+    }
+
+    @Override
     public List<D> listByUser(@NotNull String user) throws StoreException {
         return delegate.listByUser(user);
     }

@@ -23,6 +23,8 @@
 
 package it.smartcommunitylabdhub.containerimage.persistence;
 
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
+import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.containerimage.ContainerImage;
 import it.smartcommunitylabdhub.core.metadata.AuditMetadataBuilder;
@@ -83,6 +85,17 @@ public class ContainerImageDTOBuilder implements Converter<ContainerImageEntity,
             .name(entity.getName())
             .kind(entity.getKind())
             .project(entity.getProject())
+            .key(
+                entity.getKey() != null
+                    ? entity.getKey()
+                    : KeyUtils.buildKey(
+                          entity.getProject(),
+                          EntityUtils.getEntityName(ContainerImage.class).toLowerCase(),
+                          entity.getKind(),
+                          entity.getName(),
+                          entity.getId()
+                      )
+            )
             .user(entity.getCreatedBy())
             .metadata(metadata)
             .spec(converter.convertToEntityAttribute(entity.getSpec()))

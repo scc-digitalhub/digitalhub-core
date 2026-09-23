@@ -38,6 +38,12 @@ public class CommonSpecification {
         };
     }
 
+    public static <T extends BaseEntity> Specification<T> keyEquals(String key) {
+        return (root, query, criteriaBuilder) -> {
+            return criteriaBuilder.equal(root.get(AbstractEntity_.KEY), key);
+        };
+    }
+
     public static <T extends BaseEntity> Specification<T> createdByEquals(String user) {
         return (root, query, criteriaBuilder) -> {
             return criteriaBuilder.equal(root.get(AbstractEntity_.CREATED_BY), user);

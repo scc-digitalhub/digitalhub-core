@@ -128,7 +128,7 @@ public class FunctionContextController {
     @DeleteMapping(path = "")
     public void deleteAllFunction(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @ParameterObject @RequestParam @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String name
+        @ParameterObject @RequestParam @Valid @NotNull @Pattern(regexp = Keys.NAME_PATTERN) String name
     ) {
         functionManager.deleteFunctions(project, name);
     }
