@@ -29,6 +29,7 @@ import it.smartcommunitylabdhub.framework.k8s.jackson.KubernetesModule;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sTemplate;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import java.util.Collection;
+import java.util.Collections;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +44,7 @@ public class K8sConfigProvider implements ConfigurationProvider, InitializingBea
 
     private K8sConfig config;
     private KubernetesModule module;
+    private Collection<K8sTemplate<K8sRunnable>> templates = Collections.emptyList();
 
     public K8sConfigProvider(KubernetesProperties properties) {
         Assert.notNull(properties, "properties can not be null");
@@ -79,7 +81,9 @@ public class K8sConfigProvider implements ConfigurationProvider, InitializingBea
     @Autowired(required = false)
     public void setTemplates(Collection<K8sTemplate<K8sRunnable>> templates) {
         if (templates != null && !templates.isEmpty()) {
-            this.config.setProfiles(templates.stream().map(K8sTemplate::getId).toList());
+            this.templates = templates;
+
+            this.config.setProfiles(this.templates.stream().map(K8sTemplate::getId).toList());
         } else {
             this.config.setProfiles(null);
         }
@@ -88,6 +92,10 @@ public class K8sConfigProvider implements ConfigurationProvider, InitializingBea
     @Override
     public K8sConfig getConfig() {
         return config;
+    }
+
+    public Collection<K8sTemplate<K8sRunnable>> getTemplates() {
+        return Collections.unmodifiableCollection(templates);
     }
 
     @Override

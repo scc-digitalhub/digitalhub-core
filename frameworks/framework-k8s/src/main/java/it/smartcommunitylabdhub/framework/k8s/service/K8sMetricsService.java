@@ -12,6 +12,7 @@ import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1PersistentVolumeClaim;
+import io.kubernetes.client.openapi.models.V1Pod;
 import it.smartcommunitylabdhub.commons.config.ApplicationProperties;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
@@ -54,7 +55,7 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
     private ResourceMetricsStore store;
 
     //loading cache for pod metrics
-    LoadingCache<Pair<String, String>, List<PodMetrics>> podCache = CacheBuilder.newBuilder()
+    LoadingCache<Pair<String, String>, List<PodMetrics>> podMetricsCache = CacheBuilder.newBuilder()
         .expireAfterWrite(CACHE_TIMEOUT, TimeUnit.SECONDS)
         .build(
             new CacheLoader<Pair<String, String>, List<PodMetrics>>() {
@@ -73,6 +74,18 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
                 @Override
                 public List<V1PersistentVolumeClaim> load(@Nonnull Pair<String, String> key) throws Exception {
                     return fetchPvcs(key.getFirst(), key.getSecond());
+                }
+            }
+        );
+
+    //loading cache for pods
+    LoadingCache<Pair<String, String>, List<V1Pod>> podCache = CacheBuilder.newBuilder()
+        .expireAfterWrite(CACHE_TIMEOUT, TimeUnit.SECONDS)
+        .build(
+            new CacheLoader<Pair<String, String>, List<V1Pod>>() {
+                @Override
+                public List<V1Pod> load(@Nonnull Pair<String, String> key) throws Exception {
+                    return fetchPods(key.getFirst(), key.getSecond());
                 }
             }
         );
@@ -186,10 +199,29 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
         }
     }
 
+    private List<V1Pod> fetchPods(@Nonnull String key, @Nonnull String value) throws StoreException {
+        Entry<String, String> label = k8sLabelHelper.buildCoreLabel(key, value);
+        try {
+            String labelSelector = label.getKey() + "=" + label.getValue();
+            List<V1Pod> pods = coreV1Api
+                .listNamespacedPod(namespace, null, null, null, null, labelSelector, null, null, null, null, null, null)
+                .getItems();
+
+            return pods;
+        } catch (ApiException e) {
+            log.error("Error with k8s: {}", e.getMessage());
+            if (log.isTraceEnabled()) {
+                log.trace("k8s api response: {}", e.getResponseBody());
+            }
+
+            return List.of();
+        }
+    }
+
     /* API */
     public List<PodMetrics> listPodMetrics(String key, String value) throws StoreException {
         try {
-            List<PodMetrics> mv = podCache.get(Pair.of(key, value));
+            List<PodMetrics> mv = podMetricsCache.get(Pair.of(key, value));
             if (log.isTraceEnabled()) {
                 log.trace("Metrics for {} {}: {}", key, value, mv);
             }
@@ -210,6 +242,19 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
             return mv;
         } catch (Exception e) {
             throw new StoreException("Error getting pvcs for " + key + " " + value, e);
+        }
+    }
+
+    public List<V1Pod> listPods(String key, String value) throws StoreException {
+        try {
+            List<V1Pod> mv = podCache.get(Pair.of(key, value));
+            if (log.isTraceEnabled()) {
+                log.trace("Pods for {} {}: {}", key, value, mv);
+            }
+
+            return mv;
+        } catch (Exception e) {
+            throw new StoreException("Error getting pods for " + key + " " + value, e);
         }
     }
 
@@ -917,7 +962,7 @@ public class K8sMetricsService implements ResourceMetricsService, InitializingBe
         return List.of();
     }
 
-    private List<ResourceMetrics.Summary> summarize(List<ResourceMetrics.Metric> metrics) {
+    public static List<ResourceMetrics.Summary> summarize(List<ResourceMetrics.Metric> metrics) {
         if (metrics != null) {
             Double sum = metrics.stream().mapToDouble(ResourceMetrics.Metric::value).sum();
             Double avg = metrics.stream().mapToDouble(ResourceMetrics.Metric::value).average().orElse(0.0);
