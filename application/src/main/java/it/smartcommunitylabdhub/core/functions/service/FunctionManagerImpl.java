@@ -265,9 +265,33 @@ public class FunctionManagerImpl implements FunctionManager {
     }
 
     @Override
-    public Function getLatestFunction(@NotNull String project, @NotNull String name) throws NoSuchEntityException {
+    public Function getLatestFunctionByName(@NotNull String project, @NotNull String name)
+        throws NoSuchEntityException {
         log.debug("get latest function for project {} with name {}", project, name);
         try {
+            return versionableService.getLatest(project, name);
+        } catch (StoreException e) {
+            log.error("store error: {}", e.getMessage());
+            throw new SystemException(e.getMessage());
+        }
+    }
+
+    @Override
+    public Function getLatestFunctionByKey(@NotNull String project, @NotNull String key) throws NoSuchEntityException {
+        log.debug("get latest function for project {} with key {}", project, key);
+        try {
+            //resolve name
+            Page<Function> functions = entityService.listByKey(key, Pageable.ofSize(1));
+            if (functions.isEmpty()) {
+                throw new NoSuchEntityException("Function not found for key: " + key);
+            }
+
+            String name = functions
+                .get()
+                .findFirst()
+                .orElseThrow(() -> new NoSuchEntityException("Function not found for key: " + key))
+                .getName();
+
             return versionableService.getLatest(project, name);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
@@ -361,14 +385,13 @@ public class FunctionManagerImpl implements FunctionManager {
             }
 
             //define a spec for tasks building function path
-            String path =
-                (function.getKind() +
-                    "://" +
-                    function.getProject() +
-                    "/" +
-                    function.getName() +
-                    ":" +
-                    function.getId());
+            String path = (function.getKind() +
+                "://" +
+                function.getProject() +
+                "/" +
+                function.getName() +
+                ":" +
+                function.getId());
 
             Specification<TaskEntity> where = Specification.allOf(
                 CommonSpecification.projectEquals(function.getProject()),

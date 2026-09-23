@@ -144,7 +144,7 @@ public class ArtifactContextController {
     @DeleteMapping(path = "")
     public void deleteAllArtifacts(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @ParameterObject @RequestParam @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String name,
+        @ParameterObject @RequestParam @Valid @NotNull @Pattern(regexp = Keys.NAME_PATTERN) String name,
         @RequestParam(required = false) Boolean cascade
     ) {
         artifactManager.deleteArtifacts(project, name, cascade);
@@ -254,7 +254,7 @@ public class ArtifactContextController {
     public UploadInfo uploadAsUrlArtifactById(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @RequestParam(required = false) @Valid @Nullable @Pattern(regexp = Keys.SLUG_PATTERN) String name,
+        @RequestParam(required = false) @Valid @Nullable @Pattern(regexp = Keys.NAME_PATTERN) String name,
         @RequestParam @NotNull String filename
     ) throws NoSuchEntityException {
         Artifact artifact = artifactManager.findArtifact(id);
@@ -277,7 +277,7 @@ public class ArtifactContextController {
     public UploadInfo multipartStartUploadAsUrlArtifactById(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @RequestParam(required = false) @Valid @Nullable @Pattern(regexp = Keys.SLUG_PATTERN) String name,
+        @RequestParam(required = false) @Valid @Nullable @Pattern(regexp = Keys.NAME_PATTERN) String name,
         @RequestParam @NotNull String filename
     ) throws NoSuchEntityException {
         Artifact artifact = artifactManager.findArtifact(id);

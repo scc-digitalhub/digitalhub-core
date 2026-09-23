@@ -163,7 +163,7 @@ public class SklearnServeRunner {
                 Model model =
                     keyAccessor.getId() != null
                         ? modelService.findModel(keyAccessor.getId())
-                        : modelService.getLatestModel(keyAccessor.getProject(), keyAccessor.getName());
+                        : modelService.getLatestModelByKey(keyAccessor.getProject(), path);
                 if (model == null) {
                     throw new CoreRuntimeException("invalid entity reference, sklearn model not found");
                 }
@@ -249,7 +249,7 @@ public class SklearnServeRunner {
 
         if (functionService != null) {
             //check if latest
-            Function latest = functionService.getLatestFunction(run.getProject(), taskAccessor.getFunction());
+            Function latest = functionService.getLatestFunctionByName(run.getProject(), taskAccessor.getFunction());
             if (taskAccessor.getFunctionId().equals(latest.getId())) {
                 //prepend with function name
                 serviceNames.add(taskAccessor.getFunction() + "-latest");

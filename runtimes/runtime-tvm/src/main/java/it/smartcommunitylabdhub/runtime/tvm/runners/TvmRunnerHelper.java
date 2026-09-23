@@ -94,7 +94,7 @@ public final class TvmRunnerHelper {
             model =
                 ka.getId() != null
                     ? modelService.findModel(ka.getId())
-                    : modelService.getLatestModel(ka.getProject(), ka.getName());
+                    : modelService.getLatestModelByKey(ka.getProject(), path);
         } catch (NoSuchEntityException e) {
             model = null;
         }

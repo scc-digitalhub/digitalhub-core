@@ -151,7 +151,7 @@ public class DataItemContextController {
     @DeleteMapping(path = "")
     public void deleteAllDataItem(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @ParameterObject @RequestParam @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String name,
+        @ParameterObject @RequestParam @Valid @NotNull @Pattern(regexp = Keys.NAME_PATTERN) String name,
         @RequestParam(required = false) Boolean cascade
     ) {
         dataItemManager.deleteDataItems(project, name, cascade);
@@ -264,7 +264,7 @@ public class DataItemContextController {
     public UploadInfo uploadAsUrlById(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @RequestParam(required = false) @Valid @Nullable @Pattern(regexp = Keys.SLUG_PATTERN) String name,
+        @RequestParam(required = false) @Valid @Nullable @Pattern(regexp = Keys.NAME_PATTERN) String name,
         @RequestParam @NotNull String filename
     ) throws NoSuchEntityException {
         DataItem entity = dataItemManager.findDataItem(id);
@@ -287,7 +287,7 @@ public class DataItemContextController {
     public UploadInfo multipartStartUploadAsUrlById(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @RequestParam(required = false) @Valid @Nullable @Pattern(regexp = Keys.SLUG_PATTERN) String name,
+        @RequestParam(required = false) @Valid @Nullable @Pattern(regexp = Keys.NAME_PATTERN) String name,
         @RequestParam @NotNull String filename
     ) throws NoSuchEntityException {
         DataItem entity = dataItemManager.findDataItem(id);

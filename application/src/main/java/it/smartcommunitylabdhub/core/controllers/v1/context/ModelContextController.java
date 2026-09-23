@@ -158,7 +158,7 @@ public class ModelContextController {
     @DeleteMapping(path = "")
     public void deleteAllModel(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @ParameterObject @RequestParam @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String name,
+        @ParameterObject @RequestParam @Valid @NotNull @Pattern(regexp = Keys.NAME_PATTERN) String name,
         @RequestParam(required = false) Boolean cascade
     ) {
         modelManager.deleteModels(project, name, cascade);
@@ -271,7 +271,7 @@ public class ModelContextController {
     public UploadInfo uploadAsUrlById(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @RequestParam(required = false) @Valid @Nullable @Pattern(regexp = Keys.SLUG_PATTERN) String name,
+        @RequestParam(required = false) @Valid @Nullable @Pattern(regexp = Keys.NAME_PATTERN) String name,
         @RequestParam @NotNull String filename
     ) throws NoSuchEntityException {
         Model entity = modelManager.findModel(id);
@@ -294,7 +294,7 @@ public class ModelContextController {
     public UploadInfo multipartStartUploadAsUrlById(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @RequestParam(required = false) @Valid @Nullable @Pattern(regexp = Keys.SLUG_PATTERN) String name,
+        @RequestParam(required = false) @Valid @Nullable @Pattern(regexp = Keys.NAME_PATTERN) String name,
         @RequestParam @NotNull String filename
     ) throws NoSuchEntityException {
         Model entity = modelManager.findModel(id);
