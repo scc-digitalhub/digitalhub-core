@@ -44,6 +44,7 @@ import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.events.EntityOperationsListener;
 import it.smartcommunitylabdhub.core.events.EntityOperationsPublisher;
+import it.smartcommunitylabdhub.core.persistence.AbstractEntity;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.core.persistence.SpecEntity;
@@ -58,12 +59,10 @@ import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -290,7 +289,8 @@ public abstract class BaseEntityServiceImpl<
         }
 
         //check for colliding names in the same project
-        if (dto.getName() != null) {
+        //NOTE: we can check for name collisions only for entities that extend AbstractEntity and match the layout
+        if (dto.getName() != null && AbstractEntity.class.isAssignableFrom(clazz)) {
             String key = KeyUtils.encode(dto.getName());
 
             Collection<String> existingNames = Collections.emptySet();

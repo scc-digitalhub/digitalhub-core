@@ -230,32 +230,32 @@ public abstract class BaseEntityRepositoryImpl<
             log.trace("dto: {}", dto);
         }
 
+        //check for existing ids
+        if (dto.getId() != null && (repository.existsById(dto.getId()))) {
+            throw new DuplicatedEntityException(type, dto.getId());
+        }
+
+        //generate id now if missing
+        if (dto.getId() == null) {
+            if (dto instanceof BaseDTO bdto) {
+                String id = keyGenerator.generateKey();
+                bdto.setId(id);
+            } else {
+                //can not autogenerate, throw exception
+                if (log.isDebugEnabled()) {
+                    log.debug("id is null, can not autogenerate for dto {}", dto.getClass().getName());
+                }
+                throw new StoreException("id is null");
+            }
+        }
+        String id = dto.getId();
+
         //build entity
         E entity = entityBuilder.convert(dto);
         if (entity == null) {
             throw new StoreException("failed to convert dto to entity");
         }
 
-        //check for existing ids
-        if (entity.getId() != null && (repository.existsById(entity.getId()))) {
-            throw new DuplicatedEntityException(type, entity.getId());
-        }
-
-        //generate id now if missing
-        if (entity.getId() == null) {
-            if (entity instanceof AbstractEntity) {
-                AbstractEntity ae = (AbstractEntity) entity;
-                String id = keyGenerator.generateKey();
-                ae.setId(id);
-            } else {
-                //can not autogenerate, throw exception
-                if (log.isDebugEnabled()) {
-                    log.debug("id is null, can not autogenerate for entity {}", entity.getClass().getName());
-                }
-                throw new StoreException("id is null");
-            }
-        }
-        String id = entity.getId();
         final E toSave = entity;
 
         try {
