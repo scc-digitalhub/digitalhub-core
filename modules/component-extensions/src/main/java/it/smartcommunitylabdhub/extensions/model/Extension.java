@@ -76,7 +76,7 @@ public class Extension implements BaseDTO, SpecDTO {
     private String project;
 
     @Nullable
-    @Pattern(regexp = Keys.KEY_PATTERN)
+    @Pattern(regexp = Keys.KEY_PATTERN + "|" + Keys.KEY_PATTERN_NO_ID)
     private String key;
 
     private String user;

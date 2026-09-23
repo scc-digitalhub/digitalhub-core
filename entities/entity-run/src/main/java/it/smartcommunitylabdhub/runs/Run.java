@@ -73,7 +73,7 @@ public class Run implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO, Extensible
     private String project;
 
     @Nullable
-    @Pattern(regexp = Keys.KEY_PATTERN)
+    @Pattern(regexp = Keys.KEY_PATTERN + "|" + Keys.KEY_PATTERN_NO_ID)
     private String key;
 
     private String user;

@@ -71,7 +71,7 @@ public abstract class AbstractEntityFilter<T extends BaseDTO> {
     protected String project;
 
     @Nullable
-    @Pattern(regexp = Keys.KEY_PATTERN)
+    @Pattern(regexp = Keys.KEY_PATTERN + "|" + Keys.KEY_PATTERN_NO_ID)
     @Schema(example = "store://project/artifact/name:id", defaultValue = "", description = "Key identifier")
     protected String key;
 
