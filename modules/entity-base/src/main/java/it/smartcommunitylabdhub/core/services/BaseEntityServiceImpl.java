@@ -739,7 +739,9 @@ public abstract class BaseEntityServiceImpl<
                     AbstractEntity_.PROJECT,
                     accessor.getProject(),
                     AbstractEntity_.KIND,
-                    accessor.getKind()
+                    accessor.getKind(),
+                    AbstractEntity_.KEY,
+                    key + ":%"
                 );
 
                 E probe = JacksonMapper.OBJECT_MAPPER.convertValue(probeData, clazz);
@@ -806,7 +808,9 @@ public abstract class BaseEntityServiceImpl<
                     AbstractEntity_.PROJECT,
                     accessor.getProject(),
                     AbstractEntity_.KIND,
-                    accessor.getKind()
+                    accessor.getKind(),
+                    AbstractEntity_.KEY,
+                    key + ":%"
                 );
 
                 E probe = JacksonMapper.OBJECT_MAPPER.convertValue(probeData, clazz);
