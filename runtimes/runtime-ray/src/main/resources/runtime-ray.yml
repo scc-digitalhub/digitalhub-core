@@ -23,3 +23,4 @@ runtime:
     shutdown-after-job-finishes: ${RUNTIME_RAY_SHUTDOWN_AFTER_JOB_FINISHES:true}
     ttl-seconds-after-finished: ${RUNTIME_RAY_TTL_SECONDS_AFTER_FINISHED:600}
     pre-running-deadline-seconds: ${RUNTIME_RAY_PRE_RUNNING_DEADLINE_SECONDS:300}
+    duration: ${RUNTIME_RAY_DURATION:${jwt.refresh-token.duration}} # default 8 hours
