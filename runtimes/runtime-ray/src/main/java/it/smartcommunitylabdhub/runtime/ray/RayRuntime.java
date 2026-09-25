@@ -7,8 +7,6 @@
 package it.smartcommunitylabdhub.runtime.ray;
 
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
-import it.smartcommunitylabdhub.authorization.providers.AccessCredentials;
-import it.smartcommunitylabdhub.authorization.providers.AccessCredentialsProvider;
 import it.smartcommunitylabdhub.authorization.services.CredentialsService;
 import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
@@ -51,7 +49,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.Assert;
 
 /**
@@ -74,9 +71,6 @@ public class RayRuntime
     implements InitializingBean
 {
 
-    public static final Integer DEFAULT_DURATION = 3600 * 8; // 8 hour
-    public static final Integer MIN_DURATION = 300; // 5 minutes
-
     public static final String RUNTIME = "ray";
     public static final String[] KINDS = { RayJobRunSpec.KIND, RayBuildRunSpec.KIND };
 
@@ -98,29 +92,14 @@ public class RayRuntime
     @Autowired
     private CredentialsService credentialsService;
 
-    @Autowired(required = false)
-    private AccessCredentialsProvider accessCredentialsProvider;
-
     @Autowired
     private ConfigurationService configurationService;
-
-    private Integer duration = DEFAULT_DURATION;
 
     public RayRuntime(@Qualifier("rayProperties") RayProperties properties) {
         Assert.notNull(properties, "properties are required");
         this.properties = properties;
     }
 
-    @Autowired
-    public void setDuration(@Value("${runtime.ray.duration}") Integer duration) {
-        if (duration != null && duration > MIN_DURATION) {
-            // set a minimum duration of 5 minutes
-            this.duration = duration;
-        } else {
-            log.warn("Invalid Ray runtime duration {}. Using default {}", duration, DEFAULT_DURATION);
-            this.duration = DEFAULT_DURATION;
-        }
-    }    
     @Override
     public void afterPropertiesSet() throws Exception {
         this.jobRunner = new RayJobRunner(properties, k8sBuilderHelper, k8sLabelHelper);
@@ -209,30 +188,8 @@ public class RayRuntime
         //inject credentials from authenticated user, if any
         UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
         if (auth != null) {
-            //get only core credentials from providers
-            if (accessCredentialsProvider != null) {
-                if (RayJobTaskSpec.KIND.equals(runAccessor.getTask())) {
-                    //get custom duration credentials
-                    List<Credentials> credentials = List.of(
-                        accessCredentialsProvider.get((UserAuthentication<?>) auth, duration)
-                    );
-                    runnable.setCredentials(credentials);
-                } else {
-                    //keep standard duration
-                    List<Credentials> credentials = List.of(
-                        accessCredentialsProvider.get((UserAuthentication<?>) auth)
-                    );
-                    runnable.setCredentials(credentials);
-                }
-            } else {
-                //keep globally provided access credentials
-                List<Credentials> credentials = credentialsService
-                    .getCredentials((UserAuthentication<?>) auth)
-                    .stream()
-                    .filter(c -> c instanceof AccessCredentials)
-                    .toList();
-                runnable.setCredentials(credentials);
-            }
+            List<Credentials> credentials = credentialsService.getCredentials(auth);
+            runnable.setCredentials(credentials);
         }
 
         //inject configuration providers
