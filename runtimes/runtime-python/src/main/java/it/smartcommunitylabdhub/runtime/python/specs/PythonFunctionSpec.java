@@ -42,7 +42,12 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = PythonRuntime.RUNTIME, kind = PythonRuntime.RUNTIME, entity = Function.class)
+@SpecType(
+    runtime = PythonRuntime.RUNTIME,
+    kind = PythonRuntime.RUNTIME,
+    entity = Function.class,
+    uiSchema = "runtime-python/functionUiSchema.json"
+)
 public class PythonFunctionSpec extends FunctionBaseSpec {
 
     @JsonProperty("source")

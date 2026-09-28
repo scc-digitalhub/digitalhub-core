@@ -40,7 +40,12 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = ContainerRuntime.RUNTIME, kind = ContainerRuntime.RUNTIME, entity = Function.class)
+@SpecType(
+    runtime = ContainerRuntime.RUNTIME,
+    kind = ContainerRuntime.RUNTIME,
+    entity = Function.class,
+    uiSchema = "runtime-container/functionUiSchema.json"
+)
 public class ContainerFunctionSpec extends FunctionBaseSpec {
 
     @Schema(title = "fields.container.image.title", description = "fields.container.image.description")

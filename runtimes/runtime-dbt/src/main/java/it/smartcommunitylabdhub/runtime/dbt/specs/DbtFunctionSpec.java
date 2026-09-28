@@ -39,7 +39,12 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = DbtRuntime.RUNTIME, kind = DbtRuntime.RUNTIME, entity = Function.class)
+@SpecType(
+    runtime = DbtRuntime.RUNTIME,
+    kind = DbtRuntime.RUNTIME,
+    entity = Function.class,
+    uiSchema = "runtime-dbt/functionUiSchema.json"
+)
 public class DbtFunctionSpec extends FunctionBaseSpec {
 
     @NotNull

@@ -32,7 +32,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@SpecType(kind = "table", entity = DataItem.class)
+@SpecType(kind = "table", entity = DataItem.class, uiSchema = "entity-dataitem/tableUiSchema.json")
 public class DataItemTableSpec extends DataItemBaseSpec {
 
     //TODO adopt tableschema

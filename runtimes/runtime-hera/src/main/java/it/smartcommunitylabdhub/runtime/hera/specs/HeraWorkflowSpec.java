@@ -40,7 +40,12 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = HeraRuntime.RUNTIME, kind = HeraRuntime.RUNTIME, entity = Workflow.class)
+@SpecType(
+    runtime = HeraRuntime.RUNTIME,
+    kind = HeraRuntime.RUNTIME,
+    entity = Workflow.class,
+    uiSchema = "runtime-hera/workflowUiSchema.json"
+)
 public class HeraWorkflowSpec extends WorkflowBaseSpec {
 
     @NotNull

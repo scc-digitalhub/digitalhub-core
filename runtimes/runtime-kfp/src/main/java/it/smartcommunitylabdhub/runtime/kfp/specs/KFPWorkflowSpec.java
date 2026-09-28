@@ -40,7 +40,12 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = KFPRuntime.RUNTIME, kind = KFPRuntime.RUNTIME, entity = Workflow.class)
+@SpecType(
+    runtime = KFPRuntime.RUNTIME,
+    kind = KFPRuntime.RUNTIME,
+    entity = Workflow.class,
+    uiSchema = "runtime-kfp/workflowUiSchema.json"
+)
 public class KFPWorkflowSpec extends WorkflowBaseSpec {
 
     @NotNull

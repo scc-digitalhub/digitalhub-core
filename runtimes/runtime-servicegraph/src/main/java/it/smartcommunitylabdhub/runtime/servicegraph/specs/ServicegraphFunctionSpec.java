@@ -40,7 +40,12 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = ServicegraphRuntime.RUNTIME, kind = ServicegraphRuntime.RUNTIME, entity = Function.class)
+@SpecType(
+    runtime = ServicegraphRuntime.RUNTIME,
+    kind = ServicegraphRuntime.RUNTIME,
+    entity = Function.class,
+    uiSchema = "runtime-servicegraph/functionUiSchema.json"
+)
 public class ServicegraphFunctionSpec extends FunctionBaseSpec {
 
     @JsonProperty("source")

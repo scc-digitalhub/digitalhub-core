@@ -1,0 +1,21 @@
+{
+  "schema": {
+    "fields": {
+      "items": {
+        "ui:layout": [12, 6, 6, 4, 8, 12, 12],
+        "ui:order": [
+          "name",
+          "type",
+          "format",
+          "title",
+          "description",
+          "example",
+          "constraints"
+        ],
+        "constraints": {
+          "ui:title": "fields.parameters.title"
+        }
+      }
+    }
+  }
+}

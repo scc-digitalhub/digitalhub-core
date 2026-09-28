@@ -1,0 +1,25 @@
+{
+  "source": {
+    "ui:ObjectFieldTemplate": "ServicegraphSourceCodeTemplate",
+    "base64": {
+      "ui:widget": "SourceCodeEditorWidget",
+      "ui:disabled": true
+    },
+    "code": {
+      "ui:widget": "hidden",
+      "ui:disabled": true
+    },
+    "handler": {
+      "ui:widget": "hidden",
+      "ui:disabled": true
+    },
+    "source": {
+      "ui:widget": "hidden",
+      "ui:disabled": true
+    },
+    "lang": {
+      "ui:widget": "hidden",
+      "ui:disabled": true
+    }
+  }
+}
