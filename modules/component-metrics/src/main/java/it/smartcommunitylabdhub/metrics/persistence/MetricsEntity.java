@@ -47,7 +47,10 @@ import org.hibernate.annotations.JdbcTypeCode;
 @Entity
 @Table(
     name = "metrics",
-    indexes = { @Index(name = "metrics_type_id_index", columnList = "entityName, entityId", unique = false) }
+    indexes = {
+        @Index(name = "metrics_type_id_index", columnList = "entityName, entityId", unique = false),
+        @Index(name = "metrics_type_id_name_index", columnList = "entityName, entityId, name", unique = true),
+    }
 )
 public class MetricsEntity implements Serializable {
 
