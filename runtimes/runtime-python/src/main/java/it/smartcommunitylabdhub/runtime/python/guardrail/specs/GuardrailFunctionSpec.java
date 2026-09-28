@@ -40,7 +40,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = GuardrailRuntime.RUNTIME, kind = GuardrailRuntime.RUNTIME, entity = Function.class)
+@SpecType(runtime = GuardrailRuntime.RUNTIME, kind = GuardrailRuntime.RUNTIME, entity = Function.class, uiSchema = "runtime-guardrail/functionUiSchema.json")
 public class GuardrailFunctionSpec extends PythonFunctionSpec {
 
     @JsonProperty("processing_mode")

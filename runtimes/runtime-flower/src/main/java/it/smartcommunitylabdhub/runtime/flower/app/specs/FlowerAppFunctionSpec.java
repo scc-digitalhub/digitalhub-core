@@ -40,7 +40,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = FlowerAppRuntime.RUNTIME, kind = FlowerAppRuntime.RUNTIME, entity = Function.class)
+@SpecType(runtime = FlowerAppRuntime.RUNTIME, kind = FlowerAppRuntime.RUNTIME, entity = Function.class, uiSchema = "runtime-flower/functionUiSchema.json")
 public class FlowerAppFunctionSpec extends FunctionBaseSpec {
 
     @JsonProperty("fab_source")

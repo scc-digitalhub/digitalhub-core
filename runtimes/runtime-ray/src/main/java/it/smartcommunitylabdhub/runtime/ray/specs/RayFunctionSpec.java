@@ -12,7 +12,6 @@ import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.function.FunctionBaseSpec;
 import it.smartcommunitylabdhub.runtime.ray.RayRuntime;
-import it.smartcommunitylabdhub.runtime.ray.model.RayDependencyFormat;
 import it.smartcommunitylabdhub.runtime.ray.model.RaySourceCode;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
@@ -40,7 +39,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = RayRuntime.RUNTIME, kind = RayRuntime.RUNTIME, entity = Function.class)
+@SpecType(runtime = RayRuntime.RUNTIME, kind = RayRuntime.RUNTIME, entity = Function.class, uiSchema = "runtime-ray/functionUiSchema.json")
 public class RayFunctionSpec extends FunctionBaseSpec {
 
     @JsonProperty("source")
@@ -63,7 +62,6 @@ public class RayFunctionSpec extends FunctionBaseSpec {
      * Optional override for the ray version reported in the cluster spec.
      */
     @JsonProperty("ray_version")
-    @Schema(title = "fields.ray.version.title", description = "fields.ray.version.description")
     private String rayVersion;
 
     // @JsonProperty("dependency_format")

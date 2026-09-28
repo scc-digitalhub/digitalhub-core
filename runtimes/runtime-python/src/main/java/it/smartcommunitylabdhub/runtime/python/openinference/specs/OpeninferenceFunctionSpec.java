@@ -43,7 +43,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = OpeninferenceRuntime.RUNTIME, kind = OpeninferenceRuntime.RUNTIME, entity = Function.class)
+@SpecType(runtime = OpeninferenceRuntime.RUNTIME, kind = OpeninferenceRuntime.RUNTIME, entity = Function.class, uiSchema = "runtime-openinference/functionUiSchema.json")
 public class OpeninferenceFunctionSpec extends PythonFunctionSpec {
 
     @JsonProperty("model_name")

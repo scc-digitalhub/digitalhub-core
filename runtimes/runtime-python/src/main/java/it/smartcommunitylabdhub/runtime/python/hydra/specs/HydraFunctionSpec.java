@@ -41,7 +41,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = HydraRuntime.RUNTIME, kind = HydraRuntime.RUNTIME, entity = Function.class)
+@SpecType(runtime = HydraRuntime.RUNTIME, kind = HydraRuntime.RUNTIME, entity = Function.class, uiSchema = "runtime-hydra/functionUiSchema.json")
 public class HydraFunctionSpec extends PythonFunctionSpec {
 
     @JsonProperty("source")

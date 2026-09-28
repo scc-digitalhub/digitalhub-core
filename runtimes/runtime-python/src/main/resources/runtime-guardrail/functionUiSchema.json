@@ -13,5 +13,12 @@
       "ui:widget": "hidden",
       "ui:disabled": true
     }
+  },
+
+  "processing_mode": {
+    "ui:title@en": "Processing Mode",
+    "ui:description@en": " ",
+    "ui:title@it": "Modo di elaborazione",
+    "ui:description@it": " "
   }
 }

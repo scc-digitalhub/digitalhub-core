@@ -1,4 +1,12 @@
 {
+  "ray_version": {
+    "ui:title@en": "Ray Version",
+    "ui:description@en": " ",
+    "ui:title@it": "Versione Ray",
+    "ui:description@it": " "
+  },
+
+
   "requirements": {
     "ui:widget": "TextArrayWidget"
   },

@@ -13,5 +13,17 @@
       "ui:widget": "hidden",
       "ui:disabled": true
     }
+  },
+  
+  "config": {
+    "ui:ObjectFieldTemplate": "ConfigTemplate",
+    "base64": {
+        "ui:widget": "SourceCodeEditorWidget",
+        "ui:disabled": "true"
+    },
+    "code": {
+        "ui:widget": "hidden",
+        "ui:disabled": "true"
+    }
   }
 }
