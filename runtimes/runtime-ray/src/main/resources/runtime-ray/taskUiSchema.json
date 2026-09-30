@@ -1,0 +1,26 @@
+{
+  "ui:title@en": "Ray Task",
+  "ui:title@it": "Ray Task",
+  "ui:description@en": "Configuration for Ray task",
+  "ui:description@it": "Configurazione per il Ray task",
+
+  "replicas": {
+    "ui:title@en": "Replicas",
+    "ui:description@en": "Number of worker pod replicas",
+    "ui:title@it": "Repliche",
+    "ui:description@it": "Numero di repliche dei pod worker"
+  },
+  "min_replicas": {
+    "ui:title@en": "Min Replicas",
+    "ui:description@en": "Minimum number of worker pod replicas",
+    "ui:title@it": "Min Repliche",
+    "ui:description@it": "Numero minimo di repliche dei pod worker"
+  },
+  "max_replicas": {
+    "ui:title@en": "Max Replicas",
+    "ui:description@en": "Maximum number of worker pod replicas",
+    "ui:title@it": "Max Repliche",
+    "ui:description@it": "Numero massimo di repliche dei pod worker"
+  }
+
+}

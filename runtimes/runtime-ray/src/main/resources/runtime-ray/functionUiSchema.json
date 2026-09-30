@@ -1,9 +1,9 @@
 {
   "ray_version": {
     "ui:title@en": "Ray Version",
-    "ui:description@en": " ",
+    "ui:description@en": "Ray framework version",
     "ui:title@it": "Versione Ray",
-    "ui:description@it": " "
+    "ui:description@it": "Versione di Ray framework"
   },
 
 

@@ -7,7 +7,6 @@
 package it.smartcommunitylabdhub.runtime.ray.job;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
@@ -34,7 +33,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(runtime = RayRuntime.RUNTIME, kind = RayJobTaskSpec.KIND, entity = Task.class)
+@SpecType(runtime = RayRuntime.RUNTIME, kind = RayJobTaskSpec.KIND, entity = Task.class, uiSchema = "runtime-ray/taskUiSchema.json")
 public class RayJobTaskSpec extends K8sFunctionTaskBaseSpec {
 
     public static final String KIND = "ray+job";
@@ -59,7 +58,6 @@ public class RayJobTaskSpec extends K8sFunctionTaskBaseSpec {
      * Number of worker pod replicas. Defaults to {@code 1} when not provided.
      */
     @JsonProperty("replicas")
-    @Schema(title = "fields.ray.replicas.title", description = "fields.ray.replicas.description")
     private Integer replicas;
 
     /**
@@ -67,7 +65,6 @@ public class RayJobTaskSpec extends K8sFunctionTaskBaseSpec {
      * provided.
      */
     @JsonProperty("min_replicas")
-    @Schema(title = "fields.ray.minReplicas.title", description = "fields.ray.minReplicas.description")
     private Integer minReplicas;
 
     /**
@@ -75,7 +72,6 @@ public class RayJobTaskSpec extends K8sFunctionTaskBaseSpec {
      * provided.
      */
     @JsonProperty("max_replicas")
-    @Schema(title = "fields.ray.maxReplicas.title", description = "fields.ray.maxReplicas.description")
     private Integer maxReplicas;
 
     /**
