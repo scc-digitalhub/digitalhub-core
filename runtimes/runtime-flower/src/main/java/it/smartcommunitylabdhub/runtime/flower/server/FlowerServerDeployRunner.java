@@ -31,6 +31,7 @@ import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
+import it.smartcommunitylabdhub.framework.k8s.objects.AppProtocol;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
@@ -222,7 +223,7 @@ public class FlowerServerDeployRunner {
 
         //expose ports
         List<CorePort> servicePorts = HTTP_PORTS.stream()
-            .map(port -> new CorePort(port, port))
+            .map(port -> new CorePort(port, port, AppProtocol.http))
             .toList();
 
         //evaluate service names

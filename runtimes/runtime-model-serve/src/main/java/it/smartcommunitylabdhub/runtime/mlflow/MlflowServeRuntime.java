@@ -37,7 +37,9 @@ import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
+import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceDetails;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
+import it.smartcommunitylabdhub.framework.k8s.objects.AppProtocol;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
 import it.smartcommunitylabdhub.functions.FunctionManager;
@@ -53,7 +55,6 @@ import it.smartcommunitylabdhub.runtime.modelserve.specs.InferenceV2Service;
 import it.smartcommunitylabdhub.runtime.modelserve.specs.ModelServeRunStatus;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -233,21 +234,15 @@ public class MlflowServeRuntime
             K8sServiceInfo service = status.getService();
             String baseUrl = service.getUrl();
 
-            Set<String> urls = new HashSet<>();
+            Set<K8sServiceDetails> urls = new HashSet<>();
             if (service.getUrls() != null) {
                 urls.addAll(service.getUrls());
             }
 
-            // Server Metadata
-            urls.add(baseUrl + "/v2");
-
-            // Model Metadata
-            urls.add(baseUrl + "/v2/models/" + modelName);
-
-            // Inference
-            urls.add(baseUrl + "/v2/models/" + modelName + "/infer");
-
-            service.setUrls(new ArrayList<>(urls));
+            // Add v2 url as generic service
+            urls.add(
+                new K8sServiceDetails(baseUrl + "/v2", MlflowServeRunner.HTTP_PORT, AppProtocol.openinference_v2.name())
+            );
             status.setService(service);
 
             //add inference specific info

@@ -28,11 +28,13 @@ import io.kubernetes.client.openapi.models.V1Service;
 import io.kubernetes.client.openapi.models.V1ServicePort;
 import io.kubernetes.client.openapi.models.V1ServiceSpec;
 import io.kubernetes.client.openapi.models.V1ServiceStatus;
+import it.smartcommunitylabdhub.commons.accessors.Accessor;
 import it.smartcommunitylabdhub.commons.annotations.common.ProcessorType;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.infrastructure.Processor;
+import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.status.Status;
-import it.smartcommunitylabdhub.framework.k8s.jackson.KubernetesMapper;
+import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceDetails;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceStatus;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreServiceType;
@@ -55,21 +57,19 @@ public class K8sServiceProcessor implements Processor<Run, K8sServiceStatus> {
     @Override
     public K8sServiceStatus process(String stage, Run run, Serializable input) throws CoreRuntimeException {
         if (input instanceof K8sRunnable k8sRunnable) {
-            Map<String, Serializable> res = k8sRunnable.getResults();
+            ServiceAccessor res = ServiceAccessor.with(k8sRunnable.getResults());
             //extract k8s details for svc
             //note: rebuild every time to account for possible changes in service (e.g. loadBalancer ip)
-            if (res != null && res.containsKey("service")) {
+            if (res != null && res.getService() != null) {
                 try {
-                    Map<String, Serializable> s = (Map<String, Serializable>) res.get("service");
-                    V1Service service = KubernetesMapper.OBJECT_MAPPER.convertValue(s, V1Service.class);
+                    V1Service service = res.getService();
                     K8sServiceStatus status = parseService(service);
 
                     //add all additional services as aliases
-                    if (res.containsKey("services")) {
+                    if (res.getServices() != null && !res.getServices().isEmpty()) {
                         List<String> aliases = new ArrayList<>();
-                        List<Serializable> ss = (List<Serializable>) res.get("services");
-                        for (Serializable srvs : ss) {
-                            V1Service srv = KubernetesMapper.OBJECT_MAPPER.convertValue(srvs, V1Service.class);
+                        List<V1Service> ss = res.getServices();
+                        for (V1Service srv : ss) {
                             K8sServiceStatus srvstatus = parseService(srv);
                             if (srvstatus != null && StringUtils.hasText(srvstatus.getService().getUrl())) {
                                 aliases.add(srvstatus.getService().getUrl());
@@ -125,16 +125,17 @@ public class K8sServiceProcessor implements Processor<Run, K8sServiceStatus> {
             builder.url(url);
             log.debug("service {} clusterIp url {}", metadata.getName(), url);
 
-            //expose all urls if more than 1 port
-            if (spec.getPorts().size() > 1) {
-                List<String> urls = spec
-                    .getPorts()
-                    .stream()
-                    .map(p -> String.format("%s.%s:%d", metadata.getName(), metadata.getNamespace(), p.getPort()))
-                    .toList();
+            //expose all urls including base
+            List<K8sServiceDetails> urls = spec
+                .getPorts()
+                .stream()
+                .map(p -> {
+                    String u = String.format("%s.%s:%d", metadata.getName(), metadata.getNamespace(), p.getPort());
+                    return new K8sServiceDetails(u, p.getPort(), p.getAppProtocol());
+                })
+                .toList();
 
-                builder.urls(urls);
-            }
+            builder.urls(urls);
         } else if (CoreServiceType.NodePort.name().equals(type) && !spec.getPorts().isEmpty()) {
             //add ip
             builder.clusterIP(spec.getClusterIP());
@@ -145,16 +146,17 @@ public class K8sServiceProcessor implements Processor<Run, K8sServiceStatus> {
             builder.url(url);
             log.debug("service {} nodePort url {}", metadata.getName(), url);
 
-            //expose all urls if more than 1 port
-            if (spec.getPorts().size() > 1) {
-                List<String> urls = spec
-                    .getPorts()
-                    .stream()
-                    .map(p -> String.format("%s.%s:%d", metadata.getName(), metadata.getNamespace(), p.getPort()))
-                    .toList();
+            //expose all urls including base
+            List<K8sServiceDetails> urls = spec
+                .getPorts()
+                .stream()
+                .map(p -> {
+                    String u = String.format("%s.%s:%d", metadata.getName(), metadata.getNamespace(), p.getPort());
+                    return new K8sServiceDetails(u, p.getPort(), p.getAppProtocol());
+                })
+                .toList();
 
-                builder.urls(urls);
-            }
+            builder.urls(urls);
         } else if (CoreServiceType.LoadBalancer.name().equals(type) && !spec.getPorts().isEmpty()) {
             //add ip
             builder.clusterIP(spec.getClusterIP());
@@ -176,16 +178,17 @@ public class K8sServiceProcessor implements Processor<Run, K8sServiceStatus> {
                     builder.url(url);
                     log.debug("service {} loadBalancer url {}", metadata.getName(), url);
 
-                    //expose all urls if more than 1 port
-                    if (spec.getPorts().size() > 1) {
-                        List<String> urls = spec
-                            .getPorts()
-                            .stream()
-                            .map(p -> String.format("%s:%d", host, p.getPort()))
-                            .toList();
+                    //expose all urls including base
+                    List<K8sServiceDetails> urls = spec
+                        .getPorts()
+                        .stream()
+                        .map(p -> {
+                            String u = String.format("%s:%d", host, p.getPort());
+                            return new K8sServiceDetails(u, p.getPort(), p.getAppProtocol());
+                        })
+                        .toList();
 
-                        builder.urls(urls);
-                    }
+                    builder.urls(urls);
                 });
         } else if (CoreServiceType.ExternalName.name().equals(type) && !spec.getPorts().isEmpty()) {
             //add ip
@@ -201,18 +204,50 @@ public class K8sServiceProcessor implements Processor<Run, K8sServiceStatus> {
             builder.url(url);
             log.debug("service {} externalName url {}", metadata.getName(), url);
 
-            //expose all urls if more than 1 port
-            if (spec.getPorts().size() > 1) {
-                List<String> urls = spec
-                    .getPorts()
-                    .stream()
-                    .map(p -> String.format("%s:%d", externalName, p.getPort()))
-                    .toList();
+            //expose all urls including base
+            List<K8sServiceDetails> urls = spec
+                .getPorts()
+                .stream()
+                .map(p -> {
+                    String u = String.format("%s:%d", externalName, p.getPort());
+                    return new K8sServiceDetails(u, p.getPort(), p.getAppProtocol());
+                })
+                .toList();
 
-                builder.urls(urls);
-            }
+            builder.urls(urls);
         }
 
         return K8sServiceStatus.builder().service(builder.build()).build();
+    }
+}
+
+interface ServiceAccessor extends Accessor<Serializable> {
+    default V1Service getService() {
+        Map<String, Serializable> service = get("service");
+        if (service == null) {
+            return null;
+        }
+
+        return JacksonMapper.CUSTOM_OBJECT_MAPPER.convertValue(service, V1Service.class);
+    }
+
+    default List<V1Service> getServices() {
+        List<Map<String, Serializable>> services = get("services");
+        if (services == null) {
+            return null;
+        }
+
+        return services
+            .stream()
+            .map(s -> JacksonMapper.CUSTOM_OBJECT_MAPPER.convertValue(s, V1Service.class))
+            .toList();
+    }
+
+    static ServiceAccessor with(Map<String, Serializable> data) {
+        if (data != null) {
+            return () -> data;
+        } else {
+            return () -> Map.of();
+        }
     }
 }

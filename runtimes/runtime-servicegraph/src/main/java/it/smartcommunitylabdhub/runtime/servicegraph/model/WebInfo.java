@@ -24,7 +24,6 @@
 package it.smartcommunitylabdhub.runtime.servicegraph.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import io.kubernetes.client.openapi.models.V1ServicePort;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

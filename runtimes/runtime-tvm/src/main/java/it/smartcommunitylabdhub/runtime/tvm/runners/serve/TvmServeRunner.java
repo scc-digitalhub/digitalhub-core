@@ -11,6 +11,7 @@ import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
+import it.smartcommunitylabdhub.framework.k8s.objects.AppProtocol;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
@@ -105,7 +106,10 @@ public class TvmServeRunner extends TvmBaseBuildRunner {
         List<CoreEnv> coreSecrets = createSecrets(secretData);
         List<CoreVolume> volumes = createVolumes(taskSpec);
 
-        List<CorePort> servicePorts = List.of(new CorePort(HTTP_PORT, HTTP_PORT), new CorePort(GRPC_PORT, GRPC_PORT));
+        List<CorePort> servicePorts = List.of(
+            new CorePort(HTTP_PORT, HTTP_PORT, AppProtocol.openinference_v2),
+            new CorePort(GRPC_PORT, GRPC_PORT, AppProtocol.openinference_v2)
+        );
 
         List<String> serviceNames = new ArrayList<>();
         if (StringUtils.hasText(taskSpec.getServiceName())) {

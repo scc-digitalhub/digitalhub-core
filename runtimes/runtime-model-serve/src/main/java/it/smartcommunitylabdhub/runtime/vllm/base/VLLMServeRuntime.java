@@ -28,7 +28,9 @@ import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
+import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceDetails;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
+import it.smartcommunitylabdhub.framework.k8s.objects.AppProtocol;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.models.ModelManager;
@@ -99,10 +101,17 @@ public abstract class VLLMServeRuntime<F extends VLLMServeFunctionSpec, R extend
             K8sServiceInfo service = status.getService();
             String baseUrl = service.getUrl();
 
-            Set<String> urls = new HashSet<>();
+            Set<K8sServiceDetails> urls = new HashSet<>();
             if (service.getUrls() != null) {
                 urls.addAll(service.getUrls());
             }
+
+            // Add v1 url as generic service
+            urls.add(new K8sServiceDetails(baseUrl + "/v1", VLLMServeRunner.HTTP_PORT, AppProtocol.openai.name()));
+
+            service.setUrls(new ArrayList<>(urls));
+            status.setService(service);
+
             OpenAIService openai = new OpenAIService();
             openai.setBaseUrl(baseUrl + "/v1");
             openai.setModel(functionSpec.getModelName());
@@ -122,16 +131,6 @@ public abstract class VLLMServeRuntime<F extends VLLMServeFunctionSpec, R extend
             openai.setEngine(VLLM_ENGINE);
             openai.setFeatures(new LinkedList<>(getOpenAIFeatures().keySet()));
             status.setOpenai(openai);
-            // TODO check
-            getOpenAIFeatures()
-                .values()
-                .forEach(url -> urls.add(baseUrl + url));
-            getExtraFeatures()
-                .values()
-                .forEach(url -> urls.add(baseUrl + url));
-            urls.add(baseUrl + "/v1/models");
-            service.setUrls(new ArrayList<>(urls));
-            status.setService(service);
         }
 
         status.setState(RunState.RUNNING.name());

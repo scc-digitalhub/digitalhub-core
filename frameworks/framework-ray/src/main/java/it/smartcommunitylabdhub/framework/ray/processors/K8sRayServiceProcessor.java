@@ -28,9 +28,11 @@ import it.smartcommunitylabdhub.commons.annotations.common.ProcessorType;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.infrastructure.Processor;
 import it.smartcommunitylabdhub.commons.models.status.Status;
+import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceDetails;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo.K8sServiceInfoBuilder;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceStatus;
+import it.smartcommunitylabdhub.framework.k8s.objects.AppProtocol;
 import it.smartcommunitylabdhub.framework.ray.runnables.K8sRayRunnable;
 import it.smartcommunitylabdhub.runs.Run;
 import java.io.Serializable;
@@ -51,7 +53,6 @@ public class K8sRayServiceProcessor implements Processor<Run, K8sServiceStatus> 
     public K8sServiceStatus process(String stage, Run run, Serializable input) throws CoreRuntimeException {
         // // service status
 
-
         if (input instanceof K8sRayRunnable k8sRunnable) {
             Map<String, Serializable> res = k8sRunnable.getResults();
             if (res != null && run.getStatus() != null && run.getStatus().get("service") == null) {
@@ -59,19 +60,30 @@ public class K8sRayServiceProcessor implements Processor<Run, K8sServiceStatus> 
                 if (rayJob != null) {
                     Map<String, Serializable> status = (Map<String, Serializable>) rayJob.get("status");
                     if (status != null) {
-                        Map<String, Serializable> rayClusterStatus = (Map<String, Serializable>) status.get("rayClusterStatus");
+                        Map<String, Serializable> rayClusterStatus = (Map<String, Serializable>) status.get(
+                            "rayClusterStatus"
+                        );
                         if (rayClusterStatus != null) {
-                            String dashboardUrl = status.get("dashboardURL") != null ? status.get("dashboardURL").toString() : null;
+                            String dashboardUrl =
+                                status.get("dashboardURL") != null ? status.get("dashboardURL").toString() : null;
                             // process rayClusterStatus if needed
                             Map<String, Serializable> head = (Map<String, Serializable>) rayClusterStatus.get("head");
                             Map<String, String> endpoints = (Map<String, String>) rayClusterStatus.get("endpoints");
-                            
+
                             if (head != null && endpoints != null) {
                                 K8sServiceInfoBuilder serviceInfoBuilder = K8sServiceInfo.builder();
-                                serviceInfoBuilder.name(head.get("serviceName") != null ? head.get("serviceName").toString() : null);
-                                serviceInfoBuilder.ip(head.get("serviceIP") != null ? head.get("serviceIP").toString() : null);
+                                serviceInfoBuilder.name(
+                                    head.get("serviceName") != null ? head.get("serviceName").toString() : null
+                                );
+                                serviceInfoBuilder.ip(
+                                    head.get("serviceIP") != null ? head.get("serviceIP").toString() : null
+                                );
                                 serviceInfoBuilder.url(dashboardUrl);
-                                serviceInfoBuilder.urls(Collections.singletonList(dashboardUrl));
+                                serviceInfoBuilder.urls(
+                                    Collections.singletonList(
+                                        new K8sServiceDetails(dashboardUrl, 0, AppProtocol.www.name())
+                                    )
+                                );
                                 List<V1ServicePort> ports = new LinkedList<>();
                                 for (Map.Entry<String, String> entry : endpoints.entrySet()) {
                                     V1ServicePort port = new V1ServicePort();
@@ -81,17 +93,17 @@ public class K8sRayServiceProcessor implements Processor<Run, K8sServiceStatus> 
                                 }
                                 serviceInfoBuilder.ports(ports);
 
-                                K8sServiceStatus serviceStatus = K8sServiceStatus.builder().service(serviceInfoBuilder.build()).build();
+                                K8sServiceStatus serviceStatus = K8sServiceStatus.builder()
+                                    .service(serviceInfoBuilder.build())
+                                    .build();
                                 return serviceStatus;
                             }
-                        }                        
+                        }
                     }
                 }
             }
-
         }
 
         return null;
     }
-
 }

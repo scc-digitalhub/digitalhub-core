@@ -37,6 +37,7 @@ import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
+import it.smartcommunitylabdhub.framework.k8s.objects.AppProtocol;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
@@ -72,10 +73,10 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 public class SklearnServeRunner {
 
-    private static final int HTTP_PORT = 8080;
-    private static final int GRPC_PORT = 8081;
-    private static final int UID = 1000;
-    private static final int GID = 1000;
+    public static final int HTTP_PORT = 8080;
+    public static final int GRPC_PORT = 8081;
+    public static final int UID = 1000;
+    public static final int GID = 1000;
 
     private final String image;
     private final int userId;
@@ -186,7 +187,7 @@ public class SklearnServeRunner {
 
         //read source and build context
         UriComponents uri = UriComponentsBuilder.fromUriString(path).build();
-        
+
         //let's make sure we have a valid model uri
         if (uri.getScheme() == null || !StringUtils.hasText(uri.getScheme())) {
             throw new IllegalArgumentException("invalid model url, missing scheme");
@@ -237,8 +238,8 @@ public class SklearnServeRunner {
 
         List<String> args = new ArrayList<>(List.of("start", "/shared/"));
 
-        CorePort servicePort = new CorePort(HTTP_PORT, HTTP_PORT);
-        CorePort grpcPort = new CorePort(GRPC_PORT, GRPC_PORT);
+        CorePort servicePort = new CorePort(HTTP_PORT, HTTP_PORT, AppProtocol.openinference_v2);
+        CorePort grpcPort = new CorePort(GRPC_PORT, GRPC_PORT, AppProtocol.openinference_v2);
 
         //evaluate service names
         List<String> serviceNames = new ArrayList<>();

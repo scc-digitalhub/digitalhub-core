@@ -53,7 +53,7 @@ public class K8sServiceInfo {
     private List<V1ServicePort> ports;
 
     private String url;
-    private List<String> urls;
+    private List<K8sServiceDetails> urls;
 
     private List<String> aliases;
 }

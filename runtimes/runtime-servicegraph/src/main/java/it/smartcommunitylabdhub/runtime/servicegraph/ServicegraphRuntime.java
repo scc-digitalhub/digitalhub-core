@@ -37,7 +37,9 @@ import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
+import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceDetails;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
+import it.smartcommunitylabdhub.framework.k8s.objects.AppProtocol;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.runs.Run;
@@ -196,9 +198,10 @@ public class ServicegraphRuntime
         //build web descriptor only once
         if (status.getWeb() == null && status.getService() != null) {
             K8sServiceInfo service = status.getService();
-            List<String> urls = service.getUrls() != null ? new ArrayList<>(service.getUrls()) : new ArrayList<>();
+            List<K8sServiceDetails> urls =
+                service.getUrls() != null ? new ArrayList<>(service.getUrls()) : new ArrayList<>();
             if (service.getUrls() == null || service.getUrls().isEmpty()) {
-                urls.add(service.getUrl());
+                urls.add(new K8sServiceDetails(service.getUrl(), null, AppProtocol.http.name()));
             }
             service.setUrls(urls);
             status.setService(service);
@@ -207,7 +210,7 @@ public class ServicegraphRuntime
             WebInfo web = new WebInfo();
 
             // by default, add all urls to web info
-            web.setUrls(urls);
+            web.setUrls(urls.stream().map(K8sServiceDetails::getUrl).toList());
             web.setUrl(service.getUrl());
 
             status.setWeb(web);

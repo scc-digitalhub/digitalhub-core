@@ -30,6 +30,7 @@ import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
+import it.smartcommunitylabdhub.framework.k8s.objects.AppProtocol;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
@@ -172,8 +173,16 @@ public class OpeninferenceServeRunner extends PythonBaseRunner {
             // http and grpc ports
             .servicePorts(
                 List.of(
-                    new CorePort(OpeninferenceRuntime.HTTP_PORT, OpeninferenceRuntime.HTTP_PORT),
-                    new CorePort(OpeninferenceRuntime.GRPC_PORT, OpeninferenceRuntime.GRPC_PORT)
+                    new CorePort(
+                        OpeninferenceRuntime.HTTP_PORT,
+                        OpeninferenceRuntime.HTTP_PORT,
+                        AppProtocol.openinference_v2
+                    ),
+                    new CorePort(
+                        OpeninferenceRuntime.GRPC_PORT,
+                        OpeninferenceRuntime.GRPC_PORT,
+                        AppProtocol.openinference_v2
+                    )
                 )
             )
             .serviceType(taskSpec.getServiceType())

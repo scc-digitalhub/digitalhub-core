@@ -33,7 +33,9 @@ import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
+import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceDetails;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
+import it.smartcommunitylabdhub.framework.k8s.objects.AppProtocol;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sCRRunnable;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.lifecycle.RunState;
@@ -198,8 +200,9 @@ public class KubeAISpeechToTextRuntime
 
             //feature based urls
             String baseUrl = kubeAiEndpoint + "/openai/v1";
-            List<String> urls = service.getUrls() != null ? new ArrayList<>(service.getUrls()) : new ArrayList<>();
-            urls.add(baseUrl + "/audio/transcriptions");
+            List<K8sServiceDetails> urls =
+                service.getUrls() != null ? new ArrayList<>(service.getUrls()) : new ArrayList<>();
+            urls.add(new K8sServiceDetails(baseUrl + "/audio/transcriptions", null, AppProtocol.openai.name()));
 
             service.setUrls(urls);
             status.setService(service);

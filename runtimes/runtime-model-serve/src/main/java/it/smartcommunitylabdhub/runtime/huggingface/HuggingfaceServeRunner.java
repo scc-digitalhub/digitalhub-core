@@ -33,6 +33,7 @@ import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
+import it.smartcommunitylabdhub.framework.k8s.objects.AppProtocol;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
@@ -322,8 +323,8 @@ public class HuggingfaceServeRunner {
         //     }
         // }
 
-        CorePort servicePort = new CorePort(HTTP_PORT, HTTP_PORT);
-        CorePort grpcPort = new CorePort(GRPC_PORT, GRPC_PORT);
+        CorePort servicePort = new CorePort(HTTP_PORT, HTTP_PORT, AppProtocol.http);
+        CorePort grpcPort = new CorePort(GRPC_PORT, GRPC_PORT, AppProtocol.http);
 
         //evaluate service names
         List<String> serviceNames = new ArrayList<>();

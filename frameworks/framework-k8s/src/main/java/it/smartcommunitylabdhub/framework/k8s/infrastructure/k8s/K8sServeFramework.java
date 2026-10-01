@@ -603,6 +603,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
                             .port(p.port())
                             .targetPort(new IntOrString(p.targetPort()))
                             .protocol("TCP")
+                            .appProtocol(p.appProtocol() != null ? p.appProtocol().name() : null)
                             .name("port" + p.port())
                     )
                     .collect(Collectors.toList())
