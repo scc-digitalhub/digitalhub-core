@@ -28,7 +28,7 @@ import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 
-public interface CredentialsProvider {
+public interface CredentialsProvider<C extends Credentials> {
     /*
      * Process the given authentication token to extract credentials
      * that will be added to UserAuth by manager
@@ -43,5 +43,5 @@ public interface CredentialsProvider {
      * Generate or get a set of credentials for the given authenticated user
      */
     @Nullable
-    Credentials get(@NotNull UserAuthentication<?> auth);
+    C get(@NotNull UserAuthentication<?> auth);
 }

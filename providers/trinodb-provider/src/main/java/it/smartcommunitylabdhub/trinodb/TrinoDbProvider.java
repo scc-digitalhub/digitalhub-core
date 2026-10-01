@@ -27,7 +27,6 @@ import it.smartcommunitylabdhub.authorization.providers.AccessCredentials;
 import it.smartcommunitylabdhub.authorization.services.CredentialsProvider;
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.ConfigurationProvider;
-import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.trinodb.config.TrinoDbProperties;
 import jakarta.validation.constraints.NotNull;
 import java.util.Optional;
@@ -42,7 +41,9 @@ import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Slf4j
-public class TrinoDbProvider implements CredentialsProvider, ConfigurationProvider, InitializingBean {
+public class TrinoDbProvider
+    implements CredentialsProvider<TrinoDbCredentials>, ConfigurationProvider, InitializingBean
+{
 
     private final TrinoDbProperties properties;
     private TrinoDbConfiguration config;
@@ -102,7 +103,7 @@ public class TrinoDbProvider implements CredentialsProvider, ConfigurationProvid
     }
 
     @Override
-    public <T extends AbstractAuthenticationToken> Credentials process(@NotNull T token) {
+    public <T extends AbstractAuthenticationToken> TrinoDbCredentials process(@NotNull T token) {
         //if username+password is set, provide as static credentials
         if (StringUtils.hasText(properties.getUser()) && StringUtils.hasText(properties.getPassword())) {
             return new TrinoDbCredentials(properties.getUser(), properties.getPassword(), null);
@@ -134,7 +135,7 @@ public class TrinoDbProvider implements CredentialsProvider, ConfigurationProvid
     }
 
     @Override
-    public Credentials get(@NotNull UserAuthentication<?> auth) {
+    public TrinoDbCredentials get(@NotNull UserAuthentication<?> auth) {
         //nothing to do
         return null;
     }

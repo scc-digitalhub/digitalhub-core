@@ -73,7 +73,10 @@ import software.amazon.awssdk.services.sts.model.AssumeRoleResponse;
 import software.amazon.awssdk.services.sts.model.StsException;
 
 @Slf4j
-public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsProvider, InitializingBean {
+public class S3AssumeRoleProvider
+    extends S3BaseProvider
+    implements S3CredentialsProvider, CredentialsProvider<S3Credentials>, InitializingBean
+{
 
     private static final int DEFAULT_DURATION = 24 * 3600; //24 hour
     private static final int MIN_DURATION = 300; //5 min
@@ -239,7 +242,7 @@ public class S3AssumeRoleProvider extends S3BaseProvider implements CredentialsP
     }
 
     @Override
-    public Credentials get(@NotNull UserAuthentication<?> auth) {
+    public S3Credentials get(@NotNull UserAuthentication<?> auth) {
         if (properties.isAssumeRoleProviderEnabled() && cache != null) {
             //we expect a policy credentials in context
             S3PolicyMapping policy = Optional.ofNullable(auth.getCredentials())

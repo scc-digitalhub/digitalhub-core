@@ -26,6 +26,13 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.core.annotation.Order;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 @Configuration
 @PropertySource(value = "classpath:/credentials-provider-s3.yml", factory = YamlPropertySourceFactory.class)
@@ -48,5 +55,27 @@ public class S3ProviderConfig {
     @ConditionalOnProperty(name = "credentials.provider.s3.enable", havingValue = "true", matchIfMissing = false)
     S3AssumeRoleProvider s3AssumeRoleProvider(S3Properties s3Properties) {
         return new S3AssumeRoleProvider(s3Properties);
+    }
+
+    @Bean("s3StsSecurityFilterChain")
+    @ConditionalOnProperty(name = "credentials.provider.s3.enable", havingValue = "true", matchIfMissing = false)
+    @Order(50)
+    SecurityFilterChain s3StsSecurityFilterChain(HttpSecurity http) throws Exception {
+        RequestMatcher reqMatcher = new AntPathRequestMatcher("/auth/s3/**");
+
+        return http
+            .securityMatcher(reqMatcher)
+            .authorizeHttpRequests(auth -> {
+                auth.anyRequest().permitAll();
+            })
+            // disable request cache
+            .requestCache(requestCache -> requestCache.disable())
+            //disable csrf
+            .csrf(csrf -> csrf.disable())
+            // we don't want a session for these endpoints, each request should be evaluated
+            .sessionManagement(management -> management.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // enable frame options
+            .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+            .build();
     }
 }

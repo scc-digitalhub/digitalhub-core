@@ -37,7 +37,9 @@ import org.springframework.util.Assert;
 
 @Slf4j
 @Service
-public class ContainerRegistryProvider implements CredentialsProvider, ConfigurationProvider {
+public class ContainerRegistryProvider
+    implements CredentialsProvider<ContainerRegistryCredentials>, ConfigurationProvider
+{
 
     private final ContainerImagesProperties properties;
 
@@ -65,7 +67,7 @@ public class ContainerRegistryProvider implements CredentialsProvider, Configura
     }
 
     @Override
-    public Credentials get(@NotNull UserAuthentication<?> auth) {
+    public ContainerRegistryCredentials get(@NotNull UserAuthentication<?> auth) {
         log.debug("use shared credentials for user authentication to registry {}", auth.getName());
 
         //static credentials shared
@@ -73,7 +75,7 @@ public class ContainerRegistryProvider implements CredentialsProvider, Configura
     }
 
     @Override
-    public Configuration getConfig() {
+    public ContainerRegistryConfig getConfig() {
         return config;
     }
 }
