@@ -32,14 +32,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 
 @Slf4j
-public class S3StaticProvider extends S3BaseProvider implements CredentialsProvider {
+public class S3StaticProvider
+    extends S3BaseProvider
+    implements S3CredentialsProvider, CredentialsProvider<S3Credentials>
+{
 
     public S3StaticProvider(S3Properties s3Properties) {
         super(s3Properties);
     }
 
     @Override
-    public Credentials get(@NotNull UserAuthentication<?> auth) {
+    public S3Credentials get(@NotNull UserAuthentication<?> auth) {
         if (config == null) {
             return null;
         }

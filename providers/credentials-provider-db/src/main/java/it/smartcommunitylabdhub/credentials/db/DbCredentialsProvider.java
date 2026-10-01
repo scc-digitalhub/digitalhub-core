@@ -71,7 +71,9 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 @Slf4j
-public class DbCredentialsProvider implements CredentialsProvider, ConfigurationProvider, InitializingBean {
+public class DbCredentialsProvider
+    implements CredentialsProvider<DbCredentials>, ConfigurationProvider, InitializingBean
+{
 
     private static final int DEFAULT_DURATION = 24 * 3600; //24 hour
     private static final int MIN_DURATION = 300; //5 min
@@ -248,7 +250,7 @@ public class DbCredentialsProvider implements CredentialsProvider, Configuration
     }
 
     @Override
-    public Credentials get(@NotNull UserAuthentication<?> auth) {
+    public DbCredentials get(@NotNull UserAuthentication<?> auth) {
         if (properties.isEnabled() && cache != null) {
             //we expect a role credentials in context
             DbRole role = Optional.ofNullable(auth.getCredentials())

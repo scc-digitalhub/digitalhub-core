@@ -21,7 +21,9 @@ import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -42,6 +44,8 @@ public class PrometheusMetricsService implements ResourceMetricsService {
     private static final long END_OFFSET = 300L; //5 minutes offset for end time if not available
     private static final int DEFAULT_INTERVAL = 300; //default interval for current metrics
     private static final String LAZY_MODIFIER = ".*"; //lazy filter modifier for regex matching
+    private static final String UNKNOWN_GROUP = "unknown";
+    private static final String GROUP_SEPARATOR = "/";
     private static final PropertyPlaceholderHelper PLACEHOLDER_HELPER = new PropertyPlaceholderHelper("{", "}");
     private static final int MAX_NUMBER_POINTS = 1000; //max data points per series
     private static final long SECONDS_PER_MINUTE = 60L;
@@ -515,23 +519,24 @@ public class PrometheusMetricsService implements ResourceMetricsService {
                         !result.getData().isEmpty() &&
                         result.getData() instanceof Matrix matrix
                     ) {
-                        if (entry.getValue().groupBy() != null) {
-                            //group by group label container to a map of metrics, then convert to ResourceMetrics
+                        List<String> groupByLabels = groupByLabels(entry.getValue());
+                        if (!groupByLabels.isEmpty()) {
+                            //group by labels to a map of metrics, then convert to ResourceMetrics
                             Map<String, List<Matrix.Metric>> grouped = matrix
                                 .getResult()
                                 .stream()
                                 .collect(
-                                    Collectors.groupingBy(m ->
-                                        Optional.ofNullable(m.getLabels().get(entry.getValue().groupBy())).orElse(
-                                            "unknown"
-                                        )
+                                    Collectors.groupingBy(
+                                        m -> groupKey(m, groupByLabels),
+                                        LinkedHashMap::new,
+                                        Collectors.toList()
                                     )
                                 );
 
                             List<ResourceMetrics> mres = grouped
                                 .entrySet()
                                 .stream()
-                                .filter(e -> !("unknown".equals(e.getKey())))
+                                .filter(e -> !(UNKNOWN_GROUP.equals(e.getKey())))
                                 .map(e ->
                                     convert(
                                         entry,
@@ -650,6 +655,32 @@ public class PrometheusMetricsService implements ResourceMetricsService {
             };
         }
         return total;
+    }
+
+    private static List<String> groupByLabels(@NotNull PrometheusProperties.MetricMapping mapping) {
+        if (!StringUtils.hasText(mapping.groupBy())) {
+            return List.of();
+        }
+
+        return Arrays.stream(mapping.groupBy().split(",")).map(String::trim).filter(StringUtils::hasText).toList();
+    }
+
+    //build a composite key by nesting label values in declaration order, eg. pod/container
+    private static String groupKey(@NotNull QueryResult.Result result, @NotNull List<String> labels) {
+        Map<String, String> values = Optional.ofNullable(result.getLabels()).orElse(Map.of());
+        StringBuilder key = new StringBuilder();
+        for (String label : labels) {
+            String value = values.get(label);
+            if (!StringUtils.hasText(value)) {
+                return UNKNOWN_GROUP;
+            }
+            if (!key.isEmpty()) {
+                key.append(GROUP_SEPARATOR);
+            }
+            key.append(value);
+        }
+
+        return key.toString();
     }
 
     private String map(String label) {

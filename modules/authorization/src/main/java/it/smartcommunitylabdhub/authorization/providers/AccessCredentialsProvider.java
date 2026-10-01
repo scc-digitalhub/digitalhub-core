@@ -43,7 +43,7 @@ import org.springframework.util.Assert;
 
 @Service
 @Slf4j
-public class AccessCredentialsProvider implements ConfigurationProvider, CredentialsProvider {
+public class AccessCredentialsProvider implements ConfigurationProvider, CredentialsProvider<AccessCredentials> {
 
     private JwtTokenService jwtTokenService;
     private AccessCredentialsConfig config;

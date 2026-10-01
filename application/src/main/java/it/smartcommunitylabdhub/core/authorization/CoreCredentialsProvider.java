@@ -36,7 +36,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
-public class CoreCredentialsProvider implements CredentialsProvider {
+public class CoreCredentialsProvider implements CredentialsProvider<CoreCredentials> {
 
     AuthorizableAwareEntityService<Project> projectAuthHelper;
 
