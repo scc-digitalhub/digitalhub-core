@@ -38,7 +38,6 @@ public class RayBuildTaskSpec extends K8sFunctionTaskBaseSpec {
      * Optional list of extra Dockerfile {@code RUN} instructions executed after
      * staging the source code and before installing requirements.
      */
-    @Schema(title = "fields.ray.instructions.title", description = "fields.ray.instructions.description")
     private List<String> instructions;
 
     public RayBuildTaskSpec(Map<String, Serializable> data) {
