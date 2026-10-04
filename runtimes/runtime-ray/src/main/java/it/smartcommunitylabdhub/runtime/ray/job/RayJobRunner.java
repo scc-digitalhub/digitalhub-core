@@ -81,6 +81,11 @@ public class RayJobRunner {
 
     private final RayProperties properties;
     private final K8sBuilderHelper k8sBuilderHelper;
+
+    private final int userId;
+    private final int groupId;
+
+
     private Mustache handlerTemplate;
     private K8sLabelHelper k8sLabelHelper;
 
@@ -100,6 +105,10 @@ public class RayJobRunner {
         defaultCoreResource.setCpu(properties.getHeadCpu() != null ? properties.getHeadCpu() : "1");
         defaultCoreResource.setMem(properties.getHeadMemory() != null ? properties.getHeadMemory() : "2Gi");
         defaultCoreResource.setDisk(properties.getHeadDiskSize() != null ? properties.getHeadDiskSize() : "2Gi");
+
+        this.userId = properties.getUserId() != null ? properties.getUserId() : RayRuntime.UID;
+        this.groupId = properties.getGroupId() != null ? properties.getGroupId() : RayRuntime.GID;
+
     }
 
     public void setHandlerTemplate(Resource resource) {
@@ -192,6 +201,10 @@ public class RayJobRunner {
             .template(taskSpec.getProfile())
             .volumes(taskSpec.getVolumes())
             .spec(raySpec)
+            //securityContext
+            .fsGroup(groupId)
+            .runAsGroup(groupId)
+            .runAsUser(userId)
             .build();
 
         runnable.setId(run.getId());

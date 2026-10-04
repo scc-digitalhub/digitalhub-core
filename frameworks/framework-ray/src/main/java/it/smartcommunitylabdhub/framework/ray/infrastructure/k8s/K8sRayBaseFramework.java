@@ -527,7 +527,7 @@ public abstract class K8sRayBaseFramework<
     }
 
     public String getResourceName(String prefix, String task, String id) {
-        return K8sBuilderHelper.sanitizeNames(prefix + "-" + task + "-" + id);
+        return K8sBuilderHelper.sanitizeNames(task + "-" + id);
     }
 
     private Map<String, String> convertLabels(List<CoreLabel> labels) {
@@ -755,7 +755,7 @@ public abstract class K8sRayBaseFramework<
 
         // Build Container
         V1Container container = new V1Container()
-            .name("ray-" + runnable.getId())
+            .name(runnable.getId())
             .image(runnable.getImage())
             .imagePullPolicy(imagePullPolicy)
             .command(podModel.getCommand() != null ? List.of(podModel.getCommand()) : null)
