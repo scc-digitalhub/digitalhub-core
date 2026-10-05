@@ -30,7 +30,6 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.AuthorizableAwareEntityService;
-import it.smartcommunitylabdhub.authorization.services.CredentialsProvider;
 import it.smartcommunitylabdhub.authorization.services.JwtTokenService;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
@@ -75,7 +74,7 @@ import software.amazon.awssdk.services.sts.model.StsException;
 @Slf4j
 public class S3AssumeRoleProvider
     extends S3BaseProvider
-    implements S3CredentialsProvider, CredentialsProvider<S3Credentials>, InitializingBean
+    implements S3CredentialsProvider<S3StaticCredentials>, InitializingBean
 {
 
     private static final int DEFAULT_DURATION = 24 * 3600; //24 hour
@@ -85,7 +84,7 @@ public class S3AssumeRoleProvider
     private int accessTokenDuration = JwtTokenService.DEFAULT_ACCESS_TOKEN_DURATION;
 
     // cache credentials for up to DURATION
-    LoadingCache<Pair<String, S3PolicyMapping>, S3Credentials> cache;
+    LoadingCache<Pair<String, S3PolicyMapping>, S3StaticCredentials> cache;
 
     AuthorizableAwareEntityService<Project> projectAuthHelper;
     Mustache policyTemplateMustache;
@@ -133,9 +132,9 @@ public class S3AssumeRoleProvider
         cache = CacheBuilder.newBuilder()
             .expireAfterWrite(cacheDuration, TimeUnit.SECONDS)
             .build(
-                new CacheLoader<Pair<String, S3PolicyMapping>, S3Credentials>() {
+                new CacheLoader<Pair<String, S3PolicyMapping>, S3StaticCredentials>() {
                     @Override
-                    public S3Credentials load(@Nonnull Pair<String, S3PolicyMapping> key) throws Exception {
+                    public S3StaticCredentials load(@Nonnull Pair<String, S3PolicyMapping> key) throws Exception {
                         log.debug("load credentials for {}", key.getFirst());
                         return generate(key.getFirst(), key.getSecond());
                     }
@@ -143,7 +142,8 @@ public class S3AssumeRoleProvider
             );
     }
 
-    private S3Credentials generate(@NotNull String username, @NotNull S3PolicyMapping policy) throws StoreException {
+    private S3StaticCredentials generate(@NotNull String username, @NotNull S3PolicyMapping policy)
+        throws StoreException {
         log.debug("generate credentials for user authentication {} via STS service", username);
         if (log.isTraceEnabled()) {
             log.trace("policy: {}", policy);
@@ -211,7 +211,7 @@ public class S3AssumeRoleProvider
                         ? ZonedDateTime.ofInstant(credentials.expiration(), ZoneId.systemDefault())
                         : ZonedDateTime.now().plus(Duration.ofSeconds(duration - MIN_DURATION));
 
-                return S3Credentials.builder()
+                return S3StaticCredentials.builder()
                     .accessKey(credentials.accessKeyId())
                     .secretKey(credentials.secretAccessKey())
                     .sessionToken(credentials.sessionToken())
@@ -242,7 +242,7 @@ public class S3AssumeRoleProvider
     }
 
     @Override
-    public S3Credentials get(@NotNull UserAuthentication<?> auth) {
+    public S3StaticCredentials get(@NotNull UserAuthentication<?> auth) {
         if (properties.isAssumeRoleProviderEnabled() && cache != null) {
             //we expect a policy credentials in context
             S3PolicyMapping policy = Optional.ofNullable(auth.getCredentials())
@@ -276,7 +276,7 @@ public class S3AssumeRoleProvider
                 log.debug("get credentials for user authentication {} from cache", username);
                 try {
                     Pair<String, S3PolicyMapping> key = Pair.of(username, copy);
-                    S3Credentials credentials = cache.get(key);
+                    S3StaticCredentials credentials = cache.get(key);
                     if (credentials == null) {
                         return null;
                     }

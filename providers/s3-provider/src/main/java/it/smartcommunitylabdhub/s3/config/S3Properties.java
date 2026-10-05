@@ -55,6 +55,8 @@ public class S3Properties {
 
     private String policyTemplate;
 
+    private Integer webIdentityTokenDuration;
+
     public boolean isStaticProviderEnabled() {
         return (
             ((enable != null && enable.booleanValue()) &&
@@ -77,6 +79,15 @@ public class S3Properties {
                 (policy != null && !policy.isBlank()) ||
                 (claim != null && !claim.isBlank()) ||
                 (policyTemplate != null && !policyTemplate.isBlank()))
+        );
+    }
+
+    public boolean isWebIdentityProviderEnabled() {
+        return (
+            ((enable != null && enable.booleanValue()) &&
+                (endpoint != null && !endpoint.isBlank()) &&
+                (webIdentityTokenDuration != null && webIdentityTokenDuration > 0)) &&
+            isAssumeRoleProviderEnabled()
         );
     }
 

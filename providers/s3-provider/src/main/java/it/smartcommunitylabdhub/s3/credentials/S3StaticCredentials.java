@@ -20,21 +20,19 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.core.authorization;
+package it.smartcommunitylabdhub.s3.credentials;
 
-import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonSetter;
 import it.smartcommunitylabdhub.authorization.model.AbstractCredentials;
-import java.util.Set;
+import java.time.ZonedDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import org.springframework.util.StringUtils;
 
 @Getter
 @Setter
@@ -43,18 +41,29 @@ import org.springframework.util.StringUtils;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class CoreCredentials extends AbstractCredentials {
+public class S3StaticCredentials extends AbstractCredentials implements S3Credentials {
 
-    @JsonProperty("dh_projects")
-    private Set<String> projects;
+    //NOTE: align names with
+    //ref https://docs.aws.amazon.com/sdkref/latest/guide/settings-reference.html#EVarSettings
+    //
+    @JsonProperty("aws_access_key_id")
+    private String accessKey;
 
-    @JsonGetter("dh_projects")
-    private String getProjectsAsString() {
-        return projects == null ? null : StringUtils.collectionToCommaDelimitedString(projects);
-    }
+    @JsonProperty("aws_secret_access_key")
+    private String secretKey;
 
-    @JsonSetter("dh_projects")
-    private void setProjectsAsString(String projects) {
-        this.projects = projects == null ? null : StringUtils.commaDelimitedListToSet(projects);
+    @JsonProperty("aws_session_token")
+    private String sessionToken;
+
+    @JsonProperty("aws_credentials_expiration")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ssXXX", timezone = "UTC")
+    private ZonedDateTime expiration;
+
+    @Override
+    public void eraseCredentials() {
+        //clear credentials
+        this.accessKey = null;
+        this.secretKey = null;
+        this.sessionToken = null;
     }
 }

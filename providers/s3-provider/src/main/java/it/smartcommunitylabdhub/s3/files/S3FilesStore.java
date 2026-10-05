@@ -32,13 +32,12 @@ import it.smartcommunitylabdhub.files.models.TokenSlice;
 import it.smartcommunitylabdhub.files.models.UploadInfo;
 import it.smartcommunitylabdhub.files.service.FilesStore;
 import it.smartcommunitylabdhub.s3.config.S3Config;
-import it.smartcommunitylabdhub.s3.credentials.S3Credentials;
+import it.smartcommunitylabdhub.s3.credentials.S3StaticCredentials;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Stream;
@@ -106,7 +105,7 @@ public class S3FilesStore implements FilesStore {
     }
 
     //TODO add caching
-    private @Nullable AwsCredentials getCredentials(S3Credentials s3Credentials) {
+    private @Nullable AwsCredentials getCredentials(S3StaticCredentials s3Credentials) {
         if (!StringUtils.hasText(s3Credentials.getAccessKey()) || !StringUtils.hasText(s3Credentials.getSecretKey())) {
             return null;
         }
@@ -127,7 +126,7 @@ public class S3FilesStore implements FilesStore {
         }
     }
 
-    private S3Client getClient(@NotNull S3Credentials s3Credentials) throws StoreException {
+    private S3Client getClient(@NotNull S3StaticCredentials s3Credentials) throws StoreException {
         AwsCredentials credentials = getCredentials(s3Credentials);
         if (credentials == null) {
             throw new StoreException("no credentials found");
@@ -146,7 +145,7 @@ public class S3FilesStore implements FilesStore {
         }
     }
 
-    private S3Presigner getPresignerClient(@NotNull S3Credentials s3Credentials) throws StoreException {
+    private S3Presigner getPresignerClient(@NotNull S3StaticCredentials s3Credentials) throws StoreException {
         AwsCredentials credentials = getCredentials(s3Credentials);
         if (credentials == null) {
             throw new StoreException("no credentials found");
@@ -171,14 +170,14 @@ public class S3FilesStore implements FilesStore {
         }
     }
 
-    private @Nullable S3Credentials extractCredentials(List<Credentials> credentials, String bucket) {
+    private @Nullable S3StaticCredentials extractCredentials(List<Credentials> credentials, String bucket) {
         //pick matching credentials if available
         return credentials == null
             ? null
             : credentials
                   .stream()
-                  .filter(S3Credentials.class::isInstance)
-                  .map(c -> (S3Credentials) c)
+                  .filter(S3StaticCredentials.class::isInstance)
+                  .map(c -> (S3StaticCredentials) c)
                   //DISABLED: only single provider supported for now
                   // //pick either matching or global credentials
                   // .filter(c ->
@@ -211,7 +210,7 @@ public class S3FilesStore implements FilesStore {
             throw new StoreException("bucket mismatch");
         }
 
-        S3Credentials s3Credentials = extractCredentials(credentials, bucketName);
+        S3StaticCredentials s3Credentials = extractCredentials(credentials, bucketName);
         if (s3Credentials == null) {
             throw new StoreException("no credentials found");
         }
@@ -266,7 +265,7 @@ public class S3FilesStore implements FilesStore {
             throw new StoreException("bucket mismatch");
         }
 
-        S3Credentials s3Credentials = extractCredentials(credentials, bucketName);
+        S3StaticCredentials s3Credentials = extractCredentials(credentials, bucketName);
         if (s3Credentials == null) {
             throw new StoreException("no credentials found");
         }
@@ -384,7 +383,7 @@ public class S3FilesStore implements FilesStore {
             throw new StoreException("bucket mismatch");
         }
 
-        S3Credentials s3Credentials = extractCredentials(credentials, bucketName);
+        S3StaticCredentials s3Credentials = extractCredentials(credentials, bucketName);
         if (s3Credentials == null) {
             throw new StoreException("no credentials found");
         }
@@ -436,7 +435,7 @@ public class S3FilesStore implements FilesStore {
             throw new StoreException("bucket mismatch");
         }
 
-        S3Credentials s3Credentials = extractCredentials(credentials, bucketName);
+        S3StaticCredentials s3Credentials = extractCredentials(credentials, bucketName);
         if (s3Credentials == null) {
             throw new StoreException("no credentials found");
         }
@@ -489,7 +488,7 @@ public class S3FilesStore implements FilesStore {
             throw new StoreException("bucket mismatch");
         }
 
-        S3Credentials s3Credentials = extractCredentials(credentials, bucketName);
+        S3StaticCredentials s3Credentials = extractCredentials(credentials, bucketName);
         if (s3Credentials == null) {
             throw new StoreException("no credentials found");
         }
@@ -552,7 +551,7 @@ public class S3FilesStore implements FilesStore {
             throw new StoreException("bucket mismatch");
         }
 
-        S3Credentials s3Credentials = extractCredentials(credentials, bucketName);
+        S3StaticCredentials s3Credentials = extractCredentials(credentials, bucketName);
         if (s3Credentials == null) {
             throw new StoreException("no credentials found");
         }
@@ -614,7 +613,7 @@ public class S3FilesStore implements FilesStore {
             throw new StoreException("bucket mismatch");
         }
 
-        S3Credentials s3Credentials = extractCredentials(credentials, bucketName);
+        S3StaticCredentials s3Credentials = extractCredentials(credentials, bucketName);
         if (s3Credentials == null) {
             throw new StoreException("no credentials found");
         }

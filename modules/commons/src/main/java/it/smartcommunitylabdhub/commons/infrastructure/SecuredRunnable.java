@@ -23,8 +23,10 @@
 
 package it.smartcommunitylabdhub.commons.infrastructure;
 
+import java.io.Serializable;
 import java.util.Collection;
 
-public interface SecuredRunnable {
+public interface SecuredRunnable extends Serializable {
     void setCredentials(Collection<Credentials> credentials);
+    Collection<Credentials> getCredentials();
 }

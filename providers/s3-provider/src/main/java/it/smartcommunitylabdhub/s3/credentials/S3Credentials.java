@@ -22,48 +22,7 @@
 
 package it.smartcommunitylabdhub.s3.credentials;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import it.smartcommunitylabdhub.authorization.model.AbstractCredentials;
-import java.time.ZonedDateTime;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
+import org.springframework.security.core.CredentialsContainer;
 
-@Getter
-@Setter
-@ToString
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public class S3Credentials extends AbstractCredentials {
-
-    //NOTE: align names with
-    //ref https://docs.aws.amazon.com/sdkref/latest/guide/settings-reference.html#EVarSettings
-    //
-    @JsonProperty("aws_access_key_id")
-    private String accessKey;
-
-    @JsonProperty("aws_secret_access_key")
-    private String secretKey;
-
-    @JsonProperty("aws_session_token")
-    private String sessionToken;
-
-    @JsonProperty("aws_credentials_expiration")
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH':'mm':'ss'Z'")
-    private ZonedDateTime expiration;
-
-    @Override
-    public void eraseCredentials() {
-        //clear credentials
-        this.accessKey = null;
-        this.secretKey = null;
-        this.sessionToken = null;
-    }
-}
+public interface S3Credentials extends Credentials, CredentialsContainer {}

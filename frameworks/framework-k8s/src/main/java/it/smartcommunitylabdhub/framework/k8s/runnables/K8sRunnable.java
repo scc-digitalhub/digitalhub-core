@@ -24,7 +24,9 @@
 package it.smartcommunitylabdhub.framework.k8s.runnables;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import it.smartcommunitylabdhub.commons.infrastructure.ConfigurableRunnable;
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
@@ -43,6 +45,7 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreResources;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreToleration;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -63,6 +66,7 @@ import org.springframework.util.StringUtils;
 @AllArgsConstructor
 @NoArgsConstructor
 @ToString
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class K8sRunnable implements RunRunnable, SecuredRunnable, ConfigurableRunnable, CredentialsContainer {
 
     public static final String[] FINAL_STATES = {
@@ -142,10 +146,12 @@ public class K8sRunnable implements RunRunnable, SecuredRunnable, ConfigurableRu
     private List<CoreMetric> metrics;
 
     @ToString.Exclude
-    private Map<String, String> credentialsMap;
+    @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property = "@class")
+    private List<Credentials> credentials;
 
     @ToString.Exclude
-    private Map<String, String> configurationMap;
+    @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property = "@class")
+    private List<Configuration> configurations;
 
     @JsonProperty("context_refs")
     private List<ContextRef> contextRefs;
@@ -160,33 +166,52 @@ public class K8sRunnable implements RunRunnable, SecuredRunnable, ConfigurableRu
 
     @Override
     public void eraseCredentials() {
-        this.credentialsMap = null;
-    }
-
-    @Override
-    public void setCredentials(Collection<Credentials> credentials) {
-        if (credentials != null) {
-            //export to map
-            this.credentialsMap = credentials
-                .stream()
-                .flatMap(c -> c.toMap().entrySet().stream())
-                //filter empty
-                .filter(e -> StringUtils.hasText(e.getValue()))
-                .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
-        }
+        this.credentials = null;
     }
 
     @Override
     public void setConfigurations(Collection<Configuration> configurations) {
-        if (configurations != null) {
-            //export to map
-            this.configurationMap = configurations
-                .stream()
-                .flatMap(c -> c.toStringMap().entrySet().stream())
-                //filter empty
-                .filter(e -> StringUtils.hasText(e.getValue()))
-                .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
+        if (configurations == null) {
+            this.configurations = null;
         }
+
+        //copy to detach + ensure serializable
+        this.configurations = new ArrayList<>(configurations);
+    }
+
+    @Override
+    public void setCredentials(Collection<Credentials> credentials) {
+        if (credentials == null) {
+            this.credentials = null;
+        }
+
+        //copy to detach + ensure serializable
+        this.credentials = new ArrayList<>(credentials);
+    }
+
+    @JsonIgnore
+    public Map<String, String> getCredentialsMap() {
+        //export to map
+        return credentials == null
+            ? Map.of()
+            : credentials
+                  .stream()
+                  .flatMap(c -> c.toMap().entrySet().stream())
+                  //filter empty
+                  .filter(e -> StringUtils.hasText(e.getValue()))
+                  .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
+    }
+
+    @JsonIgnore
+    public Map<String, String> getConfigurationMap() {
+        return configurations == null
+            ? Map.of()
+            : configurations
+                  .stream()
+                  .flatMap(c -> c.toStringMap().entrySet().stream())
+                  //filter empty
+                  .filter(e -> StringUtils.hasText(e.getValue()))
+                  .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
     }
 
     //final state means we won't watch it anymore, so we can remove from store and stop sending events

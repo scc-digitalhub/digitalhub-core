@@ -81,8 +81,8 @@ public class PodModel {
         return (T) builder
             // .id(parent.getId() + "-" + name)
             .id(parent.getId())
-            .configurationMap(parent.getConfigurationMap())
-            .credentialsMap(parent.getCredentialsMap())
+            .configurations(parent.getConfigurations())
+            .credentials(parent.getCredentials())
             .project(parent.getProject())
             .runtime(parent.getRuntime())
             .user(parent.getUser())

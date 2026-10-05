@@ -61,6 +61,7 @@ public class KubernetesMapper {
     //custom CBOR object mapper with mixIn for K8sRunnable (for RunnableStoreImpl)
     public static final ObjectMapper CBOR_OBJECT_MAPPER = new ObjectMapper(new CBORFactory())
         .addMixIn(K8sRunnable.class, K8sRunnableMixin.class)
+        .registerModule(new JavaTimeModule())
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     public static final YAMLFactory YAML_FACTORY = YamlMapperFactory.yamlFactory();

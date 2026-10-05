@@ -5,10 +5,11 @@ import it.smartcommunitylabdhub.authorization.UserAuthenticationManagerBuilder;
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.JwtTokenService;
 import it.smartcommunitylabdhub.s3.credentials.S3AssumeRoleProvider;
-import it.smartcommunitylabdhub.s3.credentials.S3Credentials;
+import it.smartcommunitylabdhub.s3.credentials.S3StaticCredentials;
 import java.io.Serial;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
@@ -20,6 +21,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtClaimNames;
+import org.springframework.security.oauth2.jwt.JwtClaimValidator;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationProvider;
 import org.springframework.util.StringUtils;
@@ -39,6 +45,8 @@ import software.amazon.awssdk.services.sts.model.Credentials;
 public class S3STSEndpoint implements InitializingBean {
 
     public static final String STS_URL = "/auth/s3/sts";
+    public static final String AUDIENCE = "s3";
+
     private static final String ACTION = "AssumeRoleWithWebIdentity";
     private static final String VERSION = "2011-06-15";
     private static final String DEFAULT_SESSION_NAME = "dhcore";
@@ -69,7 +77,13 @@ public class S3STSEndpoint implements InitializingBean {
 
         if (jwtTokenService != null) {
             // enable internal jwt auth provider
-            JwtAuthenticationProvider coreJwtAuthProvider = new JwtAuthenticationProvider(jwtTokenService.getDecoder());
+            String audience = jwtTokenService.getAudience() + "/" + AUDIENCE;
+            OAuth2TokenValidator<Jwt> audienceValidator = new JwtClaimValidator<List<String>>(
+                JwtClaimNames.AUD,
+                (aud -> aud != null && aud.contains(audience))
+            );
+            JwtDecoder decoder = jwtTokenService.buildJwtDecoder(jwtTokenService.getJwk(), audienceValidator);
+            JwtAuthenticationProvider coreJwtAuthProvider = new JwtAuthenticationProvider(decoder);
             coreJwtAuthProvider.setJwtAuthenticationConverter(jwtTokenService.getAuthenticationConverter());
             this.authManager = authenticationManagerBuilder.build(coreJwtAuthProvider);
         }
@@ -106,7 +120,7 @@ public class S3STSEndpoint implements InitializingBean {
             throw new InsufficientAuthenticationException("Authentication failed");
         }
 
-        S3Credentials credentials = s3CredentialsProvider.get(userAuthentication);
+        S3StaticCredentials credentials = s3CredentialsProvider.get(userAuthentication);
         if (credentials == null) {
             throw new InsufficientAuthenticationException("Invalid or missing credentials");
         }
@@ -126,7 +140,6 @@ public class S3STSEndpoint implements InitializingBean {
         return toXml(response, userAuthentication.getName());
     }
 
-    //clients match the response against the requested role/session, echo them back as assumed role
     private AssumedRoleUser assumedRoleUser(String roleArn, String roleSessionName) {
         if (!StringUtils.hasText(roleArn)) {
             return null;
@@ -134,8 +147,6 @@ public class S3STSEndpoint implements InitializingBean {
 
         String sessionName = StringUtils.hasText(roleSessionName) ? roleSessionName : DEFAULT_SESSION_NAME;
 
-        //derive assumed-role identifiers from the requested role arn
-        //arn:aws:iam::<account>:role/<path/><name> -> arn:aws:sts::<account>:assumed-role/<name>/<session>
         String[] parts = roleArn.split(":", 6);
         String account = parts.length > 4 ? parts[4] : "";
         String resource = parts.length > 5 ? parts[5] : roleArn;

@@ -21,6 +21,7 @@ import it.smartcommunitylabdhub.files.service.FilesService;
 import it.smartcommunitylabdhub.s3.S3Provider;
 import it.smartcommunitylabdhub.s3.credentials.S3AssumeRoleProvider;
 import it.smartcommunitylabdhub.s3.credentials.S3StaticProvider;
+import it.smartcommunitylabdhub.s3.credentials.S3WebIdentityProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -31,7 +32,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
-import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
 @Configuration
@@ -55,6 +55,12 @@ public class S3ProviderConfig {
     @ConditionalOnProperty(name = "credentials.provider.s3.enable", havingValue = "true", matchIfMissing = false)
     S3AssumeRoleProvider s3AssumeRoleProvider(S3Properties s3Properties) {
         return new S3AssumeRoleProvider(s3Properties);
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "credentials.provider.s3.enable", havingValue = "true", matchIfMissing = false)
+    S3WebIdentityProvider s3WebIdentityProvider(S3Properties s3Properties) {
+        return new S3WebIdentityProvider(s3Properties);
     }
 
     @Bean("s3StsSecurityFilterChain")

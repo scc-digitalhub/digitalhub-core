@@ -23,7 +23,6 @@
 package it.smartcommunitylabdhub.s3.credentials;
 
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
-import it.smartcommunitylabdhub.authorization.services.CredentialsProvider;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.s3.base.S3BaseProvider;
 import it.smartcommunitylabdhub.s3.config.S3Properties;
@@ -32,17 +31,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 
 @Slf4j
-public class S3StaticProvider
-    extends S3BaseProvider
-    implements S3CredentialsProvider, CredentialsProvider<S3Credentials>
-{
+public class S3StaticProvider extends S3BaseProvider implements S3CredentialsProvider<S3StaticCredentials> {
 
     public S3StaticProvider(S3Properties s3Properties) {
         super(s3Properties);
     }
 
     @Override
-    public S3Credentials get(@NotNull UserAuthentication<?> auth) {
+    public S3StaticCredentials get(@NotNull UserAuthentication<?> auth) {
         if (config == null) {
             return null;
         }
@@ -54,7 +50,7 @@ public class S3StaticProvider
         log.debug("use shared credentials for user authentication {} via static provider", auth.getName());
 
         //static credentials shared
-        return S3Credentials.builder()
+        return S3StaticCredentials.builder()
             .accessKey(properties.getAccessKey())
             .secretKey(properties.getSecretKey())
             .build();

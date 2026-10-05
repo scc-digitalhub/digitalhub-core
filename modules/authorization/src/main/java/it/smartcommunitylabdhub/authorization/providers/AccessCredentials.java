@@ -25,8 +25,10 @@ package it.smartcommunitylabdhub.authorization.providers;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import com.nimbusds.jwt.SignedJWT;
 import it.smartcommunitylabdhub.authorization.model.AbstractCredentials;
+import java.text.ParseException;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -66,8 +68,18 @@ public class AccessCredentials extends AbstractCredentials {
         return accessToken != null ? accessToken.serialize() : null;
     }
 
+    @JsonSetter("dhcore_access_token")
+    public void setAccessTokenAsString(String accessToken) throws ParseException {
+        this.accessToken = accessToken == null ? null : SignedJWT.parse(accessToken);
+    }
+
     @JsonGetter("dhcore_id_token")
     public String getIdTokenAsString() {
         return idToken != null ? idToken.serialize() : null;
+    }
+
+    @JsonSetter("dhcore_id_token")
+    public void setIdTokenAsString(String idToken) throws ParseException {
+        this.idToken = idToken == null ? null : SignedJWT.parse(idToken);
     }
 }

@@ -20,21 +20,17 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.core.authorization;
+package it.smartcommunitylabdhub.s3.credentials;
 
-import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonSetter;
 import it.smartcommunitylabdhub.authorization.model.AbstractCredentials;
-import java.util.Set;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import org.springframework.util.StringUtils;
 
 @Getter
 @Setter
@@ -43,18 +39,21 @@ import org.springframework.util.StringUtils;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class CoreCredentials extends AbstractCredentials {
+public class S3WebIdentityCredentials extends AbstractCredentials implements S3Credentials {
 
-    @JsonProperty("dh_projects")
-    private Set<String> projects;
+    @JsonProperty("aws_web_identity_token")
+    private String webIdentityToken;
 
-    @JsonGetter("dh_projects")
-    private String getProjectsAsString() {
-        return projects == null ? null : StringUtils.collectionToCommaDelimitedString(projects);
-    }
+    @JsonProperty("aws_web_identity_token_file")
+    private String webIdentityTokenFile;
 
-    @JsonSetter("dh_projects")
-    private void setProjectsAsString(String projects) {
-        this.projects = projects == null ? null : StringUtils.commaDelimitedListToSet(projects);
+    @JsonProperty("aws_role_arn")
+    private String roleArn;
+
+    @Override
+    public void eraseCredentials() {
+        //clear credentials
+        this.webIdentityToken = null;
+        this.webIdentityTokenFile = null;
     }
 }
