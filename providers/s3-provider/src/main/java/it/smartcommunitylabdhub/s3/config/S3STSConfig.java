@@ -20,21 +20,17 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.core.authorization;
+package it.smartcommunitylabdhub.s3.config;
 
-import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonSetter;
-import it.smartcommunitylabdhub.authorization.model.AbstractCredentials;
-import java.util.Set;
+import it.smartcommunitylabdhub.commons.infrastructure.AbstractConfiguration;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import org.springframework.util.StringUtils;
 
 @Getter
 @Setter
@@ -43,18 +39,13 @@ import org.springframework.util.StringUtils;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class CoreCredentials extends AbstractCredentials {
+public class S3STSConfig extends AbstractConfiguration {
 
-    @JsonProperty("dh_projects")
-    private Set<String> projects;
+    @JsonProperty("aws_endpoint_url_sts")
+    private String stsEndpoint;
 
-    @JsonGetter("dh_projects")
-    private String getProjectsAsString() {
-        return projects == null ? null : StringUtils.collectionToCommaDelimitedString(projects);
-    }
-
-    @JsonSetter("dh_projects")
-    private void setProjectsAsString(String projects) {
-        this.projects = projects == null ? null : StringUtils.commaDelimitedListToSet(projects);
+    @JsonProperty(value = "aws_sts_endpoint_url", access = JsonProperty.Access.READ_ONLY)
+    public String getAwsStsEndpointUrl() {
+        return stsEndpoint;
     }
 }

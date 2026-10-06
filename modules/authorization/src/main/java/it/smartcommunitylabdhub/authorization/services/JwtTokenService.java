@@ -63,6 +63,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -221,6 +222,10 @@ public class JwtTokenService implements InitializingBean {
         return audience;
     }
 
+    public JWK getJwk() {
+        return jwk;
+    }
+
     public String getExchangeAudience() {
         return audience + "/exchange";
     }
@@ -363,6 +368,15 @@ public class JwtTokenService implements InitializingBean {
         List<String> audiences,
         int duration
     ) throws JwtTokenServiceException {
+        return generateAccessToken(authentication, audiences, duration, true);
+    }
+
+    public SignedJWT generateAccessToken(
+        @NotNull UserAuthentication<?> authentication,
+        List<String> audiences,
+        int duration,
+        boolean includeCredentials
+    ) throws JwtTokenServiceException {
         if (signer == null) {
             throw new UnsupportedOperationException("signer not available");
         }
@@ -396,21 +410,23 @@ public class JwtTokenService implements InitializingBean {
                 claims.claim("client_id", clientId);
             }
 
-            //include any credential available
-            //NOTE: we expect claims to NOT clash
-            if (authentication.getCredentials() != null) {
-                authentication
-                    .getCredentials()
-                    .stream()
-                    .filter(c -> c != null)
-                    .map(c -> {
-                        if (c instanceof CredentialsContainer) {
-                            ((CredentialsContainer) c).eraseCredentials();
-                        }
-                        return c;
-                    })
-                    .flatMap(c -> c.toMap().entrySet().stream())
-                    .forEach(c -> claims.claim(c.getKey(), c.getValue()));
+            if (includeCredentials) {
+                //include any credential available
+                //NOTE: we expect claims to NOT clash
+                if (authentication.getCredentials() != null) {
+                    authentication
+                        .getCredentials()
+                        .stream()
+                        .filter(c -> c != null)
+                        .map(c -> {
+                            if (c instanceof CredentialsContainer) {
+                                ((CredentialsContainer) c).eraseCredentials();
+                            }
+                            return c;
+                        })
+                        .flatMap(c -> c.toMap().entrySet().stream())
+                        .forEach(c -> claims.claim(c.getKey(), c.getValue()));
+                }
             }
 
             // build and sign
@@ -759,7 +775,7 @@ public class JwtTokenService implements InitializingBean {
         return null;
     }
 
-    private JwtDecoder buildJwtDecoder(@NotNull JWK jwk) throws JOSEException {
+    public JwtDecoder buildJwtDecoder(@NotNull JWK jwk, OAuth2TokenValidator<Jwt>... validators) throws JOSEException {
         //we support only RSA keys
         if (!(jwk instanceof RSAKey)) {
             log.warn("Unsupported key type: " + jwk);
@@ -773,7 +789,14 @@ public class JwtTokenService implements InitializingBean {
             (aud -> aud != null && aud.contains(audience))
         );
 
-        OAuth2TokenValidator<Jwt> validator = new DelegatingOAuth2TokenValidator<>(withIssuer, audienceValidator);
+        OAuth2TokenValidator<Jwt>[] jwtValidators =
+            validators != null
+                ? Stream.concat(Stream.of(withIssuer, audienceValidator), Stream.of(validators)).toArray(
+                      OAuth2TokenValidator[]::new
+                  )
+                : new OAuth2TokenValidator[] { withIssuer, audienceValidator };
+
+        OAuth2TokenValidator<Jwt> validator = new DelegatingOAuth2TokenValidator<>(jwtValidators);
         jwtDecoder.setJwtValidator(validator);
 
         return jwtDecoder;

@@ -40,6 +40,16 @@
             <version>${revision}</version>
         </dependency>
         <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-entity-run</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-framework-k8s</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>s3</artifactId>
             <version>${aws.version}</version>

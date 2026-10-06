@@ -23,8 +23,10 @@
 
 package it.smartcommunitylabdhub.commons.infrastructure;
 
+import java.io.Serializable;
 import java.util.Collection;
 
-public interface ConfigurableRunnable {
+public interface ConfigurableRunnable extends Serializable {
     void setConfigurations(Collection<Configuration> configurations);
+    Collection<Configuration> getConfigurations();
 }

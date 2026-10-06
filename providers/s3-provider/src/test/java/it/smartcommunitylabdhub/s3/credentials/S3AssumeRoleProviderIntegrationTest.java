@@ -188,8 +188,8 @@ class S3AssumeRoleProviderIntegrationTest {
 
         Credentials c = provider.get(a);
 
-        assertThat(c).as("credentials must not be null").isNotNull().isInstanceOf(S3Credentials.class);
-        S3Credentials s3 = (S3Credentials) c;
+        assertThat(c).as("credentials must not be null").isNotNull().isInstanceOf(S3StaticCredentials.class);
+        S3StaticCredentials s3 = (S3StaticCredentials) c;
 
         assertThat(s3.getAccessKey()).as("access key").isNotBlank();
         assertThat(s3.getSecretKey()).as("secret key").isNotBlank();
@@ -203,8 +203,8 @@ class S3AssumeRoleProviderIntegrationTest {
         UserAuthentication<?> a1 = auth(TEST_USER, mapping());
         UserAuthentication<?> a2 = auth(TEST_USER, mapping());
 
-        S3Credentials first = (S3Credentials) provider.get(a1);
-        S3Credentials second = (S3Credentials) provider.get(a2);
+        S3StaticCredentials first = (S3StaticCredentials) provider.get(a1);
+        S3StaticCredentials second = (S3StaticCredentials) provider.get(a2);
 
         assertThat(first).isNotNull();
         assertThat(second).isNotNull();
@@ -216,8 +216,8 @@ class S3AssumeRoleProviderIntegrationTest {
     @Test
     @DisplayName("Different users get distinct credential sessions")
     void differentUsers_getDistinctCredentials() {
-        S3Credentials a = (S3Credentials) provider.get(auth("user-a", mapping()));
-        S3Credentials b = (S3Credentials) provider.get(auth("user-b", mapping()));
+        S3StaticCredentials a = (S3StaticCredentials) provider.get(auth("user-a", mapping()));
+        S3StaticCredentials b = (S3StaticCredentials) provider.get(auth("user-b", mapping()));
 
         assertThat(a).isNotNull();
         assertThat(b).isNotNull();
@@ -238,7 +238,7 @@ class S3AssumeRoleProviderIntegrationTest {
     @DisplayName("Returned STS credentials work against the S3 endpoint (when bucket is configured)")
     @EnabledIfEnvironmentVariable(named = ENV_BUCKET, matches = ".+")
     void returnedCredentials_canListBucket() {
-        S3Credentials s3 = (S3Credentials) provider.get(auth(TEST_USER, mapping()));
+        S3StaticCredentials s3 = (S3StaticCredentials) provider.get(auth(TEST_USER, mapping()));
         assertThat(s3).isNotNull();
 
         AwsSessionCredentials creds = AwsSessionCredentials.create(
@@ -341,9 +341,9 @@ class S3AssumeRoleProviderIntegrationTest {
         assertThat(c)
             .as("credentials must be issued when policy template resolves to a non-empty session policy")
             .isNotNull()
-            .isInstanceOf(S3Credentials.class);
+            .isInstanceOf(S3StaticCredentials.class);
 
-        S3Credentials s3 = (S3Credentials) c;
+        S3StaticCredentials s3 = (S3StaticCredentials) c;
         assertThat(s3.getAccessKey()).isNotBlank();
         assertThat(s3.getSecretKey()).isNotBlank();
         assertThat(s3.getSessionToken()).isNotBlank();
@@ -377,7 +377,7 @@ class S3AssumeRoleProviderIntegrationTest {
             log.info("unknown-user template resolution -> {}", oc != null ? "credentials issued" : "no credentials");
             // use credentials to list the objects in the bucket, if returned - this validates that the policy is well-formed even in the degenerate case of no projects
             if (oc != null) {
-                S3Credentials os3 = (S3Credentials) oc;
+                S3StaticCredentials os3 = (S3StaticCredentials) oc;
                 AwsSessionCredentials ocreds = AwsSessionCredentials.create(
                     os3.getAccessKey(),
                     os3.getSecretKey(),

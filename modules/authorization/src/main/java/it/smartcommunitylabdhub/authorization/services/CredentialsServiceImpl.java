@@ -46,7 +46,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class CredentialsServiceImpl implements CredentialsService, TokenService {
 
-    private final List<CredentialsProvider> providers;
+    private final List<CredentialsProvider<? extends Credentials>> providers;
     private JwtTokenService jwtTokenService;
 
     @Autowired(required = false)
@@ -54,7 +54,7 @@ public class CredentialsServiceImpl implements CredentialsService, TokenService 
         this.jwtTokenService = jwtTokenService;
     }
 
-    public CredentialsServiceImpl(Collection<CredentialsProvider> providers) {
+    public CredentialsServiceImpl(Collection<CredentialsProvider<? extends Credentials>> providers) {
         log.debug("Initialize service with providers");
 
         if (providers != null) {
@@ -74,6 +74,7 @@ public class CredentialsServiceImpl implements CredentialsService, TokenService 
             .stream()
             .map(p -> p.get(auth))
             .filter(c -> c != null)
+            .map(c -> (Credentials) c)
             .toList();
 
         if (log.isTraceEnabled()) {
@@ -121,7 +122,7 @@ public class CredentialsServiceImpl implements CredentialsService, TokenService 
     ) {
         log.info("generate credentials for user {}", authentication.getName());
 
-        List<CredentialsProvider> credentialsProviders = providers
+        List<CredentialsProvider<? extends Credentials>> credentialsProviders = providers
             .stream()
             //skip access credentials, we generate tokens separately
             .filter(p -> !(p instanceof AccessCredentialsProvider))
