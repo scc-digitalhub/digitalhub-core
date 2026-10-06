@@ -274,6 +274,12 @@
     </dependency>
     <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
+      <artifactId>dh-autoscaler</artifactId>
+      <version>0.16.0-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>it.smartcommunitylabdhub</groupId>
       <artifactId>dh-entity-artifact</artifactId>
       <version>0.16.0-SNAPSHOT</version>
       <scope>compile</scope>

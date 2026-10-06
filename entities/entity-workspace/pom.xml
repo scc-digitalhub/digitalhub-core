@@ -10,9 +10,9 @@
         <relativePath>../../</relativePath> <!-- lookup parent from repository -->
     </parent>
     <groupId>it.smartcommunitylabdhub</groupId>
-    <artifactId>dh-entity-function</artifactId>
-    <name>entity-function</name>
-    <description>DHCore entity-function</description>
+    <artifactId>dh-entity-workspace</artifactId>
+    <name>entity-workspace</name>
+    <description>DHCore entity-workspace</description>
 
     <properties>
     </properties>
