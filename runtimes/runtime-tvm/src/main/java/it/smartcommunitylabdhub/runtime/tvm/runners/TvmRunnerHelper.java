@@ -6,6 +6,7 @@
 
 package it.smartcommunitylabdhub.runtime.tvm.runners;
 
+import io.fabric8.kubernetes.api.model.Quantity;
 import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.accessors.fields.KeyAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
@@ -15,7 +16,6 @@ import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.models.Model;
 import it.smartcommunitylabdhub.models.ModelManager;
-import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.io.Serializable;
@@ -97,73 +97,82 @@ public final class TvmRunnerHelper {
             .build();
     }
 
-    private static String loadClasspathStatic(String location) {
-        try {
-            return new String(
-                new org.springframework.core.io.DefaultResourceLoader().getResource(location).getContentAsByteArray(),
-                StandardCharsets.UTF_8
-            );
-        } catch (java.io.IOException e) {
-            throw new RuntimeException("failed to load classpath: " + location, e);
-        }
-    }
-
-    // ContextRef telling the init container to pre-download an S3/HTTP source; null when there is no source.
+    // Tells the init container to download an S3/HTTP source into the pod; null when there
+    // is no source.
     public static ContextRef inputContextRef(String s3OrHttpUri, String destination) {
-        if (!StringUtils.hasText(s3OrHttpUri)) return null;
+        if (!StringUtils.hasText(s3OrHttpUri)) {
+            return null;
+        }
         UriComponents uri = UriComponentsBuilder.fromUriString(s3OrHttpUri).build();
         return ContextRef.builder().source(s3OrHttpUri).protocol(uri.getScheme()).destination(destination).build();
     }
 
-    // Resolves a store:// key to the Model's S3 path; s3:// / https:// returned as-is.
-    @Nullable
-    public static String resolveModelPath(String path, ModelManager modelService) {
-        if (!StringUtils.hasText(path)) {
-            throw new IllegalArgumentException("model path is missing or invalid");
-        }
-        if (!path.startsWith(Keys.STORE_PREFIX)) {
-            return path;
-        }
-        KeyAccessor ka = KeyAccessor.with(path);
-        if (!EntityUtils.getEntityName(Model.class).equalsIgnoreCase(ka.getType())) {
+    // The Model entity behind a store:// key; the latest version when the key has no id.
+    public static Model resolveModel(String key, ModelManager modelManager) {
+        KeyAccessor accessor = KeyAccessor.with(key);
+        if (!EntityUtils.getEntityName(Model.class).equalsIgnoreCase(accessor.getType())) {
             throw new CoreRuntimeException("invalid entity kind reference, expected model");
         }
         Model model;
         try {
             model =
-                ka.getId() != null
-                    ? modelService.findModel(ka.getId())
-                    : modelService.getLatestModelByKey(ka.getProject(), path);
+                accessor.getId() != null
+                    ? modelManager.findModel(accessor.getId())
+                    : modelManager.getLatestModelByKey(accessor.getProject(), key);
         } catch (NoSuchEntityException e) {
             model = null;
         }
         if (model == null) {
-            throw new CoreRuntimeException("model not found for key: " + path);
+            throw new CoreRuntimeException("model not found for key: " + key);
         }
-        Object p = model.getSpec() != null ? model.getSpec().get("path") : null;
-        if (!(p instanceof String)) {
-            throw new CoreRuntimeException("model spec.path is missing for: " + path);
-        }
-        return (String) p;
+        return model;
     }
 
-    // Resolves a model key to its S3 folder; forces a trailing slash so the init container pulls the whole dir.
-    public static String resolveModelDir(String modelKey, ModelManager modelService) {
-        String path = resolveModelPath(modelKey, modelService);
-        if (!path.endsWith("/") && !path.endsWith(".zip")) {
-            path = path + "/";
+    // Storage path of a model reference: a store:// key becomes the Model's spec.path,
+    // while s3:// and https:// paths are returned as they are.
+    public static String resolveModelPath(String reference, ModelManager modelManager) {
+        if (!StringUtils.hasText(reference)) {
+            throw new IllegalArgumentException("model path is missing or invalid");
         }
-        return path;
+        if (!reference.startsWith(Keys.STORE_PREFIX)) {
+            return reference;
+        }
+        Model model = resolveModel(reference, modelManager);
+        Object path = model.getSpec() != null ? model.getSpec().get("path") : null;
+        if (!(path instanceof String text)) {
+            throw new CoreRuntimeException("model spec.path is missing for: " + reference);
+        }
+        return text;
     }
 
+    // Like resolveModelPath, with a trailing slash so the init container downloads the whole
+    // folder (model.so or model.relax.json together with metadata.json). Zip archives are
+    // left as they are.
+    public static String resolveModelDir(String modelKey, ModelManager modelManager) {
+        String path = resolveModelPath(modelKey, modelManager);
+        return path.endsWith("/") || path.endsWith(".zip") ? path : path + "/";
+    }
+
+    // Model kind named in a store:// key (store://<project>/model/<kind>/<name>); null for
+    // plain paths.
+    public static String modelKindOf(String reference) {
+        if (reference == null || !reference.startsWith(Keys.STORE_PREFIX)) {
+            return null;
+        }
+        return KeyAccessor.with(reference).getKind();
+    }
+
+    // Last path segment of a URI, ignoring a trailing slash.
     public static String extractFileName(String uri) {
-        if (!StringUtils.hasText(uri)) return "";
+        if (!StringUtils.hasText(uri)) {
+            return "";
+        }
         String trimmed = uri.endsWith("/") ? uri.substring(0, uri.length() - 1) : uri;
-        int slash = trimmed.lastIndexOf('/');
-        return slash >= 0 ? trimmed.substring(slash + 1) : trimmed;
+        return trimmed.substring(trimmed.lastIndexOf('/') + 1);
     }
 
-    // Last segment of function name (no `function/tvm/` prefix or `:id`); used for servedName and Service names.
+    // Function name without the "function/tvm/" prefix and the ":id" suffix; used for the
+    // served model name and the Service names.
     public static String cleanName(String name) {
         if (name == null) {
             return null;
