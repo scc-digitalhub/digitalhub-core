@@ -1,0 +1,106 @@
+{
+  "ui:title@en": "ONNX model",
+  "ui:description@en": "A model in ONNX format.",
+  "ui:title@it": "Modello ONNX",
+  "ui:description@it": "Un modello in formato ONNX.",
+  "inputs": {
+    "ui:title@en": "Inputs",
+    "ui:description@en": "Input tensors of the model: name, data type, shape and, when quantized, scale and zero point.",
+    "ui:title@it": "Input",
+    "ui:description@it": "Tensori di input del modello: nome, tipo di dato, shape e, se quantizzati, scala e zero point.",
+    "items": {
+      "name": {
+        "ui:title@en": "Name",
+        "ui:description@en": "Tensor name.",
+        "ui:title@it": "Nome",
+        "ui:description@it": "Nome del tensore."
+      },
+      "dtype": {
+        "ui:title@en": "Data Type",
+        "ui:description@en": "Element type, e.g. float32 or int8.",
+        "ui:title@it": "Tipo di dato",
+        "ui:description@it": "Tipo degli elementi, per esempio float32 o int8."
+      },
+      "shape": {
+        "ui:title@en": "Shape",
+        "ui:description@en": "Dimensions, e.g. [1, 3, 640, 640].",
+        "ui:title@it": "Shape",
+        "ui:description@it": "Dimensioni, per esempio [1, 3, 640, 640]."
+      },
+      "scale": {
+        "ui:title@en": "Scale",
+        "ui:description@en": "Quantization scale: real = (quantized - zero point) * scale.",
+        "ui:title@it": "Scala",
+        "ui:description@it": "Scala di quantizzazione: reale = (quantizzato - zero point) * scala."
+      },
+      "zero_point": {
+        "ui:title@en": "Zero Point",
+        "ui:description@en": "Quantization zero point.",
+        "ui:title@it": "Zero point",
+        "ui:description@it": "Zero point di quantizzazione."
+      },
+      "quantized_dimension": {
+        "ui:title@en": "Quantized Dimension",
+        "ui:description@en": "Axis of per-axis quantization.",
+        "ui:title@it": "Dimensione quantizzata",
+        "ui:description@it": "Asse della quantizzazione per asse."
+      }
+    }
+  },
+  "outputs": {
+    "ui:title@en": "Outputs",
+    "ui:description@en": "Output tensors of the model.",
+    "ui:title@it": "Output",
+    "ui:description@it": "Tensori di output del modello.",
+    "items": {
+      "name": {
+        "ui:title@en": "Name",
+        "ui:description@en": "Tensor name.",
+        "ui:title@it": "Nome",
+        "ui:description@it": "Nome del tensore."
+      },
+      "dtype": {
+        "ui:title@en": "Data Type",
+        "ui:description@en": "Element type, e.g. float32 or int8.",
+        "ui:title@it": "Tipo di dato",
+        "ui:description@it": "Tipo degli elementi, per esempio float32 o int8."
+      },
+      "shape": {
+        "ui:title@en": "Shape",
+        "ui:description@en": "Dimensions, e.g. [1, 3, 640, 640].",
+        "ui:title@it": "Shape",
+        "ui:description@it": "Dimensioni, per esempio [1, 3, 640, 640]."
+      },
+      "scale": {
+        "ui:title@en": "Scale",
+        "ui:description@en": "Quantization scale: real = (quantized - zero point) * scale.",
+        "ui:title@it": "Scala",
+        "ui:description@it": "Scala di quantizzazione: reale = (quantizzato - zero point) * scala."
+      },
+      "zero_point": {
+        "ui:title@en": "Zero Point",
+        "ui:description@en": "Quantization zero point.",
+        "ui:title@it": "Zero point",
+        "ui:description@it": "Zero point di quantizzazione."
+      },
+      "quantized_dimension": {
+        "ui:title@en": "Quantized Dimension",
+        "ui:description@en": "Axis of per-axis quantization.",
+        "ui:title@it": "Dimensione quantizzata",
+        "ui:description@it": "Asse della quantizzazione per asse."
+      }
+    }
+  },
+  "parameters": {
+    "ui:title@en": "Parameters",
+    "ui:description@en": "Free-form extra information, e.g. the dataset or the export tool.",
+    "ui:title@it": "Parametri",
+    "ui:description@it": "Informazioni aggiuntive libere, per esempio il dataset o lo strumento di export."
+  },
+  "opset": {
+    "ui:title@en": "Opset Version",
+    "ui:description@en": "ONNX operator set version the model was exported with, e.g. 17.",
+    "ui:title@it": "Versione opset",
+    "ui:description@it": "Versione dell'operator set ONNX con cui è stato esportato il modello, per esempio 17."
+  }
+}

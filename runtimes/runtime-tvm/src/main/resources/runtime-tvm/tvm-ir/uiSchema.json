@@ -1,0 +1,124 @@
+{
+  "ui:title@en": "TVM Relax IR model",
+  "ui:description@en": "The Relax IR written by tvm+build.",
+  "ui:title@it": "Modello TVM Relax IR",
+  "ui:description@it": "Il Relax IR scritto da tvm+build.",
+  "entry": {
+    "ui:title@en": "Entry Function",
+    "ui:description@en": "Function of the model to call, usually main.",
+    "ui:title@it": "Funzione di ingresso",
+    "ui:description@it": "Funzione del modello da chiamare, di solito main."
+  },
+  "inputs": {
+    "ui:title@en": "Inputs",
+    "ui:description@en": "Input tensors of the model: name, data type, shape and, when quantized, scale and zero point.",
+    "ui:title@it": "Input",
+    "ui:description@it": "Tensori di input del modello: nome, tipo di dato, shape e, se quantizzati, scala e zero point.",
+    "items": {
+      "name": {
+        "ui:title@en": "Name",
+        "ui:description@en": "Tensor name.",
+        "ui:title@it": "Nome",
+        "ui:description@it": "Nome del tensore."
+      },
+      "dtype": {
+        "ui:title@en": "Data Type",
+        "ui:description@en": "Element type, e.g. float32 or int8.",
+        "ui:title@it": "Tipo di dato",
+        "ui:description@it": "Tipo degli elementi, per esempio float32 o int8."
+      },
+      "shape": {
+        "ui:title@en": "Shape",
+        "ui:description@en": "Dimensions, e.g. [1, 3, 640, 640].",
+        "ui:title@it": "Shape",
+        "ui:description@it": "Dimensioni, per esempio [1, 3, 640, 640]."
+      },
+      "scale": {
+        "ui:title@en": "Scale",
+        "ui:description@en": "Quantization scale: real = (quantized - zero point) * scale.",
+        "ui:title@it": "Scala",
+        "ui:description@it": "Scala di quantizzazione: reale = (quantizzato - zero point) * scala."
+      },
+      "zero_point": {
+        "ui:title@en": "Zero Point",
+        "ui:description@en": "Quantization zero point.",
+        "ui:title@it": "Zero point",
+        "ui:description@it": "Zero point di quantizzazione."
+      },
+      "quantized_dimension": {
+        "ui:title@en": "Quantized Dimension",
+        "ui:description@en": "Axis of per-axis quantization.",
+        "ui:title@it": "Dimensione quantizzata",
+        "ui:description@it": "Asse della quantizzazione per asse."
+      }
+    }
+  },
+  "outputs": {
+    "ui:title@en": "Outputs",
+    "ui:description@en": "Output tensors of the model.",
+    "ui:title@it": "Output",
+    "ui:description@it": "Tensori di output del modello.",
+    "items": {
+      "name": {
+        "ui:title@en": "Name",
+        "ui:description@en": "Tensor name.",
+        "ui:title@it": "Nome",
+        "ui:description@it": "Nome del tensore."
+      },
+      "dtype": {
+        "ui:title@en": "Data Type",
+        "ui:description@en": "Element type, e.g. float32 or int8.",
+        "ui:title@it": "Tipo di dato",
+        "ui:description@it": "Tipo degli elementi, per esempio float32 o int8."
+      },
+      "shape": {
+        "ui:title@en": "Shape",
+        "ui:description@en": "Dimensions, e.g. [1, 3, 640, 640].",
+        "ui:title@it": "Shape",
+        "ui:description@it": "Dimensioni, per esempio [1, 3, 640, 640]."
+      },
+      "scale": {
+        "ui:title@en": "Scale",
+        "ui:description@en": "Quantization scale: real = (quantized - zero point) * scale.",
+        "ui:title@it": "Scala",
+        "ui:description@it": "Scala di quantizzazione: reale = (quantizzato - zero point) * scala."
+      },
+      "zero_point": {
+        "ui:title@en": "Zero Point",
+        "ui:description@en": "Quantization zero point.",
+        "ui:title@it": "Zero point",
+        "ui:description@it": "Zero point di quantizzazione."
+      },
+      "quantized_dimension": {
+        "ui:title@en": "Quantized Dimension",
+        "ui:description@en": "Axis of per-axis quantization.",
+        "ui:title@it": "Dimensione quantizzata",
+        "ui:description@it": "Asse della quantizzazione per asse."
+      }
+    }
+  },
+  "parameters": {
+    "ui:title@en": "Parameters",
+    "ui:description@en": "Free-form extra information, e.g. the dataset or the export tool.",
+    "ui:title@it": "Parametri",
+    "ui:description@it": "Informazioni aggiuntive libere, per esempio il dataset o lo strumento di export."
+  },
+  "source_format": {
+    "ui:title@en": "Source Format",
+    "ui:description@en": "Format of the model the IR was converted from.",
+    "ui:title@it": "Formato sorgente",
+    "ui:description@it": "Formato del modello da cui è stato convertito l'IR."
+  },
+  "keep_params_in_input": {
+    "ui:title@en": "Keep Params in Input",
+    "ui:description@en": "Whether the weights are kept apart in params.bin.",
+    "ui:title@it": "Parametri come input",
+    "ui:description@it": "Se i pesi sono tenuti a parte in params.bin."
+  },
+  "sanitize_input_names": {
+    "ui:title@en": "Sanitize Input Names",
+    "ui:description@en": "Whether the input names were rewritten into valid identifiers.",
+    "ui:title@it": "Normalizza nomi di input",
+    "ui:description@it": "Se i nomi degli input sono stati riscritti come identificatori validi."
+  }
+}

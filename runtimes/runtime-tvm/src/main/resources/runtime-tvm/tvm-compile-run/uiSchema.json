@@ -1,0 +1,234 @@
+{
+  "ui:title@en": "TVM compile run",
+  "ui:description@en": "Compiles the Relax IR into model.so for a target.",
+  "ui:title@it": "Run di compilazione TVM",
+  "ui:description@it": "Compila il Relax IR in model.so per un target.",
+  "model": {
+    "ui:title@en": "Source Model",
+    "ui:description@en": "The ONNX or TFLite model to convert: the store:// key of a Model, or an s3:// or https:// path.",
+    "ui:title@it": "Modello sorgente",
+    "ui:description@it": "Il modello ONNX o TFLite da convertire: la chiave store:// di un Model, oppure un percorso s3:// o https://."
+  },
+  "format": {
+    "ui:title@en": "Model Format",
+    "ui:description@en": "Format of the source model: auto takes it from the Model kind or the file extension; onnx or tflite set it.",
+    "ui:title@it": "Formato del modello",
+    "ui:description@it": "Formato del modello sorgente: auto lo ricava dal kind del Model o dall'estensione del file; onnx o tflite lo impostano."
+  },
+  "ir_model": {
+    "ui:title@en": "Relax IR Model",
+    "ui:description@en": "Key of the tvm-ir Model written by tvm+build and compiled by tvm+compile. Leave it empty.",
+    "ui:title@it": "Modello Relax IR",
+    "ui:description@it": "Chiave del Model tvm-ir scritto da tvm+build e compilato da tvm+compile. Lascialo vuoto."
+  },
+  "so_model": {
+    "ui:title@en": "Compiled Model",
+    "ui:description@en": "Key of the tvm-so Model written by tvm+compile and deployed by tvm+serve. Leave it empty.",
+    "ui:title@it": "Modello compilato",
+    "ui:description@it": "Chiave del Model tvm-so scritto da tvm+compile e servito da tvm+serve. Lascialo vuoto."
+  },
+  "model_path": {
+    "ui:title@en": "IR Model",
+    "ui:description@en": "The tvm-ir Model to compile; empty uses the one written by tvm+build in the function.",
+    "ui:title@it": "Modello IR",
+    "ui:description@it": "Il Model tvm-ir da compilare; vuoto usa quello scritto da tvm+build nella funzione."
+  },
+  "target_architecture": {
+    "ui:title@en": "Target",
+    "ui:description@en": "Hardware the library is built for: cpu (generic, node of the Job), x86 (x86-64-v2), x86_v3 (AVX2), x86_native (CPU of the Job), arm64, arm64_pi5 (Raspberry Pi 5), armv7l (32-bit ARM).",
+    "ui:title@it": "Target",
+    "ui:description@it": "Hardware per cui si compila la libreria: cpu (generica, nodo del Job), x86 (x86-64-v2), x86_v3 (AVX2), x86_native (CPU del Job), arm64, arm64_pi5 (Raspberry Pi 5), armv7l (ARM 32 bit)."
+  },
+  "target_num_cores": {
+    "ui:title@en": "Target Number of Cores",
+    "ui:description@en": "Physical cores of the target: the tuned schedules and the tuning threads use this value; empty uses the CPU request of the Job.",
+    "ui:title@it": "Numero di core del target",
+    "ui:description@it": "Core fisici del target: li usano gli schedule ottimizzati e i thread del tuning; vuoto usa la CPU richiesta dal Job."
+  },
+  "opt_level": {
+    "ui:title@en": "Optimization Level",
+    "ui:description@en": "TVM optimization level, from 0 to 3: higher values turn on more optimizations.",
+    "ui:title@it": "Livello di ottimizzazione",
+    "ui:description@it": "Livello di ottimizzazione TVM, da 0 a 3: valori più alti attivano più ottimizzazioni."
+  },
+  "cross_cc": {
+    "ui:title@en": "Cross Compiler",
+    "ui:description@en": "C++ compiler that links model.so for another architecture; empty chooses it from the target.",
+    "ui:title@it": "Cross-compilatore",
+    "ui:description@it": "Compilatore C++ che collega model.so per un'altra architettura; vuoto lo sceglie in base al target."
+  },
+  "exec_mode": {
+    "ui:title@en": "Execution Mode",
+    "ui:description@en": "bytecode: the Relax VM interprets the model graph; compiled: the graph becomes native code.",
+    "ui:title@it": "Modalità di esecuzione",
+    "ui:description@it": "bytecode: la VM Relax interpreta il grafo del modello; compiled: il grafo diventa codice nativo."
+  },
+  "relax_pipeline": {
+    "ui:title@en": "Relax Pipeline",
+    "ui:description@en": "Predefined graph-level optimization passes.",
+    "ui:title@it": "Pipeline Relax",
+    "ui:description@it": "Passi di ottimizzazione predefiniti a livello di grafo."
+  },
+  "tir_pipeline": {
+    "ui:title@en": "TIR Pipeline",
+    "ui:description@en": "Predefined low-level passes run before code generation.",
+    "ui:title@it": "Pipeline TIR",
+    "ui:description@it": "Passi di basso livello predefiniti eseguiti prima della generazione del codice."
+  },
+  "tuning_mode": {
+    "ui:title@en": "Tuning Mode",
+    "ui:description@en": "off skips tuning, tune searches the best schedules with MetaSchedule, apply reuses a database tuned earlier.",
+    "ui:title@it": "Modalità tuning",
+    "ui:description@it": "off salta il tuning, tune cerca gli schedule migliori con MetaSchedule, apply riusa un database ottimizzato in precedenza."
+  },
+  "tuning_trials": {
+    "ui:title@en": "Max Trials (Global)",
+    "ui:description@en": "Total candidates measured across all tasks; required with tune.",
+    "ui:title@it": "Trial massimi globali",
+    "ui:description@it": "Candidati misurati in totale su tutti i task; obbligatorio con tune."
+  },
+  "max_trials_per_task": {
+    "ui:title@en": "Max Trials Per Task",
+    "ui:description@en": "Most candidates measured for a single task.",
+    "ui:title@it": "Trial massimi per task",
+    "ui:description@it": "Numero massimo di candidati misurati per un singolo task."
+  },
+  "tuning_trials_per_iter": {
+    "ui:title@en": "Trials Per Iteration",
+    "ui:description@en": "Candidates built and measured for each task in one round.",
+    "ui:title@it": "Trial per iterazione",
+    "ui:description@it": "Candidati compilati e misurati per ogni task in un round."
+  },
+  "tuning_ops": {
+    "ui:title@en": "Operator Names",
+    "ui:description@en": "Tunes only the tasks whose name contains one of these words, e.g. conv2d; empty tunes all.",
+    "ui:title@it": "Nomi operatori",
+    "ui:description@it": "Ottimizza solo i task il cui nome contiene una di queste parole, per esempio conv2d; vuoto li ottimizza tutti."
+  },
+  "tuning_model_path": {
+    "ui:title@en": "Tuning Database Source",
+    "ui:description@en": "Compiled Model whose tuning database tune resumes or apply reuses; required with apply.",
+    "ui:title@it": "Origine database tuning",
+    "ui:description@it": "Model compilato di cui tune riprende o apply riusa il database di tuning; obbligatorio con apply."
+  },
+  "tuning_runner": {
+    "ui:title@en": "Runner",
+    "ui:description@en": "Where candidates are timed: local on the compile Job, rpc on a device registered with a TVM RPC tracker.",
+    "ui:title@it": "Runner",
+    "ui:description@it": "Dove si misurano i candidati: local sul Job di compilazione, rpc su un dispositivo registrato su un tracker RPC TVM."
+  },
+  "tuning_workers": {
+    "ui:title@en": "Max Workers",
+    "ui:description@en": "Candidates compiled in parallel; with rpc also the parallel device connections.",
+    "ui:title@it": "Worker massimi",
+    "ui:description@it": "Candidati compilati in parallelo; con rpc anche le connessioni parallele al dispositivo."
+  },
+  "tuning_seed": {
+    "ui:title@en": "Random Seed",
+    "ui:description@en": "Seed of the search, for reproducible results.",
+    "ui:title@it": "Seed casuale",
+    "ui:description@it": "Seed della ricerca, per risultati riproducibili."
+  },
+  "tuning_number": {
+    "ui:title@en": "Runs Per Repeat",
+    "ui:description@en": "Runs averaged into one measurement.",
+    "ui:title@it": "Esecuzioni per ripetizione",
+    "ui:description@it": "Esecuzioni mediate in una misura."
+  },
+  "tuning_repeat": {
+    "ui:title@en": "Measurement Repeats",
+    "ui:description@en": "Independent measurements taken for each candidate.",
+    "ui:title@it": "Ripetizioni misura",
+    "ui:description@it": "Misure indipendenti per ogni candidato."
+  },
+  "tuning_min_repeat_ms": {
+    "ui:title@en": "Min Repeat Time (ms)",
+    "ui:description@en": "Fast kernels run again until one measurement lasts at least this long.",
+    "ui:title@it": "Tempo minimo ripetizione (ms)",
+    "ui:description@it": "I kernel veloci vengono rieseguiti finché una misura dura almeno questo tempo."
+  },
+  "tuning_alloc_repeat": {
+    "ui:title@en": "Allocation Repeats",
+    "ui:description@en": "Sets of random inputs each candidate is timed on.",
+    "ui:title@it": "Ripetizioni allocazione",
+    "ui:description@it": "Set di input casuali su cui si misura ogni candidato."
+  },
+  "tuning_enable_cpu_cache_flush": {
+    "ui:title@en": "Flush CPU Cache",
+    "ui:description@en": "Flushes the CPU caches before each measurement, for steadier results.",
+    "ui:title@it": "Svuota cache CPU",
+    "ui:description@it": "Svuota le cache della CPU prima di ogni misura, per risultati più stabili."
+  },
+  "tuning_builder_timeout_sec": {
+    "ui:title@en": "Builder Timeout (s)",
+    "ui:description@en": "Maximum seconds to compile one candidate.",
+    "ui:title@it": "Timeout builder (s)",
+    "ui:description@it": "Secondi massimi per compilare un candidato."
+  },
+  "tuning_runner_timeout_sec": {
+    "ui:title@en": "Runner Timeout (s)",
+    "ui:description@en": "Maximum seconds to time one candidate with the local runner; rpc uses the session timeout.",
+    "ui:title@it": "Timeout runner (s)",
+    "ui:description@it": "Secondi massimi per misurare un candidato con il runner local; rpc usa il timeout di sessione."
+  },
+  "rpc_tracker_host": {
+    "ui:title@en": "RPC Tracker Host",
+    "ui:description@en": "Address of the TVM RPC tracker; required with the rpc runner.",
+    "ui:title@it": "Host tracker RPC",
+    "ui:description@it": "Indirizzo del tracker RPC TVM; obbligatorio con il runner rpc."
+  },
+  "rpc_tracker_port": {
+    "ui:title@en": "RPC Tracker Port",
+    "ui:description@en": "Port of the TVM RPC tracker; required with the rpc runner.",
+    "ui:title@it": "Porta tracker RPC",
+    "ui:description@it": "Porta del tracker RPC TVM; obbligatoria con il runner rpc."
+  },
+  "rpc_tracker_key": {
+    "ui:title@en": "RPC Tracker Key",
+    "ui:description@en": "Key the target devices are registered with; required with the rpc runner.",
+    "ui:title@it": "Chiave tracker RPC",
+    "ui:description@it": "Chiave con cui sono registrati i dispositivi target; obbligatoria con il runner rpc."
+  },
+  "rpc_session_timeout_sec": {
+    "ui:title@en": "RPC Session Timeout (s)",
+    "ui:description@en": "Maximum seconds of one remote measurement session.",
+    "ui:title@it": "Timeout sessione RPC (s)",
+    "ui:description@it": "Secondi massimi di una sessione di misura remota."
+  },
+  "allow_partial_tuning": {
+    "ui:title@en": "Allow Partial Tuning",
+    "ui:description@en": "Accepts a budget or a database that does not cover every task; for quick tests only.",
+    "ui:title@it": "Consenti tuning parziale",
+    "ui:description@it": "Accetta un budget o un database che non copre tutti i task; solo per prove veloci."
+  },
+  "system_lib": {
+    "ui:title@en": "System Library",
+    "ui:description@en": "Builds a library whose functions register themselves, for systems without dynamic loading; the serve images cannot load it.",
+    "ui:title@it": "Libreria di sistema",
+    "ui:description@it": "Crea una libreria le cui funzioni si registrano da sole, per sistemi senza caricamento dinamico; le immagini di serve non la caricano."
+  },
+  "benchmark_runs": {
+    "ui:title@en": "Benchmark Runs",
+    "ui:description@en": "Timed inferences of the finished library, saved in metadata.json; 0 turns the benchmark off.",
+    "ui:title@it": "Esecuzioni di benchmark",
+    "ui:description@it": "Inferenze cronometrate sulla libreria finita, salvate in metadata.json; 0 disattiva il benchmark."
+  },
+  "params_path": {
+    "ui:title@en": "Parameters File",
+    "ui:description@en": "Path, inside the Job, of a params.bin to embed; empty uses the one of the IR.",
+    "ui:title@it": "File dei parametri",
+    "ui:description@it": "Percorso, dentro il Job, di un params.bin da incorporare; vuoto usa quello dell'IR."
+  },
+  "tag": {
+    "ui:title@en": "Tag",
+    "ui:description@en": "Suffix of the compiled Model name, <function>-<tag>; use one tag per target.",
+    "ui:title@it": "Tag",
+    "ui:description@it": "Suffisso del nome del Model compilato, <funzione>-<tag>; usa un tag per ogni target."
+  },
+  "image": {
+    "ui:title@en": "Container Image",
+    "ui:description@en": "Image of the compile Job; empty uses the TVM toolkit image configured on the platform.",
+    "ui:title@it": "Immagine container",
+    "ui:description@it": "Immagine del Job di compilazione; vuoto usa l'immagine TVM toolkit configurata sulla piattaforma."
+  }
+}
