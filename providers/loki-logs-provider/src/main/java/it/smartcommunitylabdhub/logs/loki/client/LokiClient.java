@@ -29,7 +29,7 @@ public class LokiClient {
     private static final long NS_CONVERSION_FACTOR = 1_000_000L; // Convert milliseconds to nanoseconds
     private static final long S_CONVERSION_FACTOR = 1_000_000_000L; // Convert seconds to nanoseconds
 
-    public static final int DEFAULT_LIMIT = 1000;
+    public static final int DEFAULT_LIMIT = 2000;
     public static final int DEFAULT_START_OFFSET = 8 * 60 * 60; //8 hours
     public static final String DIRECTION = "forward"; //default direction for queries
 
@@ -52,6 +52,10 @@ public class LokiClient {
         this.orgId = lokiProperties.getOrgId();
         this.username = lokiProperties.getUsername();
         this.password = lokiProperties.getPassword();
+        this.limit = lokiProperties.getLimit() != null ? lokiProperties.getLimit() : DEFAULT_LIMIT;
+        if (this.limit > 2 * DEFAULT_LIMIT) {
+            log.warn("Query limit is set to a {} exceeding default limit {}", this.limit, DEFAULT_LIMIT);
+        }
 
         restTemplate = new RestTemplate();
 

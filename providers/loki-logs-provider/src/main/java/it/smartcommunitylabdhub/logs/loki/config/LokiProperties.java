@@ -45,6 +45,8 @@ public class LokiProperties {
     private String password;
     private String namespace;
 
+    private Integer limit;
+
     private Map<String, String> mapping;
     private Boolean mapWithPrefix;
 

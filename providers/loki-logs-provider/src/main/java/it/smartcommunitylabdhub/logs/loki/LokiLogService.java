@@ -42,6 +42,7 @@ import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -292,13 +293,29 @@ public class LokiLogService implements LogService {
             //NOTE: we lack a proper logic for pagination
             long startEpoch = start != null ? start : (System.currentTimeMillis() / 1000) - (30L * 24 * 3600);
             long endEpoch = end != null ? end : System.currentTimeMillis() / 1000;
-            QueryResult result = lokiClient.query(query.toString(), startEpoch, endEpoch, "forward");
+            //ask for latest logs within the specified time range
+            String direction = "backward";
+            QueryResult result = lokiClient.query(query.toString(), startEpoch, endEpoch, direction);
 
             // fetch and convert log entries when available
             if (
                 result.getData() != null && !result.getData().isEmpty() && result.getData() instanceof Streams streams
             ) {
-                List<Log> logs = streams.getStreams().stream().map(this::convert).toList();
+                List<Log> logs = streams
+                    .getStreams()
+                    .stream()
+                    .map(l -> convert(l, direction))
+                    .toList();
+
+                //sanity check: if multiple logs have the same id, we might need to handle duplicates
+                Set<String> ids = new HashSet<>();
+                logs.forEach(l -> {
+                    if (ids.contains(l.getId())) {
+                        l.setId(l.getId() + "/" + String.valueOf(ids.size()));
+                    }
+
+                    ids.add(l.getId());
+                });
                 return logs;
             }
 
@@ -309,7 +326,7 @@ public class LokiLogService implements LogService {
         }
     }
 
-    private Log convert(Streams.Stream entry) {
+    private Log convert(Streams.Stream entry, String direction) {
         // Implement the logic to convert a stream of LogEntry object to a Log object
         // we expect labels to be aligned in the whole stream, so we can use the first entry to extract labels
         if (entry.getLabels() == null || entry.getLabels().isEmpty()) {
@@ -351,8 +368,14 @@ public class LokiLogService implements LogService {
         }
 
         //content is concatenated values with newlines
+        //keep direction as specified by the query (forward or backward)
+        List<LogEntry> values = entry.getValues();
+        if ("backward".equals(direction)) {
+            Collections.reverse(values);
+        }
+
         StringBuilder content = new StringBuilder();
-        for (LogEntry le : entry.getValues()) {
+        for (LogEntry le : values) {
             if (!content.isEmpty()) {
                 content.append("\n");
             }

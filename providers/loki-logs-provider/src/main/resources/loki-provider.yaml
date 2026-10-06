@@ -5,6 +5,7 @@ providers:
     username: ${LOKI_USERNAME:}
     password: ${LOKI_PASSWORD:}
     namespace: ${LOKI_NAMESPACE:}
+    limit: ${LOKI_LIMIT:}
     map-with-prefix: ${LOKI_MAP_WITH_PREFIX:true}
     mapping:
       run: ${LOKI_MAPPING_RUN:instance}
