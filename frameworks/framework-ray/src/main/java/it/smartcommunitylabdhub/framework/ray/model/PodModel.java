@@ -101,9 +101,10 @@ public class PodModel {
             .runtimeClass(runtimeClass)
             .priorityClass(priorityClass)
             .imagePullPolicy(imagePullPolicy)
-            .runAsUser(runAsUser)
-            .runAsGroup(runAsGroup)
-            .fsGroup(fsGroup)
+            //securityContext
+            .runAsUser(runAsUser!=null ? runAsUser : parent.getRunAsUser())
+            .runAsGroup(runAsGroup!=null ? runAsGroup : parent.getRunAsGroup())
+            .fsGroup(fsGroup!=null ? fsGroup : parent.getFsGroup())
             .labels(labels)
             .contextRefs(withContext ? parent.getContextRefs() : null)
             .contextSources(withContext ? parent.getContextSources() : null)

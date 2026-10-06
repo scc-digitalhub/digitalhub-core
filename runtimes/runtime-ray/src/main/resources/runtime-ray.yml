@@ -4,8 +4,8 @@ runtime:
     worker-image: ${RUNTIME_RAY_WORKER_IMAGE:}
     version: ${RUNTIME_RAY_VERSION:2.55.1}
     home-dir: ${RUNTIME_RAY_HOME_DIR:/shared}
-    user-id: ${RUNTIME_RAY_USER_ID:${kubernetes.security.user}}
-    group-id: ${RUNTIME_RAY_GROUP_ID:${kubernetes.security.group}}
+    user-id: ${RUNTIME_RAY_USER_ID:1000}
+    group-id: ${RUNTIME_RAY_GROUP_ID:100}
     passwd-template: classpath:/runtime-ray/docker/passwd.template
     dependencies: ${RUNTIME_RAY_DEPENDENCIES:digitalhub-runtime-ray}
     dependency-format: ${RUNTIME_RAY_DEPENDENCY_FORMAT:pip}
