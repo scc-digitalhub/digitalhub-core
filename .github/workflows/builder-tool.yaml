@@ -48,6 +48,11 @@ jobs:
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
             arch: arm64
+          # 32-bit ARM (e.g. Raspberry Pi with a 32-bit OS): GitHub has no arm/v7 runners,
+          # so the image is built on amd64 under QEMU emulation
+          - platform: linux/arm/v7
+            runner: ubuntu-24.04
+            arch: armv7
 
     runs-on: ${{ matrix.runner }}
     permissions:
@@ -58,6 +63,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: 'false'
+      - name: Set up QEMU
+        if: matrix.arch == 'armv7'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Log in to the Container registry
@@ -109,6 +119,7 @@ jobs:
         run: |
           AMD64="$IMAGE:$TEMP_TAG-amd64"
           ARM64="$IMAGE:$TEMP_TAG-arm64"
+          ARMV7="$IMAGE:$TEMP_TAG-armv7"
 
           while IFS= read -r TARGET; do
             [ -z "$TARGET" ] && continue
@@ -116,7 +127,8 @@ jobs:
             docker buildx imagetools create \
               -t "$TARGET" \
               "$AMD64" \
-              "$ARM64"
+              "$ARM64" \
+              "$ARMV7"
           done <<< "$METADATA_TAGS"
 
           
