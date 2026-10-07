@@ -27,8 +27,14 @@ public enum TvmTargetArchitecture {
     ),
     // 32-bit ARM hard-float (Raspberry Pi armhf). mfloat-abi=hard + a VFP unit are
     // required, else LLVM emits soft-float objects that won't link against the
-    // hard-float cross g++ ("uses VFP register arguments" error).
-    armv7l("{\"kind\":\"llvm\",\"mtriple\":\"armv7l-linux-gnueabihf\",\"mfloat-abi\":\"hard\",\"mattr\":[\"+neon\"]}");
+    // hard-float cross g++ ("uses VFP register arguments" error). The triple needs all
+    // four parts: LLVM reads "armv7l-linux-gnueabihf" as vendor "linux" with no EABI
+    // environment, and then calls the int64/float conversion helpers of libgcc with the
+    // wrong calling convention, which breaks every resize that computes its indices in
+    // float (the upsampling of YOLOv8 exported from TFLite).
+    armv7l(
+        "{\"kind\":\"llvm\",\"mtriple\":\"armv7l-unknown-linux-gnueabihf\",\"mfloat-abi\":\"hard\",\"mattr\":[\"+neon\"]}"
+    );
 
     private final String target;
 

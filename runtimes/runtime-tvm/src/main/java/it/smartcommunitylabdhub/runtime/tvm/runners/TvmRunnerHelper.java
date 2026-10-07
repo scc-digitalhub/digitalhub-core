@@ -231,7 +231,7 @@ public final class TvmRunnerHelper {
     }
 
     // Kubernetes name of the architecture in an LLVM triple: x86_64-linux-gnu -> amd64,
-    // aarch64-linux-gnu -> arm64, armv7l-linux-gnueabihf -> arm. Null for the others.
+    // aarch64-linux-gnu -> arm64, armv7l-unknown-linux-gnueabihf -> arm. Null for the others.
     public static String tripleArchitecture(String triple) {
         String arch = triple.split("-", 2)[0].toLowerCase(Locale.ROOT);
         if (arch.equals("x86_64") || arch.equals("amd64")) {
