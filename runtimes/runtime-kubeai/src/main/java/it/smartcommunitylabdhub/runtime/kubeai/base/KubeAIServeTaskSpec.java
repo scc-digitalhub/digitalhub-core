@@ -25,7 +25,6 @@ package it.smartcommunitylabdhub.runtime.kubeai.base;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.models.function.FunctionTaskBaseSpec;
-import it.smartcommunitylabdhub.framework.k8s.base.K8sResourceProfileAware;
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;
@@ -35,7 +34,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class KubeAIServeTaskSpec extends FunctionTaskBaseSpec implements K8sResourceProfileAware {
+public class KubeAIServeTaskSpec extends FunctionTaskBaseSpec {
 
     @Schema(title = "fields.kubeai.resourceprofile.title", description = "fields.kubeai.resourceprofile.description")
     private String profile;
