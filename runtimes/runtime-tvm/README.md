@@ -238,9 +238,12 @@ this choice.
 The more specific the target, the faster the code, but it only runs on that kind of CPU.
 The serve images exist for `linux/amd64`, `linux/arm64` and `linux/arm/v7`.
 
+The build and compile Jobs run only on `amd64` and `arm64` nodes, the architectures of
+the toolkit image: never on a 32-bit ARM node, such as a Raspberry Pi with a 32-bit OS.
 The compile Job of the `x86` targets runs on an `amd64` node, because the library is
 generated and linked by the native toolchain. The ARM targets are cross-compiled on any
-node, and `cpu` builds for the node where the Job runs.
+of those nodes, and `cpu` builds for the node where the Job runs. The node affinity of a
+profile replaces this rule.
 
 ---
 

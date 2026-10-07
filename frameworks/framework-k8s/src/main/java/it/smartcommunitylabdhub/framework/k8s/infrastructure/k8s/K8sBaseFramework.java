@@ -1652,7 +1652,7 @@ public abstract class K8sBaseFramework<
             .map(K8sTemplate::getProfile)
             .orElse(null);
 
-        if (template != null) {
+        if (template != null && template.getAffinity() != null) {
             return template.getAffinity();
         }
 

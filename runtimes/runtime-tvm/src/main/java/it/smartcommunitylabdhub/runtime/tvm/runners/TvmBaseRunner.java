@@ -6,11 +6,16 @@
 
 package it.smartcommunitylabdhub.runtime.tvm.runners;
 
+import io.kubernetes.client.openapi.models.V1NodeAffinity;
+import io.kubernetes.client.openapi.models.V1NodeSelector;
+import io.kubernetes.client.openapi.models.V1NodeSelectorRequirement;
+import io.kubernetes.client.openapi.models.V1NodeSelectorTerm;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreAffinity;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLabel;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreNodeSelector;
@@ -152,6 +157,30 @@ public abstract class TvmBaseRunner {
         return architecture != null
             ? List.of(new CoreNodeSelector(TvmRunnerHelper.NODE_ARCH_LABEL, architecture))
             : null;
+    }
+
+    // Node architectures the tvm-toolkit image is published for.
+    public static final List<String> TOOLKIT_ARCHITECTURES = List.of("amd64", "arm64");
+
+    // Keeps the build and compile Jobs on the nodes the tvm-toolkit image runs on, never on a
+    // 32-bit ARM node (a Raspberry Pi with a 32-bit OS) where the image cannot be pulled. The
+    // ARM targets are cross-compiled, so they never need such a node. The affinity of a
+    // profile wins over it.
+    protected static CoreAffinity toolkitAffinity() {
+        CoreAffinity affinity = new CoreAffinity();
+        affinity.setNodeAffinity(
+            new V1NodeAffinity().requiredDuringSchedulingIgnoredDuringExecution(
+                new V1NodeSelector().addNodeSelectorTermsItem(
+                    new V1NodeSelectorTerm().addMatchExpressionsItem(
+                        new V1NodeSelectorRequirement()
+                            .key(TvmRunnerHelper.NODE_ARCH_LABEL)
+                            .operator("In")
+                            .values(TOOLKIT_ARCHITECTURES)
+                    )
+                )
+            )
+        );
+        return affinity;
     }
 
     // The image to run: the task override wins over the configured default.

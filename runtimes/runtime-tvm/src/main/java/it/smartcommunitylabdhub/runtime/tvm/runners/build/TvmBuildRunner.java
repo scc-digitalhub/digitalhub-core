@@ -90,6 +90,7 @@ public class TvmBuildRunner extends TvmBaseRunner {
 
         return applyCommon(
             K8sJobRunnable.builder()
+                .affinity(toolkitAffinity())
                 .command("/bin/bash")
                 .args(new String[] { homeDir + "/" + TvmRunnerHelper.ENTRYPOINT_NAME })
                 .contextSources(contextSources)
