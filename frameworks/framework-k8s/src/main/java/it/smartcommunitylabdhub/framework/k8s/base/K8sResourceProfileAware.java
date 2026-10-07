@@ -23,6 +23,9 @@
 
 package it.smartcommunitylabdhub.framework.k8s.base;
 
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreResource;
+
 public interface K8sResourceProfileAware {
     String getProfile();
+    CoreResource getResources();
 }

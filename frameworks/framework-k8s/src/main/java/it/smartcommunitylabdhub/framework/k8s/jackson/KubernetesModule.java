@@ -33,15 +33,21 @@ import com.github.victools.jsonschema.generator.SchemaGenerationContext;
 import com.github.victools.jsonschema.generator.SchemaGeneratorConfig;
 import com.github.victools.jsonschema.generator.SchemaGeneratorConfigBuilder;
 import com.github.victools.jsonschema.generator.SchemaKeyword;
+import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sResourceProfileAware;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sTemplate;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreResource;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreResources;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import java.io.IOException;
+import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 import org.springframework.beans.factory.InitializingBean;
@@ -62,6 +68,9 @@ public class KubernetesModule implements com.github.victools.jsonschema.generato
     private Collection<K8sTemplate<K8sRunnable>> templates = null;
 
     protected ResourceLoader resourceLoader;
+
+    @Value("${kubernetes.resources.gpu.key}")
+    String gpuResourceKey;
 
     @Autowired
     public void setResourceLoader(ResourceLoader resourceLoader) {
@@ -226,6 +235,8 @@ public class KubernetesModule implements com.github.victools.jsonschema.generato
                                 "profile",
                                 config.createObjectNode().put(config.getKeyword(SchemaKeyword.TAG_CONST), t.id())
                             );
+
+                            // fake object used by frontend to display template metadata
                             ObjectNode e = config
                                 .createObjectNode()
                                 .put(
@@ -238,8 +249,29 @@ public class KubernetesModule implements com.github.victools.jsonschema.generato
                             if (StringUtils.hasText(t.description())) {
                                 e.put(config.getKeyword(SchemaKeyword.TAG_DESCRIPTION), t.description());
                             }
-
                             o.set("template", e);
+
+                            // profile itself -> schema constraints
+                            K8sRunnable p = templates
+                                .stream()
+                                .filter(tt -> tt.getId().equals(t.id()))
+                                .findFirst()
+                                .map(tt -> tt.getProfile())
+                                .orElse(null);
+
+                            if (p != null) {
+                                ObjectNode profileSchema = buildProfileSchema(p, config);
+
+                                JsonNode properties = profileSchema.get(
+                                    config.getKeyword(SchemaKeyword.TAG_PROPERTIES)
+                                );
+
+                                if (properties != null) {
+                                    properties
+                                        .fields()
+                                        .forEachRemaining(entry -> o.set(entry.getKey(), entry.getValue()));
+                                }
+                            }
 
                             ObjectNode s = config.createObjectNode();
                             s.set(config.getKeyword(SchemaKeyword.TAG_PROPERTIES), o);
@@ -262,6 +294,84 @@ public class KubernetesModule implements com.github.victools.jsonschema.generato
                 );
             }
             return null;
+        }
+
+        private ObjectNode buildProfileSchema(K8sRunnable runnable, SchemaGeneratorConfig config) {
+            ObjectNode result = config.createObjectNode();
+
+            if (runnable == null) {
+                return null;
+            }
+
+            //custom mapping
+            ObjectNode properties = config.createObjectNode();
+
+            //TODO extend and make generic, this must handle all props from K8sRunnable to K8sResourceProfileAware
+            if (runnable.getResources() != null) {
+                //build resources mapping back to CoreResource
+                CoreResources coreResources = runnable.getResources();
+
+                ObjectNode resources = config.createObjectNode();
+
+                //requests are const
+                Map<String, String> requests = coreResources.getRequestsAsMap();
+                if (requests != null) {
+                    Optional.ofNullable(requests.get("cpu")).ifPresent(v -> {
+                        ObjectNode requestNode = createProfileSchema(v, config);
+                        resources.set("cpu", requestNode);
+                    });
+                    Optional.ofNullable(requests.get("memory")).ifPresent(v -> {
+                        ObjectNode requestNode = createProfileSchema(v, config);
+                        resources.set("mem", requestNode);
+                    });
+                    Optional.ofNullable(gpuResourceKey).ifPresent(key ->
+                        Optional.ofNullable(requests.get(key)).ifPresent(v -> {
+                            ObjectNode requestNode = createProfileSchema(v, config);
+                            resources.set("gpu", requestNode);
+                        })
+                    );
+                }
+
+                //limits are max if enumerable
+                Map<String, String> limits = coreResources.getLimitsAsMap();
+                //TODO
+
+                ObjectNode node = config.createObjectNode();
+                node.set(config.getKeyword(SchemaKeyword.TAG_PROPERTIES), resources);
+
+                properties.set("resources", node);
+            }
+
+            result.set(config.getKeyword(SchemaKeyword.TAG_PROPERTIES), properties);
+
+            return result;
+        }
+
+        private ObjectNode createProfileSchema(Object value, SchemaGeneratorConfig config) {
+            ObjectNode result = config.createObjectNode();
+
+            if (value == null) {
+                return null;
+            }
+
+            if (value instanceof Map<?, ?> map) {
+                ObjectNode properties = config.createObjectNode();
+
+                map.forEach((key, child) -> {
+                    ObjectNode childSchema = createProfileSchema(child, config);
+                    if (childSchema != null) {
+                        properties.set(String.valueOf(key), childSchema);
+                    }
+                });
+
+                result.set(config.getKeyword(SchemaKeyword.TAG_PROPERTIES), properties);
+
+                return result;
+            }
+
+            result.set(config.getKeyword(SchemaKeyword.TAG_CONST), JacksonMapper.OBJECT_MAPPER.valueToTree(value));
+
+            return result;
         }
     }
 
