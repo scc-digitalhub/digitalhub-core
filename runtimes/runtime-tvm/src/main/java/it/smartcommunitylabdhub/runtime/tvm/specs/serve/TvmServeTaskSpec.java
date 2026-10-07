@@ -55,11 +55,20 @@ public class TvmServeTaskSpec extends K8sFunctionTaskBaseSpec {
     )
     private String servedName;
 
-    // Override the serving image (default: runtime.tvm.serve).
+    // Server that runs the model: its image comes from runtime.tvm.serve-images (default go).
+    @JsonProperty("serve_runtime")
+    @Schema(
+        title = "Serve Runtime",
+        description = "Server that runs the model: go (the default) or rust. The image fits the node architecture by itself.",
+        defaultValue = "go"
+    )
+    private TvmServeRuntime serveRuntime;
+
+    // A custom serving image; it wins over serve_runtime.
     @JsonProperty("image")
     @Schema(
         title = "Serve Image",
-        description = "Image that serves the model; empty uses the serve image configured on the platform (Go)."
+        description = "Custom image that serves the model, in place of the one of the serve runtime."
     )
     private String image;
 
@@ -96,6 +105,7 @@ public class TvmServeTaskSpec extends K8sFunctionTaskBaseSpec {
         TvmServeTaskSpec spec = mapper.convertValue(data, TvmServeTaskSpec.class);
         this.modelPath = spec.getModelPath();
         this.servedName = spec.getServedName();
+        this.serveRuntime = spec.getServeRuntime();
         this.image = spec.getImage();
         this.replicas = spec.getReplicas();
         this.workers = spec.getWorkers();

@@ -199,14 +199,15 @@ target.
 
 ### `tvm+serve`
 
-| Option         | Default             | Description                                                                   |
-| -------------- | ------------------- | ----------------------------------------------------------------------------- |
-| `model_path`   | function `so_model` | `store://` key of the `tvm-so` Model to serve.                                |
-| `served_name`  | function name       | Model name in the URLs, `/v2/models/<served_name>`.                           |
-| `replicas`     | `1`                 | Number of pods.                                                               |
-| `workers`      | `1`                 | Inferences run in parallel in each pod; each worker loads its own model copy. |
-| `service_type` | `ClusterIP`         | `ClusterIP`, `NodePort` or `LoadBalancer`.                                    |
-| `service_name` | —                   | Extra Service name, `<function>-<service_name>`.                              |
+| Option          | Default             | Description                                                                   |
+| --------------- | ------------------- | ----------------------------------------------------------------------------- |
+| `model_path`    | function `so_model` | `store://` key of the `tvm-so` Model to serve.                                |
+| `served_name`   | function name       | Model name in the URLs, `/v2/models/<served_name>`.                           |
+| `serve_runtime` | `go`                | Server that runs the model, `go` or `rust`; `image` wins over it.             |
+| `replicas`      | `1`                 | Number of pods.                                                               |
+| `workers`       | `1`                 | Inferences run in parallel in each pod; each worker loads its own model copy. |
+| `service_type`  | `ClusterIP`         | `ClusterIP`, `NodePort` or `LoadBalancer`.                                    |
+| `service_name`  | —                   | Extra Service name, `<function>-<service_name>`.                              |
 
 The serve pod exposes REST on `8080` and gRPC on `9000`. When the task requests CPUs,
 each worker gets `resources.cpu / workers` TVM threads (`TVM_NUM_THREADS`); set
@@ -304,15 +305,20 @@ Tips:
 
 Set on CORE with environment variables:
 
-| Variable                                       | Default                                        | Description                                                              |
-| ---------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------ |
-| `RUNTIME_TVM_BUILDER_ONNX`                     | `ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0`    | Image of `tvm+build` for ONNX.                                           |
-| `RUNTIME_TVM_BUILDER_TFLITE`                   | `ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0`    | Image of `tvm+build` for TFLite.                                         |
-| `RUNTIME_TVM_COMPILER`                         | `ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0`    | Image of `tvm+compile`.                                                  |
-| `RUNTIME_TVM_SERVE`                            | `ghcr.io/scc-digitalhub/tvm-runtime-go:0.26.0` | Image of `tvm+serve` (Go; the Rust image `tvm-runtime-rust` also works). |
-| `RUNTIME_TVM_HOME_DIR`                         | `/shared`                                      | Working folder inside the pods.                                          |
-| `RUNTIME_TVM_VOLUME_SIZE`                      | `4Gi`                                          | Size of the working volume.                                              |
-| `RUNTIME_TVM_USER_ID` / `RUNTIME_TVM_GROUP_ID` | platform user and group                        | User and group the pods run as.                                          |
+| Variable                                       | Default                                          | Description                                                  |
+| ---------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------ |
+| `RUNTIME_TVM_BUILDER_ONNX`                     | `ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0`      | Image of `tvm+build` for ONNX.                               |
+| `RUNTIME_TVM_BUILDER_TFLITE`                   | `ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0`      | Image of `tvm+build` for TFLite.                             |
+| `RUNTIME_TVM_COMPILER`                         | `ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0`      | Image of `tvm+compile`.                                      |
+| `RUNTIME_TVM_SERVE_GO`                         | `ghcr.io/scc-digitalhub/tvm-runtime-go:0.26.0`   | Image of `tvm+serve` with `serve_runtime: go` (the default). |
+| `RUNTIME_TVM_SERVE_RUST`                       | `ghcr.io/scc-digitalhub/tvm-runtime-rust:0.26.0` | Image of `tvm+serve` with `serve_runtime: rust`.             |
+| `RUNTIME_TVM_HOME_DIR`                         | `/shared`                                        | Working folder inside the pods.                              |
+| `RUNTIME_TVM_VOLUME_SIZE`                      | `4Gi`                                            | Size of the working volume.                                  |
+| `RUNTIME_TVM_USER_ID` / `RUNTIME_TVM_GROUP_ID` | platform user and group                          | User and group the pods run as.                              |
+
+The serve images are multi-arch: one tag per runtime serves the amd64, arm64 and arm/v7
+nodes, so there is no image to set per architecture. `RUNTIME_TVM_SERVE`, the single serve
+image of earlier versions, still sets the Go one.
 
 The files are stored in the default S3 store of the platform; the runtime has no bucket
 setting of its own. The defaults live in `src/main/resources/runtime-tvm.yml`.

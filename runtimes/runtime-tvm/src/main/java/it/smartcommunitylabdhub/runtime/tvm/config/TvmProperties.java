@@ -33,9 +33,9 @@ public class TvmProperties {
     // Image running compile_model.py for tvm+compile (Relax IR -> model.so).
     private String compiler;
 
-    // Generic serve image for tvm+serve (the Go runtime by default); an init container
-    // drops the tvm-so Model into it.
-    private String serve;
+    // Serve runtime (go, rust) -> image for tvm+serve; an init container drops the tvm-so
+    // Model into it.
+    private Map<String, String> serveImages;
 
     // entrypoint.sh and the per-format builder scripts injected into the Job pods.
     private String entrypoint;

@@ -15,11 +15,17 @@
     "ui:title@it": "Nome modello servito",
     "ui:description@it": "Nome del modello nell'API, /v2/models/<nome>; vuoto usa il nome della funzione."
   },
+  "serve_runtime": {
+    "ui:title@en": "Serve Runtime",
+    "ui:description@en": "Server that runs the model: go (the default) or rust. The image fits the node architecture by itself.",
+    "ui:title@it": "Runtime di serve",
+    "ui:description@it": "Server che esegue il modello: go (predefinito) o rust. L'immagine si adatta da sola all'architettura del nodo."
+  },
   "image": {
     "ui:title@en": "Serve Image",
-    "ui:description@en": "Image that serves the model; empty uses the serve image configured on the platform (Go).",
+    "ui:description@en": "Custom image that serves the model, in place of the one of the serve runtime.",
     "ui:title@it": "Immagine di serve",
-    "ui:description@it": "Immagine che serve il modello; vuoto usa l'immagine di serve configurata sulla piattaforma (Go)."
+    "ui:description@it": "Immagine personalizzata che serve il modello, al posto di quella del runtime di serve."
   },
   "replicas": {
     "ui:title@en": "Replicas",
