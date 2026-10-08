@@ -17,7 +17,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
 
 @EffectType(stages = { "onReady" }, type = Run.class)
-@Component
+// @Component
 @ConditionalOnBean(S3AssumeRoleProvider.class)
 @Slf4j
 public class S3CredentialsProcessor implements Effect<Run> {

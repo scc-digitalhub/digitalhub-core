@@ -37,6 +37,7 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.Nullable;
 
 @Slf4j
@@ -55,6 +56,8 @@ public class S3WebIdentityProvider
     private JwtTokenService jwtTokenService;
     private ApplicationProperties applicationProperties;
 
+    private String secretsMountPath = null;
+
     private S3STSConfig stsConfig;
 
     public S3WebIdentityProvider(S3Properties properties) {
@@ -69,6 +72,11 @@ public class S3WebIdentityProvider
     @Autowired(required = false)
     public void setJwtTokenService(JwtTokenService jwtTokenService) {
         this.jwtTokenService = jwtTokenService;
+    }
+
+    @Autowired(required = false)
+    public void setSecretsMountPath(@Value("${kubernetes.secrets.mount-path}") String secretsMountPath) {
+        this.secretsMountPath = secretsMountPath;
     }
 
     @Override
@@ -102,6 +110,7 @@ public class S3WebIdentityProvider
 
         S3WebIdentityCredentials credentials = S3WebIdentityCredentials.builder()
             .webIdentityToken(accessToken.serialize())
+            .webIdentityTokenFile(secretsMountPath != null ? secretsMountPath + "/AWS_WEB_IDENTITY_TOKEN" : null)
             .roleArn(roleArn(auth.getName(), null))
             .build();
 
