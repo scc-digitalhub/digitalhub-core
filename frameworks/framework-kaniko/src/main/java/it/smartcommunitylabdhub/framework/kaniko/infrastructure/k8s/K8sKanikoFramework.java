@@ -256,7 +256,7 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
 
         //init config map
         try {
-            String configMapName = "init-config-map-" + runnable.getId();
+            String configMapName = initConfigName + "-" + runnable.getId();
             V1ConfigMap initConfigMap = coreV1Api.readNamespacedConfigMap(configMapName, namespace, null);
             if (initConfigMap != null) {
                 coreV1Api.deleteNamespacedConfigMap(configMapName, namespace, null, null, null, null, null, null, null);
@@ -325,13 +325,13 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
         List<V1VolumeMount> volumeMounts = new LinkedList<>(buildVolumeMounts(runnable));
 
         //make sure init and shared volumes are defined
-        if (volumeMounts.stream().noneMatch(v -> "/init-config-map".equals(v.getMountPath()))) {
+        if (volumeMounts.stream().noneMatch(v -> initConfigMountPath.equals(v.getMountPath()))) {
             // Create config map volume with fixed definition
-            V1Volume configMap = new V1Volume().name("init-config-map");
-            configMap.configMap(new V1ConfigMapVolumeSource().name("init-config-map-" + runnable.getId()));
+            V1Volume configMap = new V1Volume().name(initConfigName);
+            configMap.configMap(new V1ConfigMapVolumeSource().name(initConfigName + "-" + runnable.getId()));
             volumes.add(configMap);
 
-            V1VolumeMount configMapMount = new V1VolumeMount().name("init-config-map").mountPath("/init-config-map");
+            V1VolumeMount configMapMount = new V1VolumeMount().name(initConfigName).mountPath(initConfigMountPath);
             volumeMounts.add(configMapMount);
         }
 
@@ -371,7 +371,7 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
 
         List<String> kanikoArgsAll = new ArrayList<>(
             List.of(
-                "--dockerfile=/init-config-map/Dockerfile",
+                "--dockerfile=" + initConfigMountPath + "/Dockerfile",
                 "--context=" + k8sProperties.getSharedVolume().getMountPath(),
                 "--destination=" + imageName
             )

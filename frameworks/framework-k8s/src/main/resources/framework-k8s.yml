@@ -27,6 +27,11 @@ kubernetes:
   init:
     image: ${K8S_INIT_IMAGE:ghcr.io/scc-digitalhub/digitalhub-core-builder-tool:latest}
     command: "/bin/bash,-c,/app/builder-tool.sh"
+    name: init-config-map
+    mount-path: /init-config-map
+  secrets:
+    name: init-secrets
+    mount-path: /secrets
   shared-volume:
     volume_type: empty_dir
     name: shared-dir

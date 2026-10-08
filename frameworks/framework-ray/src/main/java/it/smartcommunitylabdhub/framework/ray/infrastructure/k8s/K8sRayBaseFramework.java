@@ -389,7 +389,7 @@ public abstract class K8sRayBaseFramework<
 
         //init config map
         try {
-            String configMapName = "init-config-map-" + runnable.getId();
+            String configMapName = initConfigName + "-" + runnable.getId();
             V1ConfigMap initConfigMap = coreV1Api.readNamespacedConfigMap(configMapName, namespace, null);
             if (initConfigMap != null) {
                 coreV1Api.deleteNamespacedConfigMap(configMapName, namespace, null, null, null, null, null, null, null);
@@ -477,7 +477,11 @@ public abstract class K8sRayBaseFramework<
 
         //merge with runnable labels, which may contain useful info for selection and are not mutually exclusive with ray operator labels
         podLabels = MapUtils.mergeMultipleMaps(podLabels, labels);
-        V1Service service = new V1Service().metadata(new V1ObjectMeta().name(k8sBuilderHelper.getServiceName(runnable.getRuntime(), runnable.getTask(), runnable.getId())));
+        V1Service service = new V1Service().metadata(
+            new V1ObjectMeta().name(
+                k8sBuilderHelper.getServiceName(runnable.getRuntime(), runnable.getTask(), runnable.getId())
+            )
+        );
         //head group: no context, but service and ports
         V1PodSpec head = convertPodModel(runnable, "head", cluster.getHeadSpec(), false, true);
         if (cluster.getHeadServiceType() != null) {
@@ -802,7 +806,8 @@ public abstract class K8sRayBaseFramework<
                         .filter(
                             v ->
                                 k8sProperties.getSharedVolume().getMountPath().equals(v.getMountPath()) ||
-                                "/init-config-map".equals(v.getMountPath())
+                                initConfigMountPath.equals(v.getMountPath()) ||
+                                initSecretsMountPath.equals(v.getMountPath())
                         )
                         .collect(Collectors.toList())
                 )

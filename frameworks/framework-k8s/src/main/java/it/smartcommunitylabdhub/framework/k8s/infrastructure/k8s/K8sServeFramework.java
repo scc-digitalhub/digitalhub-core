@@ -336,7 +336,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
 
         //init config map
         try {
-            String configMapName = "init-config-map-" + runnable.getId();
+            String configMapName = initConfigName + "-" + runnable.getId();
             V1ConfigMap initConfigMap = coreV1Api.readNamespacedConfigMap(configMapName, namespace, null);
             if (initConfigMap != null) {
                 coreV1Api.deleteNamespacedConfigMap(configMapName, namespace, null, null, null, null, null, null, null);
@@ -837,7 +837,8 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
                         .filter(
                             v ->
                                 k8sProperties.getSharedVolume().getMountPath().equals(v.getMountPath()) ||
-                                "/init-config-map".equals(v.getMountPath())
+                                initConfigMountPath.equals(v.getMountPath()) ||
+                                initSecretsMountPath.equals(v.getMountPath())
                         )
                         .collect(Collectors.toList())
                 )

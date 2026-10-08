@@ -53,6 +53,7 @@ import io.kubernetes.client.openapi.models.V1ResourceRequirements;
 import io.kubernetes.client.openapi.models.V1SeccompProfile;
 import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.openapi.models.V1SecretEnvSource;
+import io.kubernetes.client.openapi.models.V1SecretVolumeSource;
 import io.kubernetes.client.openapi.models.V1SecurityContext;
 import io.kubernetes.client.openapi.models.V1Toleration;
 import io.kubernetes.client.openapi.models.V1Volume;
@@ -105,7 +106,6 @@ import org.springframework.core.io.support.ResourcePatternUtils;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
-import org.springframework.web.util.UriComponentsBuilder;
 
 @Slf4j
 public abstract class K8sBaseFramework<
@@ -131,6 +131,11 @@ public abstract class K8sBaseFramework<
     //TODO move all props to bean
     protected String namespace;
     protected String registrySecret;
+
+    protected String initConfigName = "init-config";
+    protected String initConfigMountPath = "/init-config-map";
+    protected String initSecretsName = "init-secrets";
+    protected String initSecretsMountPath = "/secrets";
 
     //default  value
     protected String defaultImagePullPolicy = "IfNotPresent";
@@ -193,6 +198,26 @@ public abstract class K8sBaseFramework<
     @Autowired
     public void setK8sProperties(KubernetesProperties k8sProperties) {
         this.k8sProperties = k8sProperties;
+    }
+
+    @Autowired
+    public void setInitConfigName(@Value("${kubernetes.init.name}") String initConfigName) {
+        this.initConfigName = initConfigName;
+    }
+
+    @Autowired
+    public void setInitConfigMountPath(@Value("${kubernetes.init.mount-path}") String initConfigMountPath) {
+        this.initConfigMountPath = initConfigMountPath;
+    }
+
+    @Autowired
+    public void setInitSecretsName(@Value("${kubernetes.secrets.name}") String initSecretsName) {
+        this.initSecretsName = initSecretsName;
+    }
+
+    @Autowired
+    public void setInitSecretsMountPath(@Value("${kubernetes.secrets.mount-path}") String initSecretsMountPath) {
+        this.initSecretsMountPath = initSecretsMountPath;
     }
 
     @Autowired
@@ -855,7 +880,7 @@ public abstract class K8sBaseFramework<
         return envVarsFrom;
     }
 
-    protected List<V1Volume> buildVolumes(T runnable) {
+    protected List<V1Volume> buildVolumes(T runnable) throws K8sFrameworkException {
         // Volumes to attach to the pod based on the volume spec with the additional volume_type
         List<V1Volume> volumes = new LinkedList<>();
         if (runnable.getVolumes() != null) {
@@ -901,10 +926,22 @@ public abstract class K8sBaseFramework<
                 V1Volume volume = k8sBuilderHelper.getVolume(runnable.getId(), k8sProperties.getSharedVolume());
                 volumes.add(volume);
             }
+        }
 
+        //check if init config volume is required
+        V1ConfigMap initConfigMap = buildInitConfigMap(runnable);
+        if (initConfigMap != null) {
             // build config map volume with fixed definition
-            V1Volume volume = new V1Volume().name("init-config-map");
-            volume.configMap(new V1ConfigMapVolumeSource().name("init-config-map-" + runnable.getId()));
+            V1Volume volume = new V1Volume().name(initConfigName);
+            volume.configMap(new V1ConfigMapVolumeSource().name(initConfigMap.getMetadata().getName()));
+            volumes.add(volume);
+        }
+
+        //check if secret volume is required
+        V1Secret secret = buildRunSecret(runnable);
+        if (secret != null) {
+            V1Volume volume = new V1Volume().name(initSecretsName);
+            volume.secret(new V1SecretVolumeSource().secretName(secret.getMetadata().getName()));
             volumes.add(volume);
         }
 
@@ -947,7 +984,7 @@ public abstract class K8sBaseFramework<
         return volumes;
     }
 
-    protected List<V1VolumeMount> buildVolumeMounts(T runnable) {
+    protected List<V1VolumeMount> buildVolumeMounts(T runnable) throws K8sFrameworkException {
         // Volumes to attach to the pod based on the volume spec with the additional volume_type
         List<V1VolumeMount> volumeMounts = new LinkedList<>();
         if (runnable.getVolumes() != null) {
@@ -995,10 +1032,6 @@ public abstract class K8sBaseFramework<
                 volumeMounts.add(sharedMount);
             }
 
-            // Create config map volume mount with fixed definition
-            V1VolumeMount configMapMount = new V1VolumeMount().name("init-config-map").mountPath("/init-config-map");
-            volumeMounts.add(configMapMount);
-
             //process additional mounts for context sources if defined
             if (runnable.getContextSources() != null) {
                 runnable
@@ -1007,7 +1040,7 @@ public abstract class K8sBaseFramework<
                         if (StringUtils.hasText(cs.getMountPath())) {
                             //add additional mount for this context source
                             V1VolumeMount mount = new V1VolumeMount()
-                                .name("init-config-map")
+                                .name(initConfigName)
                                 .mountPath(cs.getMountPath())
                                 .subPath(
                                     Base64.getUrlEncoder().withoutPadding().encodeToString(cs.getName().getBytes())
@@ -1016,6 +1049,22 @@ public abstract class K8sBaseFramework<
                         }
                     });
             }
+        }
+
+        //check if init config volume is required
+        V1ConfigMap initConfigMap = buildInitConfigMap(runnable);
+        if (initConfigMap != null) {
+            // Create config map volume mount with fixed definition
+            V1VolumeMount configMapMount = new V1VolumeMount().name(initConfigName).mountPath(initConfigMountPath);
+            volumeMounts.add(configMapMount);
+        }
+
+        //check if secret volume is required
+        V1Secret secret = buildRunSecret(runnable);
+        if (secret != null) {
+            // Create secret volume mount with fixed definition
+            V1VolumeMount secretMount = new V1VolumeMount().name(initSecretsName).mountPath(initSecretsMountPath);
+            volumeMounts.add(secretMount);
         }
 
         //also support oci images/artifacts from contextRefs as volumes
@@ -1426,10 +1475,7 @@ public abstract class K8sBaseFramework<
         }
 
         if (!data.isEmpty()) {
-            V1Secret secret = k8sSecretHelper.convertSecrets(
-                k8sSecretHelper.getSecretName(runnable.getRuntime(), runnable.getTask(), runnable.getId()),
-                data
-            );
+            V1Secret secret = k8sSecretHelper.convertSecrets(initSecretsName + "-" + runnable.getId(), data);
 
             if (secret != null && secret.getMetadata() != null) {
                 //attach labels
@@ -1459,7 +1505,7 @@ public abstract class K8sBaseFramework<
     }
 
     protected void cleanRunSecret(T runnable) {
-        String secretName = k8sSecretHelper.getSecretName(runnable.getRuntime(), runnable.getTask(), runnable.getId());
+        String secretName = initSecretsName + "-" + runnable.getId();
         try {
             k8sSecretHelper.deleteSecret(secretName);
         } catch (ApiException e) {
@@ -1556,7 +1602,9 @@ public abstract class K8sBaseFramework<
 
         try {
             V1ConfigMap configMap = new V1ConfigMap()
-                .metadata(new V1ObjectMeta().name("init-config-map-" + runnable.getId()).labels(buildLabels(runnable)))
+                .metadata(
+                    new V1ObjectMeta().name(initConfigName + "-" + runnable.getId()).labels(buildLabels(runnable))
+                )
                 .data(contextData != null ? contextData : Map.of());
 
             if (log.isTraceEnabled()) {
