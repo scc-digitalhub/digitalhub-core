@@ -29,11 +29,11 @@ export { createComplianceWidget } from "./components/widgets/ComplianceWidget";
 export type { ComplianceWidgetProps } from "./components/widgets/ComplianceWidget";
 
 // Lower-level, fully controlled editors (bring your own data fetching/saving).
-export { default as ProjectComplianceEditor } from "./components/compliance/ProjectComplianceEditor3";
+export { default as ProjectComplianceEditor } from "./components/compliance/ProjectComplianceEditor";
 export { default as DatasetComplianceEditor } from "./components/compliance/DatasetComplianceEditor";
 export { default as ModelComplianceEditor } from "./components/compliance/ModelComplianceEditor";
 export { default as AgentAssistPanel } from "./components/compliance/AgentAssistPanel";
-export type { ProjectComplianceEditorProps } from "./components/compliance/ProjectComplianceEditor3";
+export type { ProjectComplianceEditorProps } from "./components/compliance/ProjectComplianceEditor";
 export type { DatasetComplianceEditorProps } from "./components/compliance/DatasetComplianceEditor";
 export type { ModelComplianceEditorProps } from "./components/compliance/ModelComplianceEditor";
 

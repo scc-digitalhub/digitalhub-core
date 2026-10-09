@@ -18,49 +18,6 @@ const hubModule: ConsoleExtensionModule = {
         },
       ],
     },
-    // functions: {
-    //   list: [
-    //     {
-    //       showIn: "toolbar",
-    //       component: "hubButton",
-    //       icon: "menuIcon",
-    //     },
-    //   ],
-    //   create: [
-    //     {
-    //       showIn: "toolbar",
-    //       component: "hubButton",
-    //     },
-    //     {
-    //       showIn: "tab",
-    //       component: "hubButton",
-    //       label: "Hub Test Step",
-    //     },
-    //   ],
-    //   edit: [
-    //     {
-    //       showIn: "toolbar",
-    //       component: "hubButton",
-    //     },
-    //     {
-    //       showIn: "section",
-    //       component: "hubButton",
-    //       label: "Hub Test Section",
-    //     },
-    //   ],
-    //   show: [
-    //     {
-    //       showIn: "toolbar",
-    //       component: "hubButton",
-    //     },
-    //     {
-    //       showIn: "tab",
-    //       component: "hubButton",
-    //       label: "Hub Test Section",
-
-    //     },
-    //   ],
-    // },
   },
 };
 
