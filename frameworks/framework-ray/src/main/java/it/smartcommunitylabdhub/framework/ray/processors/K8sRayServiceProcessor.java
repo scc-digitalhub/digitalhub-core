@@ -36,7 +36,7 @@ import it.smartcommunitylabdhub.framework.k8s.objects.AppProtocol;
 import it.smartcommunitylabdhub.framework.ray.runnables.K8sRayRunnable;
 import it.smartcommunitylabdhub.runs.Run;
 import java.io.Serializable;
-import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -77,6 +77,7 @@ public class K8sRayServiceProcessor implements Processor<Run, K8sServiceStatus> 
                                 serviceInfoBuilder.ip(
                                     head.get("serviceIP") != null ? head.get("serviceIP").toString() : null
                                 );
+                                String serviceUrl = null;
                                 List<V1ServicePort> ports = new LinkedList<>();
                                 List<K8sServiceDetails> urls = new LinkedList<>();
                                 for (Map.Entry<String, String> entry : endpoints.entrySet()) {
@@ -94,12 +95,23 @@ public class K8sRayServiceProcessor implements Processor<Run, K8sServiceStatus> 
                                         );
                                     String protocol = AppProtocol.http.name();
                                     if ("dashboard".equals(entry.getKey())) {
-                                        serviceInfoBuilder.url(url);
+                                        serviceUrl = url;
                                         protocol = AppProtocol.www.name();
                                     }
                                     urls.add(new K8sServiceDetails(url, 0, protocol));
                                 }
+
+                                if (serviceUrl != null) {
+                                    serviceInfoBuilder.url(serviceUrl);
+                                }
+
                                 if (!urls.isEmpty()) {
+                                    //sort by keeping the main url (dashboard) first
+                                    if (serviceUrl != null) {
+                                        String mainServiceUrl = serviceUrl;
+                                        urls.sort(Comparator.comparing(url -> !mainServiceUrl.equals(url.getUrl())));
+                                    }
+
                                     serviceInfoBuilder.urls(urls);
                                 }
 
