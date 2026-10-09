@@ -23,6 +23,7 @@
 
 package it.smartcommunitylabdhub.framework.k8s.objects;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
@@ -39,17 +40,21 @@ public class CoreResource implements Serializable {
 
     @Nullable
     @Pattern(regexp = "^\\d+([a-zA-Z]+)?$")
+    @Schema(title = "fields.k8s.resources.cpu.title", description = "fields.k8s.resources.cpu.description")
     private String cpu;
 
     @Nullable
     @Pattern(regexp = "^\\d+([a-zA-Z]+)?$")
+    @Schema(title = "fields.k8s.resources.memory.title", description = "fields.k8s.resources.memory.description")
     private String mem;
 
     @Nullable
     @Pattern(regexp = "^\\d+([a-zA-Z]+)?$")
+    @Schema(title = "fields.k8s.resources.gpu.title", description = "fields.k8s.resources.gpu.description")
     private String gpu;
 
     @Nullable
     @Pattern(regexp = "^\\d+([a-zA-Z]+)?$")
+    @Schema(title = "fields.k8s.resources.disk.title", description = "fields.k8s.resources.disk.description")
     private String disk;
 }

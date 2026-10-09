@@ -37,17 +37,14 @@ import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernetes;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sResourceProfileAware;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sTemplate;
-import it.smartcommunitylabdhub.framework.k8s.objects.CoreResource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreResources;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import java.io.IOException;
-import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 import org.springframework.beans.factory.InitializingBean;
@@ -309,41 +306,46 @@ public class KubernetesModule implements com.github.victools.jsonschema.generato
             //TODO extend and make generic, this must handle all props from K8sRunnable to K8sResourceProfileAware
             if (runnable.getResources() != null) {
                 //build resources mapping back to CoreResource
-                CoreResources coreResources = runnable.getResources();
-
-                ObjectNode resources = config.createObjectNode();
-
-                //requests are const
-                Map<String, String> requests = coreResources.getRequestsAsMap();
-                if (requests != null) {
-                    Optional.ofNullable(requests.get("cpu")).ifPresent(v -> {
-                        ObjectNode requestNode = createProfileSchema(v, config);
-                        resources.set("cpu", requestNode);
-                    });
-                    Optional.ofNullable(requests.get("memory")).ifPresent(v -> {
-                        ObjectNode requestNode = createProfileSchema(v, config);
-                        resources.set("mem", requestNode);
-                    });
-                    Optional.ofNullable(gpuResourceKey).ifPresent(key ->
-                        Optional.ofNullable(requests.get(key)).ifPresent(v -> {
-                            ObjectNode requestNode = createProfileSchema(v, config);
-                            resources.set("gpu", requestNode);
-                        })
-                    );
-                }
-
-                //limits are max if enumerable
-                Map<String, String> limits = coreResources.getLimitsAsMap();
-                //TODO
-
-                ObjectNode node = config.createObjectNode();
-                node.set(config.getKeyword(SchemaKeyword.TAG_PROPERTIES), resources);
-
-                properties.set("resources", node);
+                properties.set("resources", createCoreResourcesSchema(runnable.getResources(), config));
             }
 
             result.set(config.getKeyword(SchemaKeyword.TAG_PROPERTIES), properties);
 
+            return result;
+        }
+
+        private ObjectNode createCoreResourcesSchema(CoreResources coreResources, SchemaGeneratorConfig config) {
+            ObjectNode result = config.createObjectNode();
+            ObjectNode properties = config.createObjectNode();
+            Map<String, String> requests = coreResources.getRequestsAsMap();
+            Map<String, String> limits = coreResources.getLimitsAsMap();
+
+            Optional.ofNullable(createResourceSchema(requests.get("cpu"), limits.get("cpu"), config)).ifPresent(
+                schema -> properties.set("cpu", schema)
+            );
+            Optional.ofNullable(createResourceSchema(requests.get("memory"), limits.get("memory"), config)).ifPresent(
+                schema -> properties.set("mem", schema)
+            );
+            Optional.ofNullable(gpuResourceKey).ifPresent(key ->
+                Optional.ofNullable(createResourceSchema(requests.get(key), limits.get(key), config)).ifPresent(
+                    schema -> properties.set("gpu", schema)
+                )
+            );
+
+            result.set(config.getKeyword(SchemaKeyword.TAG_PROPERTIES), properties);
+            return result;
+        }
+
+        private ObjectNode createResourceSchema(String request, String limit, SchemaGeneratorConfig config) {
+            if (request == null && limit == null) {
+                return null;
+            }
+
+            ObjectNode result = config.createObjectNode();
+            Optional.ofNullable(request).ifPresent(value ->
+                result.put(config.getKeyword(SchemaKeyword.TAG_CONST), value)
+            );
+            Optional.ofNullable(limit).ifPresent(value -> result.put("x-maximumQuantity", value));
             return result;
         }
 
