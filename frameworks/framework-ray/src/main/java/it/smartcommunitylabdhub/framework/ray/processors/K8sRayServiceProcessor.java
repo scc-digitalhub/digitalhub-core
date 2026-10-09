@@ -84,11 +84,18 @@ public class K8sRayServiceProcessor implements Processor<Run, K8sServiceStatus> 
                                     port.setName(entry.getKey());
                                     port.setPort(Integer.parseInt(entry.getValue()));
                                     ports.add(port);
-                                    String url = String.format("%s.%s:%s", metadata.get("name"), metadata.get("namespace"), entry.getValue());
+                                    String url =
+                                        "s-" +
+                                        String.format(
+                                            "%s.%s:%s",
+                                            metadata.get("name"),
+                                            metadata.get("namespace"),
+                                            entry.getValue()
+                                        );
                                     String protocol = AppProtocol.http.name();
                                     if ("dashboard".equals(entry.getKey())) {
                                         serviceInfoBuilder.url(url);
-                                        protocol= AppProtocol.www.name();
+                                        protocol = AppProtocol.www.name();
                                     }
                                     urls.add(new K8sServiceDetails(url, 0, protocol));
                                 }
