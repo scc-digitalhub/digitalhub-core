@@ -11,10 +11,11 @@ const compliance = {
   widget: {
     edit: "Edit compliance",
   },
-  complianceTabs: {
+  compliancetabs: {
     general: "General",
     status: "Status",
     requirements: "Requirements",
+    context: "Context",
     objectives: "Objectives",
     documentation: "Documentation",
   },

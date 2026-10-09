@@ -36,10 +36,11 @@ export default function ProjectComplianceEditor({ spec, onChange }: ProjectCompl
   return (
     <Box>
       <Tabs value={tab} onChange={(_e, v) => setTab(v)} sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
-        <Tab label={t("compliance.complianceTabs.general")} />
-        <Tab label={t("compliance.complianceTabs.status")} />
-        <Tab label={t("compliance.complianceTabs.requirements")} />
-        <Tab label={t("compliance.complianceTabs.documentation")} />
+        <Tab label={t("compliance.compliancetabs.general")} />
+        <Tab label={t("compliance.compliancetabs.status")} />
+        <Tab label={t("compliance.compliancetabs.context")} />
+        <Tab label={t("compliance.compliancetabs.requirements")} />
+        <Tab label={t("compliance.compliancetabs.documentation")} />
       </Tabs>
 
       {tab === 0 && (
@@ -66,9 +67,6 @@ export default function ProjectComplianceEditor({ spec, onChange }: ProjectCompl
           <SectionAccordion title={t("compliance.fields.regulations")}>
             <SchemaForm schemaName="ComplianceContext" only={["regulations"]} value={context} onChange={setContext} />
           </SectionAccordion>
-          <SectionAccordion title={t("compliance.fields.requirements")}>
-            <SchemaForm schemaName="ComplianceContext" only={["requirements"]} value={context} onChange={setContext} />
-          </SectionAccordion>
           <SectionAccordion title={t("compliance.fields.risk_classification")}>
             <SchemaForm schemaName="ComplianceContext" only={["risk_classification"]} value={context} onChange={setContext} />
           </SectionAccordion>
@@ -87,13 +85,18 @@ export default function ProjectComplianceEditor({ spec, onChange }: ProjectCompl
           <SectionAccordion title={t("compliance.fields.human_oversight")}>
             <SchemaForm schemaName="ComplianceContext" only={["human_oversight"]} value={context} onChange={setContext} />
           </SectionAccordion>
-          <SectionAccordion title={t("compliance.fields.objectives")} subtitle={t("compliance.common.readOnly")} defaultExpanded={false}>
-            <ReadOnlyObjectives objectives={objectives} />
+        </Stack>
+      )}
+
+      {tab === 3 && (
+        <Stack spacing={1.5}>
+          <SectionAccordion title={t("compliance.fields.requirements")}>
+            <SchemaForm schemaName="ComplianceContext" only={["requirements"]} value={context} onChange={setContext} />
           </SectionAccordion>
         </Stack>
       )}
 
-      {tab === 3 && <ComplianceDocumentationTab documentation={documentation} setDocumentation={setDocumentation} />}
+      {tab === 4 && <ComplianceDocumentationTab documentation={documentation} setDocumentation={setDocumentation} />}
     </Box>
   );
 }

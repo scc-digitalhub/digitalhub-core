@@ -23,6 +23,8 @@ export default function RefObjectField({ label, schemaName, value, onChange, req
   const t = useTranslate();
   const readOnly = useSchemaReadOnly();
 
+  console.log("RefObjectField value:", label, value);
+
   // Required nested objects are always materialized so the user can fill them in immediately.
   useEffect(() => {
     if (!readOnly && required && !value) {

@@ -1,4 +1,4 @@
-import { Stack } from "@mui/material";
+import { Grid, Stack } from "@mui/material";
 import { getCustomValueTrigger, resolveSchema } from "../../schema/resolver";
 import type { JsonRecord } from "../../types";
 import SchemaField from "./SchemaField";
@@ -20,13 +20,17 @@ export default function SchemaForm({ schemaName, value, onChange, omit = [], onl
   const keys = (only ?? Object.keys(resolved.properties)).filter((k) => !omit.includes(k) && resolved.properties[k]);
 
   return (
-    <Stack spacing={2}>
+    <Grid container spacing={1.5}>
+
       {keys.map((key) => {
+        const prop = resolved.properties[key];
+        const size = Math.floor(((prop as any).columns || 12));
         const trigger = getCustomValueTrigger(resolved.properties, key);
         if (trigger && !trigger.sentinels.includes(safeValue[trigger.baseKey] as string)) {
           return null;
         }
         return (
+          <Grid key={key} size={{ xs: 12, md: size }}>
           <SchemaField
             key={key}
             fieldKey={key}
@@ -35,8 +39,9 @@ export default function SchemaForm({ schemaName, value, onChange, omit = [], onl
             required={resolved.required.includes(key)}
             onChange={(next) => onChange({ ...safeValue, [key]: next })}
           />
+          </Grid>
         );
       })}
-    </Stack>
+    </Grid>
   );
 }

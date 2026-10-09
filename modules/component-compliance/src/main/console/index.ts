@@ -2,6 +2,10 @@ import { ConsoleExtensionModule } from "@digitalhub/console/features/extensions/
 import { ComplianceIcon } from "./components/icon";
 import { AiCompliancePage } from "./components/AiCompliancePage";
 
+import { en } from "./components/compliance-widgets/i18n/resources/en";
+import { it } from "./components/compliance-widgets/i18n/resources/it";
+  
+
 const hubModule: ConsoleExtensionModule = {
   components: {
     projectCompliancePage: AiCompliancePage,
@@ -18,6 +22,10 @@ const hubModule: ConsoleExtensionModule = {
         },
       ],
     },
+  },
+  i18n: {
+    en: en,
+    it: it,
   },
 };
 

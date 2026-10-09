@@ -6,7 +6,7 @@
  *
  * ```tsx
  * import {
- *   ComplianceServicesProvider, ProjectComplianceWidget, complianceWidgetMessages,
+ *   ComplianceServicesProvider, ProjectComplianceWidget,
  * } from "@/compliance-widgets";
  *
  * function App() {
@@ -42,8 +42,6 @@ export type {
   ComplianceService, AgentService, AgentResult, ComplianceWidgetServices,
 } from "./services/types";
 export { ComplianceServicesProvider, useComplianceServices } from "./services/context";
-// i18n: bundled English/Italian resources for the host's React Admin i18n provider.
-export { complianceWidgetMessages } from "./i18n/register";
 
 // Domain types and the schema-name lookup tables used by the editors/EntityForm.
 export type { ComplianceEntityKind, JsonRecord } from "./types";

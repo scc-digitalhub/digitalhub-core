@@ -1,4 +1,4 @@
-import { Box, Stack, Typography } from "@mui/material";
+import { Box, Grid, Stack, Typography } from "@mui/material";
 import type { JSONSchemaNode } from "../../schema/types";
 import type { JsonRecord } from "../../types";
 import { getCustomValueTrigger } from "../../schema/resolver";
@@ -23,14 +23,16 @@ export default function InlineObjectField({ label, schema, value, onChange }: In
       <Typography variant="subtitle2" gutterBottom>
         {label}
       </Typography>
-      <Stack spacing={1.5}>
+      <Grid container spacing={1.5}>
         {Object.entries(properties).map(([key, prop]) => {
+          const size = Math.floor(((prop as any).columns || 12));
           const trigger = getCustomValueTrigger(properties, key);
           if (trigger && !trigger.sentinels.includes(value?.[trigger.baseKey] as string)) {
             return null;
           }
           return (
-            <SchemaField
+            <Grid key={key} size={{ xs: 12, md: size }}>
+              <SchemaField
               key={key}
               fieldKey={key}
               prop={prop}
@@ -38,9 +40,10 @@ export default function InlineObjectField({ label, schema, value, onChange }: In
               required={required.includes(key)}
               onChange={(next) => onChange({ ...value, [key]: next })}
             />
+            </Grid>
           );
         })}
-      </Stack>
+      </Grid>
     </Box>
   );
 }

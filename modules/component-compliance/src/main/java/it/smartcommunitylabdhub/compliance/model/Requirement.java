@@ -27,7 +27,7 @@ import lombok.Setter;
     "requirement_text",
     "summary",
     "kind",
-    "applicability_status",
+    "compliance_status",
     "related_requirements"
 })
 public class Requirement extends BaseComplianceObject {
@@ -39,19 +39,16 @@ public class Requirement extends BaseComplianceObject {
     @JsonProperty("requirement_text")
     private String requirementText;
 
-    @Schema(title = "fields.compliance.requirement.summary.title", description = "fields.compliance.requirement.summary.description")
-    private String summary;
-
     @Schema(title = "fields.compliance.requirement.kind.title", description = "fields.compliance.requirement.kind.description")
     private RequirementKind kind;
-
-    @Schema(title = "fields.compliance.requirement.applicability_status.title", description = "fields.compliance.requirement.applicability_status.description")
-    @JsonProperty("applicability_status")
-    private ApplicabilityStatus applicabilityStatus;
 
     @Schema(title = "fields.compliance.requirement.related_requirements.title", description = "fields.compliance.requirement.related_requirements.description")
     @JsonProperty("related_requirements")
     private Set<String> relatedRequirements;
+
+    @Schema(title = "fields.compliance.requirement.compliance_status.title", description = "fields.compliance.requirement.compliance_status.description")
+    @JsonProperty("compliance_status")
+    private ComplianceStatus complianceStatus;
 
     public enum RequirementKind {
         DESIGN,
@@ -69,11 +66,4 @@ public class Requirement extends BaseComplianceObject {
         OTHER,
     }
 
-    public enum ApplicabilityStatus {
-        APPLICABLE,
-        NOT_APPLICABLE,
-        PARTIALLY_APPLICABLE,
-        UNCERTAIN,
-        NEEDS_REVIEW,
-    }
 }

@@ -24,6 +24,7 @@ export interface JSONSchemaNode {
   uniqueItems?: boolean;
   minProperties?: number;
   maxProperties?: number;
+  columns?: number;
 }
 
 export function isSchemaRef(node: JSONSchemaNode | SchemaRef | undefined): node is SchemaRef {
