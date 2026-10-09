@@ -59,13 +59,12 @@ public class K8sRayServiceProcessor implements Processor<Run, K8sServiceStatus> 
                 Map<String, Serializable> rayJob = (Map<String, Serializable>) res.get("RayJob");
                 if (rayJob != null) {
                     Map<String, Serializable> status = (Map<String, Serializable>) rayJob.get("status");
-                    if (status != null) {
+                    Map<String, Serializable> metadata = (Map<String, Serializable>) rayJob.get("metadata");
+                    if (status != null && metadata != null) {
                         Map<String, Serializable> rayClusterStatus = (Map<String, Serializable>) status.get(
                             "rayClusterStatus"
                         );
                         if (rayClusterStatus != null) {
-                            String dashboardUrl =
-                                status.get("dashboardURL") != null ? status.get("dashboardURL").toString() : null;
                             // process rayClusterStatus if needed
                             Map<String, Serializable> head = (Map<String, Serializable>) rayClusterStatus.get("head");
                             Map<String, String> endpoints = (Map<String, String>) rayClusterStatus.get("endpoints");
@@ -78,19 +77,25 @@ public class K8sRayServiceProcessor implements Processor<Run, K8sServiceStatus> 
                                 serviceInfoBuilder.ip(
                                     head.get("serviceIP") != null ? head.get("serviceIP").toString() : null
                                 );
-                                serviceInfoBuilder.url(dashboardUrl);
-                                serviceInfoBuilder.urls(
-                                    Collections.singletonList(
-                                        new K8sServiceDetails(dashboardUrl, 0, AppProtocol.www.name())
-                                    )
-                                );
                                 List<V1ServicePort> ports = new LinkedList<>();
+                                List<K8sServiceDetails> urls = new LinkedList<>();
                                 for (Map.Entry<String, String> entry : endpoints.entrySet()) {
                                     V1ServicePort port = new V1ServicePort();
                                     port.setName(entry.getKey());
                                     port.setPort(Integer.parseInt(entry.getValue()));
                                     ports.add(port);
+                                    String url = String.format("%s.%s:%s", metadata.get("name"), metadata.get("namespace"), entry.getValue());
+                                    String protocol = AppProtocol.http.name();
+                                    if ("dashboard".equals(entry.getKey())) {
+                                        serviceInfoBuilder.url(url);
+                                        protocol= AppProtocol.www.name();
+                                    }
+                                    urls.add(new K8sServiceDetails(url, 0, protocol));
                                 }
+                                if (!urls.isEmpty()) {
+                                    serviceInfoBuilder.urls(urls);
+                                }
+
                                 serviceInfoBuilder.ports(ports);
 
                                 K8sServiceStatus serviceStatus = K8sServiceStatus.builder()
