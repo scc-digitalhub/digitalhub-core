@@ -50,6 +50,11 @@ public class Requirement extends BaseComplianceObject {
     @JsonProperty("compliance_status")
     private ComplianceStatus complianceStatus;
 
+    @Schema(title = "fields.compliance.status.findings.title", description = "fields.compliance.status.findings.description")
+    private Set<ComplianceFinding> findings;
+    @Schema(title = "fields.compliance.status.mitigations.title", description = "fields.compliance.status.mitigations.description")
+    private Set<MitigationAction> mitigations;
+
     public enum RequirementKind {
         DESIGN,
         TESTING,

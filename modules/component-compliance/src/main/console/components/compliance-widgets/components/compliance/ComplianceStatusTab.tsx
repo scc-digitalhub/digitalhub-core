@@ -17,12 +17,6 @@ export default function ComplianceStatusTab({ status, setStatus }: ComplianceSta
       <SectionAccordion title={t("compliance.fields.compliance_status")}>
         <SchemaForm schemaName="ComplianceStatus" only={["status", "assessed_at", "assessor"]} value={status} onChange={setStatus} />
       </SectionAccordion>
-      <SectionAccordion title={t("compliance.fields.findings")}>
-        <SchemaForm schemaName="ComplianceStatus" only={["findings"]} value={status} onChange={setStatus} />
-      </SectionAccordion>
-      <SectionAccordion title={t("compliance.fields.mitigations")}>
-        <SchemaForm schemaName="ComplianceStatus" only={["mitigations"]} value={status} onChange={setStatus} />
-      </SectionAccordion>
     </Stack>
   );
 }

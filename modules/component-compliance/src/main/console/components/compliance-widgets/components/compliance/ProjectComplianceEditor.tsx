@@ -37,7 +37,6 @@ export default function ProjectComplianceEditor({ spec, onChange }: ProjectCompl
     <Box>
       <Tabs value={tab} onChange={(_e, v) => setTab(v)} sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
         <Tab label={t("compliance.compliancetabs.general")} />
-        <Tab label={t("compliance.compliancetabs.status")} />
         <Tab label={t("compliance.compliancetabs.context")} />
         <Tab label={t("compliance.compliancetabs.requirements")} />
         <Tab label={t("compliance.compliancetabs.documentation")} />
@@ -45,6 +44,9 @@ export default function ProjectComplianceEditor({ spec, onChange }: ProjectCompl
 
       {tab === 0 && (
         <Stack spacing={1.5}>
+          <SectionAccordion title={t("compliance.fields.compliance_status")}>
+            <SchemaForm schemaName="ComplianceStatus" only={["status", "assessed_at", "assessor"]} value={status} onChange={setStatus} />
+          </SectionAccordion>
           <SectionAccordion title={`${t("compliance.fields.domain")} & ${t("compliance.fields.ai_task")}`}>
             <SchemaForm schemaName="ProjectComplianceSpec" only={["domain", "ai_task", "ai_task_value", "goal"]} value={spec} onChange={onChange} />
           </SectionAccordion>
@@ -57,9 +59,8 @@ export default function ProjectComplianceEditor({ spec, onChange }: ProjectCompl
         </Stack>
       )}
 
-      {tab === 1 && <ComplianceStatusTab status={status} setStatus={setStatus} />}
 
-      {tab === 2 && (
+      {tab === 1 && (
         <Stack spacing={1.5}>
           <SectionAccordion title={`${t("compliance.fields.environment")} & ${t("compliance.fields.geography")}`}>
             <SchemaForm schemaName="ComplianceContext" only={["environment", "geography"]} value={context} onChange={setContext} />
@@ -88,7 +89,7 @@ export default function ProjectComplianceEditor({ spec, onChange }: ProjectCompl
         </Stack>
       )}
 
-      {tab === 3 && (
+      {tab === 2 && (
         <Stack spacing={1.5}>
           <SectionAccordion title={t("compliance.fields.requirements")}>
             <SchemaForm schemaName="ComplianceContext" only={["requirements"]} value={context} onChange={setContext} />
@@ -96,7 +97,7 @@ export default function ProjectComplianceEditor({ spec, onChange }: ProjectCompl
         </Stack>
       )}
 
-      {tab === 4 && <ComplianceDocumentationTab documentation={documentation} setDocumentation={setDocumentation} />}
+      {tab === 3 && <ComplianceDocumentationTab documentation={documentation} setDocumentation={setDocumentation} />}
     </Box>
   );
 }

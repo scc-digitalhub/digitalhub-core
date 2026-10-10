@@ -34,11 +34,6 @@ public class ComplianceStatus {
     @Schema(title = "fields.compliance.status.assessor.title", description = "fields.compliance.status.assessor.description")
     private ActorRef assessor;
 
-    @Schema(title = "fields.compliance.status.findings.title", description = "fields.compliance.status.findings.description")
-    private Set<ComplianceFinding> findings;
-    @Schema(title = "fields.compliance.status.mitigations.title", description = "fields.compliance.status.mitigations.description")
-    private Set<MitigationAction> mitigations;
-
     public enum StatusKind {
         COMPLIANT,
         NON_COMPLIANT,
