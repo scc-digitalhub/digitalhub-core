@@ -7,6 +7,7 @@ import SectionAccordion from "../common/SectionAccordion";
 import ComplianceStatusTab from "./ComplianceStatusTab";
 import ComplianceDocumentationTab from "./ComplianceDocumentationTab";
 import ReadOnlyObjectives from "./ReadOnlyObjectives";
+import { RegulatoryOptionsProvider } from "../schemaForm/RegulatoryOptionsContext";
 
 export interface ProjectComplianceEditorProps {
   spec: JsonRecord;
@@ -32,6 +33,7 @@ export default function ProjectComplianceEditor({ spec, onChange }: ProjectCompl
   const setDocumentation = (next: JsonRecord) => onChange({ ...spec, documentation: next });
 
   const objectives = (spec.objectives as JsonRecord[]) ?? [];
+  const regulations = (context.regulations as JsonRecord[]) ?? [];
 
   return (
     <Box>
@@ -92,7 +94,9 @@ export default function ProjectComplianceEditor({ spec, onChange }: ProjectCompl
       {tab === 2 && (
         <Stack spacing={1.5}>
           <SectionAccordion title={t("compliance.fields.requirements")}>
-            <SchemaForm schemaName="ComplianceContext" only={["requirements"]} value={context} onChange={setContext} />
+            <RegulatoryOptionsProvider regulations={regulations}>
+              <SchemaForm schemaName="ComplianceContext" only={["requirements"]} value={context} onChange={setContext} />
+            </RegulatoryOptionsProvider>
           </SectionAccordion>
         </Stack>
       )}

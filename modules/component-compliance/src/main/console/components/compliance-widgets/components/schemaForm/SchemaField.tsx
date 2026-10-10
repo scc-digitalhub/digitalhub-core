@@ -1,4 +1,4 @@
-import { Switch, FormControlLabel, TextField } from "@mui/material";
+import { Autocomplete, Switch, FormControlLabel, TextField } from "@mui/material";
 import { useTranslate } from "react-admin";
 import type { JSONSchemaNode, SchemaRef } from "../../schema/types";
 import { isSchemaRef } from "../../schema/types";
@@ -12,6 +12,7 @@ import RefArrayField from "./RefArrayField";
 import InlineObjectField from "./InlineObjectField";
 import ObjectiveConditionField from "./ObjectiveConditionField";
 import { useSchemaReadOnly } from "./SchemaReadOnlyContext";
+import { useRegulatoryOptions } from "./RegulatoryOptionsContext";
 
 interface SchemaFieldProps {
   fieldKey: string;
@@ -35,9 +36,30 @@ interface SchemaFieldProps {
 export default function SchemaField({ fieldKey, prop, value, onChange, required, customValue }: SchemaFieldProps) {
   const translate = useTranslate();
   const readOnly = useSchemaReadOnly();
+  const regulatoryOptions = useRegulatoryOptions();
   const label = fieldLabel(fieldKey, translate);
 
   if (isSchemaRef(prop)) {
+    if (fieldKey === "source" && prop.$ref === "RegulatoryRef" && regulatoryOptions) {
+      const regulatoryLabel = (regulation: JsonRecord) =>
+        [regulation.framework, regulation.article, regulation.version].filter(Boolean).join(" - ");
+      const regulatoryKey = (regulation: JsonRecord) =>
+        [regulation.framework, regulation.article, regulation.version, regulation.uri].join("|");
+
+      return (
+        <Autocomplete
+          size="small"
+          fullWidth
+          disabled={readOnly}
+          options={regulatoryOptions}
+          value={(value as JsonRecord | undefined) ?? null}
+          getOptionLabel={regulatoryLabel}
+          isOptionEqualToValue={(option, selected) => regulatoryKey(option) === regulatoryKey(selected)}
+          onChange={(_event, next) => onChange(next ?? undefined)}
+          renderInput={(params) => <TextField {...params} label={label} required={required} />}
+        />
+      );
+    }
     // ObjectiveCondition is a discriminated union (exactly one of threshold/range/categorical/
     // statistical) and needs a dedicated type-selector widget instead of the generic form.
     if (prop.$ref === "ObjectiveCondition") {
