@@ -10,9 +10,21 @@ interface EnumSelectProps {
   onChange: (value: string) => void;
   required?: boolean;
   helperText?: string;
+  badgeColors?: Record<string, "default" | "success" | "error" | "warning">;
 }
 
-export function EnumSelect({ label, options, value, onChange, required, helperText }: EnumSelectProps) {
+interface CustomEnumTextFieldProps {
+  label: string;
+  options: string[];
+  value: string | undefined;
+  customValue: string | undefined;
+  sentinel: string;
+  onCustomChange: (baseValue: string | undefined, customValue: string | undefined) => void;
+  required?: boolean;
+  helperText?: string;
+}
+
+export function EnumSelect({ label, options, value, onChange, required, helperText, badgeColors }: EnumSelectProps) {
   const translate = useTranslate();
   const readOnly = useSchemaReadOnly();
   return (
@@ -26,13 +38,60 @@ export function EnumSelect({ label, options, value, onChange, required, helperTe
       value={value ?? ""}
       helperText={helperText}
       onChange={(e) => onChange(e.target.value)}
+      SelectProps={badgeColors ? {
+        renderValue: (selected) => {
+          const option = selected as string;
+          return <Chip size="medium" label={enumLabel(option, translate)} color={badgeColors[option] ?? "default"} />;
+        },
+      } : undefined}
     >
       {options.map((option) => (
         <MenuItem key={option} value={option}>
-          {enumLabel(option, translate)}
+          {badgeColors ? (
+            <Chip size="small" label={enumLabel(option, translate)} color={badgeColors[option] ?? "default"} />
+          ) : enumLabel(option, translate)}
         </MenuItem>
       ))}
     </TextField>
+  );
+}
+
+export function CustomEnumTextField({
+  label,
+  options,
+  value,
+  customValue,
+  sentinel,
+  onCustomChange,
+  required,
+  helperText,
+}: CustomEnumTextFieldProps) {
+  const translate = useTranslate();
+  const readOnly = useSchemaReadOnly();
+  const predefinedOptions = options.filter((option) => option !== sentinel && option !== "OTHER" && option !== "CUSTOM");
+  const displayedValue = value === sentinel ? (customValue ?? "") : (value ?? "");
+
+  return (
+    <Autocomplete
+      freeSolo
+      size="small"
+      disabled={readOnly}
+      options={predefinedOptions}
+      value={displayedValue}
+      getOptionLabel={(option) => enumLabel(option, translate)}
+      onChange={(_event, nextValue) => {
+        if (!nextValue) {
+          onCustomChange(undefined, undefined);
+        } else if (predefinedOptions.includes(nextValue)) {
+          onCustomChange(nextValue, undefined);
+        } else {
+          onCustomChange(sentinel, nextValue);
+        }
+      }}
+      renderInput={(params) => (
+        <TextField {...params} label={label} required={required} helperText={helperText} />
+      )}
+    />
   );
 }
 

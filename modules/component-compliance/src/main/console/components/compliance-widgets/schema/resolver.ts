@@ -61,6 +61,20 @@ export function getCustomValueTrigger(
   return sentinels.length > 0 ? { baseKey, sentinels } : null;
 }
 
+/** Returns the free-text companion and sentinel for an enum field that supports custom values. */
+export function getCustomValueCompanion(
+  properties: Record<string, JSONSchemaNode | SchemaRef>,
+  baseKey: string,
+): { valueKey: string; sentinel: string } | null {
+  for (const valueKey of Object.keys(properties)) {
+    const trigger = getCustomValueTrigger(properties, valueKey);
+    if (trigger?.baseKey === baseKey) {
+      return { valueKey, sentinel: trigger.sentinels[0] };
+    }
+  }
+  return null;
+}
+
 /** Builds a reasonable empty/default value for a named object schema (used for "add" actions). */
 export function createDefaultForSchema(name: string): Record<string, unknown> {
   const resolved = resolveSchema(name);
@@ -76,6 +90,9 @@ export function createDefaultForSchema(name: string): Record<string, unknown> {
 function createDefaultForProperty(prop: JSONSchemaNode | SchemaRef, key: string): unknown {
   if (isSchemaRef(prop)) {
     return createDefaultForSchema(prop.$ref);
+  }
+  if (prop.default !== undefined) {
+    return prop.default;
   }
   if (prop.enum && prop.enum.length > 0) {
     return prop.enum[0];

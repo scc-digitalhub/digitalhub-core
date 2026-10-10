@@ -1,5 +1,5 @@
-import { Grid, Stack } from "@mui/material";
-import { getCustomValueTrigger, resolveSchema } from "../../schema/resolver";
+import { Grid } from "@mui/material";
+import { getCustomValueCompanion, getCustomValueTrigger, resolveSchema } from "../../schema/resolver";
 import type { JsonRecord } from "../../types";
 import SchemaField from "./SchemaField";
 
@@ -26,9 +26,10 @@ export default function SchemaForm({ schemaName, value, onChange, omit = [], onl
         const prop = resolved.properties[key];
         const size = Math.floor(((prop as any).columns || 12));
         const trigger = getCustomValueTrigger(resolved.properties, key);
-        if (trigger && !trigger.sentinels.includes(safeValue[trigger.baseKey] as string)) {
+        if (trigger) {
           return null;
         }
+        const companion = getCustomValueCompanion(resolved.properties, key);
         return (
           <Grid key={key} size={{ xs: 12, md: size }}>
           <SchemaField
@@ -38,6 +39,15 @@ export default function SchemaForm({ schemaName, value, onChange, omit = [], onl
             value={safeValue[key]}
             required={resolved.required.includes(key)}
             onChange={(next) => onChange({ ...safeValue, [key]: next })}
+            customValue={companion ? {
+              value: safeValue[companion.valueKey] as string | undefined,
+              sentinel: companion.sentinel,
+              onChange: (baseValue, customValue) => onChange({
+                ...safeValue,
+                [key]: baseValue,
+                [companion.valueKey]: customValue,
+              }),
+            } : undefined}
           />
           </Grid>
         );

@@ -1,7 +1,7 @@
 import { Box, Grid, Stack, Typography } from "@mui/material";
 import type { JSONSchemaNode } from "../../schema/types";
 import type { JsonRecord } from "../../types";
-import { getCustomValueTrigger } from "../../schema/resolver";
+import { getCustomValueCompanion, getCustomValueTrigger } from "../../schema/resolver";
 import SchemaField from "./SchemaField";
 
 interface InlineObjectFieldProps {
@@ -27,9 +27,10 @@ export default function InlineObjectField({ label, schema, value, onChange }: In
         {Object.entries(properties).map(([key, prop]) => {
           const size = Math.floor(((prop as any).columns || 12));
           const trigger = getCustomValueTrigger(properties, key);
-          if (trigger && !trigger.sentinels.includes(value?.[trigger.baseKey] as string)) {
+          if (trigger) {
             return null;
           }
+          const companion = getCustomValueCompanion(properties, key);
           return (
             <Grid key={key} size={{ xs: 12, md: size }}>
               <SchemaField
@@ -39,6 +40,15 @@ export default function InlineObjectField({ label, schema, value, onChange }: In
               value={value?.[key]}
               required={required.includes(key)}
               onChange={(next) => onChange({ ...value, [key]: next })}
+              customValue={companion ? {
+                value: value?.[companion.valueKey] as string | undefined,
+                sentinel: companion.sentinel,
+                onChange: (baseValue, customValue) => onChange({
+                  ...value,
+                  [key]: baseValue,
+                  [companion.valueKey]: customValue,
+                }),
+              } : undefined}
             />
             </Grid>
           );

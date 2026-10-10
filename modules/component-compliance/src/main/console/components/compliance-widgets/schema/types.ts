@@ -14,6 +14,7 @@ export interface SchemaRef {
 export interface JSONSchemaNode {
   title?: string;
   description?: string;
+  default?: unknown;
   type?: PrimitiveType;
   format?: "date-time" | "uri" | string;
   enum?: string[];
@@ -25,6 +26,7 @@ export interface JSONSchemaNode {
   minProperties?: number;
   maxProperties?: number;
   columns?: number;
+  enumColors?: Record<string, "default" | "success" | "error" | "warning">;
 }
 
 export function isSchemaRef(node: JSONSchemaNode | SchemaRef | undefined): node is SchemaRef {

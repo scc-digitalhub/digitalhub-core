@@ -4,7 +4,7 @@ import type { JSONSchemaNode, SchemaRef } from "../../schema/types";
 import { isSchemaRef } from "../../schema/types";
 import type { JsonRecord } from "../../types";
 import { fieldLabel, isLongTextKey } from "./fieldHelpers";
-import { EnumSelect, MultiEnumSelect } from "./EnumSelect";
+import { CustomEnumTextField, EnumSelect, MultiEnumSelect } from "./EnumSelect";
 import TagsField from "./TagsField";
 import JsonField from "./JsonField";
 import RefObjectField from "./RefObjectField";
@@ -19,6 +19,11 @@ interface SchemaFieldProps {
   value: unknown;
   onChange: (value: unknown) => void;
   required?: boolean;
+  customValue?: {
+    value: string | undefined;
+    sentinel: string;
+    onChange: (baseValue: string | undefined, customValue: string | undefined) => void;
+  };
 }
 
 /**
@@ -27,7 +32,7 @@ interface SchemaFieldProps {
  * building block reused both by <SchemaForm> (renders every property of a schema) and by
  * hand-composed tab/accordion layouts that cherry-pick individual fields (see components/compliance).
  */
-export default function SchemaField({ fieldKey, prop, value, onChange, required }: SchemaFieldProps) {
+export default function SchemaField({ fieldKey, prop, value, onChange, required, customValue }: SchemaFieldProps) {
   const translate = useTranslate();
   const readOnly = useSchemaReadOnly();
   const label = fieldLabel(fieldKey, translate);
@@ -57,6 +62,20 @@ export default function SchemaField({ fieldKey, prop, value, onChange, required 
   }
 
   if (prop.enum) {
+    if (customValue) {
+      return (
+        <CustomEnumTextField
+          label={label}
+          options={prop.enum}
+          value={value as string | undefined}
+          customValue={customValue.value}
+          sentinel={customValue.sentinel}
+          onCustomChange={customValue.onChange}
+          required={required}
+          helperText={prop.description}
+        />
+      );
+    }
     return (
       <EnumSelect
         label={label}
@@ -65,6 +84,7 @@ export default function SchemaField({ fieldKey, prop, value, onChange, required 
         onChange={onChange}
         required={required}
         helperText={prop.description}
+        badgeColors={prop.enumColors}
       />
     );
   }
