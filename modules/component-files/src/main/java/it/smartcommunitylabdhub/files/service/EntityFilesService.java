@@ -38,6 +38,7 @@ import org.springframework.data.domain.Slice;
 public interface EntityFilesService<T extends BaseDTO> {
     public Slice<FileInfo> getFileInfo(@NotNull String id, @Nullable Pageable pageable)
         throws NoSuchEntityException, SystemException;
+    Class<T> getType();
 
     public void storeFileInfo(@NotNull String id, List<FileInfo> files) throws SystemException;
 

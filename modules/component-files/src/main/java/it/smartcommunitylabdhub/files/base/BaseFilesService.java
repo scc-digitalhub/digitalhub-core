@@ -31,7 +31,6 @@ import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
@@ -64,7 +63,7 @@ import org.springframework.util.StringUtils;
 
 @Slf4j
 public abstract class BaseFilesService<
-    D extends BaseDTO & MetadataDTO & SpecDTO & StatusDTO
+    D extends BaseDTO & SpecDTO & StatusDTO
 > implements EntityFilesService<D>, InitializingBean {
 
     protected final Class<D> type;
@@ -113,6 +112,11 @@ public abstract class BaseFilesService<
         Assert.notNull(entityService, "entity service can not be null");
         Assert.notNull(filesService, "files service can not be null");
         Assert.notNull(filesInfoService, "files info service can not be null");
+    }
+
+    @Override
+    public Class<D> getType() {
+        return type;
     }
 
     @Override
@@ -272,7 +276,6 @@ public abstract class BaseFilesService<
             //always set a subpath to avoid collisions
             String subpath = (name != null ? name + "/" : "") + (id != null ? id : UUID.randomUUID().toString());
             String path = resolveBasePath(project, name, id, filename) + "/" + subpath + "/";
-            String fullPath = filename.startsWith("/") ? path + filename.substring(1) : path + filename;
 
             //entity may not exists (yet)
             D dto = entityService.find(id);
@@ -284,11 +287,14 @@ public abstract class BaseFilesService<
                     throw new NoSuchEntityException("file");
                 }
 
-                //path is either full or path + filename
-                if (!fullPath.equals(specPath) && !fullPath.startsWith(specPath)) {
-                    throw new IllegalArgumentException("invalid file path");
-                }
+                //use as basePath
+                path = specPath.endsWith("/") ? specPath : specPath + "/";
             }
+
+            //build full path, avoid double appending
+            //if the path already ends with the filePath, avoid appending it again
+            String filePath = filename.startsWith("/") ? filename.substring(1) : filename;
+            String fullPath = (path.endsWith(filePath) || path.endsWith(filePath + "/")) ? path : path + filePath;
 
             //try to resolve credentials
             UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
@@ -320,7 +326,6 @@ public abstract class BaseFilesService<
             //always set a subpath to avoid collisions
             String subpath = (name != null ? name + "/" : "") + (id != null ? id : UUID.randomUUID().toString());
             String path = resolveBasePath(project, name, id, filename) + "/" + subpath + "/";
-            String fullPath = filename.startsWith("/") ? path + filename.substring(1) : path + filename;
 
             //entity may not exists (yet)
             D dto = entityService.find(id);
@@ -332,11 +337,14 @@ public abstract class BaseFilesService<
                     throw new NoSuchEntityException("file");
                 }
 
-                //path is either full or path + filename
-                if (!fullPath.equals(specPath) && !fullPath.startsWith(specPath)) {
-                    throw new IllegalArgumentException("invalid file path");
-                }
+                //use as basePath
+                path = specPath.endsWith("/") ? specPath : specPath + "/";
             }
+
+            //build full path, avoid double appending
+            //if the path already ends with the filePath, avoid appending it again
+            String filePath = filename.startsWith("/") ? filename.substring(1) : filename;
+            String fullPath = (path.endsWith(filePath) || path.endsWith(filePath + "/")) ? path : path + filePath;
 
             //try to resolve credentials
             UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
