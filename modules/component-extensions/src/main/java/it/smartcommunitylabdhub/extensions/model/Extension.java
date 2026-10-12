@@ -29,6 +29,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
+import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
@@ -49,7 +50,7 @@ import org.springframework.lang.Nullable;
 @Builder
 @ToString
 @JsonPropertyOrder(alphabetic = true)
-public class Extension implements BaseDTO, SpecDTO {
+public class Extension implements BaseDTO, SpecDTO, StatusDTO {
 
     @Nullable
     @Pattern(regexp = Keys.SLUG_PATTERN)
@@ -81,7 +82,12 @@ public class Extension implements BaseDTO, SpecDTO {
 
     private String user;
 
+    @Nullable
     @Builder.Default
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Map<String, Serializable> spec = new HashMap<>();
+
+    @Nullable
+    @Builder.Default
+    private Map<String, Serializable> status = new HashMap<>();
 }

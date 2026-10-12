@@ -23,6 +23,7 @@
 
 package it.smartcommunitylabdhub.extensions.persistence;
 
+import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import it.smartcommunitylabdhub.extensions.model.Extension;
@@ -46,6 +47,8 @@ public class ExtensionEntityBuilder implements Converter<Extension, ExtensionEnt
 
     @Override
     public ExtensionEntity convert(@NonNull Extension dto) {
+        StatusFieldAccessor statusFieldAccessor = StatusFieldAccessor.with(dto.getStatus());
+
         //build key
         String key = KeyUtils.buildKey(
             dto.getProject(),
@@ -64,6 +67,11 @@ public class ExtensionEntityBuilder implements Converter<Extension, ExtensionEnt
             .kind(dto.getKind())
             .key(key)
             .spec(converter.convertToDatabaseColumn(dto.getSpec()))
+            .status(converter.convertToDatabaseColumn(dto.getStatus()))
+            .state(
+                // Store status if not present
+                statusFieldAccessor.getState() == null ? "CREATED" : statusFieldAccessor.getState()
+            )
             .build();
     }
 }

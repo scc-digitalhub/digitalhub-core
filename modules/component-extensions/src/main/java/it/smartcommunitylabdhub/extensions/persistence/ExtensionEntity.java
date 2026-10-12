@@ -25,6 +25,7 @@ package it.smartcommunitylabdhub.extensions.persistence;
 
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity;
 import it.smartcommunitylabdhub.core.persistence.SpecEntity;
+import it.smartcommunitylabdhub.core.persistence.StatusEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Lob;
@@ -46,7 +47,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 @SuperBuilder
 @Entity
 @Table(name = "extensions")
-public class ExtensionEntity extends AbstractEntity implements SpecEntity {
+public class ExtensionEntity extends AbstractEntity implements SpecEntity, StatusEntity {
 
     @Column(nullable = false)
     private String entity;
@@ -62,4 +63,10 @@ public class ExtensionEntity extends AbstractEntity implements SpecEntity {
     @NotNull
     @ToString.Exclude
     private byte[] spec;
+
+    @JdbcTypeCode(Types.LONGVARBINARY)
+    @ToString.Exclude
+    protected byte[] status;
+
+    private String state;
 }
