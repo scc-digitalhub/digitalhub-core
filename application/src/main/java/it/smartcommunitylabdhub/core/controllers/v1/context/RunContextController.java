@@ -41,8 +41,6 @@ import it.smartcommunitylabdhub.logs.LogService;
 import it.smartcommunitylabdhub.metrics.ResourceMetrics;
 import it.smartcommunitylabdhub.metrics.ResourceMetricsService;
 import it.smartcommunitylabdhub.metrics.service.MetricsService;
-import it.smartcommunitylabdhub.relationships.RelationshipDetail;
-import it.smartcommunitylabdhub.relationships.RelationshipsAwareEntityService;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.RunManager;
 import it.smartcommunitylabdhub.runs.filters.RunEntityFilter;
@@ -95,9 +93,6 @@ public class RunContextController {
 
     @Autowired(required = false)
     LogService logService;
-
-    @Autowired
-    RelationshipsAwareEntityService<Run> relationshipsService;
 
     @Autowired
     MetricsService<Run> metricsService;
@@ -251,22 +246,6 @@ public class RunContextController {
         }
 
         return logService.getLogsByRunId(id);
-    }
-
-    @Operation(summary = "Get relationships info for a given entity, if available")
-    @GetMapping(path = "/{id}/relationships", produces = "application/json; charset=UTF-8")
-    public List<RelationshipDetail> getRelationshipsById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
-    ) throws NoSuchEntityException {
-        Run entity = runManager.getRun(id);
-
-        //check for project and name match
-        if ((entity != null) && !entity.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        return relationshipsService.getRelationships(id);
     }
 
     @Operation(summary = "Get metrics info for a given entity, if available")

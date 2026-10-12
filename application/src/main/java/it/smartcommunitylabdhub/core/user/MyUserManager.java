@@ -23,12 +23,12 @@ import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
+import it.smartcommunitylabdhub.commons.services.EntityService;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
-import it.smartcommunitylabdhub.projects.Project;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
-import it.smartcommunitylabdhub.core.services.EntityService;
+import it.smartcommunitylabdhub.projects.Project;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.util.Collections;
@@ -60,11 +60,10 @@ public class MyUserManager {
 
     @Autowired(required = false)
     public void setEntityServices(List<EntityService<? extends BaseDTO>> entityServices) {
-        this.entityServices =
-            entityServices
-                .stream()
-                .filter(s -> s.getType() != null)
-                .collect(Collectors.toMap(s -> EntityUtils.getEntityName(s.getType()), s -> s));
+        this.entityServices = entityServices
+            .stream()
+            .filter(s -> s.getType() != null)
+            .collect(Collectors.toMap(s -> EntityUtils.getEntityName(s.getType()), s -> s));
     }
 
     @Autowired(required = false)

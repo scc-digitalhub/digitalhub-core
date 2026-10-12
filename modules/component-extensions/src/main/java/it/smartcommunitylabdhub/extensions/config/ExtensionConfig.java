@@ -24,10 +24,10 @@
 package it.smartcommunitylabdhub.extensions.config;
 
 import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
+import it.smartcommunitylabdhub.commons.services.EntityService;
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.core.services.BaseEntityServiceImpl;
-import it.smartcommunitylabdhub.core.services.EntityService;
 import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
 import it.smartcommunitylabdhub.extensions.model.Extension;
 import it.smartcommunitylabdhub.extensions.model.ExtensionDefinition;

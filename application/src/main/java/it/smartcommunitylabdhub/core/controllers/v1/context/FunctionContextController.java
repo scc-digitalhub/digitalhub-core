@@ -36,8 +36,6 @@ import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.functions.filters.FunctionEntityFilter;
-import it.smartcommunitylabdhub.relationships.RelationshipDetail;
-import it.smartcommunitylabdhub.relationships.RelationshipsAwareEntityService;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -81,9 +79,6 @@ public class FunctionContextController {
 
     // @Autowired
     // TaskService taskService;
-
-    @Autowired
-    RelationshipsAwareEntityService<Function> relationshipsService;
 
     @Operation(summary = "Create a function in a project context")
     @PostMapping(
@@ -209,24 +204,5 @@ public class FunctionContextController {
         }
 
         return functionManager.getTasksByFunctionId(id);
-    }
-
-    /*
-     * Relationships
-     */
-    @Operation(summary = "Get relationships info for a given entity, if available")
-    @GetMapping(path = "/{id}/relationships", produces = "application/json; charset=UTF-8")
-    public List<RelationshipDetail> getRelationshipsById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
-    ) throws NoSuchEntityException {
-        Function entity = functionManager.getFunction(id);
-
-        //check for project and name match
-        if ((entity != null) && !entity.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        return relationshipsService.getRelationships(id);
     }
 }

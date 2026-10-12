@@ -17,7 +17,7 @@ import it.smartcommunitylabdhub.commons.infrastructure.SpecFactory;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.schemas.Schema;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
-import it.smartcommunitylabdhub.core.services.EntityService;
+import it.smartcommunitylabdhub.commons.services.EntityService;
 import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
 import it.smartcommunitylabdhub.extensions.annotations.ExtensionType;
 import it.smartcommunitylabdhub.extensions.config.ExtensionsProperties;

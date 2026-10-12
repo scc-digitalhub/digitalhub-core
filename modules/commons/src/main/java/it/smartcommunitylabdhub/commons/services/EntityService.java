@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.core.services;
+package it.smartcommunitylabdhub.commons.services;
 
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;

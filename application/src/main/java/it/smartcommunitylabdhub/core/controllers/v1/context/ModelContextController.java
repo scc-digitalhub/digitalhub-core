@@ -32,44 +32,26 @@ import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.metrics.NumberOrNumberArray;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.commons.models.schemas.Schema;
-import it.smartcommunitylabdhub.commons.services.SchemaService;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
-import it.smartcommunitylabdhub.files.models.DownloadInfo;
-import it.smartcommunitylabdhub.files.models.FileInfo;
-import it.smartcommunitylabdhub.files.models.TokenPageRequest;
-import it.smartcommunitylabdhub.files.models.UploadInfo;
-import it.smartcommunitylabdhub.files.service.EntityFilesService;
 import it.smartcommunitylabdhub.metrics.service.MetricsService;
 import it.smartcommunitylabdhub.models.Model;
 import it.smartcommunitylabdhub.models.ModelManager;
 import it.smartcommunitylabdhub.models.filters.ModelEntityFilter;
-import it.smartcommunitylabdhub.relationships.RelationshipDetail;
-import it.smartcommunitylabdhub.relationships.RelationshipsAwareEntityService;
 import jakarta.annotation.Nullable;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.SortDefault;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.BindException;
 import org.springframework.validation.annotation.Validated;
@@ -98,16 +80,7 @@ public class ModelContextController {
     ModelManager modelManager;
 
     @Autowired
-    EntityFilesService<Model> filesService;
-
-    @Autowired
-    RelationshipsAwareEntityService<Model> relationshipsService;
-
-    @Autowired
     MetricsService<Model> metricsService;
-
-    @Autowired
-    SchemaService<Model> schemaService;
 
     @Operation(summary = "Create a model in a project context")
     @PostMapping(
@@ -219,183 +192,6 @@ public class ModelContextController {
         modelManager.deleteModel(id, cascade);
     }
 
-    /*
-     * Files
-     */
-    @Operation(summary = "Get download url for a given entity, if available")
-    @GetMapping(path = "/{id}/files/download", produces = "application/json; charset=UTF-8")
-    public DownloadInfo downloadAsUrlById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @ParameterObject @RequestParam(required = false) String sub
-    ) throws NoSuchEntityException {
-        Model entity = modelManager.getModel(id);
-
-        //check for project and name match
-        if (!entity.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        if (sub != null) {
-            return filesService.downloadFileAsUrl(id, sub);
-        }
-
-        return filesService.downloadFileAsUrl(id);
-    }
-
-    @Operation(summary = "Get download url for a given model file, if available")
-    @GetMapping(path = "/{id}/files/download/**", produces = "application/json; charset=UTF-8")
-    public DownloadInfo downloadAsUrlFile(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        HttpServletRequest request
-    ) throws NoSuchEntityException {
-        Model model = modelManager.getModel(id);
-
-        //check for project and name match
-        if (!model.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-        String path = request.getRequestURL().toString().split("files/download/")[1];
-        return filesService.downloadFileAsUrl(id, path);
-    }
-
-    @Operation(summary = "Create an upload url for a given entity, if available")
-    @PostMapping(path = "/{id}/files/upload", produces = "application/json; charset=UTF-8")
-    public UploadInfo uploadAsUrlById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @RequestParam(required = false) @Valid @Nullable @Pattern(regexp = Keys.NAME_PATTERN) String name,
-        @RequestParam @NotNull String filename
-    ) throws NoSuchEntityException {
-        Model entity = modelManager.findModel(id);
-
-        //check for project and name match
-        if (entity != null) {
-            if (!entity.getProject().equals(project)) {
-                throw new IllegalArgumentException("invalid project");
-            }
-            if ((name != null) && !entity.getName().equals(name)) {
-                throw new IllegalArgumentException("invalid name");
-            }
-        }
-
-        return filesService.uploadFileAsUrl(project, name, id, filename);
-    }
-
-    @Operation(summary = "Start a multipart upload for a given entity, if available")
-    @PostMapping(path = "/{id}/files/multipart/start", produces = "application/json; charset=UTF-8")
-    public UploadInfo multipartStartUploadAsUrlById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @RequestParam(required = false) @Valid @Nullable @Pattern(regexp = Keys.NAME_PATTERN) String name,
-        @RequestParam @NotNull String filename
-    ) throws NoSuchEntityException {
-        Model entity = modelManager.findModel(id);
-
-        //check for project and name match
-        if (entity != null) {
-            if (!entity.getProject().equals(project)) {
-                throw new IllegalArgumentException("invalid project");
-            }
-            if ((name != null) && !entity.getName().equals(name)) {
-                throw new IllegalArgumentException("invalid name");
-            }
-        }
-
-        return filesService.startMultiPartUpload(project, name, id, filename);
-    }
-
-    @Operation(
-        summary = "Generate an upload url for a part of a given multipart upload for a given entity, if available"
-    )
-    @PutMapping(path = "/{id}/files/multipart/part", produces = "application/json; charset=UTF-8")
-    public UploadInfo multipartPartUploadAsUrlById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @RequestParam @NotNull String path,
-        @RequestParam @NotNull String uploadId,
-        @RequestParam @NotNull Integer partNumber
-    ) throws NoSuchEntityException {
-        Model entity = modelManager.findModel(id);
-
-        //check for project match
-        if ((entity != null) && !entity.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        return filesService.uploadMultiPart(project, id, path, uploadId, partNumber);
-    }
-
-    @Operation(summary = "Create a completing multipart upload url for a given entity, if available")
-    @PostMapping(path = "/{id}/files/multipart/complete", produces = "application/json; charset=UTF-8")
-    public UploadInfo multipartCompleteUploadAsUrlById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @RequestParam @NotNull String path,
-        @RequestParam @NotNull String uploadId,
-        @RequestParam @NotNull List<String> partList
-    ) throws NoSuchEntityException {
-        Model entity = modelManager.findModel(id);
-
-        //check for project match
-        if ((entity != null) && !entity.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        return filesService.completeMultiPartUpload(project, id, path, uploadId, partList);
-    }
-
-    @Operation(summary = "Get file info for a given entity, if available")
-    @GetMapping(path = "/{id}/files/info", produces = "application/json; charset=UTF-8")
-    public Slice<FileInfo> getFilesInfoById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @ParameterObject TokenPageRequest pageable
-    ) throws NoSuchEntityException {
-        Model entity = modelManager.getModel(id);
-
-        //check for project and name match
-        if (!entity.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        return filesService.getFileInfo(id, pageable);
-    }
-
-    @Operation(summary = "Store file info for a given entity, if available")
-    @PutMapping(path = "/{id}/files/info", produces = "application/json; charset=UTF-8")
-    public void storeFilesInfoById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @RequestBody List<FileInfo> files
-    ) throws NoSuchEntityException {
-        Model entity = modelManager.getModel(id);
-
-        //check for project and name match
-        if (!entity.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        filesService.storeFileInfo(id, files);
-    }
-
-    @Operation(summary = "Get relationships info for a given entity, if available")
-    @GetMapping(path = "/{id}/relationships", produces = "application/json; charset=UTF-8")
-    public List<RelationshipDetail> getRelationshipsById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
-    ) throws NoSuchEntityException {
-        Model entity = modelManager.findModel(id);
-
-        //check for project and name match
-        if ((entity != null) && !entity.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        return relationshipsService.getRelationships(id);
-    }
-
     @Operation(summary = "Get metrics info for a given entity, if available")
     @GetMapping(path = "/{id}/metrics", produces = "application/json; charset=UTF-8")
     public Map<String, NumberOrNumberArray> getMetrics(
@@ -445,33 +241,5 @@ public class ModelContextController {
         }
 
         metricsService.saveMetrics(id, name, data);
-    }
-
-    @Operation(
-        summary = "List entity schemas",
-        description = "Return a list of all the spec schemas available for the given entity"
-    )
-    @GetMapping(path = "/schemas")
-    public ResponseEntity<Page<Schema>> listModelSchemas(
-        @PathVariable @Valid @NotNull String project,
-        @RequestParam(required = false) Optional<String> runtime,
-        Pageable pageable
-    ) {
-        Collection<Schema> schemas = runtime.isPresent()
-            ? schemaService.listSchemas(runtime.get())
-            : schemaService.listSchemas();
-        PageImpl<Schema> page = new PageImpl<>(new ArrayList<>(schemas), pageable, schemas.size());
-
-        return ResponseEntity.ok(page);
-    }
-
-    @GetMapping(path = "/schemas/{kind}", produces = "application/json; charset=UTF-8")
-    public ResponseEntity<Schema> getModelSchema(
-        @PathVariable @Valid @NotNull String project,
-        @PathVariable @NotBlank String kind
-    ) {
-        Schema schema = schemaService.getSchema(kind);
-
-        return ResponseEntity.ok(schema);
     }
 }

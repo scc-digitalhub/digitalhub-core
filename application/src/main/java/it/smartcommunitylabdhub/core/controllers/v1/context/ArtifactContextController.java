@@ -33,39 +33,21 @@ import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.commons.models.schemas.Schema;
-import it.smartcommunitylabdhub.commons.services.SchemaService;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
-import it.smartcommunitylabdhub.files.models.DownloadInfo;
-import it.smartcommunitylabdhub.files.models.FileInfo;
-import it.smartcommunitylabdhub.files.models.TokenPageRequest;
-import it.smartcommunitylabdhub.files.models.UploadInfo;
-import it.smartcommunitylabdhub.files.service.EntityFilesService;
-import it.smartcommunitylabdhub.relationships.RelationshipDetail;
-import it.smartcommunitylabdhub.relationships.RelationshipsAwareEntityService;
 import jakarta.annotation.Nullable;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.SortDefault;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.BindException;
 import org.springframework.validation.annotation.Validated;
@@ -92,15 +74,6 @@ public class ArtifactContextController {
 
     @Autowired
     ArtifactManager artifactManager;
-
-    @Autowired
-    EntityFilesService<Artifact> filesService;
-
-    @Autowired
-    RelationshipsAwareEntityService<Artifact> relationshipsService;
-
-    @Autowired
-    SchemaService<Artifact> schemaService;
 
     @Operation(summary = "Create an artifact in a project context")
     @PostMapping(
@@ -206,210 +179,5 @@ public class ArtifactContextController {
         }
 
         artifactManager.deleteArtifact(id, cascade);
-    }
-
-    /*
-     * Files
-     */
-    @Operation(summary = "Get download url for a given artifact, if available")
-    @GetMapping(path = "/{id}/files/download", produces = "application/json; charset=UTF-8")
-    public DownloadInfo downloadAsUrlArtifactById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @ParameterObject @RequestParam(required = false) String sub
-    ) throws NoSuchEntityException {
-        Artifact artifact = artifactManager.getArtifact(id);
-
-        //check for project and name match
-        if (!artifact.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        if (sub != null) {
-            return filesService.downloadFileAsUrl(id, sub);
-        }
-
-        return filesService.downloadFileAsUrl(id);
-    }
-
-    @Operation(summary = "Get download url for a given artifact file, if available")
-    @GetMapping(path = "/{id}/files/download/**", produces = "application/json; charset=UTF-8")
-    public DownloadInfo downloadAsUrlFile(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        HttpServletRequest request
-    ) throws NoSuchEntityException {
-        Artifact artifact = artifactManager.getArtifact(id);
-
-        //check for project and name match
-        if (!artifact.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-        String path = request.getRequestURL().toString().split("files/download/")[1];
-        return filesService.downloadFileAsUrl(id, path);
-    }
-
-    @Operation(summary = "Create an upload url for a given artifact, if available")
-    @PostMapping(path = "/{id}/files/upload", produces = "application/json; charset=UTF-8")
-    public UploadInfo uploadAsUrlArtifactById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @RequestParam(required = false) @Valid @Nullable @Pattern(regexp = Keys.NAME_PATTERN) String name,
-        @RequestParam @NotNull String filename
-    ) throws NoSuchEntityException {
-        Artifact artifact = artifactManager.findArtifact(id);
-
-        //check for project and name match
-        if (artifact != null) {
-            if (!artifact.getProject().equals(project)) {
-                throw new IllegalArgumentException("invalid project");
-            }
-            if ((name != null) && !artifact.getName().equals(name)) {
-                throw new IllegalArgumentException("invalid name");
-            }
-        }
-
-        return filesService.uploadFileAsUrl(project, name, id, filename);
-    }
-
-    @Operation(summary = "Start a multipart upload for a given artifact, if available")
-    @PostMapping(path = "/{id}/files/multipart/start", produces = "application/json; charset=UTF-8")
-    public UploadInfo multipartStartUploadAsUrlArtifactById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @RequestParam(required = false) @Valid @Nullable @Pattern(regexp = Keys.NAME_PATTERN) String name,
-        @RequestParam @NotNull String filename
-    ) throws NoSuchEntityException {
-        Artifact artifact = artifactManager.findArtifact(id);
-
-        //check for project and name match
-        if (artifact != null) {
-            if (!artifact.getProject().equals(project)) {
-                throw new IllegalArgumentException("invalid project");
-            }
-            if ((name != null) && !artifact.getName().equals(name)) {
-                throw new IllegalArgumentException("invalid name");
-            }
-        }
-
-        return filesService.startMultiPartUpload(project, name, id, filename);
-    }
-
-    @Operation(
-        summary = "Generate an upload url for a part of a given multipart upload for a given artifact, if available"
-    )
-    @PutMapping(path = "/{id}/files/multipart/part", produces = "application/json; charset=UTF-8")
-    public UploadInfo multipartPartUploadAsUrlArtifactById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @RequestParam @NotNull String path,
-        @RequestParam @NotNull String uploadId,
-        @RequestParam @NotNull Integer partNumber
-    ) throws NoSuchEntityException {
-        Artifact artifact = artifactManager.findArtifact(id);
-
-        //check for project match
-        if ((artifact != null) && !artifact.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        return filesService.uploadMultiPart(project, id, path, uploadId, partNumber);
-    }
-
-    @Operation(summary = "Complete a multipart upload for a given artifact, if available")
-    @PostMapping(path = "/{id}/files/multipart/complete", produces = "application/json; charset=UTF-8")
-    public UploadInfo multipartCompleteUploadAsUrlArtifactById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @RequestParam @NotNull String path,
-        @RequestParam @NotNull String uploadId,
-        @RequestParam @NotNull List<String> partList
-    ) throws NoSuchEntityException {
-        Artifact artifact = artifactManager.findArtifact(id);
-
-        //check for project match
-        if ((artifact != null) && !artifact.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        return filesService.completeMultiPartUpload(project, id, path, uploadId, partList);
-    }
-
-    @Operation(summary = "Get file info for a given artifact, if available")
-    @GetMapping(path = "/{id}/files/info", produces = "application/json; charset=UTF-8")
-    public Slice<FileInfo> getArtifactFilesInfoById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @ParameterObject TokenPageRequest pageable
-    ) throws NoSuchEntityException {
-        Artifact artifact = artifactManager.getArtifact(id);
-
-        //check for project and name match
-        if (!artifact.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        return filesService.getFileInfo(id, pageable);
-    }
-
-    @Operation(summary = "Store file info for a given entity, if available")
-    @PutMapping(path = "/{id}/files/info", produces = "application/json; charset=UTF-8")
-    public void storeFilesInfoById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @RequestBody List<FileInfo> files
-    ) throws NoSuchEntityException {
-        Artifact entity = artifactManager.getArtifact(id);
-
-        //check for project and name match
-        if (!entity.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        filesService.storeFileInfo(id, files);
-    }
-
-    @Operation(summary = "Get relationships info for a given entity, if available")
-    @GetMapping(path = "/{id}/relationships", produces = "application/json; charset=UTF-8")
-    public List<RelationshipDetail> getRelationshipsById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
-    ) throws NoSuchEntityException {
-        Artifact entity = artifactManager.getArtifact(id);
-
-        //check for project and name match
-        if ((entity != null) && !entity.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        return relationshipsService.getRelationships(id);
-    }
-
-    @Operation(
-        summary = "List entity schemas",
-        description = "Return a list of all the spec schemas available for the given entity"
-    )
-    @GetMapping(path = "/schemas")
-    public ResponseEntity<Page<Schema>> listArtifactSchemas(
-        @PathVariable @Valid @NotNull String project,
-        @RequestParam(required = false) Optional<String> runtime,
-        Pageable pageable
-    ) {
-        Collection<Schema> schemas = runtime.isPresent()
-            ? schemaService.listSchemas(runtime.get())
-            : schemaService.listSchemas();
-        PageImpl<Schema> page = new PageImpl<>(new ArrayList<>(schemas), pageable, schemas.size());
-
-        return ResponseEntity.ok(page);
-    }
-
-    @GetMapping(path = "/schemas/{kind}", produces = "application/json; charset=UTF-8")
-    public ResponseEntity<Schema> getArtifactSchema(
-        @PathVariable @Valid @NotNull String project,
-        @PathVariable @NotBlank String kind
-    ) {
-        Schema schema = schemaService.getSchema(kind);
-
-        return ResponseEntity.ok(schema);
     }
 }

@@ -35,8 +35,6 @@ import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.commons.services.WorkflowManager;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
-import it.smartcommunitylabdhub.relationships.RelationshipDetail;
-import it.smartcommunitylabdhub.relationships.RelationshipsAwareEntityService;
 import it.smartcommunitylabdhub.workflows.filter.WorkflowEntityFilter;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
@@ -78,9 +76,6 @@ public class WorkflowContextController {
 
     @Autowired
     WorkflowManager workflowManager;
-
-    @Autowired
-    RelationshipsAwareEntityService<Workflow> relationshipsService;
 
     @Operation(
         summary = "Create a workflow in a project context",
@@ -211,25 +206,5 @@ public class WorkflowContextController {
         }
 
         return workflowManager.getTasksByWorkflowId(id);
-    }
-
-    /*
-     * Relationships
-     */
-
-    @Operation(summary = "Get relationships info for a given entity, if available")
-    @GetMapping(path = "/{id}/relationships", produces = "application/json; charset=UTF-8")
-    public List<RelationshipDetail> getRelationshipsById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
-    ) throws NoSuchEntityException {
-        Workflow entity = workflowManager.getWorkflow(id);
-
-        //check for project and name match
-        if ((entity != null) && !entity.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        return relationshipsService.getRelationships(id);
     }
 }
