@@ -81,9 +81,12 @@ public class K8sRayServiceProcessor implements Processor<Run, K8sServiceStatus> 
                                 List<V1ServicePort> ports = new LinkedList<>();
                                 List<K8sServiceDetails> urls = new LinkedList<>();
                                 for (Map.Entry<String, String> entry : endpoints.entrySet()) {
+                                    String endpoint = entry.getKey();
+                                    Integer portNumber = Integer.parseInt(entry.getValue());
+
                                     V1ServicePort port = new V1ServicePort();
-                                    port.setName(entry.getKey());
-                                    port.setPort(Integer.parseInt(entry.getValue()));
+                                    port.setName(endpoint);
+                                    port.setPort(portNumber);
                                     ports.add(port);
                                     String url =
                                         "s-" +
@@ -91,14 +94,14 @@ public class K8sRayServiceProcessor implements Processor<Run, K8sServiceStatus> 
                                             "%s.%s:%s",
                                             metadata.get("name"),
                                             metadata.get("namespace"),
-                                            entry.getValue()
+                                            portNumber
                                         );
                                     String protocol = AppProtocol.http.name();
-                                    if ("dashboard".equals(entry.getKey())) {
+                                    if ("dashboard".equals(endpoint)) {
                                         serviceUrl = url;
                                         protocol = AppProtocol.www.name();
                                     }
-                                    urls.add(new K8sServiceDetails(url, 0, protocol));
+                                    urls.add(new K8sServiceDetails(url, portNumber, protocol));
                                 }
 
                                 if (serviceUrl != null) {
