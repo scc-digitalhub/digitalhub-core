@@ -30,6 +30,7 @@ import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.services.EntityService;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.extensions.ExtensionManager;
 import it.smartcommunitylabdhub.extensions.model.Extension;
 import it.smartcommunitylabdhub.extensions.persistence.ExtensionBuilder;
@@ -78,7 +79,7 @@ public abstract class BaseExtensibleEntityController<D extends BaseDTO> {
 
     @Operation(summary = "Store extensions for a given entity, if available")
     @PutMapping(path = "/{id}/extensions", produces = "application/json; charset=UTF-8")
-    public void storeExtensionsById(
+    public List<Extension> storeExtensionsById(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestBody List<Extension> extensions
@@ -100,6 +101,7 @@ public abstract class BaseExtensibleEntityController<D extends BaseDTO> {
             for (Extension ext : extensions) {
                 ext.setParent(parent);
                 ext.setProject(dto.getProject());
+                ext.setEntity(EntityUtils.getEntityName(entityService.getType()));
                 Extension e = extensionManager.createOrUpdateExtension(ext);
                 updated.add(e);
             }
@@ -113,5 +115,6 @@ public abstract class BaseExtensibleEntityController<D extends BaseDTO> {
                 extensionManager.deleteExtension(ext.getId());
             }
         }
+        return extensionManager.listExtensionsByParent(ExtensionBuilder.from(dto).getParent());
     }
 }
