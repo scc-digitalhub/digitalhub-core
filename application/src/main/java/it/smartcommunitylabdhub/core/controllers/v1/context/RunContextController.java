@@ -35,9 +35,6 @@ import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
-import it.smartcommunitylabdhub.extensions.ExtensionManager;
-import it.smartcommunitylabdhub.extensions.model.Extension;
-import it.smartcommunitylabdhub.extensions.persistence.ExtensionBuilder;
 import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
 import it.smartcommunitylabdhub.logs.Log;
 import it.smartcommunitylabdhub.logs.LogService;
@@ -56,7 +53,6 @@ import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -105,9 +101,6 @@ public class RunContextController {
 
     @Autowired
     MetricsService<Run> metricsService;
-
-    @Autowired
-    ExtensionManager extensionManager;
 
     @Autowired(required = false)
     private ResourceMetricsService resourceMetricsService;
@@ -325,61 +318,6 @@ public class RunContextController {
         }
 
         metricsService.saveMetrics(id, name, data);
-    }
-
-    @Operation(summary = "Get extensions for a given run, if available")
-    @GetMapping(path = "/{id}/extensions", produces = "application/json; charset=UTF-8")
-    public List<Extension> getRunExtensionsById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
-    ) throws NoSuchEntityException {
-        Run run = runManager.getRun(id);
-
-        //check for project and name match
-        if (!run.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        return extensionManager.listExtensionsByParent(ExtensionBuilder.from(run).getParent());
-    }
-
-    @Operation(summary = "Store extensions for a given run, if available")
-    @PutMapping(path = "/{id}/extensions", produces = "application/json; charset=UTF-8")
-    public void storeExtensionsById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @RequestBody List<Extension> extensions
-    ) throws NoSuchEntityException, IllegalArgumentException, SystemException, BindException {
-        Run run = runManager.getRun(id);
-
-        //check for project and name match
-        if (!run.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        if (extensions != null) {
-            //enforce parent+project
-            String parent = ExtensionBuilder.from(run).getParent();
-            List<Extension> previous = extensionManager.listExtensionsByParent(parent);
-            List<Extension> updated = new ArrayList<>();
-
-            //update or create as defined
-            for (Extension ext : extensions) {
-                ext.setParent(parent);
-                ext.setProject(run.getProject());
-                Extension e = extensionManager.createOrUpdateExtension(ext);
-                updated.add(e);
-            }
-
-            //delete removed
-            List<Extension> toDelete = previous
-                .stream()
-                .filter(e -> updated.stream().noneMatch(u -> u.getId().equals(e.getId())))
-                .toList();
-            for (Extension ext : toDelete) {
-                extensionManager.deleteExtension(ext.getId());
-            }
-        }
     }
 
     @Operation(summary = "Get resource metrics", description = "Get metrics for a run")

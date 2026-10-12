@@ -37,9 +37,6 @@ import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.dataitems.DataItem;
 import it.smartcommunitylabdhub.dataitems.DataItemManager;
 import it.smartcommunitylabdhub.dataitems.filters.DataItemEntityFilter;
-import it.smartcommunitylabdhub.extensions.ExtensionManager;
-import it.smartcommunitylabdhub.extensions.model.Extension;
-import it.smartcommunitylabdhub.extensions.persistence.ExtensionBuilder;
 import it.smartcommunitylabdhub.files.models.DownloadInfo;
 import it.smartcommunitylabdhub.files.models.FileInfo;
 import it.smartcommunitylabdhub.files.models.TokenPageRequest;
@@ -101,9 +98,6 @@ public class DataItemContextController {
 
     @Autowired
     RelationshipsAwareEntityService<DataItem> relationshipsService;
-
-    @Autowired
-    ExtensionManager extensionManager;
 
     @Autowired
     SchemaService<DataItem> schemaService;
@@ -393,61 +387,6 @@ public class DataItemContextController {
         }
 
         return relationshipsService.getRelationships(id);
-    }
-
-    @Operation(summary = "Get extensions for a given dataItem, if available")
-    @GetMapping(path = "/{id}/extensions", produces = "application/json; charset=UTF-8")
-    public List<Extension> getDataItemExtensionsById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
-    ) throws NoSuchEntityException {
-        DataItem dataItem = dataItemManager.getDataItem(id);
-
-        //check for project and name match
-        if (!dataItem.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        return extensionManager.listExtensionsByParent(ExtensionBuilder.from(dataItem).getParent());
-    }
-
-    @Operation(summary = "Store extensions for a given entity, if available")
-    @PutMapping(path = "/{id}/extensions", produces = "application/json; charset=UTF-8")
-    public void storeExtensionsById(
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
-        @RequestBody List<Extension> extensions
-    ) throws NoSuchEntityException, IllegalArgumentException, SystemException, BindException {
-        DataItem entity = dataItemManager.getDataItem(id);
-
-        //check for project and name match
-        if (!entity.getProject().equals(project)) {
-            throw new IllegalArgumentException("invalid project");
-        }
-
-        if (extensions != null) {
-            //enforce parent+project
-            String parent = ExtensionBuilder.from(entity).getParent();
-            List<Extension> previous = extensionManager.listExtensionsByParent(parent);
-            List<Extension> updated = new ArrayList<>();
-
-            //update or create as defined
-            for (Extension ext : extensions) {
-                ext.setParent(parent);
-                ext.setProject(entity.getProject());
-                Extension e = extensionManager.createOrUpdateExtension(ext);
-                updated.add(e);
-            }
-
-            //delete removed
-            List<Extension> toDelete = previous
-                .stream()
-                .filter(e -> updated.stream().noneMatch(u -> u.getId().equals(e.getId())))
-                .toList();
-            for (Extension ext : toDelete) {
-                extensionManager.deleteExtension(ext.getId());
-            }
-        }
     }
 
     @Operation(
