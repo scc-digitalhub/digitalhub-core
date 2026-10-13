@@ -268,7 +268,7 @@ public abstract class BaseFilesService<
         @NotNull String project,
         @Nullable String name,
         @Nullable String id,
-        @NotNull String filename
+        @Nullable String filename
     ) throws NoSuchEntityException, SystemException {
         log.debug("upload url for dto with id {}: {}", String.valueOf(id), filename);
 
@@ -288,13 +288,27 @@ public abstract class BaseFilesService<
                 }
 
                 //use as basePath
-                path = specPath.endsWith("/") ? specPath : specPath + "/";
+                path = specPath;
             }
 
             //build full path, avoid double appending
             //if the path already ends with the filePath, avoid appending it again
-            String filePath = filename.startsWith("/") ? filename.substring(1) : filename;
-            String fullPath = (path.endsWith(filePath) || path.endsWith(filePath + "/")) ? path : path + filePath;
+            String filePath = filename != null ? (filename.startsWith("/") ? filename.substring(1) : filename) : "";
+
+            if (!StringUtils.hasText(filePath)) {
+                //build only base upload info, we can not provide a full file path
+                String fullPath = path.endsWith("/") ? path : path + "/";
+                UploadInfo info = UploadInfo.builder().path(fullPath).build();
+
+                if (log.isTraceEnabled()) {
+                    log.trace("upload url for dto with id {}: {}", id, info);
+                }
+
+                return info;
+            }
+
+            //build full path for a file
+            String fullPath = (path.endsWith(filePath)) ? path : (path.endsWith("/") ? path : path + "/") + filePath;
 
             //try to resolve credentials
             UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();

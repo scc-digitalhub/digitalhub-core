@@ -108,11 +108,11 @@ public abstract class BaseEntityFilesController<D extends BaseDTO> {
 
     @Operation(summary = "Create an upload url for a given dto, if available")
     @PostMapping(path = "/{id}/files/upload", produces = "application/json; charset=UTF-8")
-    public UploadInfo uploadAsUrlDById(
+    public UploadInfo uploadAsUrlById(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestParam(required = false) @Valid @Nullable @Pattern(regexp = Keys.NAME_PATTERN) String name,
-        @RequestParam @NotNull String filename
+        @RequestParam(required = false) @Nullable String filename
     ) throws NoSuchEntityException, StoreException {
         D dto = entityService.find(id);
 
@@ -131,7 +131,7 @@ public abstract class BaseEntityFilesController<D extends BaseDTO> {
 
     @Operation(summary = "Start a multipart upload for a given dto, if available")
     @PostMapping(path = "/{id}/files/multipart/start", produces = "application/json; charset=UTF-8")
-    public UploadInfo multipartStartUploadAsUrlDById(
+    public UploadInfo multipartStartUploadAsUrlById(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestParam(required = false) @Valid @Nullable @Pattern(regexp = Keys.NAME_PATTERN) String name,
@@ -154,7 +154,7 @@ public abstract class BaseEntityFilesController<D extends BaseDTO> {
 
     @Operation(summary = "Generate an upload url for a part of a given multipart upload for a given dto, if available")
     @PutMapping(path = "/{id}/files/multipart/part", produces = "application/json; charset=UTF-8")
-    public UploadInfo multipartPartUploadAsUrlDById(
+    public UploadInfo multipartPartUploadAsUrlById(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestParam @NotNull String path,
@@ -173,7 +173,7 @@ public abstract class BaseEntityFilesController<D extends BaseDTO> {
 
     @Operation(summary = "Complete a multipart upload for a given dto, if available")
     @PostMapping(path = "/{id}/files/multipart/complete", produces = "application/json; charset=UTF-8")
-    public UploadInfo multipartCompleteUploadAsUrlDById(
+    public UploadInfo multipartCompleteUploadAsUrlById(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         @RequestParam @NotNull String path,

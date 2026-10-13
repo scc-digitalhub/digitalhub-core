@@ -51,7 +51,7 @@ public interface EntityFilesService<T extends BaseDTO> {
         @NotNull String project,
         @Nullable String name,
         @Nullable String id,
-        @NotNull String filename
+        @Nullable String filename
     ) throws NoSuchEntityException, SystemException;
 
     public UploadInfo startMultiPartUpload(
