@@ -6,6 +6,7 @@
 
 package it.smartcommunitylabdhub.runtime.tvm.specs.compile;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
@@ -19,7 +20,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-// Run spec for tvm+compile: function spec + compile task spec flattened via @JsonUnwrapped.
 @Getter
 @Setter
 @NoArgsConstructor
@@ -33,6 +33,9 @@ public final class TvmCompileRunSpec extends TvmRunSpec {
 
     public static final String KIND = TvmCompileTaskSpec.KIND + ":run";
 
+    @JsonIgnore
+    private Map<String, Serializable> inactiveTuning = Map.of();
+
     @JsonSchemaIgnore
     @JsonUnwrapped
     private TvmFunctionSpec functionSpec;
@@ -42,10 +45,18 @@ public final class TvmCompileRunSpec extends TvmRunSpec {
 
     @Override
     public void configure(Map<String, Serializable> data) {
+        Map<String, Serializable> active = TvmCompileOptions.active(data);
+        this.inactiveTuning = TvmCompileOptions.inactive(data, active);
+        data = active;
         super.configure(data);
         TvmCompileRunSpec spec = mapper.convertValue(data, TvmCompileRunSpec.class);
         this.functionSpec = spec.getFunctionSpec();
         this.taskCompileSpec = spec.getTaskCompileSpec();
+    }
+
+    @Override
+    public Map<String, Serializable> toMap() {
+        return TvmCompileOptions.stored(super.toMap(), inactiveTuning);
     }
 
     public static TvmCompileRunSpec with(Map<String, Serializable> data) {

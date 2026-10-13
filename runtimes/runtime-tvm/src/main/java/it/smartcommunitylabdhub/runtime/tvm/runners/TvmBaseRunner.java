@@ -27,9 +27,6 @@ import java.util.Objects;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
-// Base class of the three TVM runners (build, compile, serve). It holds what every TVM
-// pod shares: the pod identity, the home folder, the entrypoint script, the standard env
-// variables, the scratch volume and the fields common to every runnable.
 public abstract class TvmBaseRunner {
 
     private static final String DEFAULT_ENTRYPOINT =
@@ -55,7 +52,6 @@ public abstract class TvmBaseRunner {
         this.k8sBuilderHelper = k8sBuilderHelper;
         this.k8sLabelHelper = k8sLabelHelper;
 
-        // Pod identity and storage: runtime-tvm.yml wins, TvmRuntime holds the defaults.
         this.userId = Objects.requireNonNullElse(properties.getUserId(), TvmRuntime.UID);
         this.groupId = Objects.requireNonNullElse(properties.getGroupId(), TvmRuntime.GID);
         this.homeDir = Objects.requireNonNullElse(properties.getHomeDir(), TvmRuntime.HOME_DIR);
@@ -65,15 +61,13 @@ public abstract class TvmBaseRunner {
         );
     }
 
-    // Adds NAME=value to the pod env only when the value is set. Unset values (null or
-    // blank) are skipped, so the pod scripts keep their own defaults.
+    // Omit unset values so the pod scripts keep their defaults.
     protected static void addEnv(List<CoreEnv> envs, String name, Object value) {
         if (value != null && StringUtils.hasText(String.valueOf(value))) {
             envs.add(new CoreEnv(name, String.valueOf(value)));
         }
     }
 
-    // True when the task sets this env variable itself through spec.envs.
     protected static boolean hasTaskEnv(K8sFunctionTaskBaseSpec taskSpec, String name) {
         return (
             taskSpec.getEnvs() != null &&
@@ -84,7 +78,6 @@ public abstract class TvmBaseRunner {
         );
     }
 
-    // CPU cores requested through resources.cpu (rounded up), or null when not set.
     protected static Integer requestedCpuCores(K8sFunctionTaskBaseSpec taskSpec) {
         if (taskSpec.getResources() == null || !StringUtils.hasText(taskSpec.getResources().getCpu())) {
             return null;
@@ -92,7 +85,6 @@ public abstract class TvmBaseRunner {
         return TvmRunnerHelper.parseCpuCores(taskSpec.getResources().getCpu());
     }
 
-    // Env variables every TVM pod receives, followed by the task's own spec.envs.
     protected List<CoreEnv> createEnvList(Run run, K8sFunctionTaskBaseSpec taskSpec) {
         List<CoreEnv> envs = new ArrayList<>();
         envs.add(new CoreEnv("PROJECT_NAME", run.getProject()));
@@ -106,7 +98,6 @@ public abstract class TvmBaseRunner {
         return envs;
     }
 
-    // Project secrets become plain env variables of the pod.
     protected List<CoreEnv> createSecrets(Map<String, String> secretData) {
         if (secretData == null) {
             return null;
@@ -118,8 +109,6 @@ public abstract class TvmBaseRunner {
             .toList();
     }
 
-    // The task volumes plus a shared scratch volume for input/ and output/, sized from
-    // resources.disk or the runtime default.
     protected List<CoreVolume> createVolumes(K8sFunctionTaskBaseSpec taskSpec) {
         List<CoreVolume> volumes = new ArrayList<>(taskSpec.getVolumes() != null ? taskSpec.getVolumes() : List.of());
         if (k8sBuilderHelper == null) {
@@ -138,23 +127,19 @@ public abstract class TvmBaseRunner {
         return volumes;
     }
 
-    // The function=<name> label put on every TVM runnable (null without a label helper,
-    // e.g. in unit tests).
     protected List<CoreLabel> functionLabels(String funcName) {
         return k8sLabelHelper != null
             ? List.of(new CoreLabel(k8sLabelHelper.buildCoreLabel("function"), funcName))
             : null;
     }
 
-    // Keeps the pod on the nodes of one CPU architecture (amd64, arm64, arm); null, so any
-    // node, when the architecture is unknown. The node selector of a profile wins over it.
+    // Profiles may override this selector; unknown architectures leave placement unrestricted.
     protected static List<CoreNodeSelector> architectureSelector(String architecture) {
         return architecture != null
             ? List.of(new CoreNodeSelector(TvmRunnerHelper.NODE_ARCH_LABEL, architecture))
             : null;
     }
 
-    // The image to run: the task override wins over the configured default.
     protected String resolveImage(String taskImage, String defaultImage, String missingMessage) {
         String image = StringUtils.hasText(taskImage) ? taskImage : defaultImage;
         if (!StringUtils.hasText(image)) {
@@ -163,8 +148,6 @@ public abstract class TvmBaseRunner {
         return image;
     }
 
-    // Fills the fields shared by the Job and Serve runnables; each runner only sets its
-    // own specific fields before calling this.
     protected <T extends K8sRunnable> T applyCommon(
         T runnable,
         Run run,

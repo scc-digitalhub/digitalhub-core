@@ -34,10 +34,6 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 
-// K8s Deployment for tvm+serve: an init container drops the tvm-so Model into
-// TVM_MODEL_DIR and a generic serve image (Go by default, Rust as an alternative) serves it
-// over Open Inference v2. The pod runs on a node of the architecture model.so was compiled
-// for, where the multi-arch serve image starts in its matching variant.
 @Slf4j
 public class TvmServeRunner extends TvmBaseRunner {
 
@@ -70,16 +66,10 @@ public class TvmServeRunner extends TvmBaseRunner {
             ? taskSpec.getServedName()
             : TvmRunnerHelper.cleanName(funcName);
 
-        // The compiled model: task.model_path wins over the function's so_model.
-        String modelKey = StringUtils.hasText(taskSpec.getModelPath())
-            ? taskSpec.getModelPath()
-            : (functionSpec != null ? functionSpec.getSoModel() : null);
-        if (!StringUtils.hasText(modelKey)) {
-            throw new IllegalArgumentException(
-                "tvm+serve needs a compiled .so model: set task.model_path or run tvm+compile first " +
-                    "(function.spec.so_model is empty)"
-            );
-        }
+        String modelKey = resolveModelKey(
+            taskSpec.getModelPath(),
+            functionSpec != null ? functionSpec.getSoModel() : null
+        );
         String modelFolder = TvmRunnerHelper.resolveModelDir(modelKey, modelManager);
         String modelDir = homeDir + "/model";
         String architecture = modelArchitecture(modelKey);
@@ -88,9 +78,7 @@ public class TvmServeRunner extends TvmBaseRunner {
         envs.add(new CoreEnv("TVM_TASK_KIND", TvmServeTaskSpec.KIND));
         envs.add(new CoreEnv("TVM_MODEL_DIR", modelDir));
         envs.add(new CoreEnv("TVM_MODEL_NAME", servedName));
-        // Only set when given, so each serve image keeps its own default of one worker.
         addEnv(envs, "TVM_SERVE_WORKERS", taskSpec.getWorkers());
-        // Size the TVM thread pools to the pod CPUs unless the task sets them itself.
         Integer threads = threadsPerWorker(requestedCpuCores(taskSpec), taskSpec.getWorkers());
         if (!hasTaskEnv(taskSpec, "TVM_NUM_THREADS")) {
             addEnv(envs, "TVM_NUM_THREADS", threads);
@@ -118,8 +106,7 @@ public class TvmServeRunner extends TvmBaseRunner {
         if (StringUtils.hasText(taskSpec.getServiceName())) {
             serviceNames.add(funcName + "-" + taskSpec.getServiceName());
         }
-        // Add a `<funcName>-latest` alias only when this run is the latest version;
-        // best-effort, must not fail serve.
+        // Alias registration is best-effort and must not prevent serving.
         if (functionService != null) {
             try {
                 Function latest = functionService.getLatestFunctionByName(run.getProject(), funcName);
@@ -131,8 +118,7 @@ public class TvmServeRunner extends TvmBaseRunner {
             }
         }
 
-        // No command/args: the serve image's ENTRYPOINT launches tvm-serve; applyCommon
-        // fills in the rest.
+        // Leave command/args unset to use the serving image's ENTRYPOINT.
         return applyCommon(
             K8sServeRunnable.builder()
                 .nodeSelector(architectureSelector(architecture))
@@ -153,9 +139,18 @@ public class TvmServeRunner extends TvmBaseRunner {
         );
     }
 
-    // Node architecture of the compiled Model (see TvmRunnerHelper.modelArchitecture). When
-    // it is unknown the pod may land on any node, and the serve image refuses a model.so
-    // built for another architecture.
+    // The function reference is the default; never infer a model from run history.
+    public static String resolveModelKey(String modelPath, String soModel) {
+        String modelKey = StringUtils.hasText(modelPath) ? modelPath : soModel;
+        if (!StringUtils.hasText(modelKey)) {
+            throw new IllegalArgumentException(
+                "tvm+serve needs a compiled .so model: set model_path or run tvm+compile first " +
+                    "(function.spec.so_model is empty)"
+            );
+        }
+        return modelKey;
+    }
+
     private String modelArchitecture(String modelKey) {
         if (!modelKey.startsWith(Keys.STORE_PREFIX)) {
             return null;
@@ -169,9 +164,7 @@ public class TvmServeRunner extends TvmBaseRunner {
         return architecture;
     }
 
-    // TVM threads for each inference worker. Every worker owns a model copy and TVM gives
-    // each of them its own thread pool, so the requested cores are split among the
-    // workers. Null when the task requests no CPU: TVM then picks its own default.
+    // Each worker owns a thread pool: split the pod's CPUs to avoid oversubscription.
     static Integer threadsPerWorker(Integer cpuCores, Integer workers) {
         if (cpuCores == null) {
             return null;

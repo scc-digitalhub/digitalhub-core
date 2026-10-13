@@ -5,9 +5,9 @@
   "ui:description@it": "Serve il modello compilato con Open Inference v2.",
   "model_path": {
     "ui:title@en": "Compiled Model",
-    "ui:description@en": "The tvm-so Model to serve; empty uses the one written by tvm+compile in the function.",
+    "ui:description@en": "The tvm-so Model to serve; empty uses function.spec.so_model of this exact function version.",
     "ui:title@it": "Modello compilato",
-    "ui:description@it": "Il Model tvm-so da servire; vuoto usa quello scritto da tvm+compile nella funzione."
+    "ui:description@it": "Il Model tvm-so da servire; vuoto usa function.spec.so_model di questa precisa versione della funzione."
   },
   "served_name": {
     "ui:title@en": "Served Model Name",

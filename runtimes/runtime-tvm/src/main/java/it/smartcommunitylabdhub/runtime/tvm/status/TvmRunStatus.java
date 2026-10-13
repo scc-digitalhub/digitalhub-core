@@ -18,7 +18,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-// Status for the three TVM tasks: build/compile report the produced Model key; serve reports the K8s service.
 @Getter
 @Setter
 @NoArgsConstructor

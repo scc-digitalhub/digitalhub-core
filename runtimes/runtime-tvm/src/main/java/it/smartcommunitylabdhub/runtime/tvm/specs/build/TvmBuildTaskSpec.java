@@ -18,8 +18,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-// Task spec for tvm+build: source model (ONNX or TFLite) -> Relax IR. Most options tune the
-// ONNX conversion; the TFLite builder ignores them.
 @Getter
 @Setter
 @NoArgsConstructor
@@ -33,7 +31,6 @@ public class TvmBuildTaskSpec extends K8sFunctionTaskBaseSpec {
 
     public static final String KIND = "tvm+build";
 
-    // Override the per-format builder image (default: runtime.tvm.builders[<format>]).
     @JsonProperty("image")
     @Schema(
         title = "Container Image",
@@ -41,8 +38,6 @@ public class TvmBuildTaskSpec extends K8sFunctionTaskBaseSpec {
     )
     private String image;
 
-    // ONNX only: run onnxsim.simplify on the graph before converting to Relax IR. build_onnx.py
-    // also runs it by itself when the converted outputs have no shape.
     @JsonProperty("simplify")
     @Schema(
         title = "Simplify ONNX Model",
@@ -50,7 +45,6 @@ public class TvmBuildTaskSpec extends K8sFunctionTaskBaseSpec {
     )
     private Boolean simplify;
 
-    // ONNX only: upgrade/downgrade to this opset (onnx.version_converter) before conversion.
     @JsonProperty("target_opset")
     @Schema(
         title = "Target Opset Version",
@@ -58,7 +52,6 @@ public class TvmBuildTaskSpec extends K8sFunctionTaskBaseSpec {
     )
     private Integer targetOpset;
 
-    // ONNX only: opset passed to from_onnx, overriding the model's declared opset.
     @JsonProperty("opset_override")
     @Schema(
         title = "Opset Override",
@@ -66,7 +59,6 @@ public class TvmBuildTaskSpec extends K8sFunctionTaskBaseSpec {
     )
     private Integer opsetOverride;
 
-    // ONNX only: use strict mode during ONNX shape inference.
     @JsonProperty("strict_shape_inference")
     @Schema(
         title = "Strict Shape Inference",
@@ -74,7 +66,6 @@ public class TvmBuildTaskSpec extends K8sFunctionTaskBaseSpec {
     )
     private Boolean strictShapeInference;
 
-    // ONNX only: enable data propagation during ONNX shape inference.
     @JsonProperty("data_prop")
     @Schema(
         title = "Data Propagation",
@@ -82,7 +73,6 @@ public class TvmBuildTaskSpec extends K8sFunctionTaskBaseSpec {
     )
     private Boolean dataProp;
 
-    // Keep model params as graph inputs rather than folding to constants (from_onnx keep_params_in_input).
     @JsonProperty("keep_params_in_input")
     @Schema(
         title = "Keep Params in Input",
@@ -90,7 +80,6 @@ public class TvmBuildTaskSpec extends K8sFunctionTaskBaseSpec {
     )
     private Boolean keepParamsInInput;
 
-    // Sanitize input tensor names during conversion to Relax IR.
     @JsonProperty("sanitize_input_names")
     @Schema(
         title = "Sanitize Input Names",

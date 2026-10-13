@@ -2,15 +2,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""MetaSchedule tuning for tvm+compile.
+"""MetaSchedule tune/apply using TVM's static_shape_tuning sequence.
 
-tune   measures candidate schedules for every operator task and keeps the best ones in a
-       database, published with the Model under tuning/;
-apply  reuses a database tuned earlier for the same IR, TVM build and target.
-
-Both follow TVM's static_shape_tuning pipeline: the IR is prepared into TIR tasks, the
-database replaces each covered task with its best schedule and, on CPU, the constant
-weights are rewritten into the layout the schedules prefer (cpu_weight_prepack).
+Databases under tuning/ are specific to the IR, TVM build and target.
+CPU weight prepacking folds scheduled layouts into constants at compile time.
 """
 
 from __future__ import annotations
@@ -37,9 +32,9 @@ RECORD_FILE = "database_tuning_record.json"
 MANIFEST_FILE = "manifest.json"
 COVERAGE_FILE = "coverage.json"
 TASKS_FILE = "tasks.json"
-# Candidates measured for each task in one round: the default of tune_relax.
+# Matches tune_relax's default.
 DEFAULT_TRIALS_PER_ITER = 64
-# MetaSchedule marks a candidate that failed with a run time of 1e10 seconds.
+# MetaSchedule's failed-candidate sentinel.
 FAILED_RUN_SECS = 1e10
 
 
@@ -78,10 +73,44 @@ def add_options(parser: argparse.ArgumentParser) -> None:
     option(rpc, "--rpc-session-timeout-sec", "TVM_RPC_SESSION_TIMEOUT_SEC", type=int, default=60, help="session_timeout_sec")
 
 
+def parse_options(parser: argparse.ArgumentParser, argv: Optional[list[str]]) -> argparse.Namespace:
+    """Ignore inactive CLI/env values before argparse converts their types."""
+    selector = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+    option(selector, "--tuning-mode", "TVM_TUNING_MODE", default="off", choices=["off", "tune", "apply"])
+    option(selector, "--tuning-runner", "TVM_TUNING_RUNNER", default="local")
+    selected, _ = selector.parse_known_args(argv)
+    for group in parser._action_groups:
+        if group.title not in ("MetaSchedule tuning", "RPC runner (measure on the target device)"):
+            continue
+        for action in group._group_actions:
+            if not option_is_active(action.dest, selected.tuning_mode, selected.tuning_runner):
+                action.type = lambda _: None
+                action.choices = None
+                action.default = None
+    return parser.parse_args(argv)
+
+
+def option_is_active(name: str, mode: str, runner: str) -> bool:
+    if name == "tuning_mode":
+        return True
+    if mode == "off":
+        return False
+    if mode == "apply":
+        return name in ("tuning_database", "tuning_ops", "allow_partial_tuning")
+    if name.startswith("rpc_"):
+        return runner == "rpc"
+    return name != "tuning_runner_timeout_sec" or runner != "rpc"
+
+
 def validate_options(args: argparse.Namespace) -> None:
-    """Checks the tuning combinations argparse cannot check on its own."""
     if args.tuning_mode not in ("off", "tune", "apply"):
         fail(f"tuning mode must be off, tune or apply, not {args.tuning_mode!r}")
+    if args.tuning_mode == "off":
+        return
+    if args.tuning_mode == "apply":
+        if not args.tuning_database:
+            fail("tuning_mode=apply requires --tuning-database")
+        return
     if args.tuning_runner not in ("local", "rpc"):
         fail(f"tuning runner must be local or rpc, not {args.tuning_runner!r}")
     for flag, value in {
@@ -92,43 +121,42 @@ def validate_options(args: argparse.Namespace) -> None:
         "--tuning-number": args.tuning_number,
         "--tuning-repeat": args.tuning_repeat,
         "--tuning-alloc-repeat": args.tuning_alloc_repeat,
-        "--rpc-session-timeout-sec": args.rpc_session_timeout_sec,
     }.items():
         if value is not None and value < 1:
             fail(f"{flag} must be >= 1")
     if args.tuning_min_repeat_ms < 0:
         fail("--tuning-min-repeat-ms must be >= 0")
-    if args.tuning_builder_timeout_sec <= 0 or args.tuning_runner_timeout_sec <= 0:
+    if args.tuning_seed < 0:
+        fail("--tuning-seed must be >= 0")
+    if args.tuning_builder_timeout_sec <= 0 or (
+        args.tuning_runner == "local" and args.tuning_runner_timeout_sec <= 0
+    ):
         fail("tuning timeouts must be > 0")
 
-    if args.tuning_mode == "tune" and args.tuning_trials is None:
+    if args.tuning_trials is None:
         fail("tuning_mode=tune requires --tuning-trials")
-    if args.tuning_mode == "apply" and not args.tuning_database:
-        fail("tuning_mode=apply requires --tuning-database")
-    # The local runner runs the candidates on this Job, which cannot run code for another CPU.
-    if args.tuning_mode == "tune" and args.cross_cc and args.tuning_runner != "rpc":
+    # Cross-compiled candidates must be measured on the target device.
+    if args.cross_cc and args.tuning_runner != "rpc":
         fail("cannot measure a cross-compiled target locally; tune on the target device "
              "with --tuning-runner rpc or compile with tuning_mode=apply")
-    if args.tuning_mode == "tune" and args.tuning_runner == "rpc":
+    if args.tuning_runner == "rpc":
         missing = [flag for flag, value in (("--rpc-tracker-host", args.rpc_tracker_host),
                                             ("--rpc-tracker-port", args.rpc_tracker_port),
-                                            ("--rpc-tracker-key", args.rpc_tracker_key)) if value is None]
+                                            ("--rpc-tracker-key", args.rpc_tracker_key)) if not value]
         if missing:
             fail("tuning_runner=rpc requires " + ", ".join(missing))
-
-
-# --------------------------------------------------------------------------- database
+        if not 1 <= args.rpc_tracker_port <= 65535:
+            fail("--rpc-tracker-port must be between 1 and 65535")
+        if args.rpc_session_timeout_sec < 1:
+            fail("--rpc-session-timeout-sec must be >= 1")
 
 
 @dataclass
 class TuningDatabase:
-    """The MetaSchedule database published under tuning/ in the compiled Model."""
-
     work_dir: Path
     reused: bool
-    # "new", "manifest" or "legacy metadata": how a reused database was identified.
+    # "new", "manifest" or "legacy metadata".
     identity_basis: str
-    # Whether the records were tuned with weight prepacking (see prepare).
     weight_prepack: bool
 
 
@@ -137,8 +165,7 @@ def module_sha256(mod) -> str:
 
 
 def database_identity(source: Path) -> tuple[dict, str]:
-    """What an earlier database was tuned for: its manifest.json or, for databases older
-    than the manifest, the metadata.json of the Model that contains it."""
+    """Read the manifest, falling back to legacy Model metadata."""
     if (source / MANIFEST_FILE).is_file():
         return read_json(source / MANIFEST_FILE), "manifest"
     for metadata_path in (source / "metadata.json", source.parent / "metadata.json"):
@@ -171,8 +198,7 @@ def find_database(path: Path) -> Path:
 
 
 def open_database(out_dir: Path, database_path: Optional[str], identity: dict, weight_prepack: bool) -> TuningDatabase:
-    """Creates tuning/ in the output folder. An earlier database is checked against this
-    IR and target, then copied in, so tuning resumes from it."""
+    """Create tuning/, validating and copying a previous database when supplied."""
     work_dir = out_dir / "tuning"
     work_dir.mkdir(parents=True, exist_ok=True)
     if not database_path:
@@ -182,8 +208,7 @@ def open_database(out_dir: Path, database_path: Optional[str], identity: dict, w
     source = find_database(Path(database_path).resolve())
     actual, basis = database_identity(source)
     check_identity(actual, identity, basis)
-    # Records only match a module prepared the same way: databases from before weight
-    # prepacking have no flag and keep working without it.
+    # Legacy records require the original preparation, without weight prepacking.
     weight_prepack = bool(actual.get("cpu_weight_prepack", False))
     if source.resolve() != work_dir.resolve():
         for name in (WORKLOAD_FILE, RECORD_FILE):
@@ -193,13 +218,8 @@ def open_database(out_dir: Path, database_path: Optional[str], identity: dict, w
     return TuningDatabase(work_dir, True, basis, weight_prepack)
 
 
-# --------------------------------------------------------------------------- tuning steps
-
-
 def prepare(mod, target, pass_ctx, weight_prepack: bool):
-    """Decomposes the inference operators, then legalizes and fuses them into TIR
-    functions: the tuning tasks. With weight_prepack the constant weights are also marked
-    as free to change layout."""
+    """Lower to TIR tasks, marking constant weights layout-free for prepacking."""
     passes = [relax.transform.DecomposeOpsForInference(), relax.transform.CanonicalizeBindings(), relax.get_pipeline("zero")]
     if weight_prepack:
         passes.append(relax.transform.AttachAttrLayoutFreeBuffers())
@@ -208,9 +228,7 @@ def prepare(mod, target, pass_ctx, weight_prepack: bool):
 
 
 def apply_database(prepared, database: TuningDatabase, target, pass_ctx, allow_partial: bool):
-    """Replaces every covered TIR function with its best schedule. With weight prepacking
-    the weights are then rewritten into the chosen layout at compile time, so model.so still
-    takes only the real inputs."""
+    """Apply schedules and fold prepacked weights so model.so takes only real inputs."""
     with target, pass_ctx:
         mod = relax.transform.MetaScheduleApplyDatabase(work_dir=str(database.work_dir), enable_warning=allow_partial)(prepared)
         if database.weight_prepack:
@@ -221,13 +239,11 @@ def apply_database(prepared, database: TuningDatabase, target, pass_ctx, allow_p
 
 
 def first_round_budget(task_count: int, max_trials_per_task: int, trials_per_iter: int) -> int:
-    """Trials needed before every task is measured at least once: MetaSchedule visits the
-    tasks in turn, giving each min(trials_per_iter, max_trials_per_task) candidates."""
+    """Budget to visit every task once, accounting for per-task candidate batches."""
     return task_count * min(trials_per_iter, max_trials_per_task)
 
 
 def builder_and_runner(args: argparse.Namespace, workers: int):
-    """The MetaSchedule builder (compiles the candidates) and runner (times them)."""
     evaluator = ms.runner.EvaluatorConfig(
         number=args.tuning_number,
         repeat=args.tuning_repeat,
@@ -254,7 +270,7 @@ def builder_and_runner(args: argparse.Namespace, workers: int):
 
 
 def tune(args, prepared, selected, all_tasks, target, database: TuningDatabase, pass_ctx, cpu_count: int) -> int:
-    """Measures candidates and stores the best ones in the database. Returns the workers used."""
+    """Tune candidates and return the worker count."""
     budget = first_round_budget(len(selected), args.max_trials_per_task, args.tuning_trials_per_iter)
     print(f"      tune: {len(selected)}/{len(all_tasks)} tasks, trials={args.tuning_trials}, "
           f"max_per_task={args.max_trials_per_task}, per_iter={args.tuning_trials_per_iter}")
@@ -287,10 +303,7 @@ def tune(args, prepared, selected, all_tasks, target, database: TuningDatabase, 
 
 
 def coverage(work_dir: Path, mod, target, op_names) -> tuple[int, int, list]:
-    """Queries the records with the same keys TVM's apply pass uses.
-
-    Returns (records, successful records, per-function coverage).
-    """
+    """Query with TVM apply-pass keys; return (records, usable records, function coverage)."""
     if not (work_dir / WORKLOAD_FILE).exists() or not (work_dir / RECORD_FILE).exists():
         return 0, 0, []
     database = ms.database.JSONDatabase(path_workload=str(work_dir / WORKLOAD_FILE),

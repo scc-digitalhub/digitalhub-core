@@ -3,10 +3,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Times a few inferences of the compiled model.so on random inputs.
-
-compile_model.py runs this file as a separate process: a model built for CPU features
-this machine lacks can crash, and the crash must not stop the compile.
+"""Benchmark model.so in a subprocess so unsupported CPU instructions cannot abort compilation.
 
     python benchmark.py <model.so> <entry> '<inputs as JSON>' <runs>
 """
@@ -51,8 +48,7 @@ def benchmark_library(so_path: Path, metadata: dict, runs: int, cross_cc: Option
 
 
 def random_input(spec: dict, rng):
-    """A random tensor shaped like the metadata input; small values fit every integer
-    type, quantized inputs included."""
+    """Use small integer values to fit quantized and unquantized input dtypes."""
     import numpy as np
 
     dtype = np.dtype(spec.get("dtype", "float32"))
@@ -66,7 +62,6 @@ def random_input(spec: dict, rng):
 
 
 def main(so_path: str, entry: str, inputs_json: str, runs_text: str) -> None:
-    """Loads model.so in a Relax VM and prints the timings as one JSON line."""
     import numpy as np
     import tvm
     from tvm import relax

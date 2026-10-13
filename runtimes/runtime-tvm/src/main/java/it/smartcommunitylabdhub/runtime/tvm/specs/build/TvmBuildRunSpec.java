@@ -19,7 +19,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-// Run spec for tvm+build: function spec + build task spec flattened via @JsonUnwrapped.
 @Getter
 @Setter
 @NoArgsConstructor

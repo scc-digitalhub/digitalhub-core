@@ -2,13 +2,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Publishes the result of a Job as a typed Model and tells CORE about it.
+"""Publish tvm-ir/tvm-so Models and record outputs for CORE's function references.
 
-tvm+build publishes a Model of kind tvm-ir, tvm+compile one of kind tvm-so: the kind
-always matches what the folder contains. The Model key is then written into
-run.status.outputs, where CORE reads it to fill the function fields ir_model and so_model.
-
-Credentials for CORE (DHCORE_*) and S3 (AWS_*) come from the variables set on the Job.
+CORE and S3 credentials come from the Job's DHCORE_* and AWS_* variables.
 """
 
 from __future__ import annotations
@@ -19,14 +15,12 @@ import time
 from pathlib import Path
 from typing import Any, Optional
 
-# The SDK looks for the current run when it sees RUN_ID, and it has no Python class for the
-# TVM runs: the id is taken out before importing it and kept for the status update.
+# Prevent SDK auto-discovery of unsupported TVM runs; retain the ID for REST updates.
 RUN_ID = os.environ.pop("RUN_ID", None)
 
 import digitalhub as dh  # noqa: E402
 
-# Model kind -> the run output CORE reads and the spec fields of the kind in CORE
-# (TvmIrModelSpec, TvmSoModelSpec). path, framework, algorithm and parameters are common.
+# Extra fields must match CORE's TvmIrModelSpec and TvmSoModelSpec.
 MODEL_KINDS = {
     "tvm-ir": {
         "output": "ir_module",
@@ -40,7 +34,6 @@ MODEL_KINDS = {
 
 
 def publish_ir_model(out_dir: Path, name: str, metadata: dict, parameters: dict) -> str:
-    """Publishes the Relax IR written by tvm+build as the Model <name>-ir (kind tvm-ir)."""
     return publish_model(
         kind="tvm-ir",
         name=f"{name}-ir",
@@ -60,8 +53,7 @@ def publish_ir_model(out_dir: Path, name: str, metadata: dict, parameters: dict)
 
 
 def publish_compiled_model(out_dir: Path, name: str, metadata: dict, source_ir_key: Optional[str]) -> str:
-    """Publishes model.so written by tvm+compile as the Model <name> (kind tvm-so), linked to
-    the IR Model it was compiled from."""
+    """Publish model.so with a link to its source IR Model."""
     return publish_model(
         kind="tvm-so",
         name=name,
@@ -81,8 +73,7 @@ def publish_compiled_model(out_dir: Path, name: str, metadata: dict, source_ir_k
 
 
 def publish_model(kind: str, name: str, folder: Path, spec: dict, consumes: Optional[str] = None) -> str:
-    """Uploads folder as a Model of the given kind, records it as the run output and
-    returns its key."""
+    """Upload a Model, record its run output and return its key."""
     project = os.environ["PROJECT_NAME"]
     if not RUN_ID:
         raise RuntimeError("RUN_ID is missing: the run status cannot be updated")
@@ -103,19 +94,15 @@ def publish_model(kind: str, name: str, folder: Path, spec: dict, consumes: Opti
         set_run_output(project, RUN_ID, output, model.key)
         print(f"      run.status.outputs.{output} = {model.key}")
     except Exception as error:  # noqa: BLE001
-        # The Model exists: only the automatic chaining to the next task is lost.
-        print(f"WARN: cannot update the run status: {error}")
+        # Fail the run, retaining the uploaded Model key for recovery.
+        raise RuntimeError(
+            f"Model {model.key} was created, but run {RUN_ID} output {output} could not be recorded"
+        ) from error
     return model.key
 
 
 def enable_model_kind(kind: str) -> None:
-    """Makes sure the installed SDK can log this Model kind.
-
-    The kinds tvm-ir and tvm-so are in the SDK source but not in every release. When the
-    SDK lacks one, it is registered here as the generic model builder with the extra spec
-    fields of the kind. If even that is impossible the Job fails: a wrong kind would break
-    the chain of tasks and hide the model type.
-    """
+    """Register typed TVM Model fields when the installed SDK lacks their builders."""
     from digitalhub.factory.registry import registry
 
     try:
@@ -158,7 +145,6 @@ def enable_model_kind(kind: str) -> None:
 
 
 def link_consumed_model(model, source_key: str) -> None:
-    """Records that the new Model was produced from source_key (CONSUMES relationship)."""
     try:
         from digitalhub.entities._commons.enums import Relationship
 
@@ -170,31 +156,44 @@ def link_consumed_model(model, source_key: str) -> None:
 
 
 def set_run_output(project: str, run_id: str, output: str, value: str) -> None:
-    """Sets run.status.outputs.<output> through the REST API.
+    """Merge and verify run outputs, retrying transient failures without re-upload.
 
-    CORE has no PATCH for runs: the run is read, changed and written back, trying again
-    when another update gets in between.
+    CORE has no run PATCH; read/modify/write is not an atomic compare-and-swap.
     """
     import requests
 
     url = f"{os.environ['DHCORE_ENDPOINT'].rstrip('/')}/api/v1/-/{project}/runs/{run_id}"
     auth, headers = core_auth()
-    response = None
+    retryable = {408, 409, 412, 429, 500, 502, 503, 504}
     for attempt in range(3):
-        run = requests.get(url, auth=auth, headers=headers, timeout=15)
-        run.raise_for_status()
-        body = run.json()
-        status = body.get("status") or {}
-        status["outputs"] = {**(status.get("outputs") or {}), output: value}
-        body["status"] = status
+        try:
+            run = requests.get(url, auth=auth, headers=headers, timeout=15)
+            run.raise_for_status()
+            body = run.json()
+            status = body.get("status") or {}
+            if (status.get("outputs") or {}).get(output) == value:
+                return  # A previous PUT may have committed before its response was lost.
+            status["outputs"] = {**(status.get("outputs") or {}), output: value}
+            body["status"] = status
 
-        response = requests.put(url, json=body, auth=auth, headers={**headers, "Content-Type": "application/json"}, timeout=15)
-        if response.status_code < 400:
-            return
-        if response.status_code not in (409, 412, 500, 502, 503):
-            break
+            response = requests.put(
+                url, json=body, auth=auth,
+                headers={**headers, "Content-Type": "application/json"}, timeout=15,
+            )
+            response.raise_for_status()
+            confirmed = requests.get(url, auth=auth, headers=headers, timeout=15)
+            confirmed.raise_for_status()
+            if ((confirmed.json().get("status") or {}).get("outputs") or {}).get(output) == value:
+                return
+            if attempt == 2:
+                raise RuntimeError(f"CORE did not confirm run {run_id} output {output} = {value}")
+        except requests.HTTPError as error:
+            if error.response is None or error.response.status_code not in retryable or attempt == 2:
+                raise
+        except (requests.ConnectionError, requests.Timeout):
+            if attempt == 2:
+                raise
         time.sleep(0.5 * (attempt + 1))
-    response.raise_for_status()
 
 
 def core_auth():
@@ -209,6 +208,5 @@ def core_auth():
 
 
 def entity_name(name: str) -> str:
-    """A valid entity name: lowercase, anything outside [a-z0-9._+-] becomes '-'."""
     clean = re.sub(r"-+", "-", re.sub(r"[^a-z0-9._+\-]+", "-", (name or "").lower())).strip("-")
     return clean or "tvm-model"

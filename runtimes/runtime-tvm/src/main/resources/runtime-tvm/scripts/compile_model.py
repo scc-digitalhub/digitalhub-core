@@ -3,19 +3,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""tvm+compile: compiles the Relax IR into model.so and publishes it as a Model of kind
-tvm-so.
+"""Compile Relax IR into model.so and publish a tvm-so Model.
 
-1. load the IR written by tvm+build and embed its weights (params.bin) as constants;
-2. resolve the target (mcpu=native becomes the real CPU of this machine);
-3. optionally tune the operators with MetaSchedule, or apply a database tuned earlier;
-4. build the Relax VM executable and export model.so;
-5. time a few inferences of model.so, when this machine can run it;
-6. write metadata.json;
-7. publish the folder as a tvm-so Model.
-
-The target is passed as-is to tvm.target.Target: "llvm" or the JSON form, for example
-{"kind":"llvm","mcpu":"x86-64-v3"}.
+Targets use TVM syntax: "llvm" or JSON, e.g. {"kind":"llvm","mcpu":"x86-64-v3"}.
 """
 
 from __future__ import annotations
@@ -37,7 +27,7 @@ STEPS = 7
 
 
 def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Relax IR -> model.so (Model tvm-so)")
+    parser = argparse.ArgumentParser(description="Relax IR -> model.so (Model tvm-so)", allow_abbrev=False)
 
     model = parser.add_argument_group("model")
     option(model, "--ir-dir", "TVM_INPUT_DIR", default=str(INPUT_DIR), help="folder with model.relax.json and metadata.json")
@@ -59,12 +49,14 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     option(build, "--benchmark-runs", "TVM_BENCHMARK_RUNS", type=int, default=10, help="timed inferences of model.so, 0 = off")
 
     tuning.add_options(parser)
-    args = parser.parse_args(argv)
+    args = tuning.parse_options(parser, argv)
     validate_options(args)
     return args
 
 
 def validate_options(args: argparse.Namespace) -> None:
+    if not 0 <= args.opt_level <= 3:
+        fail("--opt-level must be between 0 and 3")
     if args.exec_mode not in ("bytecode", "compiled"):
         fail(f"exec mode must be bytecode or compiled, not {args.exec_mode!r}")
     if args.target_num_cores is not None and args.target_num_cores < 1:
@@ -76,14 +68,16 @@ def validate_options(args: argparse.Namespace) -> None:
     tuning.validate_options(args)
 
 
-# --------------------------------------------------------------------------- inputs
-
-
 def load_ir(ir_dir: Path):
-    """model.relax.json, the round-trip safe IR written by tvm+build."""
     path = ir_dir / "model.relax.json"
-    if not path.exists():
-        fail(f"model.relax.json not found in {ir_dir}")
+    if not path.is_file():
+        source = os.environ.get("TVM_SOURCE_IR_KEY", "the selected IR model")
+        fail(
+            f"model.relax.json not found in {ir_dir}. Source: {source}. "
+            "Check that its storage folder contains the tvm+build output. "
+            "An explicit model_path in the run or task overrides function.ir_model; "
+            "clear both overrides to use the function's current IR."
+        )
     return tvm.ir.load_json(path.read_text())
 
 
@@ -102,14 +96,14 @@ def load_weights(ir_dir: Path, params_file: Optional[str]) -> Optional[dict]:
 
 
 def var_name(var) -> str:
-    """Name of a Relax variable: `name` in TVM 0.26, `name_hint` in older releases."""
     return var.name if hasattr(var, "name") else var.name_hint
 
 
 def embed_weights(mod, weights: dict):
-    """Binds the weights into the entry function as constants, so model.so takes only the
-    real inputs. The keys are the parameter names, or positional ("<function>.<i>") for the
-    parameters after the real inputs. Returns (entry name, bound weights, new module)."""
+    """Bind named or positional (<function>.<i>) weights after the real inputs.
+
+    Return (entry name, weight count, module); model.so then takes only real inputs.
+    """
     functions = [(gv.name_hint, f) for gv, f in mod.functions_items() if isinstance(f, relax.Function)]
     entry, function = next(((name, f) for name, f in functions if name == "main"), functions[0])
     params = list(function.params)
@@ -124,9 +118,6 @@ def embed_weights(mod, weights: dict):
     return entry, len(named), relax.transform.BindParams(entry, named)(mod)
 
 
-# --------------------------------------------------------------------------- target
-
-
 def cpu_count() -> int:
     """CPUs this process may use (the container limit, not the size of the node)."""
     try:
@@ -136,11 +127,9 @@ def cpu_count() -> int:
 
 
 def resolve_target(target_text: str, num_cores: Optional[int]):
-    """Returns (Target, effective target text).
+    """Resolve mcpu=native to avoid LLVM's generic-CPU fallback.
 
-    LLVM accepts mcpu=native but silently uses a generic CPU for the inferred triple: the
-    real CPU and triple are written instead, so the Model says what it was built for.
-    num-cores goes into the target too, because the tuned schedules depend on it.
+    Return (Target, effective target text), including num-cores for tuning.
     """
     requested = tvm.target.Target(target_text)
     native = requested.kind.name == "llvm" and str(requested.attrs.get("mcpu", "")) == "native"
@@ -172,11 +161,7 @@ def resolve_target(target_text: str, num_cores: Optional[int]):
     return tvm.target.Target(text), text
 
 
-# --------------------------------------------------------------------------- build and metadata
-
-
 def build_library(mod, args: argparse.Namespace, target, out_dir: Path, pass_ctx) -> Path:
-    """Runs the Relax/TIR build pipelines and exports model.so."""
     options = {"target": target, "relax_pipeline": args.relax_pipeline, "tir_pipeline": args.tir_pipeline,
                "exec_mode": args.exec_mode}
     if args.system_lib:
@@ -193,9 +178,7 @@ def build_library(mod, args: argparse.Namespace, target, out_dir: Path, pass_ctx
 
 
 def target_triple(target) -> Optional[str]:
-    """LLVM triple of the generated code. A target without mtriple builds for the machine
-    running the compile, so that machine's triple is returned: CORE reads it to run the
-    serve pod on a node of the same architecture."""
+    """Return the effective LLVM triple so CORE can match the serving architecture."""
     if target.kind.name != "llvm":
         return None
     return str(target.attrs.get("mtriple") or tvm.target.codegen.llvm_get_system_triple())
@@ -203,8 +186,7 @@ def target_triple(target) -> Optional[str]:
 
 def compiled_metadata(ir_metadata: dict, args: argparse.Namespace, target, effective_target: str,
                       tuning_summary: Optional[dict], benchmark: Optional[dict]) -> dict:
-    """metadata.json of the compiled model: the IR metadata (entry, inputs, outputs, ...)
-    plus how the library was built. The serve images read it at startup."""
+    """Extend IR metadata with build details consumed by the serve images."""
     metadata = {**ir_metadata, "target": effective_target, "tvm_version": tvm.__version__}
     triple = target_triple(target)
     if triple:

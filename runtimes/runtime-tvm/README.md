@@ -16,7 +16,8 @@ speed) and serves it with the **Open Inference Protocol v2** over REST and gRPC.
 | `tvm+serve`   | serves the compiled model                 | Deployment + Service, serve image   | Open Inference v2 endpoint                  |
 
 The tasks are chained through the function: build writes `ir_model`, compile reads it and
-writes `so_model`, serve reads that. Any task can also be pointed at a specific Model with
+writes `so_model` on the **same function version**. Serve uses that `so_model` reference,
+without searching compile history. Any task can also be pointed at a specific Model with
 `model_path`, so one IR can be compiled for many targets.
 
 ---
@@ -145,6 +146,43 @@ onnxsim and converts it again, and `metadata.json` records `simplified_automatic
 
 ### `tvm+compile`
 
+The console uses two collapsible groups, defined by this runtime's schemas:
+`optimization` (advanced compilation settings, still used when tuning is off) and
+`tuning` (MetaSchedule mode and its active settings). No console extension is needed.
+For example, the canonical task/run spec contains:
+
+```yaml
+target_architecture: x86
+optimization:
+  opt_level: 3
+  benchmark_runs: 10
+tuning:
+  tuning_mode: tune
+  tuning_trials: 8000
+  tuning_runner: local
+```
+
+Legacy flat SDK/YAML parameters remain valid inputs, including the examples below;
+CORE exports newly saved specs in grouped form. When both forms set the same option,
+the grouped value wins within that spec. Individual run options override task options.
+Existing flat tasks remain executable; resave them through the API/SDK to normalize
+their representation before editing the grouped console form. No database migration
+or modification of existing tasks is performed automatically.
+
+With `off`, tuning-only values are ignored before conversion/validation and no tuning
+database is downloaded. With `apply`, only the database and coverage options
+(`tuning_ops`, `allow_partial_tuning`) are used. Search/measurement options are used only with `tune`; RPC settings only
+with `tune` + `rpc`. Inactive fields are not displayed in the form.
+Their values are retained when saving, so disabling tuning does not erase a previous
+configuration. Enabling tuning fills unset fields with their typed baseline defaults;
+the total `tuning_trials` budget remains an explicit user choice.
+
+An explicit compile `model_path` overrides the function's `ir_model`, including after
+a new build. If compilation reports `model.relax.json not found`, check that reference
+and its stored files. To compile the latest IR linked to the function, clear
+`model_path` in **both the run and its reusable task**. CORE does not silently fall
+back from a broken explicit reference to a different model.
+
 **Model and build**
 
 | Option                | Default                | Description                                                                                                                                |
@@ -201,12 +239,40 @@ target.
 
 | Option         | Default             | Description                                                                   |
 | -------------- | ------------------- | ----------------------------------------------------------------------------- |
-| `model_path`   | function `so_model` | `store://` key of the `tvm-so` Model to serve.                                |
+| `model_path`   | `function.spec.so_model` | `store://` key of the `tvm-so` Model to serve; an explicit value always wins. |
 | `served_name`  | function name       | Model name in the URLs, `/v2/models/<served_name>`.                           |
 | `replicas`     | `1`                 | Number of pods.                                                               |
 | `workers`      | `1`                 | Inferences run in parallel in each pod; each worker loads its own model copy. |
 | `service_type` | `ClusterIP`         | `ClusterIP`, `NodePort` or `LoadBalancer`.                                    |
 | `service_name` | —                   | Extra Service name, `<function>-<service_name>`.                              |
+
+Selection order is an explicit run `model_path`, then the task's `model_path`, otherwise
+**`function.spec.so_model` of the exact function version referenced by the run**. There
+is no search through compile history. An empty function reference without an explicit
+model fails with an actionable error. The selected key is pinned in the serve run's
+`model_path`, not in the reusable task: existing serves keep their model; new serves
+read the current function reference. If you copy a serve run to make a new one, clear
+its `model_path` to use the current default again.
+
+Build updates only `ir_model`; compile updates only `so_model`, without creating a new
+function version or replacing its other fields. Compiling ARM then x86 for version V1
+updates V1's `so_model` to x86; V2 is unaffected. A new build deliberately leaves the
+previous `so_model` usable until the next compile. With concurrent compiles, the last
+successful function-reference update wins, **not** the last submitted job. To serve
+a particular architecture/build independently of this pointer, set `model_path`.
+
+Output registration retries transient HTTP/network failures up to three attempts,
+re-reading the run and verifying the stored output without re-uploading the model.
+CORE also retries function writeback up to three attempts, re-reading the function
+before each attempt. Missing outputs or a failed/unconfirmed function update make the
+run **ERROR**, not COMPLETED. The uploaded model is retained: its key stays in the job
+log and, when output registration succeeded, in `run.status.outputs`, for recovery.
+
+TVM build/compile writebacks are serialized **within one CORE instance**, so their
+read/modify/write operations cannot overwrite each other's `ir_model`/`so_model` changes.
+This is not distributed locking: concurrent external function edits or multiple CORE
+instances require shared persistence-level concurrency control. REST run updates are
+also read/modify/write, not atomic PATCH/CAS operations.
 
 The serve pod exposes REST on `8080` and gRPC on `9000`. When the task requests CPUs,
 each worker gets `resources.cpu / workers` TVM threads (`TVM_NUM_THREADS`); set
@@ -356,7 +422,8 @@ export JAVA_HOME=~/.sdkman/candidates/java/21.0.4-graal
 mvn -pl runtimes/runtime-tvm install
 ```
 
-Test the pod scripts inside the toolkit image:
+Tests in `src/test/` and `test_infer/` are kept locally and are not versioned.
+If you have the local Python tests, run them inside the toolkit image:
 
 ```bash
 docker run --rm -v "$PWD/runtimes/runtime-tvm":/work -w /work \
