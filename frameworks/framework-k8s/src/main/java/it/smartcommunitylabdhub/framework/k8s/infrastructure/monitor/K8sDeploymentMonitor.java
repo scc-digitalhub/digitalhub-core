@@ -173,6 +173,12 @@ public class K8sDeploymentMonitor extends K8sBaseMonitor<K8sDeploymentRunnable> 
                     log.error("Multiple restarts observed {}", runnable.getId());
                     runnable.setState(K8sRunnableState.ERROR.name());
                     runnable.setError("Multiple pod restarts");
+
+                    //try to collect logs for user debugging
+                    String lastLogs = lastLogs(framework, pods);
+                    if (lastLogs != null && !lastLogs.isEmpty()) {
+                        runnable.setError("Multiple pod restarts\n" + lastLogs);
+                    }
                 }
             }
 
@@ -201,6 +207,13 @@ public class K8sDeploymentMonitor extends K8sBaseMonitor<K8sDeploymentRunnable> 
                             }
                         }
                     }
+                }
+
+                //try to collect logs for user debugging
+                String lastLogs = lastLogs(framework, pods);
+                if (lastLogs != null && !lastLogs.isEmpty()) {
+                    String err = runnable.getError() != null ? runnable.getError() + "\n" + lastLogs : lastLogs;
+                    runnable.setError(err);
                 }
             }
 

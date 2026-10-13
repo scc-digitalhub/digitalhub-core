@@ -196,6 +196,13 @@ public class K8sJobMonitor extends K8sBaseMonitor<K8sJobRunnable> {
                             }
                         }
                     }
+
+                    //try to collect logs for user debugging
+                    String lastLogs = lastLogs(framework, pods);
+                    if (lastLogs != null && !lastLogs.isEmpty()) {
+                        String err = runnable.getError() != null ? runnable.getError() + "\n" + lastLogs : lastLogs;
+                        runnable.setError(err);
+                    }
                 }
             } catch (K8sFrameworkException e1) {
                 log.error("error collecting pods for job {}: {}", runnable.getId(), e1.getMessage());

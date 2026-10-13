@@ -35,10 +35,12 @@ import it.smartcommunitylabdhub.framework.k8s.annotations.ConditionalOnKubernete
 import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sDeploymentFramework;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sServeFramework;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreLog;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -199,6 +201,12 @@ public class K8sServeMonitor extends K8sBaseMonitor<K8sServeRunnable> {
                     log.error("Multiple restarts observed {}", runnable.getId());
                     runnable.setState(K8sRunnableState.ERROR.name());
                     runnable.setError("Multiple pod restarts");
+
+                    //try to collect logs for user debugging
+                    String lastLogs = lastLogs(serveFramework, pods);
+                    if (lastLogs != null && !lastLogs.isEmpty()) {
+                        runnable.setError("Multiple pod restarts\n" + lastLogs);
+                    }
                 }
             }
 
@@ -227,6 +235,13 @@ public class K8sServeMonitor extends K8sBaseMonitor<K8sServeRunnable> {
                             }
                         }
                     }
+                }
+
+                //try to collect logs for user debugging
+                String lastLogs = lastLogs(serveFramework, pods);
+                if (lastLogs != null && !lastLogs.isEmpty()) {
+                    String err = runnable.getError() != null ? runnable.getError() + "\n" + lastLogs : lastLogs;
+                    runnable.setError(err);
                 }
             }
 

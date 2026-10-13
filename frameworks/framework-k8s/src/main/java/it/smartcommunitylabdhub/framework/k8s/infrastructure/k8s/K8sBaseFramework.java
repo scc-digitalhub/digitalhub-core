@@ -657,9 +657,12 @@ public abstract class K8sBaseFramework<
             log.debug("collect logs for {}", object.getMetadata().getName());
         }
 
-        List<CoreLog> logs = new ArrayList<>();
         List<V1Pod> pods = pods(object);
+        return logs(pods);
+    }
 
+    public List<CoreLog> logs(List<V1Pod> pods) throws K8sFrameworkException {
+        List<CoreLog> logs = new ArrayList<>();
         for (V1Pod p : pods) {
             if (p.getMetadata() != null && p.getStatus() != null) {
                 String pod = p.getMetadata().getName();

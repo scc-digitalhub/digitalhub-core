@@ -25,14 +25,18 @@ package it.smartcommunitylabdhub.framework.k8s.infrastructure.monitor;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.kubernetes.client.openapi.models.V1Pod;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
+import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sBaseFramework;
 import it.smartcommunitylabdhub.framework.k8s.jackson.KubernetesMapper;
+import it.smartcommunitylabdhub.framework.k8s.objects.CoreLog;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.RunnableEventPublisher;
 import it.smartcommunitylabdhub.runtimes.events.RunnableChangedEvent;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -183,6 +187,59 @@ public abstract class K8sBaseMonitor<T extends K8sRunnable> implements Runnable 
 
             // Send message to Serve manager
             eventPublisher.publishEvent(RunnableChangedEvent.build(runnable, null));
+        }
+    }
+
+    protected String lastLogs(K8sBaseFramework<T, ?> framework, List<V1Pod> pods) {
+        if (!Boolean.TRUE.equals(collectLogs)) {
+            //disabled
+            return null;
+        }
+
+        if (pods == null || pods.isEmpty()) {
+            return null;
+        }
+
+        //try to fetch last log lines to add to message
+        try {
+            String containerId = pods
+                .stream()
+                .findFirst()
+                .map(p -> p.getStatus())
+                .map(s -> s.getContainerStatuses())
+                .map(sc -> sc.getFirst())
+                .map(cs -> cs.getName())
+                .orElse(null);
+            if (containerId != null) {
+                log.debug("Fetching logs for container {}", containerId);
+            }
+
+            log.debug("Fetch last logs from failed pods for container {}...", containerId);
+            List<CoreLog> logs = framework.logs(pods);
+            return logs
+                .stream()
+                .filter(l -> l.container().equals(containerId) && l.value() != null && !l.value().isEmpty())
+                .findFirst()
+                .map(l -> {
+                    String content = l.value();
+                    //get last few lines of the log
+                    String[] lines = content.split("\n");
+                    int lastLines = Math.min(lines.length, 8);
+                    String lastLog = String.join(
+                        "\n",
+                        Arrays.copyOfRange(lines, lines.length - lastLines, lines.length)
+                    );
+                    String message = String.format(
+                        "Last logs for container %s: \n------------------------ \n%s",
+                        containerId,
+                        lastLog
+                    );
+                    return message;
+                })
+                .orElse(null);
+        } catch (Exception e) {
+            log.error("Failed to fetch last logs for pods: {}", e.getMessage(), e);
+            return null;
         }
     }
 }
