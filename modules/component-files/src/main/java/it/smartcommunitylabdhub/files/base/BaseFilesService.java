@@ -87,6 +87,35 @@ public abstract class BaseFilesService<
         );
     }
 
+    private String resolveUploadBasePath(String path) {
+        if (path.endsWith("/")) {
+            return path;
+        }
+
+        int separator = path.lastIndexOf('/');
+        return separator >= 0 ? path.substring(0, separator + 1) : "";
+    }
+
+    private String resolveUploadPath(String path, @Nullable String filename) {
+        String filePath = filename != null && filename.startsWith("/") ? filename.substring(1) : filename;
+        String basePath = resolveUploadBasePath(path);
+
+        if (!StringUtils.hasText(filePath)) {
+            return basePath;
+        }
+
+        if (!path.endsWith("/") && (path.equals(filePath) || path.endsWith("/" + filePath))) {
+            return path;
+        }
+
+        return basePath + filePath;
+    }
+
+    private boolean isUploadPathAllowed(String specPath, String path) {
+        String basePath = resolveUploadBasePath(specPath);
+        return basePath.isEmpty() ? path.equals(specPath) : path.startsWith(basePath);
+    }
+
     @Autowired
     public void setEntityService(EntityRepository<D> entityService) {
         this.entityService = entityService;
@@ -291,14 +320,11 @@ public abstract class BaseFilesService<
                 path = specPath;
             }
 
-            //build full path, avoid double appending
-            //if the path already ends with the filePath, avoid appending it again
-            String filePath = filename != null ? (filename.startsWith("/") ? filename.substring(1) : filename) : "";
+            String basePath = resolveUploadBasePath(path);
 
-            if (!StringUtils.hasText(filePath)) {
+            if (!StringUtils.hasText(filename)) {
                 //build only base upload info, we can not provide a full file path
-                String fullPath = path.endsWith("/") ? path : path + "/";
-                UploadInfo info = UploadInfo.builder().path(fullPath).build();
+                UploadInfo info = UploadInfo.builder().path(basePath).build();
 
                 if (log.isTraceEnabled()) {
                     log.trace("upload url for dto with id {}: {}", id, info);
@@ -307,8 +333,7 @@ public abstract class BaseFilesService<
                 return info;
             }
 
-            //build full path for a file
-            String fullPath = (path.endsWith(filePath)) ? path : (path.endsWith("/") ? path : path + "/") + filePath;
+            String fullPath = resolveUploadPath(path, filename);
 
             //try to resolve credentials
             UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
@@ -352,13 +377,10 @@ public abstract class BaseFilesService<
                 }
 
                 //use as basePath
-                path = specPath.endsWith("/") ? specPath : specPath + "/";
+                path = specPath;
             }
 
-            //build full path, avoid double appending
-            //if the path already ends with the filePath, avoid appending it again
-            String filePath = filename.startsWith("/") ? filename.substring(1) : filename;
-            String fullPath = (path.endsWith(filePath) || path.endsWith(filePath + "/")) ? path : path + filePath;
+            String fullPath = resolveUploadPath(path, filename);
 
             //try to resolve credentials
             UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
@@ -397,8 +419,7 @@ public abstract class BaseFilesService<
                     throw new NoSuchEntityException("file");
                 }
 
-                //path is either full or path + filename
-                if (!path.equals(specPath) && !path.startsWith(specPath)) {
+                if (!isUploadPathAllowed(specPath, path)) {
                     throw new IllegalArgumentException("invalid file path");
                 }
             }
@@ -440,8 +461,7 @@ public abstract class BaseFilesService<
                     throw new NoSuchEntityException("file");
                 }
 
-                //path is either full or path + filename
-                if (!path.equals(specPath) && !path.startsWith(specPath)) {
+                if (!isUploadPathAllowed(specPath, path)) {
                     throw new IllegalArgumentException("invalid file path");
                 }
             }
