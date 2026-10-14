@@ -91,6 +91,5 @@ public class Artifact implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO, Exten
     private Map<String, Serializable> status = new HashMap<>();
 
     @Nullable
-    @Builder.Default
-    private List<Map<String, Serializable>> extensions = new LinkedList<>();
+    private List<Map<String, Serializable>> extensions;
 }

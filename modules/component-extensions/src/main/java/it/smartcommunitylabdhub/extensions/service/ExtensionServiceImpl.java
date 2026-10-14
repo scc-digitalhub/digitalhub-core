@@ -32,9 +32,11 @@ import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.services.EntityService;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
+import it.smartcommunitylabdhub.events.EntityOperation;
 import it.smartcommunitylabdhub.extensions.ExtensionManager;
 import it.smartcommunitylabdhub.extensions.model.Extension;
 import it.smartcommunitylabdhub.extensions.persistence.ExtensionEntity;
+import it.smartcommunitylabdhub.extensions.persistence.ExtensionEntityFinalizer;
 import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.io.Serializable;
@@ -65,6 +67,7 @@ public class ExtensionServiceImpl implements EntityService<Extension>, Extension
     protected StringKeyGenerator nameGenerator = () -> UUID.randomUUID().toString().replace("-", "");
 
     private ExtensionSchemaService schemaService;
+    private ExtensionEntityFinalizer finalizer;
 
     public ExtensionServiceImpl(SearchableEntityRepository<ExtensionEntity, Extension> entityRepository) {
         Assert.notNull(entityRepository, "entity repository is required");
@@ -75,6 +78,11 @@ public class ExtensionServiceImpl implements EntityService<Extension>, Extension
     @Autowired
     public void setSchemaService(ExtensionSchemaService schemaService) {
         this.schemaService = schemaService;
+    }
+
+    @Autowired
+    public void setFinalizer(ExtensionEntityFinalizer extensionEntityFinalizer) {
+        this.finalizer = extensionEntityFinalizer;
     }
 
     @Autowired(required = false)
@@ -305,7 +313,16 @@ public class ExtensionServiceImpl implements EntityService<Extension>, Extension
         log.debug("delete extensions with parent {}", parent);
 
         try {
-            entityRepository.deleteAll(createParentSpecification(parent));
+            //delete with cascade
+            entityRepository
+                .searchAll(createParentSpecification(parent))
+                .forEach(e -> {
+                    try {
+                        delete(e.getId(), true);
+                    } catch (StoreException ex) {
+                        log.error("Error deleting {}: {}", e.getId(), ex.getMessage());
+                    }
+                });
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -317,7 +334,7 @@ public class ExtensionServiceImpl implements EntityService<Extension>, Extension
         log.debug("delete extensions with project {}", project);
 
         try {
-            deleteByProject(project, null);
+            deleteByProject(project, true);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
@@ -327,32 +344,88 @@ public class ExtensionServiceImpl implements EntityService<Extension>, Extension
     @Override
     public void deleteExtensionByEntity(@NotNull String entity) throws StoreException {
         log.debug("delete extensions by entity {}", entity);
-        entityRepository.deleteAll(createEntitySpecification(entity));
+        try {
+            //delete with cascade
+            entityRepository
+                .searchAll(createEntitySpecification(entity))
+                .forEach(e -> {
+                    try {
+                        delete(e.getId(), true);
+                    } catch (StoreException ex) {
+                        log.error("Error deleting {}: {}", e.getId(), ex.getMessage());
+                    }
+                });
+        } catch (StoreException e) {
+            log.error("store error: {}", e.getMessage());
+            throw e;
+        }
     }
 
     @Override
     public void deleteExtensionByEntityAndUser(@NotNull String entity, @NotNull String user) throws StoreException {
         log.debug("delete extensions by entity {} and user {}", entity, user);
-        entityRepository.deleteAll(
-            Specification.allOf(createEntitySpecification(entity), CommonSpecification.createdByEquals(user))
-        );
+        try {
+            //delete with cascade
+            entityRepository
+                .searchAll(
+                    Specification.allOf(createEntitySpecification(entity), CommonSpecification.createdByEquals(user))
+                )
+                .forEach(e -> {
+                    try {
+                        delete(e.getId(), true);
+                    } catch (StoreException ex) {
+                        log.error("Error deleting {}: {}", e.getId(), ex.getMessage());
+                    }
+                });
+        } catch (StoreException e) {
+            log.error("store error: {}", e.getMessage());
+            throw e;
+        }
     }
 
     @Override
     public void deleteExtensionByEntityAndProject(@NotNull String entity, @NotNull String project)
         throws StoreException {
         log.debug("delete extensions by entity {} and project {}", entity, project);
-        entityRepository.deleteAll(
-            Specification.allOf(createEntitySpecification(entity), CommonSpecification.projectEquals(project))
-        );
+
+        try {
+            //delete with cascade
+            entityRepository
+                .searchAll(
+                    Specification.allOf(createEntitySpecification(entity), CommonSpecification.projectEquals(project))
+                )
+                .forEach(e -> {
+                    try {
+                        delete(e.getId(), true);
+                    } catch (StoreException ex) {
+                        log.error("Error deleting {}: {}", e.getId(), ex.getMessage());
+                    }
+                });
+        } catch (StoreException e) {
+            log.error("store error: {}", e.getMessage());
+            throw e;
+        }
     }
 
     @Override
     public void deleteExtensionByEntityAndKind(@NotNull String entity, @NotNull String kind) throws StoreException {
         log.debug("delete extensions by entity {} and kind {}", entity, kind);
-        entityRepository.deleteAll(
-            Specification.allOf(createEntitySpecification(entity), CommonSpecification.kindEquals(kind))
-        );
+
+        try {
+            //delete with cascade
+            entityRepository
+                .searchAll(Specification.allOf(createEntitySpecification(entity), CommonSpecification.kindEquals(kind)))
+                .forEach(e -> {
+                    try {
+                        delete(e.getId(), true);
+                    } catch (StoreException ex) {
+                        log.error("Error deleting {}: {}", e.getId(), ex.getMessage());
+                    }
+                });
+        } catch (StoreException e) {
+            log.error("store error: {}", e.getMessage());
+            throw e;
+        }
     }
 
     @Override
@@ -481,6 +554,14 @@ public class ExtensionServiceImpl implements EntityService<Extension>, Extension
 
     @Override
     public void delete(@NotNull String id, @Nullable Boolean cascade) throws StoreException {
+        //finalize if available
+        if (finalizer != null && Boolean.TRUE.equals(cascade)) {
+            Extension extension = entityRepository.find(id);
+            if (extension != null) {
+                finalizer.finalize(extension);
+            }
+        }
+
         log.debug("delete extension with id {} (cascade: {})", id, cascade);
         entityRepository.delete(id);
     }
@@ -494,19 +575,61 @@ public class ExtensionServiceImpl implements EntityService<Extension>, Extension
     @Override
     public void deleteByUser(@NotNull String user, @Nullable Boolean cascade) throws StoreException {
         log.debug("delete extensions by user {} (cascade: {})", user, cascade);
-        entityRepository.deleteAll(CommonSpecification.createdByEquals(user));
+
+        if (Boolean.TRUE.equals(cascade)) {
+            //delete one by one with cascade
+            entityRepository
+                .searchAll(CommonSpecification.createdByEquals(user))
+                .forEach(e -> {
+                    try {
+                        delete(e.getId(), cascade);
+                    } catch (StoreException ex) {
+                        log.error("Error deleting {}: {}", e.getId(), ex.getMessage());
+                    }
+                });
+        } else {
+            //bulk delete
+            long count = entityRepository.deleteAll(CommonSpecification.createdByEquals(user));
+            log.debug("deleted {} entities", count);
+        }
     }
 
     @Override
     public void deleteByProject(@NotNull String project, @Nullable Boolean cascade) throws StoreException {
         log.debug("delete extensions by project {} (cascade: {})", project, cascade);
-        entityRepository.deleteAll(CommonSpecification.projectEquals(project));
+        if (Boolean.TRUE.equals(cascade)) {
+            entityRepository
+                .searchAll(CommonSpecification.projectEquals(project))
+                .forEach(e -> {
+                    try {
+                        delete(e.getId(), cascade);
+                    } catch (StoreException ex) {
+                        log.error("Error deleting {}: {}", e.getId(), ex.getMessage());
+                    }
+                });
+        } else {
+            long count = entityRepository.deleteAll(CommonSpecification.projectEquals(project));
+            log.debug("deleted {} entities", count);
+        }
     }
 
     @Override
     public void deleteByKind(@NotNull String kind, @Nullable Boolean cascade) throws StoreException {
         log.debug("delete extensions by kind {} (cascade: {})", kind, cascade);
-        entityRepository.deleteAll(CommonSpecification.kindEquals(kind));
+        if (Boolean.TRUE.equals(cascade)) {
+            entityRepository
+                .searchAll(CommonSpecification.kindEquals(kind))
+                .forEach(e -> {
+                    try {
+                        delete(e.getId(), cascade);
+                    } catch (StoreException ex) {
+                        log.error("Error deleting {}: {}", e.getId(), ex.getMessage());
+                    }
+                });
+        } else {
+            long count = entityRepository.deleteAll(CommonSpecification.kindEquals(kind));
+            log.debug("deleted {} entities", count);
+        }
     }
 
     @Override

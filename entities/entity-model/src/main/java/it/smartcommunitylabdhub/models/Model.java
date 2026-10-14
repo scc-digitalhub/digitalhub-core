@@ -35,7 +35,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import lombok.AllArgsConstructor;
@@ -88,6 +87,5 @@ public class Model implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO, Extensib
     private Map<String, Serializable> status = new HashMap<>();
 
     @Nullable
-    @Builder.Default
-    private List<Map<String, Serializable>> extensions = new LinkedList<>();
+    private List<Map<String, Serializable>> extensions;
 }
