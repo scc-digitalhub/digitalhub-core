@@ -139,6 +139,7 @@ public class ExtensionsEntityServiceAspect {
                     Extension ext = ExtensionBuilder.from(resBase);
                     ext.setKind(ed.getKind());
                     ext.setName(ed.getName());
+                    ext.setId(ed.getId());
                     ext.setSpec(ed.getSpec());
                     ext.setEntity(entityName);
 
@@ -231,6 +232,7 @@ public class ExtensionsEntityServiceAspect {
                     Extension ext = ExtensionBuilder.from(resBase);
                     ext.setKind(ed.getKind());
                     ext.setName(ed.getName());
+                    ext.setId(ed.getId());
                     ext.setSpec(ed.getSpec());
                     ext.setEntity(entityName);
 

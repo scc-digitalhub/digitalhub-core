@@ -460,8 +460,11 @@ public class ExtensionServiceImpl implements EntityService<Extension>, Extension
         //merge spec
         current.setSpec(dto.getSpec());
 
+        //merge status
+        current.setStatus(dto.getStatus());
+
         //update
-        Extension extension = entityRepository.update(id, dto);
+        Extension extension = entityRepository.update(id, current);
         if (log.isTraceEnabled()) {
             log.trace("res: {}", extension);
         }
