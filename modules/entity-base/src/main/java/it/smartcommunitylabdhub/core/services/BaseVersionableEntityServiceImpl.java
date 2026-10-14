@@ -27,14 +27,11 @@ import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.core.events.EntityOperationsPublisher;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilterConverter;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
-import it.smartcommunitylabdhub.events.EntityAction;
-import it.smartcommunitylabdhub.events.EntityOperation;
 import jakarta.validation.constraints.NotNull;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -46,7 +43,6 @@ import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.lang.Nullable;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
@@ -66,13 +62,10 @@ public abstract class BaseVersionableEntityServiceImpl<
     protected SearchableEntityRepository<E, D> repository;
     protected Converter<D, E> entityBuilder;
     protected Converter<E, D> dtoBuilder;
-    protected EntityFinalizer<D> finalizer;
     protected final Class<D> type;
     protected final Class<E> clazz;
 
     protected Converter<SearchFilter<D>, SearchFilter<E>> filterConverter;
-
-    protected EntityOperationsPublisher operationsPublisher;
 
     protected BaseVersionableEntityServiceImpl() {
         // resolve generics type via subclass trick
@@ -118,20 +111,10 @@ public abstract class BaseVersionableEntityServiceImpl<
     }
 
     @Autowired(required = false)
-    public void setFinalizer(EntityFinalizer<D> finalizer) {
-        this.finalizer = finalizer;
-    }
-
-    @Autowired(required = false)
     public void setFilterConverter(Converter<SearchFilter<D>, SearchFilter<E>> filterConverter) {
         if (filterConverter != null) {
             this.filterConverter = filterConverter;
         }
-    }
-
-    @Autowired(required = false)
-    public void setOperationsPublisher(EntityOperationsPublisher operationsPublisher) {
-        this.operationsPublisher = operationsPublisher;
     }
 
     @Override
@@ -148,42 +131,6 @@ public abstract class BaseVersionableEntityServiceImpl<
     /*
      * Service
      */
-
-    @Override
-    public void deleteAll(@NotNull String project, @NotNull String name, @Nullable Boolean cascade)
-        throws StoreException {
-        log.debug("delete all by project {} and name {}", project, name);
-        Specification<E> spec = Specification.allOf(
-            CommonSpecification.projectEquals(project),
-            CommonSpecification.nameEquals(name)
-        );
-
-        if (Boolean.TRUE.equals(cascade)) {
-            //delete one by one with cascade
-            repository
-                .searchAll(spec)
-                .forEach(e -> {
-                    try {
-                        if (operationsPublisher != null) {
-                            //dispatch delete op
-                            operationsPublisher.publish(new EntityOperation<>(e, EntityAction.DELETE));
-                        } else {
-                            //first perform gc via finalizer
-                            finalizer.finalize(e);
-
-                            //then remove from repo
-                            repository.delete(e.getId());
-                        }
-                    } catch (StoreException ex) {
-                        log.error("Error deleting {}: {}", e.getId(), ex.getMessage());
-                    }
-                });
-        } else {
-            //bulk delete
-            long count = repository.deleteAll(spec);
-            log.debug("deleted {} entities", count);
-        }
-    }
 
     @Override
     public List<D> findAll(@NotNull String project, @NotNull String name) throws StoreException {

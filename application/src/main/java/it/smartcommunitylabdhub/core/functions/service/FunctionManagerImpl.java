@@ -357,7 +357,9 @@ public class FunctionManagerImpl implements FunctionManager {
     public void deleteFunctions(@NotNull String project, @NotNull String name) {
         log.debug("delete functions for project {} with name {}", project, name);
         try {
-            versionableService.deleteAll(project, name, true);
+            for (Function function : versionableService.findAll(project, name)) {
+                entityService.delete(function.getId(), true);
+            }
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

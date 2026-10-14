@@ -332,7 +332,9 @@ public class DataItemManagerImpl implements DataItemManager {
     public void deleteDataItems(@NotNull String project, @NotNull String name, @Nullable Boolean cascade) {
         log.debug("delete dataItems for project {} with name {}", project, name);
         try {
-            versionableService.deleteAll(project, name, cascade);
+            for (DataItem dataItem : versionableService.findAll(project, name)) {
+                entityService.delete(dataItem.getId(), cascade);
+            }
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

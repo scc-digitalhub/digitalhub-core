@@ -31,14 +31,11 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.lang.Nullable;
 
 /*
  * Entity service for VERSIONABLE DTOs, where versions are grouped by `project`+`name` and identified by `id`.
  */
 public interface VersionableEntityService<D extends BaseDTO> {
-    void deleteAll(@NotNull String project, @NotNull String name, @Nullable Boolean cascade) throws StoreException;
-
     List<D> findAll(@NotNull String project, @NotNull String name) throws StoreException;
     Page<D> findAll(@NotNull String project, @NotNull String name, Pageable page) throws StoreException;
 

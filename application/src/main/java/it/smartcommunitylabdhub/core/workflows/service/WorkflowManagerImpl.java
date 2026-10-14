@@ -359,7 +359,9 @@ public class WorkflowManagerImpl implements WorkflowManager {
     public void deleteWorkflows(@NotNull String project, @NotNull String name) {
         log.debug("delete workflows for project {} with name {}", project, name);
         try {
-            versionableService.deleteAll(project, name, true);
+            for (Workflow workflow : versionableService.findAll(project, name)) {
+                entityService.delete(workflow.getId(), true);
+            }
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

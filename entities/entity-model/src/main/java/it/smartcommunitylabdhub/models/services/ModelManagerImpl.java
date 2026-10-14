@@ -331,7 +331,9 @@ public class ModelManagerImpl implements ModelManager {
     public void deleteModels(@NotNull String project, @NotNull String name, @Nullable Boolean cascade) {
         log.debug("delete models for project {} with name {}", project, name);
         try {
-            versionableService.deleteAll(project, name, cascade);
+            for (Model model : versionableService.findAll(project, name)) {
+                entityService.delete(model.getId(), cascade);
+            }
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

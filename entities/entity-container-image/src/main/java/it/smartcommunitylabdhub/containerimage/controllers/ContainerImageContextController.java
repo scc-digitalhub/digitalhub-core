@@ -141,7 +141,9 @@ public class ContainerImageContextController {
         @ParameterObject @RequestParam @Valid @NotNull @Pattern(regexp = Keys.NAME_PATTERN) String name,
         @RequestParam(required = false) Boolean cascade
     ) throws StoreException {
-        versionableService.deleteAll(project, name, cascade);
+        for (ContainerImage containerImage : versionableService.findAll(project, name)) {
+            entityService.delete(containerImage.getId(), cascade);
+        }
     }
 
     /*

@@ -333,7 +333,9 @@ public class ArtifactManagerImpl implements ArtifactManager {
     public void deleteArtifacts(@NotNull String project, @NotNull String name, @Nullable Boolean cascade) {
         log.debug("delete artifacts for project {} with name {}", project, name);
         try {
-            versionableService.deleteAll(project, name, cascade);
+            for (Artifact artifact : versionableService.findAll(project, name)) {
+                entityService.delete(artifact.getId(), cascade);
+            }
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
