@@ -29,9 +29,9 @@
   },
   "model_path": {
     "ui:title@en": "IR Model",
-    "ui:description@en": "Explicit IR override. Empty in both run and task uses function.ir_model. Example: store://my-project/model/tvm-ir/xinet-ir:version.",
+    "ui:description@en": "Explicit IR override for this run. Empty uses function.ir_model. Example: store://my-project/model/tvm-ir/xinet-ir:version.",
     "ui:title@it": "Modello IR",
-    "ui:description@it": "Override del modello IR. Vuoto sia nella run sia nel task usa function.ir_model. Esempio: store://my-project/model/tvm-ir/xinet-ir:version."
+    "ui:description@it": "Override del modello IR per questa run. Vuoto usa function.ir_model. Esempio: store://my-project/model/tvm-ir/xinet-ir:version."
   },
   "target_architecture": {
     "ui:title@en": "Target CPU Profile",
@@ -39,13 +39,34 @@
     "ui:title@it": "Profilo CPU di destinazione",
     "ui:description@it": "CPU che eseguirà model.so. auto usa l'architettura del nodo di compilazione. AMD64 indica Intel/AMD a 64 bit; ARM32 richiede ARMv7 hard-float con NEON. I profili native e quelli per una scheda specifica richiedono le stesse caratteristiche CPU.",
     "oneOf": [
-      { "ui:title@en": "Compile node CPU - generic", "ui:title@it": "CPU del nodo di compilazione - generica" },
-      { "ui:title@en": "Intel/AMD 64-bit - x86-64-v2", "ui:title@it": "Intel/AMD 64 bit - x86-64-v2" },
-      { "ui:title@en": "Intel/AMD 64-bit - x86-64-v3 (AVX2)", "ui:title@it": "Intel/AMD 64 bit - x86-64-v3 (AVX2)" },
-      { "ui:title@en": "Intel/AMD 64-bit - compile node CPU (native)", "ui:title@it": "Intel/AMD 64 bit - CPU del nodo (native)" },
-      { "ui:title@en": "ARM 64-bit - generic (AArch64)", "ui:title@it": "ARM 64 bit - generico (AArch64)" },
-      { "ui:title@en": "Raspberry Pi 5 - ARM 64-bit (Cortex-A76)", "ui:title@it": "Raspberry Pi 5 - ARM 64 bit (Cortex-A76)" },
-      { "ui:title@en": "ARM 32-bit - ARMv7 (hard-float, NEON)", "ui:title@it": "ARM 32 bit - ARMv7 (hard-float, NEON)" }
+      {
+        "ui:title@en": "Compile node CPU - generic",
+        "ui:title@it": "CPU del nodo di compilazione - generica"
+      },
+      {
+        "ui:title@en": "Intel/AMD 64-bit - x86-64-v2",
+        "ui:title@it": "Intel/AMD 64 bit - x86-64-v2"
+      },
+      {
+        "ui:title@en": "Intel/AMD 64-bit - x86-64-v3 (AVX2)",
+        "ui:title@it": "Intel/AMD 64 bit - x86-64-v3 (AVX2)"
+      },
+      {
+        "ui:title@en": "Intel/AMD 64-bit - compile node CPU (native)",
+        "ui:title@it": "Intel/AMD 64 bit - CPU del nodo (native)"
+      },
+      {
+        "ui:title@en": "ARM 64-bit - generic (AArch64)",
+        "ui:title@it": "ARM 64 bit - generico (AArch64)"
+      },
+      {
+        "ui:title@en": "Raspberry Pi 5 - ARM 64-bit (Cortex-A76)",
+        "ui:title@it": "Raspberry Pi 5 - ARM 64 bit (Cortex-A76)"
+      },
+      {
+        "ui:title@en": "ARM 32-bit - ARMv7 (hard-float, NEON)",
+        "ui:title@it": "ARM 32 bit - ARMv7 (hard-float, NEON)"
+      }
     ]
   },
   "tag": {
@@ -253,5 +274,16 @@
       "ui:title@it": "Consenti tuning parziale",
       "ui:description@it": "Accetta una copertura incompleta dei task, solo per prove rapide. Esempio: false."
     }
-  }
+  },
+  "ui:order": [
+    "task",
+    "inputs",
+    "model_path",
+    "target_architecture",
+    "tag",
+    "image",
+    "optimization",
+    "tuning",
+    "*"
+  ]
 }

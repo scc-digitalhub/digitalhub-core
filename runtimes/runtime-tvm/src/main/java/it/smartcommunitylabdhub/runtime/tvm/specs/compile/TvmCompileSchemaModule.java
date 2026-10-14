@@ -40,7 +40,18 @@ public class TvmCompileSchemaModule implements com.github.victools.jsonschema.ge
                 else if (type == Double.class) attributes.put("default", Double.parseDouble(value.asText()));
                 else if (type == Boolean.class) attributes.put("default", Boolean.parseBoolean(value.asText()));
             });
-        builder.forTypesInGeneral().withCustomDefinitionProvider(new CompileProvider());
+        builder
+            .forTypesInGeneral()
+            .withTypeAttributeOverride((schema, type, context) -> {
+                if (!type.getType().getErasedType().getName().equals(TvmTargetArchitecture.class.getName())) return;
+                // Apply labels after enum providers, regardless of registry initialization order.
+                schema.remove("enum");
+                ArrayNode options = schema.putArray("oneOf");
+                for (TvmTargetArchitecture target : TvmTargetArchitecture.values()) {
+                    options.addObject().put("const", target.name()).put("title", target.getLabel());
+                }
+            })
+            .withCustomDefinitionProvider(new CompileProvider());
     }
 
     private static class CompileProvider implements CustomDefinitionProviderV2 {
@@ -48,17 +59,9 @@ public class TvmCompileSchemaModule implements com.github.victools.jsonschema.ge
         @Override
         public CustomDefinition provideCustomSchemaDefinition(ResolvedType type, SchemaGenerationContext context) {
             String name = type.getErasedType().getName();
-            if (name.equals(TvmTargetArchitecture.class.getName())) {
-                ObjectNode schema = context.getGeneratorConfig().createObjectNode().put("type", "string");
-                ArrayNode options = schema.putArray("oneOf");
-                for (TvmTargetArchitecture target : TvmTargetArchitecture.values()) {
-                    options.addObject().put("const", target.name()).put("title", target.getLabel());
-                }
-                return new CustomDefinition(schema);
-            }
             if (
-                !name.equals(TvmCompileTaskSpec.class.getName()) &&
-                !name.equals(TvmCompileTaskSpec.class.getName() + "Proxy")
+                !name.equals(TvmCompileRunSpec.class.getName()) &&
+                !name.equals(TvmCompileRunSpec.class.getName() + "Proxy")
             ) return null;
             ObjectNode schema = context.createStandardDefinition(type, this);
             ObjectNode properties = (ObjectNode) schema.get("properties");

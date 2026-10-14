@@ -17,8 +17,14 @@ speed) and serves it with the **Open Inference Protocol v2** over REST and gRPC.
 
 The tasks are chained through the function: build writes `ir_model`, compile reads it and
 writes `so_model` on the **same function version**. Serve uses that `so_model` reference,
-without searching compile history. Any task can also be pointed at a specific Model with
+without searching compile history. A compile or serve run can override its Model with
 `model_path`, so one IR can be compiled for many targets.
+
+Tasks hold the function reference and common Kubernetes settings (`profile`, `resources`,
+`envs`, `secrets`, `volumes`). TVM options belong to each run: build conversion settings,
+compile target/optimization/tuning, and serve model/image/workers/service settings.
+Old TVM options stored in tasks are not used or migrated; pass them in the run instead.
+For scheduled or lifecycle-triggered runs, put the same run options in `trigger.spec.template`.
 
 ---
 
@@ -42,27 +48,40 @@ spec:
   model: store://my-project/model/onnx/yolov8n
 ```
 
-**3. Run the three tasks**, one after the other:
+**3. Start a run for each action**, one after the other. The console creates/selects
+the corresponding task. With the API, create a task for each action first; for example:
+
+```yaml
+kind: tvm+compile
+spec:
+  function: tvm://my-project/yolov8n:<function-id>
+  resources: { cpu: "4", mem: 8Gi }
+```
+
+Use the returned task IDs in the run payloads below:
 
 ```yaml
 # build: source -> tvm-ir
-kind: tvm+build
+kind: tvm+build:run
 spec:
+  task: tvm+build://my-project/<build-task-id>
   resources: { cpu: "2", mem: 4Gi }
 ```
 
 ```yaml
 # compile: tvm-ir -> tvm-so
-kind: tvm+compile
+kind: tvm+compile:run
 spec:
+  task: tvm+compile://my-project/<compile-task-id>
   target_architecture: amd64_v3
   resources: { cpu: "4", mem: 8Gi }
 ```
 
 ```yaml
 # serve: tvm-so -> endpoint
-kind: tvm+serve
+kind: tvm+serve:run
 spec:
+  task: tvm+serve://my-project/<serve-task-id>
   service_type: NodePort
   resources: { cpu: "4" }
 ```
@@ -97,7 +116,7 @@ works, with the format taken from the file extension.
 | `onnx`   | `inputs`, `outputs`, `parameters`, `opset` (opset used at export) |
 | `tflite` | `inputs`, `outputs`, `parameters`                                 |
 
-**Produced models**, created by the tasks:
+**Produced models**, created by the runs:
 
 | Kind     | Files                                                                                          | Fields                                                                                        |
 | -------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
@@ -114,7 +133,9 @@ Each tensor in `inputs` / `outputs` has `name`, `dtype` and `shape`. Quantized t
 
 Every option is optional unless marked as required.
 
-### Common to all tasks
+### Common task settings
+
+Runs inherit these settings from the task and can override them for one execution.
 
 | Option      | Description                                                                           |
 | ----------- | ------------------------------------------------------------------------------------- |
@@ -123,7 +144,8 @@ Every option is optional unless marked as required.
 | `secrets`   | Secrets exposed to the container as environment variables.                            |
 | `volumes`   | Extra volumes to mount.                                                               |
 | `profile`   | Resource profile defined by the platform.                                             |
-| `image`     | Use another image for this run instead of the configured one.                         |
+
+`image` belongs to the run, for all three actions. Empty uses the platform's configured image.
 
 ### `tvm+build`
 
@@ -149,7 +171,8 @@ onnxsim and converts it again, and `metadata.json` records `simplified_automatic
 The console uses two collapsible groups, defined by this runtime's schemas:
 `optimization` (advanced compilation settings, still used when tuning is off) and
 `tuning` (MetaSchedule mode and its active settings). No console extension is needed.
-For example, the canonical task/run spec contains:
+In the console, common settings are in the **Task** step and TVM options in the **Run**
+step. For example, the canonical compile run spec contains:
 
 ```yaml
 target_architecture: amd64
@@ -162,12 +185,10 @@ tuning:
   tuning_runner: local
 ```
 
-Legacy flat SDK/YAML parameters remain valid inputs, including the examples below;
+Flat API/YAML run parameters remain valid inputs, including the examples below;
 CORE exports newly saved specs in grouped form. When both forms set the same option,
-the grouped value wins within that spec. Individual run options override task options.
-Existing flat tasks remain executable; resave them through the API/SDK to normalize
-their representation before editing the grouped console form. No database migration
-or modification of existing tasks is performed automatically.
+the grouped value wins within that run. No TVM options are inherited from tasks.
+New runs use their own options or the defaults, independently of previous runs.
 
 With `off`, tuning-only values are ignored before conversion/validation and no tuning
 database is downloaded. With `apply`, only the database and coverage options
@@ -180,7 +201,7 @@ the total `tuning_trials` budget remains an explicit user choice.
 An explicit compile `model_path` overrides the function's `ir_model`, including after
 a new build. If compilation reports `model.relax.json not found`, check that reference
 and its stored files. To compile the latest IR linked to the function, clear
-`model_path` in **both the run and its reusable task**. CORE does not silently fall
+`model_path` in **the run**. CORE does not silently fall
 back from a broken explicit reference to a different model.
 
 **Model and build**
@@ -246,7 +267,7 @@ target.
 | `service_type` | `ClusterIP`         | `ClusterIP`, `NodePort` or `LoadBalancer`.                                    |
 | `service_name` | —                   | Extra Service name, `<function>-<service_name>`.                              |
 
-Selection order is an explicit run `model_path`, then the task's `model_path`, otherwise
+Selection order is an explicit run `model_path`, otherwise
 **`function.spec.so_model` of the exact function version referenced by the run**. There
 is no search through compile history. An empty function reference without an explicit
 model fails with an actionable error. The selected key is pinned in the serve run's
@@ -322,7 +343,7 @@ supported toolkit node, and `auto` builds for the node where the Job runs.
 Older API values remain accepted: `cpu`/`llvm` → `auto`, `x86` → `amd64`,
 `x86_v3` → `amd64_v3`, `x86_native` → `amd64_native`, `armv7l` → `arm32`.
 New saves use the new values. Existing database records are not migrated automatically:
-when editing an old task, reselect its target profile and save it once.
+when cloning an old run, reselect its target profile and save the new run.
 LLVM triples, compiler names and container platforms keep their standard names, such
 as `aarch64-linux-gnu`, `armv7l-unknown-linux-gnueabihf` and `linux/arm/v7`.
 
@@ -338,8 +359,9 @@ The weights are also rearranged for that code.
 1. **Tune once**, on the same kind of CPU used for serving:
 
    ```yaml
-   kind: tvm+compile
+   kind: tvm+compile:run
    spec:
+     task: tvm+compile://my-project/<compile-task-id>
      target_architecture: amd64_native
      target_num_cores: 4
      tuning_mode: tune
@@ -355,8 +377,9 @@ The weights are also rearranged for that code.
    of the tuned Model in `tuning_model_path`:
 
    ```yaml
-   kind: tvm+compile
+   kind: tvm+compile:run
    spec:
+     task: tvm+compile://my-project/<compile-task-id>
      target_architecture: amd64_native
      target_num_cores: 4
      tuning_mode: apply

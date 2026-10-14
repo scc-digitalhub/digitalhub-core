@@ -62,12 +62,12 @@ public class TvmServeRunner extends TvmBaseRunner {
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
         String funcName = taskAccessor.getFunction();
 
-        String servedName = StringUtils.hasText(taskSpec.getServedName())
-            ? taskSpec.getServedName()
+        String servedName = StringUtils.hasText(runSpec.getServedName())
+            ? runSpec.getServedName()
             : TvmRunnerHelper.cleanName(funcName);
 
         String modelKey = resolveModelKey(
-            taskSpec.getModelPath(),
+            runSpec.getModelPath(),
             functionSpec != null ? functionSpec.getSoModel() : null
         );
         Model model = modelKey.startsWith(Keys.STORE_PREFIX)
@@ -83,8 +83,8 @@ public class TvmServeRunner extends TvmBaseRunner {
         envs.add(new CoreEnv("TVM_TASK_KIND", TvmServeTaskSpec.KIND));
         envs.add(new CoreEnv("TVM_MODEL_DIR", modelDir));
         envs.add(new CoreEnv("TVM_MODEL_NAME", servedName));
-        addEnv(envs, "TVM_SERVE_WORKERS", taskSpec.getWorkers());
-        Integer threads = threadsPerWorker(requestedCpuCores(taskSpec), taskSpec.getWorkers());
+        addEnv(envs, "TVM_SERVE_WORKERS", runSpec.getWorkers());
+        Integer threads = threadsPerWorker(requestedCpuCores(taskSpec), runSpec.getWorkers());
         if (!hasTaskEnv(taskSpec, "TVM_NUM_THREADS")) {
             addEnv(envs, "TVM_NUM_THREADS", threads);
         }
@@ -94,9 +94,9 @@ public class TvmServeRunner extends TvmBaseRunner {
         );
 
         String image = resolveImage(
-            taskSpec.getImage(),
+            runSpec.getImage(),
             properties.getServe(),
-            "no serve image configured: set task.image or runtime.tvm.serve"
+            "no serve image configured: set run.image or runtime.tvm.serve"
         );
 
         List<CorePort> servicePorts = List.of(
@@ -105,8 +105,8 @@ public class TvmServeRunner extends TvmBaseRunner {
         );
 
         List<String> serviceNames = new ArrayList<>();
-        if (StringUtils.hasText(taskSpec.getServiceName())) {
-            serviceNames.add(funcName + "-" + taskSpec.getServiceName());
+        if (StringUtils.hasText(runSpec.getServiceName())) {
+            serviceNames.add(funcName + "-" + runSpec.getServiceName());
         }
         // Alias registration is best-effort and must not prevent serving.
         if (functionService != null) {
@@ -124,9 +124,9 @@ public class TvmServeRunner extends TvmBaseRunner {
         return applyCommon(
             K8sServeRunnable.builder()
                 .nodeSelector(architectureSelector(architecture))
-                .replicas(taskSpec.getReplicas())
+                .replicas(runSpec.getReplicas())
                 .servicePorts(servicePorts)
-                .serviceType(taskSpec.getServiceType())
+                .serviceType(runSpec.getServiceType())
                 .serviceNames(serviceNames.isEmpty() ? null : serviceNames)
                 .build(),
             run,

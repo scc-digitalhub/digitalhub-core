@@ -138,12 +138,11 @@ public class TvmRuntime
             default -> throw new IllegalArgumentException("Unknown task kind: " + task.getKind());
         };
 
-        // Run overrides task options; the function owns the model references.
+        // The task supplies common settings; TVM options belong to the run.
         boolean compile = runSpec instanceof TvmCompileRunSpec;
         Map<String, Serializable> map = new LinkedHashMap<>(runSpec.toMap());
         if (compile) {
             map = TvmCompileOptions.flatten(map);
-            taskMap = TvmCompileOptions.flatten(taskMap);
         }
         taskMap.forEach(map::putIfAbsent);
         map.putAll(funSpec.toMap());
@@ -156,10 +155,10 @@ public class TvmRuntime
         if (runSpec instanceof TvmServeRunSpec serveSpec) {
             // Pin the model in this run, not in the reusable task.
             String model = TvmServeRunner.resolveModelKey(
-                serveSpec.getTaskServeSpec().getModelPath(),
+                serveSpec.getModelPath(),
                 funSpec.getSoModel()
             );
-            serveSpec.getTaskServeSpec().setModelPath(model);
+            serveSpec.setModelPath(model);
         }
         return runSpec;
     }

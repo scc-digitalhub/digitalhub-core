@@ -55,13 +55,13 @@ public class TvmBuildRunner extends TvmBaseRunner {
         envs.add(new CoreEnv("TVM_TASK_KIND", TvmBuildTaskSpec.KIND));
         envs.add(new CoreEnv("TVM_FUNCTION_NAME", funcName));
         envs.add(new CoreEnv("TVM_INPUT_FILE", inputFile));
-        addEnv(envs, "TVM_KEEP_PARAMS_IN_INPUT", taskSpec.getKeepParamsInInput());
-        addEnv(envs, "TVM_SANITIZE_INPUT_NAMES", taskSpec.getSanitizeInputNames());
-        addEnv(envs, "TVM_SIMPLIFY", taskSpec.getSimplify());
-        addEnv(envs, "TVM_TARGET_OPSET", taskSpec.getTargetOpset());
-        addEnv(envs, "TVM_OPSET_OVERRIDE", taskSpec.getOpsetOverride());
-        addEnv(envs, "TVM_STRICT_SHAPE_INFER", taskSpec.getStrictShapeInference());
-        addEnv(envs, "TVM_DATA_PROP", taskSpec.getDataProp());
+        addEnv(envs, "TVM_KEEP_PARAMS_IN_INPUT", runSpec.getKeepParamsInInput());
+        addEnv(envs, "TVM_SANITIZE_INPUT_NAMES", runSpec.getSanitizeInputNames());
+        addEnv(envs, "TVM_SIMPLIFY", runSpec.getSimplify());
+        addEnv(envs, "TVM_TARGET_OPSET", runSpec.getTargetOpset());
+        addEnv(envs, "TVM_OPSET_OVERRIDE", runSpec.getOpsetOverride());
+        addEnv(envs, "TVM_STRICT_SHAPE_INFER", runSpec.getStrictShapeInference());
+        addEnv(envs, "TVM_DATA_PROP", runSpec.getDataProp());
 
         String scriptLocation = builderScriptLocation(format);
         String scriptName = TvmRunnerHelper.scriptName(scriptLocation);
@@ -79,7 +79,7 @@ public class TvmBuildRunner extends TvmBaseRunner {
         );
 
         String image = resolveImage(
-            taskSpec.getImage(),
+            runSpec.getImage(),
             properties.getBuilders() != null ? properties.getBuilders().get(format.name()) : null,
             "no builder image configured for format: " + format.name()
         );

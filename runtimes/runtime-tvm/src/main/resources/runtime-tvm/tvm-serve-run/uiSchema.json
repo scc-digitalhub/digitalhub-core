@@ -68,5 +68,17 @@
     "ui:description@en": "Extra Service name, <function>-<service name>.",
     "ui:title@it": "Nome del servizio",
     "ui:description@it": "Nome aggiuntivo del Service, <funzione>-<nome servizio>."
-  }
+  },
+  "ui:order": [
+    "task",
+    "inputs",
+    "model_path",
+    "served_name",
+    "image",
+    "replicas",
+    "workers",
+    "service_type",
+    "service_name",
+    "*"
+  ]
 }
