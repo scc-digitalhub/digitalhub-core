@@ -218,7 +218,7 @@ public class VLLMServeRunner {
         });
 
         //read source and build context
-        List<ContextRef> contextRefs = null;
+        List<ContextRef> contextRefs = new ArrayList<>();
         List<ContextSource> contextSources = new ArrayList<>();
 
         //inject custom passwd to add our user
@@ -276,7 +276,7 @@ public class VLLMServeRunner {
         } else {
             args.add("/shared/model");
 
-            contextRefs = Collections.singletonList(
+            contextRefs.add(
                 ContextRef.builder().source(url).protocol(uri.getScheme()).destination("model").build()
             );
         }
@@ -326,7 +326,7 @@ public class VLLMServeRunner {
                 if (!"huggingface".equals(adapterUri.getScheme()) || "hf".equals(adapterUri.getScheme())) {
                     if (!adapterSource.endsWith("/")) adapterSource += "/";
                     ref = "/shared/adapters/" + adapter.getName() + "/";
-                    contextRefs = Collections.singletonList(
+                    contextRefs.add(
                         ContextRef.builder()
                             .source(adapterSource)
                             .protocol(adapterUri.getScheme())
