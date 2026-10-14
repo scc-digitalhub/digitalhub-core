@@ -41,7 +41,7 @@ public class TvmCompileTaskSpec extends K8sFunctionTaskBaseSpec {
     private String modelPath;
 
     @JsonProperty("target_architecture")
-    @Schema(title = "Target", description = "Hardware the library is built for: cpu (generic, node of the Job), x86 (x86-64-v2), x86_v3 (AVX2), x86_native (CPU of the Job), arm64, arm64_pi5 (Raspberry Pi 5).", defaultValue = "cpu")
+    @Schema(title = "Target CPU Profile", description = "CPU that will run model.so. auto uses the compile node's architecture; amd64 profiles are Intel/AMD 64-bit, arm64 profiles are ARM 64-bit, and arm32 requires ARMv7 hard-float with NEON. Native and board-specific profiles require matching CPU features.", defaultValue = "auto")
     private TvmTargetArchitecture targetArchitecture;
 
     @JsonProperty("target_num_cores")
@@ -195,9 +195,8 @@ public class TvmCompileTaskSpec extends K8sFunctionTaskBaseSpec {
     public void configure(Map<String, Serializable> data) {
         Map<String, Serializable> active = TvmCompileOptions.active(data);
         this.inactiveTuning = TvmCompileOptions.inactive(data, active);
-        data = active;
-        super.configure(data);
-        TvmCompileTaskSpec spec = mapper.convertValue(data, TvmCompileTaskSpec.class);
+        super.configure(active);
+        TvmCompileTaskSpec spec = mapper.convertValue(active, TvmCompileTaskSpec.class);
         this.modelPath = spec.getModelPath();
         this.targetArchitecture = spec.getTargetArchitecture();
         this.targetNumCores = spec.getTargetNumCores();

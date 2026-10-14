@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import os
 import shutil
 import sys
@@ -25,7 +26,7 @@ from tvm.s_tir import meta_schedule as ms
 from tvm.s_tir.meta_schedule.relax_integration import extract_tasks, tune_relax
 from tvm.tirx.function import PrimFunc
 
-from common import fail, option, read_json, to_bool, to_list, write_json
+from common import fail, option, read_json, target_triple, to_bool, to_list, write_json
 
 WORKLOAD_FILE = "database_workload.json"
 RECORD_FILE = "database_tuning_record.json"
@@ -164,18 +165,42 @@ def module_sha256(mod) -> str:
     return hashlib.sha256(tvm.ir.save_json(mod).encode("utf-8")).hexdigest()
 
 
+def compatible_metadata(identity: dict, metadata: dict) -> bool:
+    return (
+        all(metadata.get(key) == identity.get(key) for key in ("target", "tvm_version"))
+        and all(not metadata.get(key) or not identity.get(key) or metadata[key] == identity[key]
+                for key in ("source_sha256", "tvm_git_commit", "ir_sha256"))
+    )
+
+
 def database_identity(source: Path) -> tuple[dict, str]:
     """Read the manifest, falling back to legacy Model metadata."""
-    if (source / MANIFEST_FILE).is_file():
-        return read_json(source / MANIFEST_FILE), "manifest"
+    identity = read_json(source / MANIFEST_FILE) if (source / MANIFEST_FILE).is_file() else None
+    basis = "manifest" if identity is not None else "legacy metadata"
+    if identity is not None and identity.get("target_triple"):
+        return identity, basis
     for metadata_path in (source / "metadata.json", source.parent / "metadata.json"):
-        if metadata_path.is_file():
-            metadata = read_json(metadata_path)
-            if metadata.get("target") and metadata.get("tvm_version"):
-                keys = ("tvm_version", "target", "source_sha256", "tvm_git_commit")
-                return {key: metadata.get(key) for key in keys}, "legacy metadata"
-    raise ValueError(f"tuning database under {source} has no {MANIFEST_FILE} or compatible model metadata; "
-                     "retune it before reuse")
+        if not metadata_path.is_file():
+            continue
+        metadata = read_json(metadata_path)
+        if identity is None and metadata.get("target") and metadata.get("tvm_version"):
+            keys = ("tvm_version", "target", "source_sha256", "tvm_git_commit", "ir_sha256", "target_triple")
+            identity = {key: metadata.get(key) for key in keys}
+        if identity is not None and not identity.get("target_triple") and compatible_metadata(identity, metadata):
+            identity["target_triple"] = metadata.get("target_triple")
+        if identity is not None and identity.get("target_triple"):
+            break
+    if identity is None:
+        raise ValueError(f"tuning database under {source} has no {MANIFEST_FILE} or compatible model metadata; "
+                         "retune it before reuse")
+    if not identity.get("target_triple"):
+        try:
+            target = json.loads(identity.get("target", ""))
+        except (TypeError, json.JSONDecodeError):
+            target = None
+        if isinstance(target, dict) and target.get("mtriple"):
+            identity["target_triple"] = target["mtriple"]
+    return identity, basis
 
 
 def check_identity(actual: dict, expected: dict, basis: str) -> None:
@@ -185,6 +210,9 @@ def check_identity(actual: dict, expected: dict, basis: str) -> None:
     mismatches += [f"{key}: database={actual[key]!r}, requested={expected[key]!r}"
                    for key in ("ir_sha256", "source_sha256", "tvm_git_commit")
                    if actual.get(key) and expected.get(key) and actual[key] != expected[key]]
+    if expected.get("target_triple") and actual.get("target_triple") != expected["target_triple"]:
+        mismatches.append(f"target_triple: database={actual.get('target_triple')!r}, "
+                          f"requested={expected['target_triple']!r}; retune if the original target cannot be verified")
     if mismatches:
         raise ValueError(f"incompatible MetaSchedule database ({basis}): " + "; ".join(mismatches))
 
@@ -302,6 +330,18 @@ def tune(args, prepared, selected, all_tasks, target, database: TuningDatabase, 
     return workers
 
 
+def matches_ops(name: str, op_names: Optional[list[str]]) -> bool:
+    return not op_names or any(op in name for op in op_names)
+
+
+def record_timing(record) -> tuple[bool, Optional[float]]:
+    """Return whether the record succeeded and its best time in milliseconds."""
+    if record is None or not record.run_secs:
+        return False, None
+    best = min(float(value) for value in record.run_secs)
+    return best < FAILED_RUN_SECS, best * 1000
+
+
 def coverage(work_dir: Path, mod, target, op_names) -> tuple[int, int, list]:
     """Query with TVM apply-pass keys; return (records, usable records, function coverage)."""
     if not (work_dir / WORKLOAD_FILE).exists() or not (work_dir / RECORD_FILE).exists():
@@ -309,26 +349,25 @@ def coverage(work_dir: Path, mod, target, op_names) -> tuple[int, int, list]:
     database = ms.database.JSONDatabase(path_workload=str(work_dir / WORKLOAD_FILE),
                                         path_tuning_record=str(work_dir / RECORD_FILE), allow_missing=False)
     records = database.get_all_tuning_records()
-    usable = sum(1 for record in records if record.run_secs and min(float(v) for v in record.run_secs) < FAILED_RUN_SECS)
+    usable = sum(record_timing(record)[0] for record in records)
     normalize = tvm.get_global_func("tvm.s_tir.meta_schedule.normalize_mod")
     functions = []
     for global_var, function in mod.functions_items():
         name = global_var.name_hint
-        if not isinstance(function, PrimFunc) or (op_names and not any(op in name for op in op_names)):
+        if not isinstance(function, PrimFunc) or not matches_ops(name, op_names):
             continue
         record = database.query_tuning_record(normalize(function), target, name)
-        run_secs = [float(v) for v in record.run_secs] if record is not None and record.run_secs else []
+        covered, best_run_ms = record_timing(record)
         functions.append({
             "name": name,
-            "covered": bool(run_secs) and min(run_secs) < FAILED_RUN_SECS,
-            "best_run_ms": min(run_secs) * 1000 if run_secs else None,
+            "covered": covered,
+            "best_run_ms": best_run_ms,
         })
     return len(records), usable, functions
 
 
-def run(args: argparse.Namespace, mod, target, effective_target: str, ir_dir: Path, out_dir: Path, pass_ctx, cpu_count: int):
+def run(args: argparse.Namespace, mod, target, effective_target: str, ir_metadata: dict, out_dir: Path, pass_ctx, cpu_count: int):
     """Runs tune or apply. Returns the tuned module and the summary saved in metadata.json."""
-    ir_metadata = read_json(ir_dir / "metadata.json") if (ir_dir / "metadata.json").is_file() else {}
     identity = {
         "schema_version": 1,
         "tvm_version": tvm.__version__,
@@ -337,10 +376,13 @@ def run(args: argparse.Namespace, mod, target, effective_target: str, ir_dir: Pa
         "source_sha256": ir_metadata.get("source_sha256"),
         "tvm_git_commit": os.environ.get("TVM_GIT_COMMIT"),
     }
+    triple = target_triple(target)
+    if triple:
+        identity["target_triple"] = triple
     database = open_database(out_dir, args.tuning_database, identity, weight_prepack=target.kind.name == "llvm")
     prepared = prepare(mod, target, pass_ctx, database.weight_prepack)
     tasks = extract_tasks(prepared, target, params={})
-    selected = [t for t in tasks if not args.tuning_ops or any(op in t.task_name for op in args.tuning_ops)]
+    selected = [t for t in tasks if matches_ops(t.task_name, args.tuning_ops)]
     if not selected:
         fail(f"no MetaSchedule task matches {args.tuning_ops}; available tasks: {[t.task_name for t in tasks]}")
     write_json(database.work_dir / TASKS_FILE, {

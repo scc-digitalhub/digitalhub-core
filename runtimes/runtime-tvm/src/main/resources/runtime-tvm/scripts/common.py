@@ -77,6 +77,15 @@ def sha256_of(path: Path) -> str:
         return hashlib.file_digest(source, "sha256").hexdigest()
 
 
+def target_triple(target) -> Optional[str]:
+    """Return the effective LLVM triple, or None for non-LLVM targets."""
+    import tvm
+
+    if target.kind.name != "llvm":
+        return None
+    return str(target.attrs.get("mtriple") or tvm.target.codegen.llvm_get_system_triple())
+
+
 def print_signature(inputs: list[dict], outputs: list[dict]) -> None:
     for spec in inputs:
         print(f"      in  '{spec['name']}': {spec['dtype']} {spec['shape']}")

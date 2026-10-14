@@ -10,10 +10,19 @@
     "ui:description@it": "Override del modello IR. Vuoto sia nella run sia nel task usa function.ir_model. Esempio: store://my-project/model/tvm-ir/xinet-ir:version."
   },
   "target_architecture": {
-    "ui:title@en": "Target",
-    "ui:description@en": "Hardware the library is built for: cpu (generic, node of the Job), x86 (x86-64-v2), x86_v3 (AVX2), x86_native (CPU of the Job), arm64, arm64_pi5 (Raspberry Pi 5), armv7l (32-bit ARM).",
-    "ui:title@it": "Target",
-    "ui:description@it": "Hardware per cui si compila la libreria: cpu (generica, nodo del Job), x86 (x86-64-v2), x86_v3 (AVX2), x86_native (CPU del Job), arm64, arm64_pi5 (Raspberry Pi 5), armv7l (ARM 32 bit)."
+    "ui:title@en": "Target CPU Profile",
+    "ui:description@en": "CPU that will run model.so. auto uses the compile node's architecture. AMD64 means Intel/AMD 64-bit; ARM32 requires ARMv7 hard-float with NEON. Native and board-specific profiles require matching CPU features.",
+    "ui:title@it": "Profilo CPU di destinazione",
+    "ui:description@it": "CPU che eseguirà model.so. auto usa l'architettura del nodo di compilazione. AMD64 indica Intel/AMD a 64 bit; ARM32 richiede ARMv7 hard-float con NEON. I profili native e quelli per una scheda specifica richiedono le stesse caratteristiche CPU.",
+    "oneOf": [
+      { "ui:title@en": "Compile node CPU - generic", "ui:title@it": "CPU del nodo di compilazione - generica" },
+      { "ui:title@en": "Intel/AMD 64-bit - x86-64-v2", "ui:title@it": "Intel/AMD 64 bit - x86-64-v2" },
+      { "ui:title@en": "Intel/AMD 64-bit - x86-64-v3 (AVX2)", "ui:title@it": "Intel/AMD 64 bit - x86-64-v3 (AVX2)" },
+      { "ui:title@en": "Intel/AMD 64-bit - compile node CPU (native)", "ui:title@it": "Intel/AMD 64 bit - CPU del nodo (native)" },
+      { "ui:title@en": "ARM 64-bit - generic (AArch64)", "ui:title@it": "ARM 64 bit - generico (AArch64)" },
+      { "ui:title@en": "Raspberry Pi 5 - ARM 64-bit (Cortex-A76)", "ui:title@it": "Raspberry Pi 5 - ARM 64 bit (Cortex-A76)" },
+      { "ui:title@en": "ARM 32-bit - ARMv7 (hard-float, NEON)", "ui:title@it": "ARM 32 bit - ARMv7 (hard-float, NEON)" }
+    ]
   },
   "tag": {
     "ui:title@en": "Tag",

@@ -155,8 +155,7 @@ public abstract class TvmBaseRunner {
         String funcName,
         String image,
         List<CoreEnv> envs,
-        List<CoreEnv> secrets,
-        List<CoreVolume> volumes,
+        Map<String, String> secretData,
         List<ContextRef> contextRefs,
         K8sFunctionTaskBaseSpec taskSpec
     ) {
@@ -166,12 +165,12 @@ public abstract class TvmBaseRunner {
         runnable.setLabels(functionLabels(funcName));
         runnable.setImage(image);
         runnable.setEnvs(envs);
-        runnable.setSecrets(secrets);
+        runnable.setSecrets(createSecrets(secretData));
         runnable.setContextRefs(contextRefs);
         runnable.setResources(
             k8sBuilderHelper != null ? k8sBuilderHelper.convertResources(taskSpec.getResources()) : null
         );
-        runnable.setVolumes(volumes);
+        runnable.setVolumes(createVolumes(taskSpec));
         runnable.setTemplate(taskSpec.getProfile());
         runnable.setFsGroup(groupId);
         runnable.setRunAsGroup(groupId);

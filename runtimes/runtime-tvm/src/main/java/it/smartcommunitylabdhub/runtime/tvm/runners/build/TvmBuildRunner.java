@@ -95,8 +95,7 @@ public class TvmBuildRunner extends TvmBaseRunner {
             funcName,
             image,
             envs,
-            createSecrets(secretData),
-            createVolumes(taskSpec),
+            secretData,
             contextRefs,
             taskSpec
         );

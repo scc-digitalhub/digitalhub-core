@@ -164,12 +164,16 @@ def set_run_output(project: str, run_id: str, output: str, value: str) -> None:
 
     url = f"{os.environ['DHCORE_ENDPOINT'].rstrip('/')}/api/v1/-/{project}/runs/{run_id}"
     auth, headers = core_auth()
+
+    def read_run() -> dict:
+        response = requests.get(url, auth=auth, headers=headers, timeout=15)
+        response.raise_for_status()
+        return response.json()
+
     retryable = {408, 409, 412, 429, 500, 502, 503, 504}
     for attempt in range(3):
         try:
-            run = requests.get(url, auth=auth, headers=headers, timeout=15)
-            run.raise_for_status()
-            body = run.json()
+            body = read_run()
             status = body.get("status") or {}
             if (status.get("outputs") or {}).get(output) == value:
                 return  # A previous PUT may have committed before its response was lost.
@@ -181,9 +185,8 @@ def set_run_output(project: str, run_id: str, output: str, value: str) -> None:
                 headers={**headers, "Content-Type": "application/json"}, timeout=15,
             )
             response.raise_for_status()
-            confirmed = requests.get(url, auth=auth, headers=headers, timeout=15)
-            confirmed.raise_for_status()
-            if ((confirmed.json().get("status") or {}).get("outputs") or {}).get(output) == value:
+            confirmed = read_run()
+            if ((confirmed.get("status") or {}).get("outputs") or {}).get(output) == value:
                 return
             if attempt == 2:
                 raise RuntimeError(f"CORE did not confirm run {run_id} output {output} = {value}")

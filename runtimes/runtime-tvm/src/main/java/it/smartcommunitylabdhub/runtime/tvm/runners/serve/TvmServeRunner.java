@@ -15,10 +15,10 @@ import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.objects.AppProtocol;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
-import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
 import it.smartcommunitylabdhub.functions.FunctionManager;
+import it.smartcommunitylabdhub.models.Model;
 import it.smartcommunitylabdhub.models.ModelManager;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.tvm.config.TvmProperties;
@@ -70,9 +70,14 @@ public class TvmServeRunner extends TvmBaseRunner {
             taskSpec.getModelPath(),
             functionSpec != null ? functionSpec.getSoModel() : null
         );
-        String modelFolder = TvmRunnerHelper.resolveModelDir(modelKey, modelManager);
+        Model model = modelKey.startsWith(Keys.STORE_PREFIX)
+            ? TvmRunnerHelper.resolveModel(modelKey, modelManager)
+            : null;
+        String modelFolder = TvmRunnerHelper.modelDir(
+            model != null ? TvmRunnerHelper.modelPath(model, modelKey) : modelKey
+        );
         String modelDir = homeDir + "/model";
-        String architecture = modelArchitecture(modelKey);
+        String architecture = modelArchitecture(modelKey, model);
 
         List<CoreEnv> envs = createEnvList(run, taskSpec);
         envs.add(new CoreEnv("TVM_TASK_KIND", TvmServeTaskSpec.KIND));
@@ -93,9 +98,6 @@ public class TvmServeRunner extends TvmBaseRunner {
             properties.getServe(),
             "no serve image configured: set task.image or runtime.tvm.serve"
         );
-
-        List<CoreEnv> coreSecrets = createSecrets(secretData);
-        List<CoreVolume> volumes = createVolumes(taskSpec);
 
         List<CorePort> servicePorts = List.of(
             new CorePort(HTTP_PORT, HTTP_PORT, AppProtocol.openinference_v2),
@@ -132,8 +134,7 @@ public class TvmServeRunner extends TvmBaseRunner {
             funcName,
             image,
             envs,
-            createSecrets(secretData),
-            createVolumes(taskSpec),
+            secretData,
             contextRefs,
             taskSpec
         );
@@ -151,13 +152,11 @@ public class TvmServeRunner extends TvmBaseRunner {
         return modelKey;
     }
 
-    private String modelArchitecture(String modelKey) {
-        if (!modelKey.startsWith(Keys.STORE_PREFIX)) {
+    private String modelArchitecture(String modelKey, Model model) {
+        if (model == null) {
             return null;
         }
-        String architecture = TvmRunnerHelper.modelArchitecture(
-            TvmRunnerHelper.resolveModel(modelKey, modelManager).getSpec()
-        );
+        String architecture = TvmRunnerHelper.modelArchitecture(model.getSpec());
         if (architecture == null) {
             log.warn("no target architecture in {}: the serve pod can run on any node", modelKey);
         }

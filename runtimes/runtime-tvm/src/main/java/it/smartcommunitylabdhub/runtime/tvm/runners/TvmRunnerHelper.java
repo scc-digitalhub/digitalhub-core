@@ -123,7 +123,10 @@ public final class TvmRunnerHelper {
         if (!reference.startsWith(Keys.STORE_PREFIX)) {
             return reference;
         }
-        Model model = resolveModel(reference, modelManager);
+        return modelPath(resolveModel(reference, modelManager), reference);
+    }
+
+    public static String modelPath(Model model, String reference) {
         Object path = model.getSpec() != null ? model.getSpec().get("path") : null;
         if (!(path instanceof String text)) {
             throw new CoreRuntimeException("model spec.path is missing for: " + reference);
@@ -131,9 +134,12 @@ public final class TvmRunnerHelper {
         return text;
     }
 
-    // A trailing slash downloads the entire model folder; ZIP paths must remain unchanged.
     public static String resolveModelDir(String modelKey, ModelManager modelManager) {
-        String path = resolveModelPath(modelKey, modelManager);
+        return modelDir(resolveModelPath(modelKey, modelManager));
+    }
+
+    // A trailing slash downloads the entire model folder; ZIP paths must remain unchanged.
+    public static String modelDir(String path) {
         return path.endsWith("/") || path.endsWith(".zip") ? path : path + "/";
     }
 

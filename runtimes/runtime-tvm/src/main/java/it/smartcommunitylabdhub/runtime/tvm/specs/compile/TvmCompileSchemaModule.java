@@ -12,6 +12,7 @@ import com.github.victools.jsonschema.generator.CustomDefinition;
 import com.github.victools.jsonschema.generator.CustomDefinitionProviderV2;
 import com.github.victools.jsonschema.generator.SchemaGenerationContext;
 import com.github.victools.jsonschema.generator.SchemaGeneratorConfigBuilder;
+import it.smartcommunitylabdhub.runtime.tvm.specs.model.TvmTargetArchitecture;
 import java.util.List;
 
 /** Group TVM options using the console's existing accordions and schema dependencies. */
@@ -47,6 +48,14 @@ public class TvmCompileSchemaModule implements com.github.victools.jsonschema.ge
         @Override
         public CustomDefinition provideCustomSchemaDefinition(ResolvedType type, SchemaGenerationContext context) {
             String name = type.getErasedType().getName();
+            if (name.equals(TvmTargetArchitecture.class.getName())) {
+                ObjectNode schema = context.getGeneratorConfig().createObjectNode().put("type", "string");
+                ArrayNode options = schema.putArray("oneOf");
+                for (TvmTargetArchitecture target : TvmTargetArchitecture.values()) {
+                    options.addObject().put("const", target.name()).put("title", target.getLabel());
+                }
+                return new CustomDefinition(schema);
+            }
             if (
                 !name.equals(TvmCompileTaskSpec.class.getName()) &&
                 !name.equals(TvmCompileTaskSpec.class.getName() + "Proxy")

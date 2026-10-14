@@ -47,9 +47,8 @@ public final class TvmCompileRunSpec extends TvmRunSpec {
     public void configure(Map<String, Serializable> data) {
         Map<String, Serializable> active = TvmCompileOptions.active(data);
         this.inactiveTuning = TvmCompileOptions.inactive(data, active);
-        data = active;
-        super.configure(data);
-        TvmCompileRunSpec spec = mapper.convertValue(data, TvmCompileRunSpec.class);
+        super.configure(active);
+        TvmCompileRunSpec spec = mapper.convertValue(active, TvmCompileRunSpec.class);
         this.functionSpec = spec.getFunctionSpec();
         this.taskCompileSpec = spec.getTaskCompileSpec();
     }

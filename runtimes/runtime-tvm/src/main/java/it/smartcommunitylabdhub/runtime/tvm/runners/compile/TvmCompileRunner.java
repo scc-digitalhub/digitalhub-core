@@ -55,7 +55,7 @@ public class TvmCompileRunner extends TvmBaseRunner {
 
         TvmTargetArchitecture architecture = Objects.requireNonNullElse(
             taskSpec.getTargetArchitecture(),
-            TvmTargetArchitecture.cpu
+            TvmTargetArchitecture.auto
         );
 
         String irModelKey = StringUtils.hasText(taskSpec.getModelPath())
@@ -136,17 +136,16 @@ public class TvmCompileRunner extends TvmBaseRunner {
             funcName,
             image,
             envs,
-            createSecrets(secretData),
-            createVolumes(taskSpec),
+            secretData,
             contextRefs,
             taskSpec
         );
     }
 
-    // x86 targets use the native toolchain; ARM targets use cross-compilers.
+    // AMD64 targets use the native toolchain; ARM targets use cross-compilers.
     static String jobArchitecture(TvmTargetArchitecture architecture) {
         return switch (architecture) {
-            case x86, x86_v3, x86_native -> "amd64";
+            case amd64, amd64_v3, amd64_native -> "amd64";
             default -> null;
         };
     }
@@ -154,7 +153,7 @@ public class TvmCompileRunner extends TvmBaseRunner {
     static String defaultCrossCc(TvmTargetArchitecture architecture) {
         return switch (architecture) {
             case arm64, arm64_pi5 -> "aarch64-linux-gnu-g++";
-            case armv7l -> "arm-linux-gnueabihf-g++";
+            case arm32 -> "arm-linux-gnueabihf-g++";
             default -> null;
         };
     }

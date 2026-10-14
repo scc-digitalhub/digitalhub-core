@@ -21,7 +21,7 @@ from tvm import relax
 
 import tuning
 from benchmark import benchmark_library
-from common import INPUT_DIR, OUTPUT_DIR, fail, option, read_json, step, to_bool, write_json
+from common import INPUT_DIR, OUTPUT_DIR, fail, option, read_json, step, target_triple, to_bool, write_json
 
 STEPS = 7
 
@@ -177,13 +177,6 @@ def build_library(mod, args: argparse.Namespace, target, out_dir: Path, pass_ctx
     return so_path
 
 
-def target_triple(target) -> Optional[str]:
-    """Return the effective LLVM triple so CORE can match the serving architecture."""
-    if target.kind.name != "llvm":
-        return None
-    return str(target.attrs.get("mtriple") or tvm.target.codegen.llvm_get_system_triple())
-
-
 def compiled_metadata(ir_metadata: dict, args: argparse.Namespace, target, effective_target: str,
                       tuning_summary: Optional[dict], benchmark: Optional[dict]) -> dict:
     """Extend IR metadata with build details consumed by the serve images."""
@@ -237,7 +230,7 @@ def main(argv: Optional[list[str]] = None) -> None:
         step(3, STEPS, "MetaSchedule tuning off")
     else:
         step(3, STEPS, f"MetaSchedule {args.tuning_mode}")
-        mod, tuning_summary = tuning.run(args, mod, target, effective_target, ir_dir, out_dir, pass_ctx, cpu_count())
+        mod, tuning_summary = tuning.run(args, mod, target, effective_target, ir_metadata, out_dir, pass_ctx, cpu_count())
 
     step(4, STEPS, "building model.so")
     so_path = build_library(mod, args, target, out_dir, pass_ctx)

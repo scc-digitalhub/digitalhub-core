@@ -55,7 +55,7 @@ spec:
 # compile: tvm-ir -> tvm-so
 kind: tvm+compile
 spec:
-  target_architecture: x86_v3
+  target_architecture: amd64_v3
   resources: { cpu: "4", mem: 8Gi }
 ```
 
@@ -152,7 +152,7 @@ The console uses two collapsible groups, defined by this runtime's schemas:
 For example, the canonical task/run spec contains:
 
 ```yaml
-target_architecture: x86
+target_architecture: amd64
 optimization:
   opt_level: 3
   benchmark_runs: 10
@@ -188,7 +188,7 @@ back from a broken explicit reference to a different model.
 | Option                | Default                | Description                                                                                                                                |
 | --------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `model_path`          | function `ir_model`    | `store://` key of the `tvm-ir` Model to compile.                                                                                           |
-| `target_architecture` | `cpu`                  | Hardware target, see [Targets](#targets).                                                                                                  |
+| `target_architecture` | `auto`                 | Target CPU profile, see [Targets](#targets).                                                                                               |
 | `target_num_cores`    | `resources.cpu`        | Cores the generated code is optimized for. Use the same number when serving.                                                               |
 | `opt_level`           | `3`                    | TVM optimization level, 0 to 3.                                                                                                            |
 | `exec_mode`           | `bytecode`             | How the model graph runs: `bytecode` (interpreted by the Relax VM) or `compiled` (native code).                                            |
@@ -291,22 +291,40 @@ this choice.
 
 ## Targets
 
-| `target_architecture` | Runs on                                                         |
-| --------------------- | --------------------------------------------------------------- |
-| `cpu`                 | Generic code for the architecture of the compile Job.           |
-| `x86`                 | x86-64 CPUs with SSE4.2 (x86-64-v2, about 2009 and newer).      |
-| `x86_v3`              | x86-64 CPUs with AVX2 (Intel Haswell, AMD Excavator and newer). |
-| `x86_native`          | Exactly the CPU model of the compile Job.                       |
-| `arm64`               | Any 64-bit ARM (aarch64).                                       |
-| `arm64_pi5`           | Raspberry Pi 5 (Cortex-A76, 4 cores).                           |
-| `armv7l`              | 32-bit ARM hard-float (Raspberry Pi OS 32-bit).                 |
+The console calls this field **Target CPU Profile**. Values describe the architecture
+first; suffixes select a CPU feature level or a specific board.
 
-The more specific the target, the faster the code, but it only runs on that kind of CPU.
-The serve images exist for `linux/amd64`, `linux/arm64` and `linux/arm/v7`.
+| `target_architecture` | Console label | Requirements |
+| --------------------- | ------------- | ------------ |
+| `auto` | Compile node CPU - generic | Generic LLVM code for the architecture of the compile Job; not native CPU optimization. |
+| `amd64` | Intel/AMD 64-bit - x86-64-v2 | A 64-bit Intel/AMD CPU with the full x86-64-v2 feature set. Not 32-bit x86. |
+| `amd64_v3` | Intel/AMD 64-bit - x86-64-v3 (AVX2) | The full x86-64-v3 feature set, including AVX2 and FMA. |
+| `amd64_native` | Intel/AMD 64-bit - compile node CPU (native) | CPU features matching the compile node. |
+| `arm64` | ARM 64-bit - generic (AArch64) | AArch64 Linux; for example Raspberry Pi 3, 4 or 5 with a 64-bit OS. |
+| `arm64_pi5` | Raspberry Pi 5 - ARM 64-bit (Cortex-A76) | Cortex-A76, a 64-bit OS and 4 cores. Not portable to Pi 3/4. |
+| `arm32` | ARM 32-bit - ARMv7 (hard-float, NEON) | ARMv7-compatible Linux with the hard-float ABI and NEON; not every 32-bit ARM CPU. |
 
-The compile Job of the `x86` targets runs on an `amd64` node, because the library is
+`arm64`/AArch64 and `arm32` describe the bitness/execution environment; Armv7, Armv8
+and Armv9 describe architecture generations. They are not interchangeable labels.
+The OS and runtime must match the compiled library's bitness and ABI.
+A more specific target can improve performance, but requires compatible CPU features.
+The toolkit images run on AMD64 and ARM64 and compile for AMD64, ARM64 and ARM32.
+Both Go and Rust runtime image builds cover `linux/amd64`, `linux/arm64` and
+`linux/arm/v7`; ARM32 compilation and inference remain supported.
+CORE's default init image currently covers only AMD64 and ARM64. Serving on an ARM32
+cluster node also requires an ARMv7-compatible init image to download the model;
+the ARMv7 runtime image alone does not complete this deployment path.
+
+The compile Job of the `amd64` profiles runs on an `amd64` node, because the library is
 generated and linked by the native toolchain. The ARM targets are cross-compiled on any
-node, and `cpu` builds for the node where the Job runs.
+supported toolkit node, and `auto` builds for the node where the Job runs.
+
+Older API values remain accepted: `cpu`/`llvm` → `auto`, `x86` → `amd64`,
+`x86_v3` → `amd64_v3`, `x86_native` → `amd64_native`, `armv7l` → `arm32`.
+New saves use the new values. Existing database records are not migrated automatically:
+when editing an old task, reselect its target profile and save it once.
+LLVM triples, compiler names and container platforms keep their standard names, such
+as `aarch64-linux-gnu`, `armv7l-unknown-linux-gnueabihf` and `linux/arm/v7`.
 
 ---
 
@@ -322,7 +340,7 @@ The weights are also rearranged for that code.
    ```yaml
    kind: tvm+compile
    spec:
-     target_architecture: x86_native
+     target_architecture: amd64_native
      target_num_cores: 4
      tuning_mode: tune
      tuning_trials: 8000
@@ -339,7 +357,7 @@ The weights are also rearranged for that code.
    ```yaml
    kind: tvm+compile
    spec:
-     target_architecture: x86_native
+     target_architecture: amd64_native
      target_num_cores: 4
      tuning_mode: apply
      tuning_model_path: store://my-project/model/tvm-so/yolov8n-so:<id>
