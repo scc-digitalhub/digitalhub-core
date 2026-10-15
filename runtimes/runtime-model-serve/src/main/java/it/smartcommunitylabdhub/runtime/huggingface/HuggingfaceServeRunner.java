@@ -48,7 +48,7 @@ import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipName;
 import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
 import it.smartcommunitylabdhub.runs.Run;
-import it.smartcommunitylabdhub.runtime.huggingface.specs.HuggingFaceModelSpec;
+import it.smartcommunitylabdhub.runtime.huggingface.specs.HuggingfaceModelSpec;
 import it.smartcommunitylabdhub.runtime.huggingface.specs.HuggingfaceServeFunctionSpec;
 import it.smartcommunitylabdhub.runtime.huggingface.specs.HuggingfaceServeRunSpec;
 import it.smartcommunitylabdhub.runtime.huggingface.specs.HuggingfaceServeTaskSpec;
@@ -172,7 +172,7 @@ public class HuggingfaceServeRunner {
                 RelationshipsMetadata relationships = RelationshipsMetadata.from(run.getMetadata());
                 relationships.getRelationships().add(rel);
                 run.getMetadata().putAll(relationships.toMap());
-                HuggingFaceModelSpec modelSpec = new HuggingFaceModelSpec();
+                HuggingfaceModelSpec modelSpec = new HuggingfaceModelSpec();
                 modelSpec.configure(model.getSpec());
                 path = modelSpec.getPath();
             } catch (NoSuchElementException e) {

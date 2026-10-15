@@ -24,51 +24,31 @@
 package it.smartcommunitylabdhub.runtime.huggingface.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
+import it.smartcommunitylabdhub.commons.models.base.BaseSpec;
 import it.smartcommunitylabdhub.models.Model;
-import it.smartcommunitylabdhub.models.specs.ModelBaseSpec;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
-@SpecType(kind = HuggingFaceModelSpec.KIND, entity = Model.class)
-public class HuggingFaceModelSpec extends ModelBaseSpec {
+@SpecType(kind = HuggingfaceModelSpec.KIND, entity = Model.class)
+public class HuggingfaceModelSpec extends BaseSpec {
 
     public static final String KIND = "huggingface";
 
-    @JsonProperty("base_model")
-    private String baseModel;
-
-    @JsonProperty("parameters")
-    private Map<String, Serializable> parameters = new LinkedHashMap<>();
-
-    //Huggingface model id
-    @JsonProperty("model_id")
-    @Schema(title = "fields.huggingface.modelid.title", description = "fields.huggingface.modelid.description")
-    private String modelId;
-
-    //Huggingface model revision
-    @JsonProperty("model_revision")
-    @Schema(
-        title = "fields.huggingface.modelrevision.title",
-        description = "fields.huggingface.modelrevision.description"
-    )
-    private String modelRevision;
+    @NotBlank
+    @Pattern(regexp = "^(huggingface|hf)://[^/\\s:]+/[^/\\s:]+(:\\S+)?$")
+    @JsonProperty("path")
+    private String path;
 
     @Override
     public void configure(Map<String, Serializable> data) {
-        super.configure(data);
-
-        HuggingFaceModelSpec spec = mapper.convertValue(data, HuggingFaceModelSpec.class);
-
-        this.baseModel = spec.getBaseModel();
-        this.parameters = spec.getParameters();
-        this.modelId = spec.getModelId();
-        this.modelRevision = spec.getModelRevision();
+        HuggingfaceModelSpec spec = mapper.convertValue(data, HuggingfaceModelSpec.class);
+        this.path = spec.getPath();
     }
 }

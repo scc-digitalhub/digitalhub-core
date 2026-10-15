@@ -1,0 +1,4 @@
+providers:
+  huggingface:
+    apiUrl: ${HUGGINGFACE_API_URL:https://huggingface.co}
+    metadata: ${HUGGINGFACE_METADATA:author,pipeline_tag,library_name,tags,cardData,config,safetensors,sha}
