@@ -158,10 +158,10 @@ public class VLLMServeSpeechRuntime extends VLLMServeRuntime<VLLMServeSpeechFunc
         }
 
         VLLMServeSpeechRunSpec runSpec = VLLMServeSpeechRunSpec.with(run.getSpec());
-
-        String image = StringUtils.hasText(runSpec.getFunctionSpec().getImage())
-            ? runSpec.getFunctionSpec().getImage()
-            : Boolean.TRUE.equals(runSpec.getUseCpuImage())
+        VLLMServeSpeechFunctionSpec funSpec = runSpec.getFunctionSpec();
+        String image = StringUtils.hasText(funSpec.getImage())
+            ? funSpec.getImage()
+            : Boolean.TRUE.equals(funSpec.getUseCpuImage())
                 ? properties.getCpuImageAudio()
                 : properties.getImageAudio();
 
@@ -173,7 +173,7 @@ public class VLLMServeSpeechRuntime extends VLLMServeRuntime<VLLMServeSpeechFunc
                 RUNTIME,
                 image,
                 properties,
-                runSpec.getFunctionSpec(),
+                funSpec,
                 secretService.getSecretData(run.getProject(), runSpec.getTaskServeSpec().getSecrets()),
                 k8sBuilderHelper,
                 k8sLabelHelper,

@@ -160,9 +160,10 @@ public class VLLMServePoolingRuntime extends VLLMServeRuntime<VLLMServePoolingFu
         }
 
         VLLMServePoolingRunSpec runSpec = VLLMServePoolingRunSpec.with(run.getSpec());
-        String image = StringUtils.hasText(runSpec.getFunctionSpec().getImage())
-            ? runSpec.getFunctionSpec().getImage()
-            : Boolean.TRUE.equals(runSpec.getUseCpuImage())
+        VLLMServePoolingFunctionSpec funSpec = runSpec.getFunctionSpec();
+        String image = StringUtils.hasText(funSpec.getImage())
+            ? funSpec.getImage()
+            : Boolean.TRUE.equals(funSpec.getUseCpuImage())
                 ? properties.getCpuImage()
                 : properties.getImage();
 
@@ -174,7 +175,7 @@ public class VLLMServePoolingRuntime extends VLLMServeRuntime<VLLMServePoolingFu
                 RUNTIME,
                 image,
                 properties,
-                runSpec.getFunctionSpec(),
+                funSpec,
                 secretService.getSecretData(run.getProject(), runSpec.getTaskServeSpec().getSecrets()),
                 k8sBuilderHelper,
                 k8sLabelHelper,
