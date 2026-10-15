@@ -36,8 +36,10 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@SpecType(kind = "huggingface", entity = Model.class)
+@SpecType(kind = HuggingFaceModelSpec.KIND, entity = Model.class)
 public class HuggingFaceModelSpec extends ModelBaseSpec {
+
+    public static final String KIND = "huggingface";
 
     @JsonProperty("base_model")
     private String baseModel;
