@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 @Slf4j
@@ -113,18 +114,24 @@ public class HuggingfaceApiService {
 
         log.debug("Getting metadata for model: {} from URL: {}", key, manifestUrl);
 
-        ResponseEntity<HashMap<String, Serializable>> response = restTemplate.exchange(
-            manifestUrl + params.toString(),
-            HttpMethod.GET,
-            HttpEntity.EMPTY,
-            paramRef
-        );
+        try {
+            ResponseEntity<HashMap<String, Serializable>> response = restTemplate.exchange(
+                manifestUrl + params.toString(),
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                paramRef
+            );
 
-        if (response.getStatusCode() != HttpStatus.OK) {
-            log.debug("error getting config for model {}: {}", key, response.getStatusCode());
+            if (response.getStatusCode() != HttpStatus.OK) {
+                log.debug("error getting config for model {}: {}", key, response.getStatusCode());
+            }
+
+            return response.getBody();
+        } catch (RestClientException e) {
+            log.debug("error getting config for model {}: {}", key, e.getMessage());
         }
 
-        return response.getBody();
+        return null;
     }
 
     public Map<String, Serializable> getConfig(String key) {
@@ -136,25 +143,28 @@ public class HuggingfaceApiService {
         String configUrl = apiUrl + "/" + key + "/resolve/main/config.json";
 
         log.debug("Getting config for model: {} from URL: {}", key, configUrl);
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                configUrl,
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                String.class
+            );
 
-        ResponseEntity<String> response = restTemplate.exchange(
-            configUrl,
-            HttpMethod.GET,
-            HttpEntity.EMPTY,
-            String.class
-        );
-
-        if (response.getStatusCode() != HttpStatus.OK) {
-            log.debug("error getting config for model {}: {}", key, response.getStatusCode());
-        }
-
-        String value = response.getBody();
-        if (value != null && !value.isEmpty()) {
-            try {
-                return objectMapper.readValue(value, typeRef);
-            } catch (JsonProcessingException e) {
-                log.debug("error parsing config for model {}: {}", key, e.getMessage());
+            if (response.getStatusCode() != HttpStatus.OK) {
+                log.debug("error getting config for model {}: {}", key, response.getStatusCode());
             }
+
+            String value = response.getBody();
+            if (value != null && !value.isEmpty()) {
+                try {
+                    return objectMapper.readValue(value, typeRef);
+                } catch (JsonProcessingException e) {
+                    log.debug("error parsing config for model {}: {}", key, e.getMessage());
+                }
+            }
+        } catch (RestClientException e) {
+            log.debug("error getting config for model {}: {}", key, e.getMessage());
         }
 
         //empty response body
@@ -171,17 +181,23 @@ public class HuggingfaceApiService {
 
         log.debug("Getting README for model: {} from URL: {}", key, readmeUrl);
 
-        ResponseEntity<String> response = restTemplate.exchange(
-            readmeUrl,
-            HttpMethod.GET,
-            HttpEntity.EMPTY,
-            String.class
-        );
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                readmeUrl,
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                String.class
+            );
 
-        if (response.getStatusCode() != HttpStatus.OK) {
-            log.debug("error getting README for model {}: {}", key, response.getStatusCode());
+            if (response.getStatusCode() != HttpStatus.OK) {
+                log.debug("error getting README for model {}: {}", key, response.getStatusCode());
+            }
+
+            return response.getBody();
+        } catch (RestClientException e) {
+            log.debug("error getting config for model {}: {}", key, e.getMessage());
         }
 
-        return response.getBody();
+        return null;
     }
 }
