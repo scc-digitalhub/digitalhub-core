@@ -457,6 +457,14 @@
             <artifactId>dh-search-solr</artifactId>
             <version>${revision}</version>
         </dependency> -->
+
+        <!-- EXTENSIONS -->
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-compliance</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
     </dependencies>
 
     <build>

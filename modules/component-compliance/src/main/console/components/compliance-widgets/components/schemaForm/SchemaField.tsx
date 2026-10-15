@@ -1,0 +1,181 @@
+import { Switch, FormControlLabel, TextField } from "@mui/material";
+import { useTranslate } from "react-admin";
+import type { JSONSchemaNode, SchemaRef } from "../../schema/types";
+import { isSchemaRef } from "../../schema/types";
+import type { JsonRecord } from "../../types";
+import { fieldLabel, isLongTextKey } from "./fieldHelpers";
+import { CustomEnumTextField, EnumSelect, MultiEnumSelect } from "./EnumSelect";
+import TagsField from "./TagsField";
+import JsonField from "./JsonField";
+import RefObjectField from "./RefObjectField";
+import RefArrayField from "./RefArrayField";
+import InlineObjectField from "./InlineObjectField";
+import { useSchemaReadOnly } from "./SchemaReadOnlyContext";
+import { getCustomFieldWidget } from "./customWidgets";
+
+interface SchemaFieldProps {
+  fieldKey: string;
+  prop: JSONSchemaNode | SchemaRef;
+  formValue: JsonRecord;
+  value: unknown;
+  onChange: (value: unknown) => void;
+  required?: boolean;
+  customValue?: {
+    value: string | undefined;
+    sentinel: string;
+    onChange: (baseValue: string | undefined, customValue: string | undefined) => void;
+  };
+}
+
+/**
+ * Renders a single schema property with the appropriate MUI control, dispatching on the
+ * property shape (enum / $ref object / array / inline object / primitive). This is the single
+ * building block reused both by <SchemaForm> (renders every property of a schema) and by
+ * hand-composed tab/accordion layouts that cherry-pick individual fields (see components/compliance).
+ */
+export default function SchemaField({ fieldKey, prop, formValue, value, onChange, required, customValue }: SchemaFieldProps) {
+  const translate = useTranslate();
+  const readOnly = useSchemaReadOnly();
+  const label = fieldLabel(fieldKey, translate);
+  const CustomWidget = prop.widget ? getCustomFieldWidget(prop.widget) : null;
+
+  if (CustomWidget) {
+    return <CustomWidget label={label} prop={prop} formValue={formValue} value={value} onChange={onChange} required={required} />;
+  }
+
+  if (isSchemaRef(prop)) {
+    return (
+      <RefObjectField
+        label={label}
+        schemaName={prop.$ref}
+        value={value as JsonRecord | undefined}
+        onChange={(next) => onChange(next)}
+        required={required}
+      />
+    );
+  }
+
+  if (prop.enum) {
+    if (customValue) {
+      return (
+        <CustomEnumTextField
+          label={label}
+          options={prop.enum}
+          value={value as string | undefined}
+          customValue={customValue.value}
+          sentinel={customValue.sentinel}
+          onCustomChange={customValue.onChange}
+          required={required}
+          helperText={prop.description}
+        />
+      );
+    }
+    return (
+      <EnumSelect
+        label={label}
+        options={prop.enum}
+        value={value as string | undefined}
+        onChange={onChange}
+        required={required}
+        helperText={prop.description}
+        badgeColors={prop.enumColors}
+      />
+    );
+  }
+
+  if (prop.type === "array") {
+    const items = prop.items;
+    if (items && isSchemaRef(items)) {
+      return (
+        <RefArrayField
+          label={label}
+          itemSchemaName={items.$ref}
+          value={(value as JsonRecord[] | undefined) ?? []}
+          onChange={(next) => onChange(next)}
+        />
+      );
+    }
+    if (items && !isSchemaRef(items) && items.enum) {
+      return (
+        <MultiEnumSelect
+          label={label}
+          options={items.enum}
+          value={(value as string[] | undefined) ?? []}
+          onChange={onChange}
+          helperText={prop.description}
+        />
+      );
+    }
+    return <TagsField label={label} value={(value as string[] | undefined) ?? []} onChange={onChange} helperText={prop.description} />;
+  }
+
+  if (prop.type === "object") {
+    if (prop.properties) {
+      return (
+        <InlineObjectField
+          label={label}
+          schema={prop}
+          value={(value as JsonRecord | undefined) ?? {}}
+          onChange={(next) => onChange(next)}
+        />
+      );
+    }
+    return <JsonField label={label} value={value as JsonRecord | undefined} onChange={onChange} />;
+  }
+
+  if (prop.type === "boolean") {
+    return (
+      <FormControlLabel
+        control={<Switch checked={!!value} disabled={readOnly} onChange={(e) => onChange(e.target.checked)} />}
+        label={label}
+      />
+    );
+  }
+
+  if (prop.type === "number" || prop.type === "integer") {
+    return (
+      <TextField
+        label={label}
+        type="number"
+        size="small"
+        fullWidth
+        disabled={readOnly}
+        required={required}
+        helperText={prop.description}
+        value={value === undefined || value === null ? "" : (value as number)}
+        onChange={(e) => onChange(e.target.value === "" ? undefined : Number(e.target.value))}
+      />
+    );
+  }
+
+  if (prop.format === "date-time") {
+    return (
+      <TextField
+        label={label}
+        type="datetime-local"
+        size="small"
+        fullWidth
+        disabled={readOnly}
+        required={required}
+        InputLabelProps={{ shrink: true }}
+        value={value ? String(value).slice(0, 16) : ""}
+        onChange={(e) => onChange(e.target.value ? new Date(e.target.value).toISOString() : undefined)}
+      />
+    );
+  }
+
+  return (
+    <TextField
+      label={label}
+      size="small"
+      fullWidth
+      disabled={readOnly}
+      required={required}
+      multiline={isLongTextKey(fieldKey)}
+      minRows={isLongTextKey(fieldKey) ? 2 : undefined}
+      helperText={prop.description}
+      value={(value as string) ?? ""}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  );
+}

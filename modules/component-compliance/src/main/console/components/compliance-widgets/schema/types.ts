@@ -1,0 +1,60 @@
+/**
+ * Minimal JSON-Schema-like typing used to drive the generic form renderer.
+ * Mirrors (a practical subset of) the JSON Schema 2020-12 dialect used under okb/schemas,
+ * with `$ref` values pointing at other keys of the schema registry (see registry.ts)
+ * instead of file paths.
+ */
+
+export type PrimitiveType = "string" | "number" | "integer" | "boolean" | "object" | "array";
+export type CustomFieldWidget =
+  | "requirements"
+  | "objective-condition"
+  | "regulatory-reference"
+  | "report-content"
+  | "project-objectives"
+  | "entity-reference";
+
+export interface SchemaRef {
+  $ref: string;
+  widget?: CustomFieldWidget;
+  entityResources?: string[];
+  entityKind?: string;
+}
+
+export interface JSONSchemaNode {
+  title?: string;
+  description?: string;
+  default?: unknown;
+  type?: PrimitiveType;
+  format?: "date-time" | "uri" | string;
+  enum?: string[];
+  properties?: Record<string, JSONSchemaNode | SchemaRef>;
+  items?: JSONSchemaNode | SchemaRef;
+  required?: string[];
+  allOf?: Array<JSONSchemaNode | SchemaRef>;
+  uniqueItems?: boolean;
+  minProperties?: number;
+  maxProperties?: number;
+  columns?: number;
+  enumColors?: Record<string, "default" | "success" | "error" | "warning">;
+  widget?: CustomFieldWidget;
+  /** React Admin resources available to an entity-reference widget. */
+  entityResources?: string[];
+  /** Optional entity kind filter applied by an entity-reference widget. */
+  entityKind?: string;
+  /** Builds a textual title for an item of this schema (e.g. in RefArrayField accordions). */
+  getTitle?: (item: Record<string, unknown>) => string;
+}
+
+export function isSchemaRef(node: JSONSchemaNode | SchemaRef | undefined): node is SchemaRef {
+  return !!node && typeof node === "object" && "$ref" in node;
+}
+
+/** A fully merged (allOf-flattened) object schema, ready to render. */
+export interface ResolvedObjectSchema {
+  name: string;
+  title: string;
+  description?: string;
+  properties: Record<string, JSONSchemaNode | SchemaRef>;
+  required: string[];
+}
