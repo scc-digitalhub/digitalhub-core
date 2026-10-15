@@ -26,6 +26,7 @@ package it.smartcommunitylabdhub.runtime.vllm.base.specs;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
+import it.smartcommunitylabdhub.runtime.vllm.base.models.VLLMAdapter;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.List;
@@ -43,6 +44,18 @@ public class VLLMServeRunSpec extends RunBaseSpec {
     @Schema(title = "fields.vllm.url.title", description = "fields.vllm.url.description")
     private String url;
 
+    @JsonProperty("model_name")
+    @Schema(
+        title = "fields.modelserve.modelname.title",
+        description = "fields.modelserve.modelname.description",
+        defaultValue = "model"
+    )
+    private String modelName;
+
+    @JsonProperty("adapters")
+    @Schema(title = "fields.vllm.adapters.title", description = "fields.vllm.adapters.description")
+    private List<VLLMAdapter> adapters;
+
     @Schema(title = "fields.vllm.args.title", description = "fields.vllm.args.description")
     private List<String> args;
 
@@ -50,18 +63,16 @@ public class VLLMServeRunSpec extends RunBaseSpec {
     @JsonProperty("enable_telemetry")
     private Boolean enableTelemetry;
 
-    @Schema(title = "fields.vllm.useCpuImage.title", description = "fields.vllm.useCpuImage.description")
-    @JsonProperty("use_cpu_image")
-    private Boolean useCpuImage;
-
     @Override
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
         VLLMServeRunSpec spec = mapper.convertValue(data, VLLMServeRunSpec.class);
         this.url = spec.getUrl();
+        this.modelName = spec.getModelName();
+        this.adapters = spec.getAdapters();
+
         this.args = spec.getArgs();
         this.enableTelemetry = spec.getEnableTelemetry();
-        this.useCpuImage = spec.getUseCpuImage();
     }
 
     public static VLLMServeRunSpec with(Map<String, Serializable> data) {

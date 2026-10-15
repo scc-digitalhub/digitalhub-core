@@ -25,7 +25,6 @@ package it.smartcommunitylabdhub.runtime.vllm.base.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
-import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.models.function.FunctionBaseSpec;
 import it.smartcommunitylabdhub.runtime.vllm.base.models.VLLMAdapter;
 import jakarta.validation.constraints.NotNull;
@@ -57,14 +56,18 @@ public class VLLMServeFunctionSpec extends FunctionBaseSpec {
     )
     private String modelName;
 
+    @JsonProperty("adapters")
+    @Schema(title = "fields.vllm.adapters.title", description = "fields.vllm.adapters.description")
+    private List<VLLMAdapter> adapters;
+
     @JsonProperty("image")
     @Pattern(regexp = "^vllm\\/vllm-openai(:.*)?$")
     @Schema(title = "fields.container.image.title", description = "fields.container.image.description")
     private String image;
 
-    @JsonProperty("adapters")
-    @Schema(title = "fields.vllm.adapters.title", description = "fields.vllm.adapters.description")
-    private List<VLLMAdapter> adapters;
+    @Schema(title = "fields.vllm.useCpuImage.title", description = "fields.vllm.useCpuImage.description")
+    @JsonProperty("use_cpu_image")
+    private Boolean useCpuImage;
 
     @Override
     public void configure(Map<String, Serializable> data) {
@@ -73,7 +76,9 @@ public class VLLMServeFunctionSpec extends FunctionBaseSpec {
         VLLMServeFunctionSpec spec = mapper.convertValue(data, VLLMServeFunctionSpec.class);
         this.url = spec.getUrl();
         this.modelName = spec.getModelName();
-        this.image = spec.getImage();
         this.adapters = spec.getAdapters();
+
+        this.image = spec.getImage();
+        this.useCpuImage = spec.getUseCpuImage();
     }
 }

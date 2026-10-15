@@ -34,6 +34,7 @@ import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
+import it.smartcommunitylabdhub.files.models.PathAccessor;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
@@ -53,6 +54,7 @@ import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipName;
 import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
 import it.smartcommunitylabdhub.runs.Run;
+import it.smartcommunitylabdhub.runtime.huggingface.specs.HuggingFaceModelSpec;
 import it.smartcommunitylabdhub.runtime.vllm.base.models.VLLMAdapter;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeFunctionSpec;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeRunSpec;
@@ -66,7 +68,6 @@ import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -197,7 +198,7 @@ public class VLLMServeRunner {
         CoreResource resources = taskSpec.getResources() != null ? taskSpec.getResources() : new CoreResource();
         String memSize = resources != null && resources.getMem() != null ? resources.getMem() : memSizeSpec;
 
-        if (Boolean.TRUE.equals(runSpec.getUseCpuImage())) {
+        if (Boolean.TRUE.equals(functionSpec.getUseCpuImage())) {
             coreEnvList.add(new CoreEnv("VLLM_BACKEND", "cpu"));
 
             // define VLLM_CPU_KVCACHE_SPACE as 50% of mem size if not defined,
@@ -241,9 +242,26 @@ public class VLLMServeRunner {
             //enforce model from store
             throw new IllegalArgumentException("invalid model url, must be a store reference");
         }
-        url = linkToModel(run, url);
 
-        UriComponents uri = UriComponentsBuilder.fromUriString(url).build();
+        Model model = resolveModel(url);
+        if (model == null) {
+            throw new IllegalArgumentException("model not found for url: " + url);
+        }
+
+        PathAccessor pathAccessor = PathAccessor.with(model.getSpec());
+        String modelPath = pathAccessor.getPath();
+
+        RelationshipsMetadata relMetadata = RelationshipsMetadata.from(run.getMetadata());
+        List<RelationshipDetail> relationships = new ArrayList<>();
+        Optional.ofNullable(relMetadata.getRelationships()).ifPresent(relationships::addAll);
+
+        RelationshipDetail rel = new RelationshipDetail();
+        rel.setType(RelationshipName.CONSUMES);
+        rel.setSource(run.getKey());
+        rel.setDest(model.getKey());
+        relationships.add(rel);
+
+        UriComponents uri = UriComponentsBuilder.fromUriString(modelPath).build();
 
         //let's make sure we have a valid model uri
         if (uri.getScheme() == null || !StringUtils.hasText(uri.getScheme())) {
@@ -275,19 +293,24 @@ public class VLLMServeRunner {
             defaultServedModelName = mdlId;
         } else {
             args.add("/shared/model");
-
             contextRefs.add(
-                ContextRef.builder().source(url).protocol(uri.getScheme()).destination("model").build()
+                ContextRef.builder().source(modelPath).protocol(uri.getScheme()).destination("model").build()
             );
         }
+
+        //model name can be overridden in the run spec
+        //fallback to model name or default naming convention
+        String modelName =
+            runSpec.getModelName() != null
+                ? runSpec.getModelName()
+                : model.getName() != null
+                    ? model.getName()
+                    : defaultServedModelName;
 
         Map<String, List<String>> defaultArgMap = new HashMap<>();
         defaultArgMap.put("--host", List.of("0.0.0.0"));
         defaultArgMap.put("--port", List.of(String.valueOf(HTTP_PORT)));
-        defaultArgMap.put(
-            "--served-model-name",
-            List.of(functionSpec.getModelName() != null ? functionSpec.getModelName() : defaultServedModelName)
-        );
+        defaultArgMap.put("--served-model-name", List.of(modelName));
 
         // //enable caching by default
         // defaultArgMap.put("--enable-prefix-caching", List.of());
@@ -306,19 +329,30 @@ public class VLLMServeRunner {
             if (!arg.getValue().isEmpty()) args.addAll(arg.getValue());
         }
 
-        if (functionSpec.getAdapters() != null && functionSpec.getAdapters().size() > 0) {
+        //adapters are in run spec after build
+        if (runSpec.getAdapters() != null && runSpec.getAdapters().size() > 0) {
             contextRefs = new LinkedList<>(contextRefs);
             args.add("--enable-lora");
             args.add("--lora-modules");
 
-            for (VLLMAdapter adapter : functionSpec.getAdapters()) {
-                String adapterPath = adapter.getUrl();
-                if (!adapterPath.startsWith(Keys.STORE_PREFIX)) {
+            for (VLLMAdapter adapter : runSpec.getAdapters()) {
+                String adapterUrl = adapter.getUrl();
+                if (adapterUrl == null || !adapterUrl.startsWith(Keys.STORE_PREFIX)) {
                     //enforce model from store
                     throw new IllegalArgumentException("invalid adapter url, must be a store reference");
                 }
-                adapterPath = linkToModel(run, adapterPath);
+                Model am = resolveModel(adapterUrl);
+                if (am == null) {
+                    throw new IllegalArgumentException("model not found for url: " + adapterUrl);
+                }
 
+                RelationshipDetail rela = new RelationshipDetail();
+                rela.setType(RelationshipName.CONSUMES);
+                rela.setSource(run.getKey());
+                rela.setDest(am.getKey());
+                relationships.add(rela);
+
+                String adapterPath = PathAccessor.with(am.getSpec()).getPath();
                 UriComponents adapterUri = UriComponentsBuilder.fromUriString(adapterPath).build();
                 String adapterSource = adapter.getUrl().trim();
                 String ref = adapterSource;
@@ -362,6 +396,9 @@ public class VLLMServeRunner {
         //         "invalid or empty image, must be based on " + VLLMServeRuntime.IMAGE
         //     );
         // }
+
+        //update rels in run
+        run.getMetadata().putAll(relMetadata.toMap());
 
         appendHFVariables(coreEnvList);
 
@@ -428,7 +465,7 @@ public class VLLMServeRunner {
         // }
     }
 
-    private String linkToModel(Run run, String path) {
+    private Model resolveModel(String path) {
         KeyAccessor keyAccessor = KeyAccessor.with(path);
         if (!EntityUtils.getEntityName(Model.class).equalsIgnoreCase(keyAccessor.getType())) {
             throw new CoreRuntimeException("invalid entity kind reference, expected model");
@@ -439,20 +476,14 @@ public class VLLMServeRunner {
                     ? modelService.findModel(keyAccessor.getId())
                     : modelService.getLatestModelByKey(keyAccessor.getProject(), path);
             if (model == null) {
-                throw new CoreRuntimeException("invalid entity reference, odel not found");
+                throw new CoreRuntimeException("invalid entity reference, model not found");
             }
-            if (!model.getKind().equals("huggingface") && !model.getKind().equals("hf")) {
+
+            if (!HuggingFaceModelSpec.KIND.equals(model.getKind())) {
                 throw new CoreRuntimeException("invalid entity reference, expected HuggingFace model");
             }
-            RelationshipDetail rel = new RelationshipDetail();
-            rel.setType(RelationshipName.CONSUMES);
-            rel.setSource(run.getKey());
-            rel.setDest(model.getKey());
-            RelationshipsMetadata relationships = RelationshipsMetadata.from(run.getMetadata());
-            relationships.getRelationships().add(rel);
-            run.getMetadata().putAll(relationships.toMap());
-            path = (String) model.getSpec().get("path");
-            return path;
+
+            return model;
         } catch (NoSuchElementException e) {
             throw new CoreRuntimeException("invalid entity reference, model not found", e);
         }
