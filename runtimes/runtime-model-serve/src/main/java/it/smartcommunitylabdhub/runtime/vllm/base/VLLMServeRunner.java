@@ -54,7 +54,7 @@ import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipName;
 import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
 import it.smartcommunitylabdhub.runs.Run;
-import it.smartcommunitylabdhub.runtime.huggingface.specs.HuggingFaceModelSpec;
+import it.smartcommunitylabdhub.runtime.huggingface.specs.HuggingfaceModelSpec;
 import it.smartcommunitylabdhub.runtime.vllm.base.models.VLLMAdapter;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeFunctionSpec;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeRunSpec;
@@ -479,7 +479,7 @@ public class VLLMServeRunner {
                 throw new CoreRuntimeException("invalid entity reference, model not found");
             }
 
-            if (!HuggingFaceModelSpec.KIND.equals(model.getKind())) {
+            if (!HuggingfaceModelSpec.KIND.equals(model.getKind())) {
                 throw new CoreRuntimeException("invalid entity reference, expected HuggingFace model");
             }
 

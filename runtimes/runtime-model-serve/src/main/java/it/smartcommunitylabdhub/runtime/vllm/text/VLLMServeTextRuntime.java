@@ -155,9 +155,10 @@ public class VLLMServeTextRuntime extends VLLMServeRuntime<VLLMServeTextFunction
         }
 
         VLLMServeTextRunSpec runSpec = VLLMServeTextRunSpec.with(run.getSpec());
-        String image = StringUtils.hasText(runSpec.getFunctionSpec().getImage())
-            ? runSpec.getFunctionSpec().getImage()
-            : Boolean.TRUE.equals(runSpec.getUseCpuImage())
+        VLLMServeTextFunctionSpec funSpec = runSpec.getFunctionSpec();
+        String image = StringUtils.hasText(funSpec.getImage())
+            ? funSpec.getImage()
+            : Boolean.TRUE.equals(funSpec.getUseCpuImage())
                 ? properties.getCpuImage()
                 : properties.getImage();
 
@@ -169,7 +170,7 @@ public class VLLMServeTextRuntime extends VLLMServeRuntime<VLLMServeTextFunction
                 RUNTIME,
                 image,
                 properties,
-                runSpec.getFunctionSpec(),
+                funSpec,
                 secretService.getSecretData(run.getProject(), runSpec.getTaskServeSpec().getSecrets()),
                 k8sBuilderHelper,
                 k8sLabelHelper,
