@@ -353,8 +353,11 @@ public class VLLMServeRunner {
                 relationships.add(rela);
 
                 String adapterPath = PathAccessor.with(am.getSpec()).getPath();
+                if (adapterPath == null || adapterPath.isEmpty()) {
+                    throw new IllegalArgumentException("model path is missing for " + am.getKey());
+                }
                 UriComponents adapterUri = UriComponentsBuilder.fromUriString(adapterPath).build();
-                String adapterSource = adapter.getUrl().trim();
+                String adapterSource = adapterPath;
                 String ref = adapterSource;
 
                 if (!"huggingface".equals(adapterUri.getScheme()) || "hf".equals(adapterUri.getScheme())) {
