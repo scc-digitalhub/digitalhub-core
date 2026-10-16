@@ -3,6 +3,7 @@ import it.smartcommunitylabdhub.artifacts.Artifact;
 import it.smartcommunitylabdhub.dataitems.DataItem;
 import it.smartcommunitylabdhub.models.Model;
 import java.util.Map;
+import jakarta.validation.constraints.NotNull;
 
 import it.smartcommunitylabdhub.compliance.model.Lineage;
 import it.smartcommunitylabdhub.compliance.model.ReportContent;
@@ -30,6 +31,7 @@ import lombok.Setter;
 public class ReportSpec extends BaseSpec {
 
     @Schema(title = "fields.compliance.report.name.title", description = "fields.compliance.report.name.description")
+    @NotNull
     private String name;
 
     @Schema(title = "fields.compliance.report.path.title", description = "fields.compliance.report.path.description")

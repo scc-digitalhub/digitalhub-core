@@ -27,17 +27,6 @@ import lombok.Setter;
 @Setter
 @SpecType(kind = "ai-compliance", entity = Extension.class)
 @ExtensionType(appliesTo = { Project.class })
-@JsonPropertyOrder({
-    "ai_task",
-    "ai_task_value",
-    "goal",
-    "purpose",
-    "domain",
-    "deployment",
-    "audience",
-    "scope",
-})
-
 public class ProjectComplianceSpec extends BaseComplianceSpec {
     
     @NotNull

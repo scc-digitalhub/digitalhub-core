@@ -734,7 +734,7 @@ export const COMPLIANCE_SCHEMAS: Record<string, JSONSchemaNode> = {
       path: { type: "string"}, 
       lineage: { $ref: "Lineage" },
     },
-    required: ["kind", "content"],
+    required: ["name", "kind", "content"],
   },
 
   // ── Top-level compliance specs ────────────────────────────────────────────

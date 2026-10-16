@@ -4,7 +4,7 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import SaveIcon from "@mui/icons-material/Save";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import { useResourceContext, useTranslate } from "react-admin";
+import { RecordContext, RecordContextProvider, useResourceContext, useTranslate } from "react-admin";
 import { v4 as uuidv4 } from "uuid";
 import type { ComplianceEntityKind, JsonRecord } from "../../types";
 import { useComplianceServices } from "../../services/context";
@@ -232,6 +232,7 @@ export function createComplianceWidget(kind: ComplianceEntityKind, Editor: Compo
         <Box sx={{ minWidth: 0, width: "100%" }}>
           <SchemaReadOnlyProvider readOnly={!editing}>
             {kind === "project" ? (
+              <RecordContextProvider value={entity}>
               <Editor
                 spec={spec}
                 onChange={setSpec}
@@ -240,6 +241,7 @@ export function createComplianceWidget(kind: ComplianceEntityKind, Editor: Compo
                 onDeleteReport={deleteReport}
                 reportProject={extension?.project ?? entity.project ?? entity.id}
               />
+              </RecordContextProvider>
             ) : (
               <ProjectComplianceProvider>
                 <Editor

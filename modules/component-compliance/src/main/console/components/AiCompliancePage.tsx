@@ -6,7 +6,6 @@ import {
     LoadingIndicator,
     useDataProvider,
     useAuthProvider,
-    useRecordContext,
     useTranslate,
 } from 'react-admin';
 import { useRootSelector } from '@dslab/ra-root-selector';
@@ -18,7 +17,7 @@ import {
 } from "./compliance-widgets";
 import { PageTitle } from '@digitalhub/console/common/components/layout/PageTitle';
 import { ComplianceIcon } from './icon';
-import { useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
  
 export const AiCompliancePage = () => {
     const dataProvider = useDataProvider();
@@ -54,7 +53,6 @@ export const AiCompliancePage = () => {
                 )}
                 icon={<ComplianceIcon fontSize="large" />}
             />
-
             <ProjectComplianceWidget entity={project} resource="projects" extension={extension} />
         </ComplianceServicesProvider>
     );
