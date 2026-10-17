@@ -58,8 +58,12 @@ export default function ComplianceReportWidget({
   const [deleting, setDeleting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const notify = useNotify();
-  
+  const [currentReport, setCurrentReport] = useState(report);
   const [draft, setDraft] = useState<JsonRecord | null>(initialEditing ? report : null);
+
+  useEffect(() => {
+    setCurrentReport(report);
+  }, [report]);
 
   const record = useRecordContext();
   const parent = record;
@@ -70,12 +74,12 @@ export default function ComplianceReportWidget({
   const uploader = useResourceUploader({ id: parentId! });
 
   const editing = canManage && draft !== null;
-  const activeReport = draft ?? report;
+  const activeReport = draft ?? currentReport;
   const spec = (activeReport.spec as JsonRecord | undefined) ?? {};
   
   const title = (spec.name as string) || (spec.kind as string) || t("compliance.form.item", { index });
 
-  const id = report.id as string;
+  const id = currentReport.id as string;
   const name = spec.name as string | undefined;
   
   
@@ -120,7 +124,7 @@ export default function ComplianceReportWidget({
   }, [canManage, draft, onEditingChange]);
 
   const startEditing = () => {
-    setDraft(structuredClone(report));
+    setDraft(structuredClone(currentReport));
     setExpanded(true);
     setValidationErrors([]);
     onEditingChange(true);
@@ -150,7 +154,9 @@ export default function ComplianceReportWidget({
       uploader.start();
       notify('ra.notification.created', { messageArgs: { smart_count: 1 } });
 
+      setCurrentReport(saved);
       setDraft(null);
+      setExpanded(false);
       setValidationErrors([]);
       onEditingChange(false);
     } finally {
@@ -162,7 +168,7 @@ export default function ComplianceReportWidget({
     if (!canManage || !onDelete || !window.confirm(t("compliance.common.deleteConfirm"))) return;
     setDeleting(true);
     try {
-      await onDelete(report);
+      await onDelete(currentReport);
     } finally {
       setDeleting(false);
     }
@@ -217,7 +223,7 @@ export default function ComplianceReportWidget({
                         onChange={onPathFilesChange}
                     />}
                 {editing && <PathWatcher onChange={updateDraftPath} />}
-                {!editing && (
+                {!editing && expanded  && (
                   <RecordContextProvider value={activeReport}>
                     <FileInfoTree />
                   </RecordContextProvider>

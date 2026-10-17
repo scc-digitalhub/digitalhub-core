@@ -205,7 +205,7 @@ export function createComplianceWidget(kind: ComplianceEntityKind, Editor: Compo
             </Button>
           </Stack>
         )}
-        {Object.keys(spec).length === 0 && <Alert severity="info">{t("compliance.agent.generateCta")}</Alert>}
+        {/* {Object.keys(spec).length === 0 && <Alert severity="info">{t("compliance.agent.generateCta")}</Alert>} */}
         <Box sx={{ minWidth: 0, width: "100%" }}>
           <SchemaReadOnlyProvider readOnly={!editing}>
             {kind === "project" ? (

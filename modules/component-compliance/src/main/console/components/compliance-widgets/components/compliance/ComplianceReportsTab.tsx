@@ -1,7 +1,7 @@
 import AddIcon from "@mui/icons-material/Add";
 import { Button, Stack, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
-import { useRecordContext, useResourceContext } from "react-admin";
+import { useGetOne, useRecordContext, useResourceContext } from "react-admin";
 import { useTranslate } from "react-admin";
 import { v4 as uuidv4 } from "uuid";
 import { createDefaultForSchema } from "../../schema/resolver";
@@ -24,19 +24,25 @@ export default function ComplianceReportsTab() {
 
   const entity = useRecordContext();
   const resource = useResourceContext();
+  const { data: refreshedEntity, refetch: refetchEntity } = useGetOne(
+    resource as string,
+    { id: entity?.id as string },
+    { enabled: Boolean(entity?.id) },
+  );
 
   useEffect(() => {
     if (!canManageReports) {
       setNewReport(null);
       setReportEditing(false);
     }
-    if (entity && entity.extensions) {
-      const initialReports = ((entity.extensions as JsonRecord[] | undefined) ?? [])
+    const currentEntity = refreshedEntity ?? entity;
+    if (currentEntity) {
+      const initialReports = ((currentEntity.extensions as JsonRecord[] | undefined) ?? [])
       .filter((item) => item.kind === "compliance-report");
       setReports(initialReports);
     }
 
-  }, [canManageReports, entity]);
+  }, [canManageReports, entity, refreshedEntity]);
 
   const addReport = () => {
     if (!canManageReports) return;
@@ -52,18 +58,20 @@ export default function ComplianceReportsTab() {
 
   const saveReport = async (report: JsonRecord) => {
       const saved = await complianceService.saveComplianceSpec("report", resource as string, entity?.id as string, report);
-      setReports((current) => {
-        const index = current.findIndex((item) => item.id === saved.id);
-        return index < 0
-          ? [...current, saved]
-          : current.map((item, itemIndex) => itemIndex === index ? saved : item);
-      });
-      return saved;
+      const { data: updatedEntity } = await refetchEntity();
+      const updatedReports = ((updatedEntity?.extensions as JsonRecord[] | undefined) ?? [])
+        .filter((item) => item.kind === "compliance-report");
+      setReports(updatedReports);
+      return updatedReports.find((item) => item.id === saved.id) ?? saved;
     };
 
     const deleteReport = async (report: JsonRecord) => {
       await complianceService.deleteComplianceSpec("report", resource as string, entity?.id as string, report.id as string);
-      setReports((current) => current.filter((item) => item.id !== report.id));
+      const { data: updatedEntity } = await refetchEntity();
+      setReports(
+        ((updatedEntity?.extensions as JsonRecord[] | undefined) ?? [])
+          .filter((item) => item.kind === "compliance-report"),
+      );
     };
 
   const saveNewReport = async (report: JsonRecord) => {
