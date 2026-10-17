@@ -49,7 +49,6 @@ export const AiComplianceDataPage = (props: {
             <DatasetComplianceWidget
                 entity={record}
                 resource={resource as string}
-                extension={field.find((item: any) => item.kind === 'data-compliance')}
             />
         </ComplianceServicesProvider>
     );

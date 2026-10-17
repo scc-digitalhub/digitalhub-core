@@ -1,47 +1,73 @@
 import AddIcon from "@mui/icons-material/Add";
 import { Button, Stack, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
+import { useRecordContext, useResourceContext } from "react-admin";
 import { useTranslate } from "react-admin";
 import { v4 as uuidv4 } from "uuid";
 import { createDefaultForSchema } from "../../schema/resolver";
 import type { JsonRecord } from "../../types";
 import { useSchemaReadOnly } from "../schemaForm/SchemaReadOnlyContext";
 import ComplianceReportWidget from "./ComplianceReportWidget";
+import { useComplianceServices } from "../..";
+import { useRootSelector } from "@dslab/ra-root-selector";
+import { randomId } from "@digitalhub/console/common/utils/helpers";
 
-interface ComplianceReportsTabProps {
-  reports: JsonRecord[];
-  onSave: (report: JsonRecord) => Promise<JsonRecord>;
-  onDelete: (report: JsonRecord) => Promise<void>;
-  project: unknown;
-}
-
-export default function ComplianceReportsTab({ reports, onSave, onDelete, project }: ComplianceReportsTabProps) {
+export default function ComplianceReportsTab() {
   const t = useTranslate();
+  const { complianceService } = useComplianceServices();
+
   const canManageReports = useSchemaReadOnly();
   const [newReport, setNewReport] = useState<JsonRecord | null>(null);
   const [reportEditing, setReportEditing] = useState(false);
+  const [reports, setReports] = useState<JsonRecord[]>([]);
+  const { root: project } = useRootSelector();
+
+  const entity = useRecordContext();
+  const resource = useResourceContext();
 
   useEffect(() => {
     if (!canManageReports) {
       setNewReport(null);
       setReportEditing(false);
     }
-  }, [canManageReports]);
+    if (entity && entity.extensions) {
+      const initialReports = ((entity.extensions as JsonRecord[] | undefined) ?? [])
+      .filter((item) => item.kind === "compliance-report");
+      setReports(initialReports);
+    }
+
+  }, [canManageReports, entity]);
 
   const addReport = () => {
     if (!canManageReports) return;
     setNewReport({
-      id: uuidv4(),
+      id: randomId(),
       name: "",
+      project: project,
       kind: "compliance-report",
-      project,
       spec: createDefaultForSchema("ReportSpec"),
     });
     setReportEditing(true);
   };
 
+  const saveReport = async (report: JsonRecord) => {
+      const saved = await complianceService.saveComplianceSpec("report", resource as string, entity?.id as string, report);
+      setReports((current) => {
+        const index = current.findIndex((item) => item.id === saved.id);
+        return index < 0
+          ? [...current, saved]
+          : current.map((item, itemIndex) => itemIndex === index ? saved : item);
+      });
+      return saved;
+    };
+
+    const deleteReport = async (report: JsonRecord) => {
+      await complianceService.deleteComplianceSpec("report", resource as string, entity?.id as string, report.id as string);
+      setReports((current) => current.filter((item) => item.id !== report.id));
+    };
+
   const saveNewReport = async (report: JsonRecord) => {
-    const saved = await onSave(report);
+    const saved = await saveReport(report);
     setNewReport(null);
     return saved;
   };
@@ -59,8 +85,8 @@ export default function ComplianceReportsTab({ reports, onSave, onDelete, projec
           index={index + 1}
           canManage={canManageReports}
           managementLocked={reportEditing}
-          onSave={onSave}
-          onDelete={onDelete}
+          onSave={saveReport}
+          onDelete={deleteReport}
           onEditingChange={setReportEditing}
         />
       ))}

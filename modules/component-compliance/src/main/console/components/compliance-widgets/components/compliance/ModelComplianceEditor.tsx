@@ -11,16 +11,10 @@ import ComplianceReportsTab from "./ComplianceReportsTab";
 export interface ModelComplianceEditorProps {
   spec: JsonRecord;
   onChange: (spec: JsonRecord) => void;
-  reports?: JsonRecord[];
-  onSaveReport?: (report: JsonRecord) => Promise<JsonRecord>;
-  onDeleteReport?: (report: JsonRecord) => Promise<void>;
-  reportProject?: unknown;
 }
 
 /** Compliance spec editor for models (ModelComplianceSpec): General / Status / Objectives / Documentation tabs. */
-export default function ModelComplianceEditor({
-  spec, onChange, reports = [], onSaveReport = async (report) => report, onDeleteReport = async () => undefined, reportProject,
-}: ModelComplianceEditorProps) {
+export default function ModelComplianceEditor({ spec, onChange }: ModelComplianceEditorProps) {
   const t = useTranslate();
   const [tab, setTab] = useState(0);
 
@@ -52,7 +46,7 @@ export default function ModelComplianceEditor({
 
 
       {tab === 2 && <ComplianceDocumentationTab documentation={documentation} setDocumentation={setDocumentation} />}
-      {tab === 3 && <ComplianceReportsTab reports={reports} onSave={onSaveReport} onDelete={onDeleteReport} project={reportProject} />}
+      {tab === 3 && <ComplianceReportsTab />}
     </Box>
   );
 }

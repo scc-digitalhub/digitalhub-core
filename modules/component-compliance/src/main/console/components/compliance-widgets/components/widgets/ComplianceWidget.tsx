@@ -4,7 +4,7 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import SaveIcon from "@mui/icons-material/Save";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import { RecordContext, RecordContextProvider, useResourceContext, useTranslate } from "react-admin";
+import { RecordContextProvider, useTranslate } from "react-admin";
 import { v4 as uuidv4 } from "uuid";
 import type { ComplianceEntityKind, JsonRecord } from "../../types";
 import { useComplianceServices } from "../../services/context";
@@ -19,7 +19,6 @@ export interface ComplianceWidgetProps {
   /** project/dataset/model entity whose compliance specification this widget edits. */
   entity: any;
   resource: string;
-  extension?: any;
   /** Called after the specification has been successfully saved. */
   onSaved?: (spec: JsonRecord) => void;
 }
@@ -27,16 +26,13 @@ export interface ComplianceWidgetProps {
 interface ComplianceEditorProps {
   spec: JsonRecord;
   onChange: (spec: JsonRecord) => void;
-  reports?: JsonRecord[];
-  onSaveReport?: (report: JsonRecord) => Promise<JsonRecord>;
-  onDeleteReport?: (report: JsonRecord) => Promise<void>;
-  reportProject?: unknown;
 }
 
 const SPEC_SCHEMA_NAME: Record<ComplianceEntityKind, string> = {
   project: "ProjectComplianceSpec",
   dataset: "DataComplianceSpec",
   model: "ModelComplianceSpec",
+  report: "ComplianceReportSpec",
 };
 
 /**
@@ -47,22 +43,19 @@ const SPEC_SCHEMA_NAME: Record<ComplianceEntityKind, string> = {
  * `DatasetComplianceWidget` and `ModelComplianceWidget`.
  */
 export function createComplianceWidget(kind: ComplianceEntityKind, Editor: ComponentType<ComplianceEditorProps>) {
-  return function ComplianceWidget({ entity, resource, extension: initialExt, onSaved }: ComplianceWidgetProps) {
+  return function ComplianceWidget({ entity, resource, onSaved }: ComplianceWidgetProps) {
     const t = useTranslate();
 
     const { complianceService } = useComplianceServices();
     const [spec, setSpec] = useState<JsonRecord>({});
     const [savedSpec, setSavedSpec] = useState<JsonRecord>({});
-    const [extension, setExtension] = useState<any>(initialExt);
+    const [extension, setExtension] = useState<any>(null);
     const [editing, setEditing] = useState(false);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [enabling, setEnabling] = useState(false);
     const [enableError, setEnableError] = useState(false);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
-    const initialReports = ((entity.extensions as JsonRecord[] | undefined) ?? [])
-      .filter((item) => item.kind === "compliance-report");
-    const [reports, setReports] = useState<JsonRecord[]>(initialReports);
 
     useEffect(() => {
       if (extension) {
@@ -120,22 +113,6 @@ export function createComplianceWidget(kind: ComplianceEntityKind, Editor: Compo
       } finally {
         setSaving(false);
       }
-    };
-
-    const saveReport = async (report: JsonRecord) => {
-      const saved = await complianceService.saveComplianceSpec(kind, resource, entity.id, report);
-      setReports((current) => {
-        const index = current.findIndex((item) => item.id === saved.id);
-        return index < 0
-          ? [...current, saved]
-          : current.map((item, itemIndex) => itemIndex === index ? saved : item);
-      });
-      return saved;
-    };
-
-    const deleteReport = async (report: JsonRecord) => {
-      await complianceService.deleteComplianceSpec(kind, resource, entity.id, report.id as string);
-      setReports((current) => current.filter((item) => item.id !== report.id));
     };
 
     const enableProjectCompliance = async () => {
@@ -236,10 +213,6 @@ export function createComplianceWidget(kind: ComplianceEntityKind, Editor: Compo
               <Editor
                 spec={spec}
                 onChange={setSpec}
-                reports={reports}
-                onSaveReport={saveReport}
-                onDeleteReport={deleteReport}
-                reportProject={extension?.project ?? entity.project ?? entity.id}
               />
               </RecordContextProvider>
             ) : (
@@ -247,10 +220,6 @@ export function createComplianceWidget(kind: ComplianceEntityKind, Editor: Compo
                 <Editor
                   spec={spec}
                   onChange={setSpec}
-                  reports={reports}
-                  onSaveReport={saveReport}
-                  onDeleteReport={deleteReport}
-                  reportProject={extension?.project ?? entity.project ?? entity.id}
                 />
               </ProjectComplianceProvider>
             )}

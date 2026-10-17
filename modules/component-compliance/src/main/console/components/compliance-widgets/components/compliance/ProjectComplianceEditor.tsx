@@ -12,10 +12,6 @@ import { ProjectComplianceProvider } from "./ProjectComplianceContext";
 export interface ProjectComplianceEditorProps {
   spec: JsonRecord;
   onChange: (spec: JsonRecord) => void;
-  reports?: JsonRecord[];
-  onSaveReport?: (report: JsonRecord) => Promise<JsonRecord>;
-  onDeleteReport?: (report: JsonRecord) => Promise<void>;
-  reportProject?: unknown;
 }
 
 /**
@@ -23,9 +19,7 @@ export interface ProjectComplianceEditorProps {
  * Documentation tabs. Compliance objectives are shown read-only in Requirements — they are
  * owned/edited at the dataset and model level, not directly on the project.
  */
-export default function ProjectComplianceEditor({
-  spec, onChange, reports = [], onSaveReport = async (report) => report, onDeleteReport = async () => undefined, reportProject,
-}: ProjectComplianceEditorProps) {
+export default function ProjectComplianceEditor({ spec, onChange }: ProjectComplianceEditorProps) {
   const t = useTranslate();
   const [tab, setTab] = useState(0);
 
@@ -111,7 +105,7 @@ export default function ProjectComplianceEditor({
       {tab === 3 && <ComplianceDocumentationTab documentation={documentation} setDocumentation={setDocumentation} />}
       {tab === 4 && (
         <ProjectComplianceProvider>
-          <ComplianceReportsTab reports={reports} onSave={onSaveReport} onDelete={onDeleteReport} project={reportProject} />
+          <ComplianceReportsTab />
         </ProjectComplianceProvider>
       )}
     </Box>

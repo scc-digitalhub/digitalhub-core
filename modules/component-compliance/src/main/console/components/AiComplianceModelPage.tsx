@@ -50,7 +50,6 @@ export const AiComplianceModelPage = (props: {
             <ModelComplianceWidget
                 entity={record}
                 resource={resource as string}
-                extension={field.find((item: any) => item.kind === 'model-compliance')}
             />
         </ComplianceServicesProvider>
     );

@@ -53,7 +53,7 @@ export const AiCompliancePage = () => {
                 )}
                 icon={<ComplianceIcon fontSize="large" />}
             />
-            <ProjectComplianceWidget entity={project} resource="projects" extension={extension} />
+            <ProjectComplianceWidget entity={project} resource="projects"/>
         </ComplianceServicesProvider>
     );
 };

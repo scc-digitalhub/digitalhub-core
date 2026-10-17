@@ -7,7 +7,7 @@ import {
   Accordion, AccordionDetails, AccordionSummary, Alert, Button, IconButton, Stack, Tooltip, Typography,
 } from "@mui/material";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Form, RecordContext, RecordContextProvider, ResourceContextProvider, useNotify, useRecordContext, useResourceContext, useSourceContext, useTranslate } from "react-admin";
+import { Form, RecordContextProvider, ResourceContextProvider, useNotify, useRecordContext, useResourceContext, useSourceContext, useTranslate } from "react-admin";
 import { useWatch } from "react-hook-form";
 import { validateSpec } from "../../schema/validateSpec";
 import type { JsonRecord } from "../../types";
@@ -101,7 +101,7 @@ export default function ComplianceReportWidget({
         basePathSuffix: name ? `extensions/${name}/` : undefined,
     });
     
-  const onPathFilesChange = (selection: FileSelection) => {};
+  const onPathFilesChange = (_: FileSelection) => {};
 
   const updateDraftPath = useCallback((path: string | undefined) => {
     setDraft((currentDraft) => {
@@ -144,11 +144,12 @@ export default function ComplianceReportWidget({
 
     setSaving(true);
     try {
-      await uploader.prepare(nextSpec);
+      const saved = await onSave({ ...draft, name: nextSpec.name, spec: nextSpec });
+
+      await uploader.prepare(saved);
       uploader.start();
       notify('ra.notification.created', { messageArgs: { smart_count: 1 } });
-      const saved = await onSave({ ...draft, name: nextSpec.name, spec: nextSpec });
-      // if (uploader.files.length > 0) uploader.upload(saved);
+
       setDraft(null);
       setValidationErrors([]);
       onEditingChange(false);
@@ -208,7 +209,6 @@ export default function ComplianceReportWidget({
                   omit={["path"]}
                   onChange={(nextSpec) => setDraft({ ...activeReport, spec: nextSpec })}
                 />
-                {/* {editing && <PathInput source="path" uploader={editing ? uploader : undefined} disabled={!editing} />} */}
                 {editing && <PathInput
                         source="path"
                         defaultValue={String(spec.path ?? "")}

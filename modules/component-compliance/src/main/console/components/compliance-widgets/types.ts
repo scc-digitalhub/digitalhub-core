@@ -1,5 +1,5 @@
 /** The three entity kinds the compliance widgets support, matching okb "appliesTo" targets. */
-export type ComplianceEntityKind = "project" | "dataset" | "model";
+export type ComplianceEntityKind = "project" | "dataset" | "model" | "report";
 
 /** Generic JSON object — entity definitions and compliance specs are treated as loosely-typed
  * records edited through the schema-driven form, mirroring how a real backend exchanges plain

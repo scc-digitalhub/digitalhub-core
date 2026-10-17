@@ -11,16 +11,10 @@ import ComplianceReportsTab from "./ComplianceReportsTab";
 export interface DatasetComplianceEditorProps {
   spec: JsonRecord;
   onChange: (spec: JsonRecord) => void;
-  reports?: JsonRecord[];
-  onSaveReport?: (report: JsonRecord) => Promise<JsonRecord>;
-  onDeleteReport?: (report: JsonRecord) => Promise<void>;
-  reportProject?: unknown;
 }
 
 /** Compliance spec editor for datasets (DataComplianceSpec): General / Status / Objectives / Documentation tabs. */
-export default function DatasetComplianceEditor({
-  spec, onChange, reports = [], onSaveReport = async (report) => report, onDeleteReport = async () => undefined, reportProject,
-}: DatasetComplianceEditorProps) {
+export default function DatasetComplianceEditor({ spec, onChange }: DatasetComplianceEditorProps) {
   const t = useTranslate();
   const [tab, setTab] = useState(0);
 
@@ -63,7 +57,7 @@ export default function DatasetComplianceEditor({
       )}
 
       {tab === 2 && <ComplianceDocumentationTab documentation={documentation} setDocumentation={setDocumentation} />}
-      {tab === 3 && <ComplianceReportsTab reports={reports} onSave={onSaveReport} onDelete={onDeleteReport} project={reportProject} />}
+      {tab === 3 && <ComplianceReportsTab />}
     </Box>
   );
 }

@@ -5,6 +5,7 @@ const EXT_MAP = {
   project: 'ai-compliance',
   dataset: 'data-compliance',
   model: 'model-compliance',
+  report: 'compliance-report',
 };
 
 export function createComplianceService(dataProvider: any): ComplianceService {
@@ -17,6 +18,7 @@ export function createComplianceService(dataProvider: any): ComplianceService {
     },
 
     async saveComplianceSpec(kind, entityKind, entityId, spec) {
+      console.log("Saving compliance spec:", kind, entityKind, entityId, spec);
       // const entity = (await dataProvider.getOne(entityKind, { id: entityId })).data;
       const extensions = (await dataProvider.getExtensions(entityKind, { id: entityId, meta: { root: spec.project } })).extensions || [];
 
@@ -29,7 +31,7 @@ export function createComplianceService(dataProvider: any): ComplianceService {
       const savedExtensions = (await dataProvider.updateExtensions(entityKind, { id: entityId, data: extensions, meta: { root: spec.project, update: true } })).extensions || [];
 
       const saved = (savedExtensions || []).find((e: any) => e.id === spec.id);
-
+      console.log("Saved compliance spec:", saved);
       return saved ? Promise.resolve(saved) : Promise.reject(null);
     },
 
