@@ -35,6 +35,12 @@ const SPEC_SCHEMA_NAME: Record<ComplianceEntityKind, string> = {
   report: "ComplianceReportSpec",
 };
 
+const EXTENSION_KIND: Partial<Record<ComplianceEntityKind, string>> = {
+  project: "ai-compliance",
+  dataset: "data-compliance",
+  model: "model-compliance",
+};
+
 /**
  * Builds a self-contained "smart" compliance widget for one entity kind: fetches the entity
  * definition + compliance spec via the injected services (see `ComplianceServicesProvider`),
@@ -63,6 +69,7 @@ export function createComplianceWidget(kind: ComplianceEntityKind, Editor: Compo
         setSavedSpec(extension.spec);
         setEditing(false);
         setLoading(false);
+        console.log("Extension loaded:", extension.spec);
       } else {
         let cancelled = false;
         setLoading(true);
@@ -74,6 +81,7 @@ export function createComplianceWidget(kind: ComplianceEntityKind, Editor: Compo
                 setSpec(fetchedExtension.spec as JsonRecord);
                 setSavedSpec(fetchedExtension.spec as JsonRecord);
             }
+            console.log("Fetched extension:", fetchedExtension?.spec);
 
             setEditing(false);
             setLoading(false);
@@ -103,8 +111,15 @@ export function createComplianceWidget(kind: ComplianceEntityKind, Editor: Compo
       setValidationErrors([]);
       setSaving(true);
       try {
-        extension.spec = spec;
-        const saved = await complianceService.saveComplianceSpec(kind, resource, entity.id, extension);
+        const extensionToSave = extension ?? {
+          id: uuidv4(),
+          name: EXTENSION_KIND[kind],
+          kind: EXTENSION_KIND[kind],
+          project: entity.project ?? entity.id,
+          spec,
+        };
+        extensionToSave.spec = spec;
+        const saved = await complianceService.saveComplianceSpec(kind, resource, entity.id, extensionToSave);
         setExtension(saved);
         setSpec(saved.spec as JsonRecord);
         setSavedSpec(saved.spec as JsonRecord);
@@ -115,13 +130,15 @@ export function createComplianceWidget(kind: ComplianceEntityKind, Editor: Compo
       }
     };
 
-    const enableProjectCompliance = async () => {
-      const minimalSpec = createDefaultForSchema("ProjectComplianceSpec");
+    const enableCompliance = async () => {
+      const schemaName = SPEC_SCHEMA_NAME[kind];
+      const minimalSpec = createDefaultForSchema(schemaName);
+      console.log("Minimal spec for compliance:", minimalSpec);
       const newExtension: JsonRecord = {
         id: uuidv4(),
-        name: "ai-compliance",
-        kind: "ai-compliance",
-        project: entity.id,
+        name: EXTENSION_KIND[kind],
+        kind: EXTENSION_KIND[kind],
+        project: entity.project ?? entity.id,
         spec: minimalSpec,
       };
 
@@ -142,7 +159,7 @@ export function createComplianceWidget(kind: ComplianceEntityKind, Editor: Compo
       return <CircularProgress />;
     }
 
-    if (kind === "project" && Object.keys(spec).length === 0) {
+    if (Object.keys(spec).length === 0) {
       return (
         <Alert
           severity={enableError ? "error" : "info"}
@@ -152,7 +169,7 @@ export function createComplianceWidget(kind: ComplianceEntityKind, Editor: Compo
               size="small"
               startIcon={enabling ? <CircularProgress color="inherit" size={16} /> : <AddIcon />}
               disabled={enabling}
-              onClick={enableProjectCompliance}
+              onClick={enableCompliance}
             >
               {t("compliance.pages.compliance.create")}
             </Button>

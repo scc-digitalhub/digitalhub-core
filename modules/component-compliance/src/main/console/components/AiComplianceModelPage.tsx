@@ -16,7 +16,6 @@ import {
 } from "./compliance-widgets";
 import { PageTitle } from '@digitalhub/console/common/components/layout/PageTitle';
 import { ComplianceIcon } from './icon';
-import { useGetSchemas } from '@digitalhub/console/common/jsonSchema/schemaController';
  
 export const AiComplianceModelPage = (props: {
     record?: any;
@@ -25,17 +24,8 @@ export const AiComplianceModelPage = (props: {
     const translate = useTranslate();
     const dataProvider = useDataProvider();
     const authProvider = useAuthProvider();
-    const { source = 'extensions' } = props;
     const record = useRecordContext(props);
     const resource = useResourceContext(); 
-
-    //check if any extension is available
-    const { data: schemas, isLoading } = useGetSchemas('extensions');
-
-    const field = record ? record[source] : null;
-    if (!field || isLoading || !schemas) {
-        return <></>;
-    }
 
     return (
         <ComplianceServicesProvider services={createServices(dataProvider, authProvider)}>

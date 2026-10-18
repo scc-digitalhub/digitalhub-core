@@ -789,7 +789,7 @@ export const COMPLIANCE_SCHEMAS: Record<string, JSONSchemaNode> = {
       deployment: { type: "string", enum: ["EDGE", "PREMISE", "CLOUD", "EMBEDDED"], description: "compliance.explanations.deployment" },
       context: { $ref: "ComplianceContext", description: "compliance.explanations.complianceContext" },
     },
-    required: ["domain", "ai_task", "goal"],
+    required: ["domain", "ai_task", "goal", "compliance_status"],
   },
 
   ModelComplianceSpec: {
@@ -798,6 +798,7 @@ export const COMPLIANCE_SCHEMAS: Record<string, JSONSchemaNode> = {
     type: "object",
     allOf: [{ $ref: "ComplianceSpec" }],
     properties: {},
+    required: ["compliance_status"],
   },
 
   DataComplianceSpec: {
@@ -810,5 +811,6 @@ export const COMPLIANCE_SCHEMAS: Record<string, JSONSchemaNode> = {
       governance: { $ref: "DataGovernance", description: "compliance.explanations.dataGovernance" },
       attributes: { type: "array", items: { $ref: "AttributeRef" }, uniqueItems: true, description: "compliance.explanations.dataAttributes" },
     },
+    required: ["scope", "compliance_status"],
   },
 };

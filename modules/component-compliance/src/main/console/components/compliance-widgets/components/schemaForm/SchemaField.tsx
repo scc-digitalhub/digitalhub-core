@@ -176,6 +176,11 @@ export default function SchemaField({ fieldKey, prop, formValue, value, onChange
   }
 
   if (prop.format === "date-time") {
+    const dateTimeValue = typeof value === "string" && value.trim() !== "" ? new Date(value) : undefined;
+    const dateTimeInputValue = dateTimeValue && !Number.isNaN(dateTimeValue.getTime())
+      ? new Date(dateTimeValue.getTime() - dateTimeValue.getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
+      : "";
+
     return withExplanation(
       <TextField
         label={label}
@@ -185,7 +190,7 @@ export default function SchemaField({ fieldKey, prop, formValue, value, onChange
         disabled={readOnly}
         required={required}
         InputLabelProps={{ shrink: true }}
-        value={value ? String(value).slice(0, 16) : ""}
+        value={dateTimeInputValue}
         onChange={(e) => onChange(e.target.value ? new Date(e.target.value).toISOString() : undefined)}
       />,
     );
