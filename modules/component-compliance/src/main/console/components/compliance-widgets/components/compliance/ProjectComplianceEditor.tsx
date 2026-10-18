@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Box, Stack, Tab, Tabs } from "@mui/material";
-import { useTranslate } from "react-admin";
+import { ResourceContextProvider, useTranslate } from "react-admin";
 import type { JsonRecord } from "../../types";
 import SchemaForm from "../schemaForm/SchemaForm";
 import SectionAccordion from "../common/SectionAccordion";
@@ -105,7 +105,9 @@ export default function ProjectComplianceEditor({ spec, onChange }: ProjectCompl
       {tab === 3 && <ComplianceDocumentationTab documentation={documentation} setDocumentation={setDocumentation} />}
       {tab === 4 && (
         <ProjectComplianceProvider>
-          <ComplianceReportsTab />
+          <ResourceContextProvider value="projects">
+            <ComplianceReportsTab />
+          </ResourceContextProvider>
         </ProjectComplianceProvider>
       )}
     </Box>
