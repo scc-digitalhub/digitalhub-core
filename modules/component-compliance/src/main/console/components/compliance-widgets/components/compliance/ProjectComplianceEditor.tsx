@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Box, Stack, Tab, Tabs } from "@mui/material";
+import { Box, Stack, Tab, Tabs, Typography } from "@mui/material";
 import { ResourceContextProvider, useTranslate } from "react-admin";
 import type { JsonRecord } from "../../types";
 import SchemaForm from "../schemaForm/SchemaForm";
@@ -22,6 +22,7 @@ export interface ProjectComplianceEditorProps {
 export default function ProjectComplianceEditor({ spec, onChange }: ProjectComplianceEditorProps) {
   const t = useTranslate();
   const [tab, setTab] = useState(0);
+  const guidanceKeys = ["general", "context", "requirements", "documentation", "reports"];
 
   const context = (spec.context as JsonRecord) ?? {};
   const setContext = (next: JsonRecord) => onChange({ ...spec, context: next });
@@ -44,6 +45,9 @@ export default function ProjectComplianceEditor({ spec, onChange }: ProjectCompl
         <Tab label={t("compliance.compliancetabs.documentation")} />
         <Tab label={t("compliance.compliancetabs.reports")} />
       </Tabs>
+      <Typography variant="body2" color="text.secondary" mb={2}>
+        {t(`compliance.guidance.project.${guidanceKeys[tab]}`)}
+      </Typography>
 
       {tab === 0 && (
         <Stack spacing={1.5}>

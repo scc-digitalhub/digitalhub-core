@@ -1,4 +1,6 @@
-import { Switch, FormControlLabel, TextField } from "@mui/material";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import { Box, Switch, FormControlLabel, IconButton, Stack, TextField, Tooltip } from "@mui/material";
+import type { ReactNode } from "react";
 import { useTranslate } from "react-admin";
 import type { JSONSchemaNode, SchemaRef } from "../../schema/types";
 import { isSchemaRef } from "../../schema/types";
@@ -27,6 +29,21 @@ interface SchemaFieldProps {
   };
 }
 
+function FieldWithExplanation({ explanation, children }: { explanation?: string; children: ReactNode }) {
+  if (!explanation) return children;
+
+  return (
+    <Stack direction="row" alignItems="flex-start" spacing={0.5} width="100%">
+      <Box minWidth={0} flex={1}>{children}</Box>
+      <Tooltip title={explanation} arrow>
+        <IconButton size="small" aria-label={explanation} sx={{ mt: 0.25 }}>
+          <InfoOutlinedIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+    </Stack>
+  );
+}
+
 /**
  * Renders a single schema property with the appropriate MUI control, dispatching on the
  * property shape (enum / $ref object / array / inline object / primitive). This is the single
@@ -38,26 +55,36 @@ export default function SchemaField({ fieldKey, prop, formValue, value, onChange
   const readOnly = useSchemaReadOnly();
   const label = fieldLabel(fieldKey, translate);
   const CustomWidget = prop.widget ? getCustomFieldWidget(prop.widget) : null;
+  const description = prop.description
+    ? translate(prop.description, { _: prop.description })
+    : undefined;
+  const explanation = prop.explanation
+    ? translate(prop.explanation, { _: prop.explanation })
+    : undefined;
+  const translatedProp = description ? { ...prop, description } : prop;
+  const withExplanation = (field: ReactNode) => (
+    <FieldWithExplanation explanation={explanation}>{field}</FieldWithExplanation>
+  );
 
   if (CustomWidget) {
-    return <CustomWidget label={label} prop={prop} formValue={formValue} value={value} onChange={onChange} required={required} />;
+    return withExplanation(<CustomWidget label={label} prop={translatedProp} formValue={formValue} value={value} onChange={onChange} required={required} />);
   }
 
   if (isSchemaRef(prop)) {
-    return (
+    return withExplanation(
       <RefObjectField
         label={label}
         schemaName={prop.$ref}
         value={value as JsonRecord | undefined}
         onChange={(next) => onChange(next)}
         required={required}
-      />
+      />,
     );
   }
 
   if (prop.enum) {
     if (customValue) {
-      return (
+      return withExplanation(
         <CustomEnumTextField
           label={label}
           options={prop.enum}
@@ -66,74 +93,74 @@ export default function SchemaField({ fieldKey, prop, formValue, value, onChange
           sentinel={customValue.sentinel}
           onCustomChange={customValue.onChange}
           required={required}
-          helperText={prop.description}
-        />
+          helperText={description}
+        />,
       );
     }
-    return (
+    return withExplanation(
       <EnumSelect
         label={label}
         options={prop.enum}
         value={value as string | undefined}
         onChange={onChange}
         required={required}
-        helperText={prop.description}
+        helperText={description}
         badgeColors={prop.enumColors}
-      />
+      />,
     );
   }
 
   if (prop.type === "array") {
     const items = prop.items;
     if (items && isSchemaRef(items)) {
-      return (
+      return withExplanation(
         <RefArrayField
           label={label}
           itemSchemaName={items.$ref}
           value={(value as JsonRecord[] | undefined) ?? []}
           onChange={(next) => onChange(next)}
-        />
+        />,
       );
     }
     if (items && !isSchemaRef(items) && items.enum) {
-      return (
+      return withExplanation(
         <MultiEnumSelect
           label={label}
           options={items.enum}
           value={(value as string[] | undefined) ?? []}
           onChange={onChange}
-          helperText={prop.description}
-        />
+          helperText={description}
+        />,
       );
     }
-    return <TagsField label={label} value={(value as string[] | undefined) ?? []} onChange={onChange} helperText={prop.description} />;
+    return withExplanation(<TagsField label={label} value={(value as string[] | undefined) ?? []} onChange={onChange} helperText={description} />);
   }
 
   if (prop.type === "object") {
     if (prop.properties) {
-      return (
+      return withExplanation(
         <InlineObjectField
           label={label}
           schema={prop}
           value={(value as JsonRecord | undefined) ?? {}}
           onChange={(next) => onChange(next)}
-        />
+        />,
       );
     }
-    return <JsonField label={label} value={value as JsonRecord | undefined} onChange={onChange} />;
+    return withExplanation(<JsonField label={label} value={value as JsonRecord | undefined} onChange={onChange} />);
   }
 
   if (prop.type === "boolean") {
-    return (
+    return withExplanation(
       <FormControlLabel
         control={<Switch checked={!!value} disabled={readOnly} onChange={(e) => onChange(e.target.checked)} />}
         label={label}
-      />
+      />,
     );
   }
 
   if (prop.type === "number" || prop.type === "integer") {
-    return (
+    return withExplanation(
       <TextField
         label={label}
         type="number"
@@ -141,15 +168,15 @@ export default function SchemaField({ fieldKey, prop, formValue, value, onChange
         fullWidth
         disabled={readOnly}
         required={required}
-        helperText={prop.description}
+        helperText={description}
         value={value === undefined || value === null ? "" : (value as number)}
         onChange={(e) => onChange(e.target.value === "" ? undefined : Number(e.target.value))}
-      />
+      />,
     );
   }
 
   if (prop.format === "date-time") {
-    return (
+    return withExplanation(
       <TextField
         label={label}
         type="datetime-local"
@@ -160,11 +187,11 @@ export default function SchemaField({ fieldKey, prop, formValue, value, onChange
         InputLabelProps={{ shrink: true }}
         value={value ? String(value).slice(0, 16) : ""}
         onChange={(e) => onChange(e.target.value ? new Date(e.target.value).toISOString() : undefined)}
-      />
+      />,
     );
   }
 
-  return (
+  return withExplanation(
     <TextField
       label={label}
       size="small"
@@ -173,9 +200,9 @@ export default function SchemaField({ fieldKey, prop, formValue, value, onChange
       required={required}
       multiline={isLongTextKey(fieldKey)}
       minRows={isLongTextKey(fieldKey) ? 2 : undefined}
-      helperText={prop.description}
+      helperText={description}
       value={(value as string) ?? ""}
       onChange={(e) => onChange(e.target.value)}
-    />
+    />,
   );
 }

@@ -209,6 +209,11 @@ export default function ComplianceReportWidget({
           <UploadCoordinatorContext.Provider value={uploader}>
             <Form key={`${id}-${editing}`} onSubmit={() => undefined}>
               <SchemaReadOnlyProvider readOnly={!editing}>
+                {editing && (
+                  <Typography variant="body2" color="text.secondary" mb={2}>
+                    {t("compliance.guidance.report.editor")}
+                  </Typography>
+                )}
                 <SchemaForm
                   schemaName="ReportSpec"
                   value={spec}

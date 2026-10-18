@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Box, Tab, Tabs } from "@mui/material";
+import { Box, Tab, Tabs, Typography } from "@mui/material";
 import { useTranslate } from "react-admin";
 import type { JsonRecord } from "../../types";
 import SchemaForm from "../schemaForm/SchemaForm";
@@ -17,6 +17,7 @@ export interface ModelComplianceEditorProps {
 export default function ModelComplianceEditor({ spec, onChange }: ModelComplianceEditorProps) {
   const t = useTranslate();
   const [tab, setTab] = useState(0);
+  const guidanceKeys = ["general", "objectives", "documentation", "reports"];
 
   const status = (spec.compliance_status as JsonRecord) ?? {};
   const setStatus = (next: JsonRecord) => onChange({ ...spec, compliance_status: next });
@@ -33,6 +34,9 @@ export default function ModelComplianceEditor({ spec, onChange }: ModelComplianc
         <Tab label={t("compliance.compliancetabs.documentation")} />
         <Tab label={t("compliance.compliancetabs.reports")} />
       </Tabs>
+      <Typography variant="body2" color="text.secondary" mb={2}>
+        {t(`compliance.guidance.model.${guidanceKeys[tab]}`)}
+      </Typography>
 
       {tab === 0 && (
           <SectionAccordion title={t("compliance.fields.compliance_status")}>

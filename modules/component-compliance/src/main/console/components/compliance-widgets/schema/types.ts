@@ -16,6 +16,8 @@ export type CustomFieldWidget =
 
 export interface SchemaRef {
   $ref: string;
+  description?: string;
+  explanation?: string;
   widget?: CustomFieldWidget;
   entityResources?: string[];
   entityKind?: string;
@@ -24,6 +26,7 @@ export interface SchemaRef {
 export interface JSONSchemaNode {
   title?: string;
   description?: string;
+  explanation?: string;
   default?: unknown;
   type?: PrimitiveType;
   format?: "date-time" | "uri" | string;

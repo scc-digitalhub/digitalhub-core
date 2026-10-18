@@ -82,6 +82,9 @@ export default function ComplianceReportsTab() {
 
   return (
     <Stack spacing={1}>
+      <Typography variant="body2" color="text.secondary">
+        {t("compliance.guidance.report.list")}
+      </Typography>
       {reports.length === 0 && !newReport && (
         <Typography color="text.secondary">{t("compliance.form.emptyArray")}</Typography>
       )}
