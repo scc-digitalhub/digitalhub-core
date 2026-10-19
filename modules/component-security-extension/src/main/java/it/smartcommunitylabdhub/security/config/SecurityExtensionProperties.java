@@ -31,9 +31,6 @@ public class SecurityExtensionProperties {
 
     private boolean enabled = false;
 
-    //name of the predefined analyzer to execute on new functions
-    private String analyzer;
-
     //location of predefined analyzer definitions (*.yaml)
     private String analyzersPath;
 }

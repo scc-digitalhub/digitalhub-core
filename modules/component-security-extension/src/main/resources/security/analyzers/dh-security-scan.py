@@ -83,10 +83,12 @@ def _fetch_source(source, dest):
 
 
 def _run_bandit(src, out_dir, findings):
+    print("Running bandit at", src)
     report = os.path.join(out_dir, "bandit.json")
     # bandit exits with 1 when issues are found
-    subprocess.run(["bandit", "-r", src, "-f", "json", "-o", report, "-q"], check=False)
+    subprocess.run(["python", "-m", "bandit", "-r", src, "-f", "json", "-o", report, "-q"], check=False)
     if not os.path.exists(report):
+        print("Bandit report not found at", report)
         return False
     with open(report) as f:
         for issue in json.load(f).get("results", []):
@@ -144,16 +146,22 @@ def _assess(findings, scanners):
 
 
 def main(
+    project,
+    run,
     function_key: str,
-    function_kind: str = None,
-    function_name: str = None,
-    report: str = None,
-    output_path: str = None,
-    image: str = None,
-    source: dict = None,
+    report_key: str = None,
 ):
     print(f"security analysis of {function_key}")
 
+    function = project.get_function(function_key)
+    if not function:
+        print(f"function {function_key} not found in project")
+        _error_report(function_key, f"function {function_key} not found in project")
+        return
+
+    source = function.spec.source or {}
+    image = function.spec.image or None
+    
     findings = {s: 0 for s in SEVERITIES}
     scanners = []
     errors = []
@@ -187,9 +195,9 @@ def main(
 
     summary = {
         "target": function_key,
-        "kind": function_kind,
-        "name": function_name,
-        "report": report,
+        "kind": function.kind,
+        "name": function.name,
+        "report_key": report_key,
         "image": image,
         "scanners": scanners,
         "findings": findings,
@@ -201,5 +209,8 @@ def main(
 
     print(json.dumps(summary, indent=2))
 
-    if output_path:
-        _upload(out, output_path)
+def _error_report(report, message = None):
+    if message:
+        print(f"error report {report}: {message}")
+    else:
+        print(f"error report {report}: no message provided")

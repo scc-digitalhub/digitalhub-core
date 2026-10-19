@@ -1,4 +1,3 @@
 security-extension:
   enabled: ${SECURITY_EXTENSION_ENABLED:false}
-  analyzer: ${SECURITY_EXTENSION_ANALYZER:dh-security-scan}
   analyzers-path: ${SECURITY_EXTENSION_ANALYZERS_PATH:classpath*:security/analyzers/}

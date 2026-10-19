@@ -46,13 +46,13 @@ public class SecurityReportSpec extends BaseSpec {
     @NotNull
     private String analyzer;
 
-    @Schema(title = "Target", description = "Key of the analyzed function")
+    @Schema(title = "Target", description = "Analyzed function")
     private String target;
 
     @Schema(title = "Image", description = "Container image analyzed, if any")
     private String image;
 
-    @Schema(title = "Run", description = "Key of the analysis run")
+    @Schema(title = "Run", description = "Analysis run key")
     private String run;
 
     @Schema(title = "Assessment", description = "Overall security assessment")
