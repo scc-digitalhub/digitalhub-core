@@ -1,0 +1,19 @@
+name: dh-security-trivy
+description: "Container image vulnerability analysis with Trivy"
+script: dh-security-trivy.py
+filter:
+  spec_fields: [image]
+function:
+  kind: python
+  spec:
+    python_version: PYTHON3_10
+    source:
+      lang: python
+      handler: main
+task:
+  kind: python+job
+  spec: {}
+run:
+  kind: python+job:run
+  spec: {}
+parameters_field: parameters

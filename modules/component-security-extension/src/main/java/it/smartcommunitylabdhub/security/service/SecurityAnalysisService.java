@@ -135,6 +135,9 @@ public class SecurityAnalysisService {
         }
 
         registry.list().forEach(analyzer -> {
+            if (!analyzer.matches(function)) {
+                return;
+            }
             log.debug("available security analyzer: {}", analyzer.getName());
             analyze(analyzer, function);
         });

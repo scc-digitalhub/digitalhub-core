@@ -18,8 +18,11 @@ package it.smartcommunitylabdhub.security.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import it.smartcommunitylabdhub.commons.models.function.Function;
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -45,6 +48,41 @@ public class SecurityAnalyzer {
     private EntityTemplate function;
     private EntityTemplate task;
     private EntityTemplate run;
+    private Filter filter;
+
+    public boolean matches(Function target) {
+        return target != null && (filter == null || filter.matches(target));
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class Filter {
+
+        @JsonProperty("spec_fields")
+        private List<String> specFields = List.of();
+
+        private List<String> kinds = List.of();
+
+        public boolean matches(Function target) {
+            if (kinds != null && !kinds.isEmpty() && !kinds.contains(target.getKind())) {
+                return false;
+            }
+            return specFields == null || specFields.stream().allMatch(field -> {
+                Object value = target.getSpec() != null ? target.getSpec().get(field) : null;
+                if (value instanceof String text) {
+                    return !text.isBlank();
+                }
+                if (value instanceof Map<?, ?> map) {
+                    return !map.isEmpty();
+                }
+                if (value instanceof Collection<?> collection) {
+                    return !collection.isEmpty();
+                }
+                return value != null;
+            });
+        }
+    }
 
     //run spec field receiving the analysis context (target function, image, source, output path)
     @JsonProperty("parameters_field")
