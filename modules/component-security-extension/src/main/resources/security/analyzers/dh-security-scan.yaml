@@ -1,0 +1,20 @@
+name: dh-security-scan
+description: "Security analysis of functions: static analysis of python sources (bandit) and vulnerability scan of source/container images (trivy, when available)"
+script: dh-security-scan.py
+function:
+  kind: python
+  spec:
+    python_version: PYTHON3_10
+    requirements:
+      - bandit
+      - boto3
+    source:
+      lang: python
+      handler: main
+task:
+  kind: python+job
+  spec: {}
+run:
+  kind: python+job:run
+  spec: {}
+parameters_field: parameters

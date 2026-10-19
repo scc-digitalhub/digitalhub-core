@@ -268,6 +268,12 @@
             <artifactId>dh-autoscaler</artifactId>
             <version>${revision}</version>
         </dependency>
+        <dependency>
+            <groupId>it.smartcommunitylabdhub</groupId>
+            <artifactId>dh-security-extension</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        
 
         <!-- ENTITIES  -->
         <dependency>

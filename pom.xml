@@ -80,6 +80,7 @@
         <module>modules/proxy</module>
         <module>modules/component-run-initializer</module>
         <module>modules/component-autoscaler</module>
+        <module>modules/component-security-extension</module>
         <module>providers/credentials-provider-db</module>
         <module>providers/trinodb-provider</module>
         <module>providers/s3-provider</module>
