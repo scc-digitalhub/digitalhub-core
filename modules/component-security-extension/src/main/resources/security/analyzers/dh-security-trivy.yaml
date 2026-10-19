@@ -15,5 +15,7 @@ task:
   spec: {}
 run:
   kind: python+job:run
-  spec: {}
+  spec: 
+    resources:
+      disk: 4Gi
 parameters_field: parameters
