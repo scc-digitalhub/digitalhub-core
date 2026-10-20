@@ -20,7 +20,7 @@ export function createComplianceService(dataProvider: any): ComplianceService {
     async saveComplianceSpec(kind, entityKind, entityId, spec) {
       console.log("Saving compliance spec:", kind, entityKind, entityId, spec);
       // workaround for project compliance spec saving
-      if (kind === 'project') {
+      if (entityKind === 'projects') {
         const project = (await dataProvider.getOne(entityKind, { id: entityId })).data;
         const extensions = [...(project.extensions || [])];
         const existingIndex = extensions.findIndex((extension: JsonRecord) => extension.id === spec.id);
@@ -56,6 +56,24 @@ export function createComplianceService(dataProvider: any): ComplianceService {
     },
 
     async deleteComplianceSpec(kind, entityKind, entityId, extensionId) {
+      if (entityKind === 'projects') {
+        const project = (await dataProvider.getOne(entityKind, { id: entityId })).data;
+        const extensions = [...(project.extensions || [])];
+        const existingIndex = extensions.findIndex((extension: JsonRecord) => extension.id === extensionId);
+
+        if (existingIndex >= 0) {
+          extensions.splice(existingIndex, 1);
+        }
+
+        const savedProject = (await dataProvider.update(entityKind, {
+          id: entityId,
+          data: { ...project, extensions },
+          previousData: project,
+        })).data;
+        const saved = (savedProject.extensions || []);
+        return saved ? Promise.resolve(saved) : Promise.reject(null);
+      }
+
       const entity = (await dataProvider.getOne(entityKind, { id: entityId })).data;
       const extensions = (await dataProvider.getExtensions(entityKind, { id: entityId, meta: { root: entity.project } })).extensions || [];
 

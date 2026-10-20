@@ -93,17 +93,27 @@ export default function ComplianceReportWidget({
         [id, name]
     );
 
-    const pathResolver = useResolveUploadPath({
-        id:
-            parentId == null
-                ? coordinator?.id
-                : String(parentId),
+    // workaround: for project put extension files under <project-root>/extensions
+    const uploadParams = parentResource !== 'projects' ?
+    {
+        id: parentId == null ? coordinator?.id : String(parentId),
         name: parentName,
-        resource: parentResource,
+        resource:  parentResource,
         uploadTarget,
         filenamePrefix: name ? `extensions/${name}` : undefined,
         basePathSuffix: name ? `extensions/${name}/` : undefined,
-    });
+    }
+    :
+    {
+        id: id,
+        name: name,
+        resource: 'extensions', 
+        uploadTarget,
+        filenamePrefix: undefined, 
+        basePathSuffix: undefined, 
+    }
+
+    const pathResolver = useResolveUploadPath(uploadParams);
     
   const onPathFilesChange = (_: FileSelection) => {};
 
