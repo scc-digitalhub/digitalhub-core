@@ -80,10 +80,10 @@ public class TvmCompileRunner extends TvmBaseRunner {
         Integer targetNumCores = runSpec.getTargetNumCores() != null ? runSpec.getTargetNumCores() : cpuCores;
         String crossCc = StringUtils.hasText(runSpec.getCrossCc())
             ? runSpec.getCrossCc()
-            : (explicitTarget ? null : profile.getCrossCc());
+            : (explicitTarget ? null : profile.getLinker().getCommand());
         List<String> crossCcOptions = runSpec.getCrossCcOptions() != null
             ? runSpec.getCrossCcOptions()
-            : (explicitTarget ? List.of() : profile.getCrossCcOptions());
+            : (explicitTarget ? List.of() : profile.getLinker().getOptions());
         validateTuning(runSpec, targetNumCores, cpuCores);
 
         List<CoreEnv> envs = createEnvList(run, taskSpec);

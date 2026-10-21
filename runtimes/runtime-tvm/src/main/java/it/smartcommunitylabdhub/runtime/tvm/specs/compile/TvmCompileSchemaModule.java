@@ -178,10 +178,10 @@ public class TvmCompileSchemaModule implements com.github.victools.jsonschema.ge
     private static ObjectNode withDefaults(ObjectNode branch) {
         // Defaults belong to each active branch so the form resolves dependencies before prefilling.
         ObjectNode defaults = branch.objectNode();
-        branch.get("properties").fields().forEachRemaining(field -> {
+        for (var field : branch.get("properties").properties()) {
             JsonNode value = field.getValue().findValue("default");
             if (value != null) defaults.set(field.getKey(), value);
-        });
+        }
         if (!defaults.isEmpty()) branch.set("default", defaults);
         return branch;
     }

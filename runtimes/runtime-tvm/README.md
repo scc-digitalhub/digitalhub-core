@@ -363,17 +363,20 @@ the architecture of the generated model are separate choices.
 
 ### Configure the target catalogue
 
-`src/main/resources/runtime-tvm.yaml` is the single source for profile names, labels,
-standard TVM target strings, default compilers and aliases. The existing
-`YamlPropertySourceFactory` is reused through a small TVM reader that distinguishes
-bundled and external files with the same name; Spring binds them to `TvmProperties`.
-The compile runner and the generated form schema use that same configuration.
-There is no Java or SDK target enumeration.
+`src/main/resources/runtime-tvm.yaml` is the single source for the target catalogue.
+Each profile separates its display name (`label`), standard TVM options (`target`)
+and the C++ linker that produces `model.so` (`linker`). Spring's YAML processor reads
+the configuration; the TVM reader converts each target mapping to the JSON already
+used by the compiler, preserving lists and numbers. The compile runner and the
+generated form schema use the same configuration. There is no Java or SDK target
+enumeration.
 
 To add or override profiles without rebuilding CORE, mount an override file and set
 `RUNTIME_TVM_CONFIG=file:/etc/digitalhub/runtime-tvm.yaml`, then restart CORE.
 The file is merged with the bundled defaults; omitted profiles remain available.
-Without an override, only the bundled file is loaded.
+An explicit `target` replaces that profile's whole target definition, so old CPU
+features are not accidentally inherited. Other omitted profile fields retain their
+defaults. Without an override, only the bundled file is loaded.
 
 ```yaml
 runtime:
@@ -381,15 +384,32 @@ runtime:
     targets:
       arm64_pi4:
         label: Raspberry Pi 4 - ARM 64-bit (Cortex-A72)
-        target: '{"kind":"llvm","mtriple":"aarch64-linux-gnu","mcpu":"cortex-a72"}'
-        cross-cc: aarch64-linux-gnu-g++
+        target:
+          kind: llvm
+          mtriple: aarch64-linux-gnu
+          mcpu: cortex-a72
+          mattr: [+neon]
+          num-cores: 4
+        linker:
+          command: aarch64-linux-gnu-g++
+          options: []
 ```
 
-Select `target_architecture: arm64_pi4` on a compile Run. `cross-cc-options` can set
-default compiler arguments; `compiler-architecture` optionally constrains the
-compiler node (as for `amd64_native`). Run `optimization` values override these
-compiler defaults. For compiler arguments, the form offers **Profile defaults** or
-**Custom arguments**; an explicit empty list clears the profile's arguments.
+Select `target_architecture: arm64_pi4` on a compile Run. `linker.options` sets
+default compiler arguments, for example `["--sysroot=/opt/sysroots/arm64"]`.
+`aliases` contains alternative profile names. `compiler-architecture` optionally
+constrains the compiler node (as for `amd64_native`); it does not select the model's
+target. The separate Run `profile` still selects where the Job executes.
+
+Run options do not change: `optimization.cross_cc` overrides `linker.command`, and
+`optimization.cross_cc_options` overrides `linker.options`. The form offers
+**Profile defaults** or **Custom arguments**; an explicit empty list clears the
+profile's arguments. SDK requests, compiler environment variables and model metadata
+keep their existing formats.
+
+When upgrading an external configuration, expand the old quoted JSON `target` into
+a YAML mapping and move `cross-cc` / `cross-cc-options` to `linker.command` /
+`linker.options`. Old configuration forms are rejected with an explanatory error.
 
 For a one-off configuration, use an explicit target instead of a non-auto profile:
 

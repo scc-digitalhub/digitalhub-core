@@ -59,9 +59,16 @@ public class TvmProperties {
     public static class Target {
         private String label;
         private String target;
-        private String crossCc;
-        private List<String> crossCcOptions = List.of();
+        private Linker linker = new Linker();
         private String compilerArchitecture;
         private List<String> aliases = List.of();
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class Linker {
+        private String command;
+        private List<String> options = List.of();
     }
 }
