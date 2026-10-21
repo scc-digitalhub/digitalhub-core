@@ -8,6 +8,7 @@ package it.smartcommunitylabdhub.runtime.tvm.runners.compile;
 
 import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
+import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
@@ -24,7 +25,6 @@ import it.smartcommunitylabdhub.runtime.tvm.specs.compile.TvmCompileRunSpec;
 import it.smartcommunitylabdhub.runtime.tvm.specs.compile.TvmCompileTaskSpec;
 import it.smartcommunitylabdhub.runtime.tvm.specs.compile.TvmTuningMode;
 import it.smartcommunitylabdhub.runtime.tvm.specs.compile.TvmTuningRunner;
-import it.smartcommunitylabdhub.runtime.tvm.specs.model.TvmTargetArchitecture;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -51,12 +51,19 @@ public class TvmCompileRunner extends TvmBaseRunner {
         TvmCompileRunSpec runSpec = TvmCompileRunSpec.with(run.getSpec());
         TvmFunctionSpec functionSpec = runSpec.getFunctionSpec();
         TvmCompileTaskSpec taskSpec = runSpec.getTaskCompileSpec();
-        String funcName = TaskSpecAccessor.with(taskSpec.toMap()).getFunction();
+        String funcName = TaskSpecAccessor.with(run.getSpec()).getFunction();
 
-        TvmTargetArchitecture architecture = Objects.requireNonNullElse(
-            runSpec.getTargetArchitecture(),
-            TvmTargetArchitecture.auto
-        );
+        boolean explicitTarget = runSpec.getTarget() != null && !runSpec.getTarget().isEmpty();
+        TvmProperties.Target profile = properties.target(runSpec.getTargetArchitecture());
+        if (explicitTarget && profile != properties.target("auto")) {
+            throw new IllegalArgumentException("Use target or target_architecture, not both; leave the profile at auto");
+        }
+        if (explicitTarget && !"llvm".equals(runSpec.getTarget().get("kind"))) {
+            throw new IllegalArgumentException("target.kind must be llvm; only Linux CPU compilation is supported");
+        }
+        String target = explicitTarget
+            ? JacksonMapper.CUSTOM_OBJECT_MAPPER.valueToTree(runSpec.getTarget()).toString()
+            : profile.getTarget();
 
         String irModelKey = StringUtils.hasText(runSpec.getModelPath())
             ? runSpec.getModelPath()
@@ -73,13 +80,16 @@ public class TvmCompileRunner extends TvmBaseRunner {
         Integer targetNumCores = runSpec.getTargetNumCores() != null ? runSpec.getTargetNumCores() : cpuCores;
         String crossCc = StringUtils.hasText(runSpec.getCrossCc())
             ? runSpec.getCrossCc()
-            : defaultCrossCc(architecture);
-        validateTuning(runSpec, crossCc, targetNumCores, cpuCores);
+            : (explicitTarget ? null : profile.getCrossCc());
+        List<String> crossCcOptions = runSpec.getCrossCcOptions() != null
+            ? runSpec.getCrossCcOptions()
+            : (explicitTarget ? List.of() : profile.getCrossCcOptions());
+        validateTuning(runSpec, targetNumCores, cpuCores);
 
         List<CoreEnv> envs = createEnvList(run, taskSpec);
         envs.add(new CoreEnv("TVM_TASK_KIND", TvmCompileTaskSpec.KIND));
-        envs.add(new CoreEnv("TVM_FUNCTION_NAME", TvmRunnerHelper.cleanName(funcName)));
-        envs.add(new CoreEnv("TVM_TARGET", architecture.getValue()));
+        envs.add(new CoreEnv("TVM_FUNCTION_NAME", funcName));
+        envs.add(new CoreEnv("TVM_TARGET", target));
         addEnv(envs, "TVM_TARGET_NUM_CORES", targetNumCores);
         // Tuning must measure candidates with the thread count the schedules are built for.
         addEnv(envs, "TVM_NUM_THREADS", targetNumCores);
@@ -88,6 +98,7 @@ public class TvmCompileRunner extends TvmBaseRunner {
         addEnv(envs, "TVM_RELAX_PIPELINE", runSpec.getRelaxPipeline());
         addEnv(envs, "TVM_TIR_PIPELINE", runSpec.getTirPipeline());
         addEnv(envs, "TVM_CROSS_CC", crossCc);
+        addEnv(envs, "TVM_CROSS_CC_OPTIONS", JacksonMapper.CUSTOM_OBJECT_MAPPER.valueToTree(crossCcOptions));
         addEnv(envs, "TVM_SYSTEM_LIB", runSpec.getSystemLib());
         // In-pod path only: compile_model.py reads it as it is.
         addEnv(envs, "TVM_PARAMS_FILE", runSpec.getParamsPath());
@@ -126,7 +137,7 @@ public class TvmCompileRunner extends TvmBaseRunner {
 
         return applyCommon(
             K8sJobRunnable.builder()
-                .nodeSelector(architectureSelector(jobArchitecture(architecture)))
+                .nodeSelector(architectureSelector(explicitTarget ? null : profile.getCompilerArchitecture()))
                 .command("/bin/bash")
                 .args(new String[] { homeDir + "/" + TvmRunnerHelper.ENTRYPOINT_NAME })
                 .contextSources(contextSources)
@@ -142,25 +153,8 @@ public class TvmCompileRunner extends TvmBaseRunner {
         );
     }
 
-    // AMD64 targets use the native toolchain; ARM targets use cross-compilers.
-    static String jobArchitecture(TvmTargetArchitecture architecture) {
-        return switch (architecture) {
-            case amd64, amd64_v3, amd64_native -> "amd64";
-            default -> null;
-        };
-    }
-
-    static String defaultCrossCc(TvmTargetArchitecture architecture) {
-        return switch (architecture) {
-            case arm64, arm64_pi5 -> "aarch64-linux-gnu-g++";
-            case arm32 -> "arm-linux-gnueabihf-g++";
-            default -> null;
-        };
-    }
-
     static void validateTuning(
         TvmCompileRunSpec runSpec,
-        String crossCc,
         Integer targetNumCores,
         Integer resourceCpuCores
     ) {
@@ -176,10 +170,6 @@ public class TvmCompileRunner extends TvmBaseRunner {
             throw new IllegalArgumentException("tuning_mode=tune requires tuning_trials");
         }
         TvmTuningRunner runner = Objects.requireNonNullElse(runSpec.getTuningRunner(), TvmTuningRunner.local);
-        // Cross-compiled candidates must be measured on the remote target.
-        if (runner == TvmTuningRunner.local && StringUtils.hasText(crossCc)) {
-            throw new IllegalArgumentException("cross-compiled targets require tuning_runner=rpc or tuning_mode=apply");
-        }
         if (
             runner == TvmTuningRunner.rpc &&
             (!StringUtils.hasText(runSpec.getRpcTrackerHost()) ||

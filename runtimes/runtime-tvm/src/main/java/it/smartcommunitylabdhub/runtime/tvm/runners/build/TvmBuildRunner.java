@@ -45,7 +45,7 @@ public class TvmBuildRunner extends TvmBaseRunner {
         TvmBuildRunSpec runSpec = TvmBuildRunSpec.with(run.getSpec());
         TvmFunctionSpec functionSpec = runSpec.getFunctionSpec();
         TvmBuildTaskSpec taskSpec = runSpec.getTaskBuildSpec();
-        String funcName = TaskSpecAccessor.with(taskSpec.toMap()).getFunction();
+        String funcName = TaskSpecAccessor.with(run.getSpec()).getFunction();
 
         String sourceUri = TvmRunnerHelper.resolveModelPath(functionSpec.getModel(), modelManager);
         TvmFormat format = resolveFormat(functionSpec.getFormat(), functionSpec.getModel(), sourceUri);

@@ -16,7 +16,6 @@ import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.tvm.TvmRuntime;
 import it.smartcommunitylabdhub.runtime.tvm.specs.TvmFunctionSpec;
 import it.smartcommunitylabdhub.runtime.tvm.specs.TvmRunSpec;
-import it.smartcommunitylabdhub.runtime.tvm.specs.model.TvmTargetArchitecture;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -55,8 +54,12 @@ public final class TvmCompileRunSpec extends TvmRunSpec {
     private String modelPath;
 
     @JsonProperty("target_architecture")
-    @Schema(title = "Target CPU Profile", description = "CPU that will run model.so. auto uses the compile node's architecture; amd64 profiles are Intel/AMD 64-bit, arm64 profiles are ARM 64-bit, and arm32 requires ARMv7 hard-float with NEON. Native and board-specific profiles require matching CPU features.", defaultValue = "auto")
-    private TvmTargetArchitecture targetArchitecture;
+    @Schema(title = "Target CPU Profile", description = "Profile from runtime-tvm.yaml. auto uses the compile node's architecture. Example: arm64_pi5.", defaultValue = "auto")
+    private String targetArchitecture;
+
+    @JsonProperty("target")
+    @Schema(title = "Explicit TVM Target", description = "Optional standard LLVM target object; leave the profile at auto. Example: {\"kind\":\"llvm\",\"mtriple\":\"aarch64-linux-gnu\",\"mcpu\":\"cortex-a72\"}.")
+    private Map<String, Serializable> target;
 
     @JsonProperty("target_num_cores")
     @Min(1)
@@ -72,6 +75,10 @@ public final class TvmCompileRunSpec extends TvmRunSpec {
     @JsonProperty("cross_cc")
     @Schema(title = "Cross Compiler", description = "C++ compiler used to link model.so; empty selects it from the target. ARM64 example: aarch64-linux-gnu-g++.")
     private String crossCc;
+
+    @JsonProperty("cross_cc_options")
+    @Schema(title = "Compiler Options", description = "Arguments passed separately to the C++ compiler. Example item: --sysroot=/opt/sysroots/arm64. Paths are inside the compile container.")
+    private List<String> crossCcOptions;
 
     @JsonProperty("exec_mode")
     @Schema(title = "Execution Mode", description = "Relax VM graph execution: bytecode or compiled. Example: compiled generates native graph code.", defaultValue = "bytecode", allowableValues = {
@@ -207,17 +214,24 @@ public final class TvmCompileRunSpec extends TvmRunSpec {
 
     @Override
     public void configure(Map<String, Serializable> data) {
-        Map<String, Serializable> active = TvmCompileOptions.active(data);
-        this.inactiveTuning = TvmCompileOptions.inactive(data, active);
+        var options = TvmCompileOptions.select(data);
+        Map<String, Serializable> active = options.active();
+        this.inactiveTuning = options.inactive();
         super.configure(active);
         TvmCompileRunSpec spec = mapper.convertValue(active, TvmCompileRunSpec.class);
         this.functionSpec = spec.getFunctionSpec();
         this.taskCompileSpec = spec.getTaskCompileSpec();
         this.modelPath = spec.getModelPath();
         this.targetArchitecture = spec.getTargetArchitecture();
+        this.target = spec.getTarget();
         this.targetNumCores = spec.getTargetNumCores();
         this.optLevel = spec.getOptLevel();
         this.crossCc = spec.getCrossCc();
+        // Preserve an explicit [] when replacing a profile's compiler arguments.
+        this.crossCcOptions = mapper.convertValue(
+            active.get("cross_cc_options"),
+            mapper.getTypeFactory().constructCollectionType(List.class, String.class)
+        );
         this.execMode = spec.getExecMode();
         this.relaxPipeline = spec.getRelaxPipeline();
         this.tirPipeline = spec.getTirPipeline();

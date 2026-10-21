@@ -16,6 +16,7 @@ public final class TvmCompileOptions {
             "target_num_cores",
             "opt_level",
             "cross_cc",
+            "cross_cc_options",
             "exec_mode",
             "relax_pipeline",
             "tir_pipeline",
@@ -71,8 +72,11 @@ public final class TvmCompileOptions {
         }
     }
 
-    public static Map<String, Serializable> active(Map<String, Serializable> data) {
-        Map<String, Serializable> result = flatten(data);
+    public record Selection(Map<String, Serializable> active, Map<String, Serializable> inactive) {}
+
+    public static Selection select(Map<String, Serializable> data) {
+        Map<String, Serializable> inactive = flatten(data);
+        Map<String, Serializable> result = new LinkedHashMap<>(inactive);
         Object mode = result.get("tuning_mode");
         switch (mode == null ? "off" : mode.toString()) {
             case "off" -> result.keySet().removeAll(TUNING);
@@ -89,13 +93,8 @@ public final class TvmCompileOptions {
                 }
             }
         }
-        return result;
-    }
-
-    public static Map<String, Serializable> inactive(Map<String, Serializable> data, Map<String, Serializable> active) {
-        Map<String, Serializable> result = flatten(data);
-        result.keySet().removeAll(active.keySet());
-        return result;
+        inactive.keySet().removeAll(result.keySet());
+        return new Selection(result, inactive);
     }
 
     public static Map<String, Serializable> stored(

@@ -25,6 +25,7 @@ package it.smartcommunitylabdhub.runtime.modelserve.specs;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import it.smartcommunitylabdhub.framework.k8s.model.InferenceV2Service;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
 import java.io.Serializable;

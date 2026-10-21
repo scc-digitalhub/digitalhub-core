@@ -35,39 +35,16 @@
   },
   "target_architecture": {
     "ui:title@en": "Target CPU Profile",
-    "ui:description@en": "CPU that will run model.so. auto uses the compile node's architecture. AMD64 means Intel/AMD 64-bit; ARM32 requires ARMv7 hard-float with NEON. Native and board-specific profiles require matching CPU features.",
+    "ui:description@en": "Profile configured in runtime-tvm.yaml. auto uses the compile node's architecture. Leave auto selected when setting an explicit target.",
     "ui:title@it": "Profilo CPU di destinazione",
-    "ui:description@it": "CPU che eseguirà model.so. auto usa l'architettura del nodo di compilazione. AMD64 indica Intel/AMD a 64 bit; ARM32 richiede ARMv7 hard-float con NEON. I profili native e quelli per una scheda specifica richiedono le stesse caratteristiche CPU.",
-    "oneOf": [
-      {
-        "ui:title@en": "Compile node CPU - generic",
-        "ui:title@it": "CPU del nodo di compilazione - generica"
-      },
-      {
-        "ui:title@en": "Intel/AMD 64-bit - x86-64-v2",
-        "ui:title@it": "Intel/AMD 64 bit - x86-64-v2"
-      },
-      {
-        "ui:title@en": "Intel/AMD 64-bit - x86-64-v3 (AVX2)",
-        "ui:title@it": "Intel/AMD 64 bit - x86-64-v3 (AVX2)"
-      },
-      {
-        "ui:title@en": "Intel/AMD 64-bit - compile node CPU (native)",
-        "ui:title@it": "Intel/AMD 64 bit - CPU del nodo (native)"
-      },
-      {
-        "ui:title@en": "ARM 64-bit - generic (AArch64)",
-        "ui:title@it": "ARM 64 bit - generico (AArch64)"
-      },
-      {
-        "ui:title@en": "Raspberry Pi 5 - ARM 64-bit (Cortex-A76)",
-        "ui:title@it": "Raspberry Pi 5 - ARM 64 bit (Cortex-A76)"
-      },
-      {
-        "ui:title@en": "ARM 32-bit - ARMv7 (hard-float, NEON)",
-        "ui:title@it": "ARM 32 bit - ARMv7 (hard-float, NEON)"
-      }
-    ]
+    "ui:description@it": "Profilo configurato in runtime-tvm.yaml. auto usa l'architettura del nodo di compilazione. Lascia auto quando imposti un target esplicito."
+  },
+  "target": {
+    "ui:title@en": "Explicit TVM target (advanced)",
+    "ui:description@en": "Optional LLVM target object. Example: kind=llvm, mtriple=aarch64-linux-gnu, mcpu=cortex-a72. The compile image must contain the matching toolchain.",
+    "ui:title@it": "Target TVM esplicito (avanzato)",
+    "ui:description@it": "Oggetto LLVM facoltativo. Esempio: kind=llvm, mtriple=aarch64-linux-gnu, mcpu=cortex-a72. L'immagine di compilazione deve contenere la toolchain corrispondente.",
+    "ui:expandable": true
   },
   "tag": {
     "ui:title@en": "Tag",
@@ -104,6 +81,12 @@
       "ui:description@en": "C++ compiler used to link model.so; empty selects it from the target. ARM64 example: aarch64-linux-gnu-g++.",
       "ui:title@it": "Cross-compilatore",
       "ui:description@it": "Compilatore C++ usato per collegare model.so; vuoto lo sceglie dal target. Esempio ARM64: aarch64-linux-gnu-g++."
+    },
+    "cross_cc_options": {
+      "ui:title@en": "Compiler options",
+      "ui:description@en": "One argument per item. Example: --sysroot=/opt/sysroots/arm64. Paths are inside the compile container.",
+      "ui:title@it": "Opzioni del compilatore",
+      "ui:description@it": "Un argomento per elemento. Esempio: --sysroot=/opt/sysroots/arm64. I percorsi sono interni al container di compilazione."
     },
     "exec_mode": {
       "ui:title@en": "Execution Mode",
@@ -280,6 +263,7 @@
     "inputs",
     "model_path",
     "target_architecture",
+    "target",
     "tag",
     "image",
     "optimization",

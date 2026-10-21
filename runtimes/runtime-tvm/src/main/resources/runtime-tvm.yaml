@@ -1,0 +1,55 @@
+runtime:
+  tvm:
+    user-id: ${RUNTIME_TVM_USER_ID:${kubernetes.security.user}}
+    group-id: ${RUNTIME_TVM_GROUP_ID:${kubernetes.security.group}}
+    home-dir: ${RUNTIME_TVM_HOME_DIR:/shared}
+    volume-size: ${RUNTIME_TVM_VOLUME_SIZE:4Gi}
+
+    builders:
+      onnx: ${RUNTIME_TVM_BUILDER_ONNX:ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0}
+      tflite: ${RUNTIME_TVM_BUILDER_TFLITE:ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0}
+
+    compiler: ${RUNTIME_TVM_COMPILER:ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0}
+
+    # Override with the Rust image here or in run.image.
+    serve: ${RUNTIME_TVM_SERVE:ghcr.io/scc-digitalhub/tvm-runtime-go:0.26.0}
+
+    entrypoint: classpath:/runtime-tvm/scripts/entrypoint.sh
+    builder-scripts:
+      onnx: classpath:/runtime-tvm/scripts/build_onnx.py
+      tflite: classpath:/runtime-tvm/scripts/build_tflite.py
+
+    # Targets are standard TVM JSON. Toolchains must exist in the compile image.
+    targets:
+      auto:
+        label: Compile node CPU - generic
+        target: '{"kind":"llvm"}'
+        aliases: [cpu, llvm]
+      amd64:
+        label: Intel/AMD 64-bit - x86-64-v2
+        target: '{"kind":"llvm","mtriple":"x86_64-linux-gnu","mcpu":"x86-64-v2"}'
+        cross-cc: x86_64-linux-gnu-g++
+        aliases: [x86]
+      amd64_v3:
+        label: Intel/AMD 64-bit - x86-64-v3 (AVX2)
+        target: '{"kind":"llvm","mtriple":"x86_64-linux-gnu","mcpu":"x86-64-v3"}'
+        cross-cc: x86_64-linux-gnu-g++
+        aliases: [x86_v3]
+      amd64_native:
+        label: Intel/AMD 64-bit - compile node CPU (native)
+        target: '{"kind":"llvm","mtriple":"x86_64-linux-gnu","mcpu":"native"}'
+        compiler-architecture: amd64
+        aliases: [x86_native]
+      arm64:
+        label: ARM 64-bit - generic (AArch64)
+        target: '{"kind":"llvm","mtriple":"aarch64-linux-gnu"}'
+        cross-cc: aarch64-linux-gnu-g++
+      arm64_pi5:
+        label: Raspberry Pi 5 - ARM 64-bit (Cortex-A76)
+        target: '{"kind":"llvm","mtriple":"aarch64-linux-gnu","mcpu":"cortex-a76","mattr":["+neon"],"num-cores":4}'
+        cross-cc: aarch64-linux-gnu-g++
+      arm32:
+        label: ARM 32-bit - ARMv7 (hard-float, NEON)
+        target: '{"kind":"llvm","mtriple":"armv7l-unknown-linux-gnueabihf","mfloat-abi":"hard","mattr":["+neon"]}'
+        cross-cc: arm-linux-gnueabihf-g++
+        aliases: [armv7l]

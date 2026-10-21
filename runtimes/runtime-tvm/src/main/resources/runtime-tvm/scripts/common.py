@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 import os
@@ -29,7 +28,7 @@ def to_list(text: str) -> Optional[list[str]]:
 
 
 def option(
-    parser: argparse._ActionsContainer,
+    parser,
     flag: str,
     env: str,
     *,
@@ -37,14 +36,15 @@ def option(
     default: Any = None,
     choices: Optional[list[str]] = None,
     help: str = "",
+    active: bool = True,
 ) -> None:
     """Use a nonempty environment value as the CLI default."""
-    value = os.environ.get(env)
+    value = os.environ.get(env) if active else None
     parser.add_argument(
         flag,
-        type=type,
-        default=value if value not in (None, "") else default,
-        choices=choices,
+        type=type if active else (lambda _: None),
+        default=(value if value not in (None, "") else default) if active else None,
+        choices=choices if active else None,
         help=f"{help} (env {env}, default {default})".strip(),
     )
 

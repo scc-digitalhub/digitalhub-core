@@ -8,6 +8,7 @@ package it.smartcommunitylabdhub.runtime.tvm.status;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import it.smartcommunitylabdhub.framework.k8s.model.InferenceV2Service;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
 import java.io.Serializable;
@@ -33,12 +34,16 @@ public class TvmRunStatus extends RunBaseStatus {
     // Populated by tvm+serve only.
     private K8sServiceInfo service;
 
+    @JsonProperty("inference_v2")
+    private InferenceV2Service inferenceV2;
+
     @Override
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
         TvmRunStatus s = mapper.convertValue(data, TvmRunStatus.class);
         this.modelKey = s.getModelKey();
         this.service = s.getService();
+        this.inferenceV2 = s.getInferenceV2();
     }
 
     public static TvmRunStatus with(Map<String, Serializable> data) {

@@ -21,12 +21,12 @@ from typing import Optional
 TIMEOUT_SEC = 900
 
 
-def benchmark_library(so_path: Path, metadata: dict, runs: int, cross_cc: Optional[str], system_lib: bool) -> Optional[dict]:
+def benchmark_library(so_path: Path, metadata: dict, runs: int, execution_error: Optional[str], system_lib: bool) -> Optional[dict]:
     """The timings of `runs` inferences, the reason they were skipped, or None when off."""
     if runs <= 0:
         return None
-    if cross_cc:
-        return {"skipped": f"cross-compiled with {cross_cc}"}
+    if execution_error:
+        return {"skipped": execution_error}
     if system_lib:
         return {"skipped": "a system-lib module cannot be loaded as a shared library"}
     if not metadata.get("inputs"):

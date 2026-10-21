@@ -32,14 +32,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.util.StringUtils;
-import org.springframework.web.util.UriComponents;
-import org.springframework.web.util.UriComponentsBuilder;
 
 public final class TvmRunnerHelper {
 
     public static final String SCRIPTS_CLASSPATH = "classpath:/runtime-tvm/scripts/";
     public static final String ENTRYPOINT_NAME = "entrypoint.sh";
-    public static final List<String> SHARED_SCRIPTS = List.of("common.py", "publish.py", "tuning.py", "benchmark.py");
+    public static final List<String> SHARED_SCRIPTS = List.of("common.py", "publish.py", "tuning.py", "benchmark.py", "toolchain.py");
 
     public static final String NODE_ARCH_LABEL = "kubernetes.io/arch";
 
@@ -91,8 +89,12 @@ public final class TvmRunnerHelper {
         if (!StringUtils.hasText(s3OrHttpUri)) {
             return null;
         }
-        UriComponents uri = UriComponentsBuilder.fromUriString(s3OrHttpUri).build();
-        return ContextRef.builder().source(s3OrHttpUri).protocol(uri.getScheme()).destination(destination).build();
+        ContextRef ref = ContextRef.from(s3OrHttpUri);
+        if (ref == null) {
+            throw new IllegalArgumentException("invalid model source URI");
+        }
+        ref.setDestination(destination);
+        return ref;
     }
 
     // The Model entity behind a store:// key; the latest version when the key has no id.
@@ -158,15 +160,6 @@ public final class TvmRunnerHelper {
         return trimmed.substring(trimmed.lastIndexOf('/') + 1);
     }
 
-    public static String cleanName(String name) {
-        if (name == null) {
-            return null;
-        }
-        String clean = name.substring(name.lastIndexOf('/') + 1);
-        int colon = clean.indexOf(':');
-        return colon >= 0 ? clean.substring(0, colon) : clean;
-    }
-
     // Whole CPU cores in a Kubernetes quantity, rounded up: "500m" -> 1, "1.5" -> 2.
     public static int parseCpuCores(String value) {
         final BigDecimal cores;
@@ -195,7 +188,11 @@ public final class TvmRunnerHelper {
             manifest.get("target_triple") instanceof String triple &&
             StringUtils.hasText(triple)
         ) {
-            return tripleArchitecture(triple);
+            String architecture = tripleArchitecture(triple);
+            if (architecture == null) {
+                throw new IllegalArgumentException("No serve node architecture mapping for model target_triple: " + triple);
+            }
+            return architecture;
         }
         return spec.get("target") instanceof String target ? targetArchitecture(target) : null;
     }
@@ -220,6 +217,12 @@ public final class TvmRunnerHelper {
         if (arch.equals("aarch64") || arch.equals("arm64")) {
             return "arm64";
         }
-        return arch.startsWith("arm") ? "arm" : null;
+        if (arch.equals("arm") || arch.startsWith("armv") || arch.startsWith("thumb")) return "arm";
+        return switch (arch) {
+            case "riscv64", "s390x" -> arch;
+            case "powerpc64le", "ppc64le" -> "ppc64le";
+            case "i386", "i486", "i586", "i686" -> "386";
+            default -> null;
+        };
     }
 }

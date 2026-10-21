@@ -16,12 +16,14 @@ import json
 import os
 import shutil
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
 import tvm
 from tvm import relax
+from tvm.ir.utils import derived_object
 from tvm.s_tir import meta_schedule as ms
 from tvm.s_tir.meta_schedule.relax_integration import extract_tasks, tune_relax
 from tvm.tirx.function import PrimFunc
@@ -39,39 +41,43 @@ DEFAULT_TRIALS_PER_ITER = 64
 FAILED_RUN_SECS = 1e10
 
 
-def add_options(parser: argparse.ArgumentParser) -> None:
+def add_options(parser: argparse.ArgumentParser, mode: str, runner: str) -> None:
+    def add(group, flag, env, **settings):
+        name = flag.removeprefix("--").replace("-", "_")
+        option(group, flag, env, active=option_is_active(name, mode, runner), **settings)
+
     tuning = parser.add_argument_group("MetaSchedule tuning")
-    option(tuning, "--tuning-mode", "TVM_TUNING_MODE", default="off", choices=["off", "tune", "apply"],
+    add(tuning, "--tuning-mode", "TVM_TUNING_MODE", default="off", choices=["off", "tune", "apply"],
            help="off, tune (search schedules) or apply (reuse a database)")
-    option(tuning, "--tuning-trials", "TVM_TUNING_TRIALS", type=int, help="max_trials_global: total trials, required to tune")
-    option(tuning, "--max-trials-per-task", "TVM_MAX_TRIALS_PER_TASK", type=int, default=16, help="max_trials_per_task")
-    option(tuning, "--tuning-trials-per-iter", "TVM_TUNING_TRIALS_PER_ITER", type=int, default=DEFAULT_TRIALS_PER_ITER,
+    add(tuning, "--tuning-trials", "TVM_TUNING_TRIALS", type=int, help="max_trials_global: total trials, required to tune")
+    add(tuning, "--max-trials-per-task", "TVM_MAX_TRIALS_PER_TASK", type=int, default=16, help="max_trials_per_task")
+    add(tuning, "--tuning-trials-per-iter", "TVM_TUNING_TRIALS_PER_ITER", type=int, default=DEFAULT_TRIALS_PER_ITER,
            help="num_trials_per_iter: candidates measured per task in one round")
-    option(tuning, "--tuning-ops", "TVM_TUNING_OPS", type=to_list, help="op_names: comma-separated filters on the task names")
-    option(tuning, "--tuning-database", "TVM_TUNING_DATABASE", help="earlier database or compiled Model folder to resume or apply")
-    option(tuning, "--tuning-runner", "TVM_TUNING_RUNNER", default="local", choices=["local", "rpc"],
+    add(tuning, "--tuning-ops", "TVM_TUNING_OPS", type=to_list, help="op_names: comma-separated filters on the task names")
+    add(tuning, "--tuning-database", "TVM_TUNING_DATABASE", help="earlier database or compiled Model folder to resume or apply")
+    add(tuning, "--tuning-runner", "TVM_TUNING_RUNNER", default="local", choices=["local", "rpc"],
            help="where candidates are measured: this Job or an RPC device")
-    option(tuning, "--tuning-workers", "TVM_TUNING_WORKERS", type=int,
+    add(tuning, "--tuning-workers", "TVM_TUNING_WORKERS", type=int,
            help="builder max_workers; with rpc also the parallel device connections")
-    option(tuning, "--tuning-seed", "TVM_TUNING_SEED", type=int, default=0, help="random seed of the search")
-    option(tuning, "--tuning-number", "TVM_TUNING_NUMBER", type=int, default=3, help="evaluator number: runs per measurement")
-    option(tuning, "--tuning-repeat", "TVM_TUNING_REPEAT", type=int, default=1, help="evaluator repeat: measurements per candidate")
-    option(tuning, "--tuning-min-repeat-ms", "TVM_TUNING_MIN_REPEAT_MS", type=int, default=100, help="evaluator min_repeat_ms")
-    option(tuning, "--tuning-alloc-repeat", "TVM_TUNING_ALLOC_REPEAT", type=int, default=1, help="runner alloc_repeat")
-    option(tuning, "--tuning-enable-cpu-cache-flush", "TVM_TUNING_ENABLE_CPU_CACHE_FLUSH", type=to_bool, default=False,
+    add(tuning, "--tuning-seed", "TVM_TUNING_SEED", type=int, default=0, help="random seed of the search")
+    add(tuning, "--tuning-number", "TVM_TUNING_NUMBER", type=int, default=3, help="evaluator number: runs per measurement")
+    add(tuning, "--tuning-repeat", "TVM_TUNING_REPEAT", type=int, default=1, help="evaluator repeat: measurements per candidate")
+    add(tuning, "--tuning-min-repeat-ms", "TVM_TUNING_MIN_REPEAT_MS", type=int, default=100, help="evaluator min_repeat_ms")
+    add(tuning, "--tuning-alloc-repeat", "TVM_TUNING_ALLOC_REPEAT", type=int, default=1, help="runner alloc_repeat")
+    add(tuning, "--tuning-enable-cpu-cache-flush", "TVM_TUNING_ENABLE_CPU_CACHE_FLUSH", type=to_bool, default=False,
            help="evaluator enable_cpu_cache_flush")
-    option(tuning, "--tuning-builder-timeout-sec", "TVM_TUNING_BUILDER_TIMEOUT_SEC", type=float, default=30.0,
+    add(tuning, "--tuning-builder-timeout-sec", "TVM_TUNING_BUILDER_TIMEOUT_SEC", type=float, default=30.0,
            help="builder timeout_sec")
-    option(tuning, "--tuning-runner-timeout-sec", "TVM_TUNING_RUNNER_TIMEOUT_SEC", type=float, default=30.0,
+    add(tuning, "--tuning-runner-timeout-sec", "TVM_TUNING_RUNNER_TIMEOUT_SEC", type=float, default=30.0,
            help="local runner timeout_sec (rpc uses the session timeout)")
-    option(tuning, "--allow-partial-tuning", "TVM_ALLOW_PARTIAL_TUNING", type=to_bool, default=False,
+    add(tuning, "--allow-partial-tuning", "TVM_ALLOW_PARTIAL_TUNING", type=to_bool, default=False,
            help="accept a budget or database that does not cover every task")
 
     rpc = parser.add_argument_group("RPC runner (measure on the target device)")
-    option(rpc, "--rpc-tracker-host", "TVM_RPC_TRACKER_HOST", help="tracker_host")
-    option(rpc, "--rpc-tracker-port", "TVM_RPC_TRACKER_PORT", type=int, help="tracker_port")
-    option(rpc, "--rpc-tracker-key", "TVM_RPC_TRACKER_KEY", help="tracker_key")
-    option(rpc, "--rpc-session-timeout-sec", "TVM_RPC_SESSION_TIMEOUT_SEC", type=int, default=60, help="session_timeout_sec")
+    add(rpc, "--rpc-tracker-host", "TVM_RPC_TRACKER_HOST", help="tracker_host")
+    add(rpc, "--rpc-tracker-port", "TVM_RPC_TRACKER_PORT", type=int, help="tracker_port")
+    add(rpc, "--rpc-tracker-key", "TVM_RPC_TRACKER_KEY", help="tracker_key")
+    add(rpc, "--rpc-session-timeout-sec", "TVM_RPC_SESSION_TIMEOUT_SEC", type=int, default=60, help="session_timeout_sec")
 
 
 def parse_options(parser: argparse.ArgumentParser, argv: Optional[list[str]]) -> argparse.Namespace:
@@ -80,14 +86,7 @@ def parse_options(parser: argparse.ArgumentParser, argv: Optional[list[str]]) ->
     option(selector, "--tuning-mode", "TVM_TUNING_MODE", default="off", choices=["off", "tune", "apply"])
     option(selector, "--tuning-runner", "TVM_TUNING_RUNNER", default="local")
     selected, _ = selector.parse_known_args(argv)
-    for group in parser._action_groups:
-        if group.title not in ("MetaSchedule tuning", "RPC runner (measure on the target device)"):
-            continue
-        for action in group._group_actions:
-            if not option_is_active(action.dest, selected.tuning_mode, selected.tuning_runner):
-                action.type = lambda _: None
-                action.choices = None
-                action.default = None
+    add_options(parser, selected.tuning_mode, selected.tuning_runner)
     return parser.parse_args(argv)
 
 
@@ -136,10 +135,6 @@ def validate_options(args: argparse.Namespace) -> None:
 
     if args.tuning_trials is None:
         fail("tuning_mode=tune requires --tuning-trials")
-    # Cross-compiled candidates must be measured on the target device.
-    if args.cross_cc and args.tuning_runner != "rpc":
-        fail("cannot measure a cross-compiled target locally; tune on the target device "
-             "with --tuning-runner rpc or compile with tuning_mode=apply")
     if args.tuning_runner == "rpc":
         missing = [flag for flag, value in (("--rpc-tracker-host", args.rpc_tracker_host),
                                             ("--rpc-tracker-port", args.rpc_tracker_port),
@@ -272,13 +267,24 @@ def first_round_budget(task_count: int, max_trials_per_task: int, trials_per_ite
 
 
 def builder_and_runner(args: argparse.Namespace, workers: int):
+    compiler, options = args.cross_cc, args.cross_cc_options
+
+    # A local callable is serialized by value into TVM's isolated builder workers.
+    def export_candidate(module):
+        path = str(Path(tempfile.mkdtemp(prefix="tvm-candidate-")) / "candidate.so")
+        module.export_library(path, cc=compiler, options=options)
+        return path
+
     evaluator = ms.runner.EvaluatorConfig(
         number=args.tuning_number,
         repeat=args.tuning_repeat,
         min_repeat_ms=args.tuning_min_repeat_ms,
         enable_cpu_cache_flush=args.tuning_enable_cpu_cache_flush,
     )
-    builder = ms.builder.LocalBuilder(max_workers=workers, timeout_sec=args.tuning_builder_timeout_sec)
+    builder = ms.builder.LocalBuilder(
+        max_workers=workers, timeout_sec=args.tuning_builder_timeout_sec,
+        f_export=export_candidate,
+    )
     if args.tuning_runner == "rpc":
         runner = ms.runner.RPCRunner(
             rpc_config=ms.runner.RPCConfig(
@@ -297,7 +303,27 @@ def builder_and_runner(args: argparse.Namespace, workers: int):
     return builder, runner
 
 
-def tune(args, prepared, selected, all_tasks, target, database: TuningDatabase, pass_ctx, cpu_count: int) -> int:
+@derived_object
+class MeasurementErrors(ms.measure_callback.PyMeasureCallback):
+    def __init__(self, path: Path, errors: dict):
+        self.path = path
+        self.errors = errors
+
+    def apply(self, scheduler, task_id, candidates, builder_results, runner_results):
+        for built, measured in zip(builder_results, runner_results):
+            message = built.error_msg or measured.error_msg
+            if not message:
+                continue
+            phase = "builder" if built.error_msg else "runner"
+            self.errors[phase] = self.errors.get(phase, 0) + 1
+            if "first" not in self.errors:
+                self.errors["first"] = {"task_id": int(task_id), "phase": phase, "message": str(message)}
+                print(f"WARN: MetaSchedule {phase}: {message}", file=sys.stderr, flush=True)
+        if self.errors:
+            write_json(self.path, self.errors)
+
+
+def tune(args, prepared, selected, all_tasks, target, database: TuningDatabase, pass_ctx, cpu_count: int, errors: dict) -> int:
     """Tune candidates and return the worker count."""
     budget = first_round_budget(len(selected), args.max_trials_per_task, args.tuning_trials_per_iter)
     print(f"      tune: {len(selected)}/{len(all_tasks)} tasks, trials={args.tuning_trials}, "
@@ -325,6 +351,8 @@ def tune(args, prepared, selected, all_tasks, target, database: TuningDatabase, 
             num_trials_per_iter=args.tuning_trials_per_iter,
             builder=builder,
             runner=runner,
+            measure_callbacks=[*ms.MeasureCallback.create("default"),
+                               MeasurementErrors(database.work_dir / "errors.json", errors)],
             seed=args.tuning_seed,
         )
     return workers
@@ -392,8 +420,9 @@ def run(args: argparse.Namespace, mod, target, effective_target: str, ir_metadat
     })
 
     workers = None
+    errors = {}
     if args.tuning_mode == "tune":
-        workers = tune(args, prepared, selected, tasks, target, database, pass_ctx, cpu_count)
+        workers = tune(args, prepared, selected, tasks, target, database, pass_ctx, cpu_count, errors)
     else:
         print(f"      apply: the database may cover up to {len(tasks)} tasks")
 
@@ -406,7 +435,9 @@ def run(args: argparse.Namespace, mod, target, effective_target: str, ir_metadat
         "functions": functions,
     })
     if records == 0:
-        fail("MetaSchedule database contains no successful tuning records; inspect tuning/logs")
+        first = errors.get("first")
+        detail = f"; {first['phase']}: {first['message']}" if first else ""
+        fail(f"MetaSchedule database contains no successful tuning records{detail}; inspect tuning/logs and tuning/errors.json")
     if missing and not args.allow_partial_tuning:
         fail(f"MetaSchedule database does not cover every selected function: {missing}; "
              "set --allow-partial-tuning true only when partial optimization is intentional")
@@ -441,4 +472,6 @@ def run(args: argparse.Namespace, mod, target, effective_target: str, ir_metadat
         "covered_function_count": len(functions) - len(missing),
         "missing_functions": missing,
     }
+    if errors:
+        summary["measurement_errors"] = errors
     return tuned, summary

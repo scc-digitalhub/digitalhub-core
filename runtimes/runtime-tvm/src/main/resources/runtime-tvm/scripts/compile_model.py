@@ -20,6 +20,7 @@ import tvm
 from tvm import relax
 
 import tuning
+import toolchain
 from benchmark import benchmark_library
 from common import INPUT_DIR, OUTPUT_DIR, fail, option, read_json, step, target_triple, to_bool, write_json
 
@@ -42,13 +43,14 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     option(build, "--target-num-cores", "TVM_TARGET_NUM_CORES", type=int, help="num-cores of the target, used by tuning")
     option(build, "--opt-level", "TVM_OPT_LEVEL", type=int, default=3, help="PassContext opt_level, 0-3")
     option(build, "--cross-cc", "TVM_CROSS_CC", help="cross compiler for export_library, e.g. aarch64-linux-gnu-g++")
+    option(build, "--cross-cc-options", "TVM_CROSS_CC_OPTIONS", type=toolchain.compiler_options, default="[]",
+           help='JSON array of C++ compiler arguments, e.g. ["--sysroot=/opt/sysroots/arm64"]')
     option(build, "--exec-mode", "TVM_EXEC_MODE", default="bytecode", choices=["bytecode", "compiled"], help="relax.build exec_mode")
     option(build, "--relax-pipeline", "TVM_RELAX_PIPELINE", default="default", help="relax.build relax_pipeline")
     option(build, "--tir-pipeline", "TVM_TIR_PIPELINE", default="default", help="relax.build tir_pipeline")
     option(build, "--system-lib", "TVM_SYSTEM_LIB", type=to_bool, default=False, help="relax.build system_lib")
     option(build, "--benchmark-runs", "TVM_BENCHMARK_RUNS", type=int, default=10, help="timed inferences of model.so, 0 = off")
 
-    tuning.add_options(parser)
     args = tuning.parse_options(parser, argv)
     validate_options(args)
     return args
@@ -75,8 +77,8 @@ def load_ir(ir_dir: Path):
         fail(
             f"model.relax.json not found in {ir_dir}. Source: {source}. "
             "Check that its storage folder contains the tvm+build output. "
-            "An explicit model_path in the run or task overrides function.ir_model; "
-            "clear both overrides to use the function's current IR."
+            "An explicit run.model_path overrides function.ir_model; "
+            "clear it to use the function's current IR."
         )
     return tvm.ir.load_json(path.read_text())
 
@@ -131,34 +133,44 @@ def resolve_target(target_text: str, num_cores: Optional[int]):
 
     Return (Target, effective target text), including num-cores for tuning.
     """
-    requested = tvm.target.Target(target_text)
-    native = requested.kind.name == "llvm" and str(requested.attrs.get("mcpu", "")) == "native"
-    if not native and num_cores is None:
-        return requested, target_text
-
     try:
         config = json.loads(target_text)
     except json.JSONDecodeError as error:
         if target_text.strip() != "llvm":
-            raise ValueError("target_num_cores and mcpu=native need a JSON target or plain llvm") from error
+            raise ValueError("use a standard JSON target or plain llvm") from error
         config = {"kind": "llvm"}
     if not isinstance(config, dict):
         raise ValueError("an LLVM target must be a JSON object")
+    if config.get("kind") != "llvm":
+        raise ValueError("only LLVM CPU compilation is supported")
+    host_triple = tvm.target.codegen.llvm_get_system_triple()
+    config.setdefault("mtriple", host_triple)
+    toolchain.platform_key(config["mtriple"])
 
-    if native:
+    if config.get("mcpu") == "native":
+        if toolchain.platform_key(config["mtriple"]) != toolchain.platform_key(host_triple):
+            raise ValueError("mcpu=native requires a target matching the compile host")
         cpu = tvm.target.codegen.llvm_get_system_cpu()
         if not cpu or cpu in {"generic", "unknown"}:
             raise RuntimeError("LLVM could not detect the native CPU")
         config["mcpu"] = cpu
+        features = tvm.get_global_func("tvm.codegen.llvm.GetHostCPUFeatures")()
+        config["mattr"] = [
+            ("+" if int(enabled) else "-") + name for name, enabled in sorted(features.items())
+        ] + config.get("mattr", [])
         triple = tvm.target.codegen.llvm_get_system_triple()
         if triple:
             config["mtriple"] = triple
         num_cores = num_cores or cpu_count()
         print(f"      mcpu=native -> mcpu={cpu}, mtriple={config.get('mtriple')}")
-    config["num-cores"] = num_cores
-    print(f"      num-cores={num_cores}")
+    if num_cores is not None:
+        config["num-cores"] = num_cores
     text = json.dumps(config, separators=(",", ":"))
-    return tvm.target.Target(text), text
+    target = tvm.target.Target(text)
+    cpus = tvm.target.codegen.llvm_get_cpu_archlist(target)
+    if config.get("mcpu") not in (None, "generic") and config["mcpu"] not in cpus:
+        raise ValueError(f"LLVM does not support CPU {config['mcpu']!r} for {config['mtriple']}")
+    return target, text
 
 
 def build_library(mod, args: argparse.Namespace, target, out_dir: Path, pass_ctx) -> Path:
@@ -172,7 +184,7 @@ def build_library(mod, args: argparse.Namespace, target, out_dir: Path, pass_ctx
     so_path = out_dir / "model.so"
     if args.cross_cc:
         print(f"      cross compiler: {args.cross_cc}")
-    executable.export_library(str(so_path), **({"cc": args.cross_cc} if args.cross_cc else {}))
+    executable.export_library(str(so_path), cc=args.cross_cc, options=args.cross_cc_options)
     print(f"      written: {so_path} ({so_path.stat().st_size / 1e6:.1f} MB)")
     return so_path
 
@@ -190,6 +202,10 @@ def compiled_metadata(ir_metadata: dict, args: argparse.Namespace, target, effec
         metadata["target_requested"] = args.target
     metadata.update(opt_level=args.opt_level, exec_mode=args.exec_mode, relax_pipeline=args.relax_pipeline,
                     tir_pipeline=args.tir_pipeline)
+    metadata["toolchain"] = {
+        "compiler": args.cross_cc, "options": args.cross_cc_options,
+        "host_triple": tvm.target.codegen.llvm_get_system_triple(),
+    }
     if tuning_summary is not None:
         metadata["meta_schedule"] = tuning_summary
     if benchmark is not None:
@@ -217,8 +233,10 @@ def main(argv: Optional[list[str]] = None) -> None:
 
     step(2, STEPS, f"target {args.target} (opt_level={args.opt_level}, exec_mode={args.exec_mode})")
     target, effective_target = resolve_target(args.target, args.target_num_cores)
-    if args.tuning_mode == "tune" and target.kind.name != "llvm":
-        fail("MetaSchedule tuning supports LLVM (CPU) targets only")
+    args.cross_cc = toolchain.check_toolchain(target, args.cross_cc, args.cross_cc_options)
+    execution_error = toolchain.local_execution_error(target)
+    if args.tuning_mode == "tune" and args.tuning_runner == "local" and execution_error:
+        fail(execution_error + "; use tuning_runner=rpc or tuning_mode=apply")
     if args.tuning_mode == "tune" and target.attrs.get("num-cores") is not None:
         # Candidates must be timed with the thread count the schedules are built for.
         os.environ.setdefault("TVM_NUM_THREADS", str(target.attrs["num-cores"]))
@@ -236,7 +254,7 @@ def main(argv: Optional[list[str]] = None) -> None:
     so_path = build_library(mod, args, target, out_dir, pass_ctx)
 
     step(5, STEPS, "benchmarking model.so")
-    benchmark = benchmark_library(so_path, ir_metadata, args.benchmark_runs, args.cross_cc, args.system_lib)
+    benchmark = benchmark_library(so_path, ir_metadata, args.benchmark_runs, execution_error, args.system_lib)
     print(f"      {json.dumps(benchmark) if benchmark is not None else 'off'}")
 
     step(6, STEPS, "writing metadata.json")

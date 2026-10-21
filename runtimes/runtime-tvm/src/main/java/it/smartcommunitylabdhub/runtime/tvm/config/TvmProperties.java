@@ -6,12 +6,16 @@
 
 package it.smartcommunitylabdhub.runtime.tvm.config;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import org.springframework.util.StringUtils;
 
 @Getter
 @Setter
@@ -34,4 +38,30 @@ public class TvmProperties {
 
     private String entrypoint;
     private Map<String, String> builderScripts;
+
+    private Map<String, Target> targets = new LinkedHashMap<>();
+
+    public Target target(String name) {
+        String key = StringUtils.hasText(name) ? name.trim().toLowerCase(Locale.ROOT) : "auto";
+        Target target = targets.get(key);
+        if (target == null) {
+            target = targets.values().stream().filter(value -> value.getAliases().contains(key)).findFirst().orElse(null);
+        }
+        if (target == null || !StringUtils.hasText(target.getTarget())) {
+            throw new IllegalArgumentException("Unknown or unconfigured target_architecture: " + key);
+        }
+        return target;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class Target {
+        private String label;
+        private String target;
+        private String crossCc;
+        private List<String> crossCcOptions = List.of();
+        private String compilerArchitecture;
+        private List<String> aliases = List.of();
+    }
 }

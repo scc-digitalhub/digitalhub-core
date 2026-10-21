@@ -37,19 +37,18 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class TvmServeRunner extends TvmBaseRunner {
 
-    private static final int HTTP_PORT = 8080;
-    private static final int GRPC_PORT = 9000;
+    public static final int HTTP_PORT = 8080;
+    public static final int GRPC_PORT = 9000;
 
     private final ModelManager modelManager;
     private final FunctionManager functionService;
 
     public TvmServeRunner(
-        TvmProperties properties,
-        K8sBuilderHelper k8sBuilderHelper,
-        K8sLabelHelper k8sLabelHelper,
-        ModelManager modelManager,
-        FunctionManager functionService
-    ) {
+            TvmProperties properties,
+            K8sBuilderHelper k8sBuilderHelper,
+            K8sLabelHelper k8sLabelHelper,
+            ModelManager modelManager,
+            FunctionManager functionService) {
         super(properties, k8sBuilderHelper, k8sLabelHelper);
         this.modelManager = modelManager;
         this.functionService = functionService;
@@ -59,23 +58,19 @@ public class TvmServeRunner extends TvmBaseRunner {
         TvmServeRunSpec runSpec = TvmServeRunSpec.with(run.getSpec());
         TvmFunctionSpec functionSpec = runSpec.getFunctionSpec();
         TvmServeTaskSpec taskSpec = runSpec.getTaskServeSpec();
-        TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(taskSpec.toMap());
+        TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(run.getSpec());
         String funcName = taskAccessor.getFunction();
 
-        String servedName = StringUtils.hasText(runSpec.getServedName())
-            ? runSpec.getServedName()
-            : TvmRunnerHelper.cleanName(funcName);
+        String servedName = resolveServedName(runSpec.getServedName(), funcName);
 
         String modelKey = resolveModelKey(
-            runSpec.getModelPath(),
-            functionSpec != null ? functionSpec.getSoModel() : null
-        );
+                runSpec.getModelPath(),
+                functionSpec != null ? functionSpec.getSoModel() : null);
         Model model = modelKey.startsWith(Keys.STORE_PREFIX)
-            ? TvmRunnerHelper.resolveModel(modelKey, modelManager)
-            : null;
+                ? TvmRunnerHelper.resolveModel(modelKey, modelManager)
+                : null;
         String modelFolder = TvmRunnerHelper.modelDir(
-            model != null ? TvmRunnerHelper.modelPath(model, modelKey) : modelKey
-        );
+                model != null ? TvmRunnerHelper.modelPath(model, modelKey) : modelKey);
         String modelDir = homeDir + "/model";
         String architecture = modelArchitecture(modelKey, model);
 
@@ -90,19 +85,16 @@ public class TvmServeRunner extends TvmBaseRunner {
         }
 
         List<ContextRef> contextRefs = Collections.singletonList(
-            TvmRunnerHelper.inputContextRef(modelFolder, "model/")
-        );
+                TvmRunnerHelper.inputContextRef(modelFolder, "model/"));
 
         String image = resolveImage(
-            runSpec.getImage(),
-            properties.getServe(),
-            "no serve image configured: set run.image or runtime.tvm.serve"
-        );
+                runSpec.getImage(),
+                properties.getServe(),
+                "no serve image configured: set run.image or runtime.tvm.serve");
 
         List<CorePort> servicePorts = List.of(
-            new CorePort(HTTP_PORT, HTTP_PORT, AppProtocol.openinference_v2),
-            new CorePort(GRPC_PORT, GRPC_PORT, AppProtocol.openinference_v2)
-        );
+                new CorePort(HTTP_PORT, HTTP_PORT, AppProtocol.openinference_v2),
+                new CorePort(GRPC_PORT, GRPC_PORT, AppProtocol.openinference_v2));
 
         List<String> serviceNames = new ArrayList<>();
         if (StringUtils.hasText(runSpec.getServiceName())) {
@@ -122,22 +114,25 @@ public class TvmServeRunner extends TvmBaseRunner {
 
         // Leave command/args unset to use the serving image's ENTRYPOINT.
         return applyCommon(
-            K8sServeRunnable.builder()
-                .nodeSelector(architectureSelector(architecture))
-                .replicas(runSpec.getReplicas())
-                .servicePorts(servicePorts)
-                .serviceType(runSpec.getServiceType())
-                .serviceNames(serviceNames.isEmpty() ? null : serviceNames)
-                .build(),
-            run,
-            TvmServeTaskSpec.KIND,
-            funcName,
-            image,
-            envs,
-            secretData,
-            contextRefs,
-            taskSpec
-        );
+                K8sServeRunnable.builder()
+                        .nodeSelector(architectureSelector(architecture))
+                        .replicas(runSpec.getReplicas())
+                        .servicePorts(servicePorts)
+                        .serviceType(runSpec.getServiceType())
+                        .serviceNames(serviceNames.isEmpty() ? null : serviceNames)
+                        .build(),
+                run,
+                TvmServeTaskSpec.KIND,
+                funcName,
+                image,
+                envs,
+                secretData,
+                contextRefs,
+                taskSpec);
+    }
+
+    public static String resolveServedName(String servedName, String functionName) {
+        return StringUtils.hasText(servedName) ? servedName : functionName;
     }
 
     // The function reference is the default; never infer a model from run history.
@@ -145,9 +140,8 @@ public class TvmServeRunner extends TvmBaseRunner {
         String modelKey = StringUtils.hasText(modelPath) ? modelPath : soModel;
         if (!StringUtils.hasText(modelKey)) {
             throw new IllegalArgumentException(
-                "tvm+serve needs a compiled .so model: set model_path or run tvm+compile first " +
-                    "(function.spec.so_model is empty)"
-            );
+                    "tvm+serve needs a compiled .so model: set model_path or run tvm+compile first " +
+                            "(function.spec.so_model is empty)");
         }
         return modelKey;
     }
@@ -163,7 +157,8 @@ public class TvmServeRunner extends TvmBaseRunner {
         return architecture;
     }
 
-    // Each worker owns a thread pool: split the pod's CPUs to avoid oversubscription.
+    // Each worker owns a thread pool: split the pod's CPUs to avoid
+    // oversubscription.
     static Integer threadsPerWorker(Integer cpuCores, Integer workers) {
         if (cpuCores == null) {
             return null;

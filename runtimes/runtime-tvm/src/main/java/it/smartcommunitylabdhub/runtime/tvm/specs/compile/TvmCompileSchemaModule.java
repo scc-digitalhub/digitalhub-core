@@ -12,11 +12,17 @@ import com.github.victools.jsonschema.generator.CustomDefinition;
 import com.github.victools.jsonschema.generator.CustomDefinitionProviderV2;
 import com.github.victools.jsonschema.generator.SchemaGenerationContext;
 import com.github.victools.jsonschema.generator.SchemaGeneratorConfigBuilder;
-import it.smartcommunitylabdhub.runtime.tvm.specs.model.TvmTargetArchitecture;
+import it.smartcommunitylabdhub.runtime.tvm.config.TvmProperties;
 import java.util.List;
 
 /** Group TVM options using the console's existing accordions and schema dependencies. */
 public class TvmCompileSchemaModule implements com.github.victools.jsonschema.generator.Module {
+
+    private final TvmProperties properties;
+
+    public TvmCompileSchemaModule(TvmProperties properties) {
+        this.properties = properties;
+    }
 
     @Override
     public void applyToConfigBuilder(SchemaGeneratorConfigBuilder builder) {
@@ -42,19 +48,16 @@ public class TvmCompileSchemaModule implements com.github.victools.jsonschema.ge
             });
         builder
             .forTypesInGeneral()
-            .withTypeAttributeOverride((schema, type, context) -> {
-                if (!type.getType().getErasedType().getName().equals(TvmTargetArchitecture.class.getName())) return;
-                // Apply labels after enum providers, regardless of registry initialization order.
-                schema.remove("enum");
-                ArrayNode options = schema.putArray("oneOf");
-                for (TvmTargetArchitecture target : TvmTargetArchitecture.values()) {
-                    options.addObject().put("const", target.name()).put("title", target.getLabel());
-                }
-            })
-            .withCustomDefinitionProvider(new CompileProvider());
+            .withCustomDefinitionProvider(new CompileProvider(properties));
     }
 
     private static class CompileProvider implements CustomDefinitionProviderV2 {
+
+        private final TvmProperties config;
+
+        CompileProvider(TvmProperties config) {
+            this.config = config;
+        }
 
         @Override
         public CustomDefinition provideCustomSchemaDefinition(ResolvedType type, SchemaGenerationContext context) {
@@ -65,14 +68,64 @@ public class TvmCompileSchemaModule implements com.github.victools.jsonschema.ge
             ) return null;
             ObjectNode schema = context.createStandardDefinition(type, this);
             ObjectNode properties = (ObjectNode) schema.get("properties");
-            ObjectNode optimization = object(schema, "Advanced compilation");
-            move(properties, (ObjectNode) optimization.get("properties"), TvmCompileOptions.OPTIMIZATION);
-            properties.set("optimization", optimization);
+            properties.set("target_architecture", targetProfileSchema(properties, config));
+            properties.set("target", explicitTargetSchema(properties));
+            requireAutoProfileForExplicitTarget(schema);
+            properties.set("optimization", optimizationSchema(properties));
             properties.set("tuning", tuningSchema(properties));
             properties.remove(TvmCompileOptions.TUNING);
             properties.remove("tuning_mode");
             return new CustomDefinition(schema);
         }
+    }
+
+    private static ObjectNode targetProfileSchema(ObjectNode factory, TvmProperties config) {
+        ObjectNode profile = factory.objectNode()
+            .put("type", "string").put("title", "Target CPU Profile").put("default", "auto");
+        ArrayNode profiles = profile.putArray("oneOf");
+        config.getTargets().forEach((name, target) ->
+            profiles.addObject().put("const", name).put("title", target.getLabel() != null ? target.getLabel() : name)
+        );
+        return profile;
+    }
+
+    private static ObjectNode explicitTargetSchema(ObjectNode factory) {
+        ObjectNode target = object(factory, "Explicit TVM Target");
+        ((ObjectNode) target.get("properties")).putObject("kind").put("type", "string").put("pattern", "^llvm$");
+        ObjectNode fields = target.putObject("dependencies").putObject("kind").putObject("properties");
+        for (String field : List.of("mtriple", "mcpu", "mfloat-abi")) {
+            fields.putObject(field).put("type", "string");
+        }
+        fields.putObject("mattr").put("type", "array").putObject("items").put("type", "string");
+        fields.putObject("num-cores").put("type", "integer").put("minimum", 1);
+        target.putObject("if").put("minProperties", 1);
+        target.putObject("then").putArray("required").add("kind");
+        target.put("additionalProperties", true);
+        target.put("description", "Optional standard TVM LLVM target; leave the profile at auto. Example: kind=llvm, mtriple=aarch64-linux-gnu, mcpu=cortex-a72.");
+        return target;
+    }
+
+    private static void requireAutoProfileForExplicitTarget(ObjectNode schema) {
+        ObjectNode choice = schema.withArray("/allOf").addObject();
+        ObjectNode explicit = choice.putObject("if");
+        explicit.putArray("required").add("target");
+        explicit.putObject("properties").putObject("target").put("minProperties", 1);
+        choice.putObject("then").putObject("properties").putObject("target_architecture").put("const", "auto");
+    }
+
+    private static ObjectNode optimizationSchema(ObjectNode fields) {
+        ObjectNode optimization = object(fields, "Advanced compilation");
+        ObjectNode options = (ObjectNode) optimization.get("properties");
+        move(fields, options, TvmCompileOptions.OPTIMIZATION);
+        ObjectNode arguments = fields.objectNode().put("type", "array").put("title", "Custom arguments");
+        arguments.putObject("items").put("type", "string");
+        ObjectNode compilerOptions = options.putObject("cross_cc_options").put("title", "Compiler Options");
+        compilerOptions.put("description", "Use profile defaults, or replace them with separate compiler arguments. Example item: --sysroot=/opt/sysroots/arm64.");
+        compilerOptions.putNull("default");
+        compilerOptions.putArray("oneOf")
+            .add(arguments.objectNode().put("type", "null").put("title", "Profile defaults"))
+            .add(arguments);
+        return optimization;
     }
 
     private static ObjectNode tuningSchema(ObjectNode fields) {
