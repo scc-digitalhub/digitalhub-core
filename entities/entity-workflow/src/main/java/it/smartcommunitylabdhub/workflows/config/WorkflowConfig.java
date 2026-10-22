@@ -22,6 +22,7 @@ import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
+import it.smartcommunitylabdhub.templates.service.TemplateServiceImpl;
 import it.smartcommunitylabdhub.workflows.persistence.WorkflowEntity;
 import it.smartcommunitylabdhub.workflows.persistence.WorkflowRepository;
 import java.util.Optional;
@@ -44,6 +45,11 @@ public class WorkflowConfig {
     @Bean
     SpecRegistryImpl<Workflow> workflowSpecRegistry() {
         return new SpecRegistryImpl<>(Workflow.class);
+    }
+
+    @Bean
+    TemplateServiceImpl<Workflow> workflowTemplateService() {
+        return new TemplateServiceImpl<>(Workflow.class) {};
     }
 
     // build indexer only if a provider is available

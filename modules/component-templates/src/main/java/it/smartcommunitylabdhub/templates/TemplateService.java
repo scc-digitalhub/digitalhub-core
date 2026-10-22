@@ -23,22 +23,28 @@
 
 package it.smartcommunitylabdhub.templates;
 
+import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.template.Template;
 import it.smartcommunitylabdhub.templates.filter.TemplateFilter;
+import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 /*
- * Searchable service for managing function
+ * Template service for exposing templates for a given entity D
  */
-public interface SearchableTemplateService {
-    Page<Template> searchTemplates(Pageable pageable, @Valid TemplateFilter filter) throws SystemException;
+public interface TemplateService<D> {
+    Class<D> getType();
 
-    Page<Template> searchTemplates(Pageable pageable, @NotNull String type, @Valid TemplateFilter filter)
-        throws SystemException;
+    @Nullable
+    Template findTemplate(@NotNull String id) throws NoSuchEntityException, SystemException;
 
-    Template getTemplate(@NotNull String type, @NotNull String id) throws SystemException;
+    Template getTemplate(@NotNull String id) throws NoSuchEntityException, SystemException;
+
+    List<Template> listTemplates(@Valid TemplateFilter filter) throws SystemException;
+    Page<Template> searchTemplates(@Valid TemplateFilter filter, Pageable pageable) throws SystemException;
 }

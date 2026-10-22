@@ -24,6 +24,7 @@ import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
 import it.smartcommunitylabdhub.functions.persistence.FunctionEntity;
 import it.smartcommunitylabdhub.functions.persistence.FunctionRepository;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
+import it.smartcommunitylabdhub.templates.service.TemplateServiceImpl;
 import java.util.Optional;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -44,6 +45,11 @@ public class FunctionConfig {
     @Bean
     SpecRegistryImpl<Function> functionSpecRegistry() {
         return new SpecRegistryImpl<>(Function.class);
+    }
+
+    @Bean
+    TemplateServiceImpl<Function> functionTemplateService() {
+        return new TemplateServiceImpl<>(Function.class) {};
     }
 
     // build indexer only if a provider is available
