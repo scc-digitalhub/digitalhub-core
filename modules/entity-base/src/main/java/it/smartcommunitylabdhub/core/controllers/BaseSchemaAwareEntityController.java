@@ -27,9 +27,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.schemas.Schema;
 import it.smartcommunitylabdhub.commons.services.SchemaService;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Optional;
@@ -56,8 +54,7 @@ public abstract class BaseSchemaAwareEntityController<D extends BaseDTO> {
         description = "Return a list of all the spec schemas available for the given entity"
     )
     @GetMapping(path = "/schemas")
-    public ResponseEntity<Page<Schema>> listDataItemSchemas(
-        @PathVariable @Valid @NotNull String project,
+    public ResponseEntity<Page<Schema>> listSchemas(
         @RequestParam(required = false) Optional<String> runtime,
         Pageable pageable
     ) {
@@ -70,10 +67,7 @@ public abstract class BaseSchemaAwareEntityController<D extends BaseDTO> {
     }
 
     @GetMapping(path = "/schemas/{kind}", produces = "application/json; charset=UTF-8")
-    public ResponseEntity<Schema> getDataItemSchema(
-        @PathVariable @Valid @NotNull String project,
-        @PathVariable @NotBlank String kind
-    ) {
+    public ResponseEntity<Schema> getSchema(@PathVariable @NotBlank String kind) {
         Schema schema = schemaService.getSchema(kind);
 
         return ResponseEntity.ok(schema);
