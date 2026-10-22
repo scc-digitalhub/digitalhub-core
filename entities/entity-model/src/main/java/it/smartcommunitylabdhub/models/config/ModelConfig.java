@@ -22,6 +22,7 @@ import it.smartcommunitylabdhub.fsm.Fsm;
 import it.smartcommunitylabdhub.models.Model;
 import it.smartcommunitylabdhub.models.lifecycle.ModelFsmFactoryBuilder;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
+import it.smartcommunitylabdhub.templates.service.TemplateServiceImpl;
 import java.util.Optional;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,6 +38,11 @@ public class ModelConfig {
     @Bean
     SpecRegistryImpl<Model> modelSpecRegistry() {
         return new SpecRegistryImpl<>(Model.class);
+    }
+
+    @Bean
+    TemplateServiceImpl<Model> modelTemplateService() {
+        return new TemplateServiceImpl<>(Model.class) {};
     }
 
     // build indexer only if a provider is available

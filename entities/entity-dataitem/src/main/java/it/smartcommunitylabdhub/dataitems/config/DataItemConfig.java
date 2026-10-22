@@ -22,6 +22,7 @@ import it.smartcommunitylabdhub.dataitems.DataItem;
 import it.smartcommunitylabdhub.dataitems.lifecycle.DataItemFsmFactoryBuilder;
 import it.smartcommunitylabdhub.fsm.Fsm;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
+import it.smartcommunitylabdhub.templates.service.TemplateServiceImpl;
 import java.util.Optional;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,6 +38,11 @@ public class DataItemConfig {
     @Bean
     SpecRegistryImpl<DataItem> dataItemSpecRegistry() {
         return new SpecRegistryImpl<>(DataItem.class);
+    }
+
+    @Bean
+    TemplateServiceImpl<DataItem> dataItemTemplateService() {
+        return new TemplateServiceImpl<>(DataItem.class) {};
     }
 
     // build indexer only if a provider is available
