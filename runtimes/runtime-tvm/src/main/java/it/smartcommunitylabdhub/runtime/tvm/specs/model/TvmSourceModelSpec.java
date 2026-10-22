@@ -15,18 +15,11 @@ import java.util.Map;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * Base spec for the source model kinds that tvm+build accepts (onnx, tflite).
- *
- * A source model is the file a user uploads before anything is converted. Every field
- * here is optional: tvm+build reads the real signature from the file itself, so these
- * fields only describe the model for people and tools browsing the catalog.
- */
+// Catalog metadata only; tvm+build reads the signature from the source file.
 @Getter
 @Setter
 public abstract class TvmSourceModelSpec extends ModelBaseSpec {
 
-    // Input tensors as declared by the model (name, dtype, shape, quantization).
     @JsonProperty("inputs")
     @Schema(
         title = "Inputs",
@@ -34,12 +27,10 @@ public abstract class TvmSourceModelSpec extends ModelBaseSpec {
     )
     private List<TvmTensorSpec> inputs;
 
-    // Output tensors as declared by the model.
     @JsonProperty("outputs")
     @Schema(title = "Outputs", description = "Output tensors of the model.")
     private List<TvmTensorSpec> outputs;
 
-    // Free-form extra information, e.g. the training dataset or the export tool.
     @JsonProperty("parameters")
     @Schema(title = "Parameters", description = "Free-form extra information, e.g. the dataset or the export tool.")
     private Map<String, Serializable> parameters;

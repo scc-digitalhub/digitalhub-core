@@ -8,7 +8,6 @@ package it.smartcommunitylabdhub.runtime.tvm.specs.compile;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 
-/** Standard Apache TVM measurement runner used by MetaSchedule. */
 public enum TvmTuningRunner {
     local,
     rpc;

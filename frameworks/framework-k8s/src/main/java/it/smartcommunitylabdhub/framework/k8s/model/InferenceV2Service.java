@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.python.openinference.model;
+package it.smartcommunitylabdhub.framework.k8s.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
@@ -49,4 +49,16 @@ public class InferenceV2Service {
 
     private String readinessUrl;
     private String livenessUrl;
+
+    public static InferenceV2Service from(String baseUrl, String model) {
+        return InferenceV2Service.builder()
+            .baseUrl(baseUrl)
+            .model(model)
+            .inferenceUrl(baseUrl + "/v2/models/" + model + "/infer")
+            .modelMetadataUrl(baseUrl + "/v2/models/" + model)
+            .modelReadinessUrl(baseUrl + "/v2/models/" + model + "/ready")
+            .readinessUrl(baseUrl + "/v2/health/ready")
+            .livenessUrl(baseUrl + "/v2/health/live")
+            .build();
+    }
 }

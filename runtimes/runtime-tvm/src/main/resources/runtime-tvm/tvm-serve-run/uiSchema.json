@@ -29,9 +29,9 @@
   },
   "model_path": {
     "ui:title@en": "Compiled Model",
-    "ui:description@en": "The tvm-so Model to serve; empty uses the one written by tvm+compile in the function.",
+    "ui:description@en": "The tvm-so Model to serve; empty uses function.spec.so_model of this exact function version. The selected reference is saved in this run.",
     "ui:title@it": "Modello compilato",
-    "ui:description@it": "Il Model tvm-so da servire; vuoto usa quello scritto da tvm+compile nella funzione."
+    "ui:description@it": "Il Model tvm-so da servire; vuoto usa function.spec.so_model di questa precisa versione della funzione. Il riferimento scelto viene salvato in questo run."
   },
   "served_name": {
     "ui:title@en": "Served Model Name",
@@ -68,5 +68,17 @@
     "ui:description@en": "Extra Service name, <function>-<service name>.",
     "ui:title@it": "Nome del servizio",
     "ui:description@it": "Nome aggiuntivo del Service, <funzione>-<nome servizio>."
-  }
+  },
+  "ui:order": [
+    "task",
+    "inputs",
+    "model_path",
+    "served_name",
+    "image",
+    "replicas",
+    "workers",
+    "service_type",
+    "service_name",
+    "*"
+  ]
 }

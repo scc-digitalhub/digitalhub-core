@@ -6,16 +6,28 @@
 
 package it.smartcommunitylabdhub.runtime.tvm.config;
 
-import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
+import it.smartcommunitylabdhub.runtime.tvm.specs.compile.TvmCompileSchemaModule;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.PropertySource;
 
 @Configuration
-@PropertySource(value = "classpath:/runtime-tvm.yml", factory = YamlPropertySourceFactory.class)
+@PropertySource(value = "classpath:/runtime-tvm.yaml", factory = TvmYamlPropertySourceFactory.class)
+@Import(TvmConfig.TargetOverrides.class)
 public class TvmConfig {
+
+    @ConditionalOnProperty("runtime.tvm.config")
+    @PropertySource(value = "${runtime.tvm.config}", factory = TvmYamlPropertySourceFactory.class)
+    static class TargetOverrides {}
+
+    @Bean
+    public TvmCompileSchemaModule tvmCompileSchemaModule(TvmProperties properties) {
+        return new TvmCompileSchemaModule(properties);
+    }
 
     @Bean("tvmProperties")
     @Primary

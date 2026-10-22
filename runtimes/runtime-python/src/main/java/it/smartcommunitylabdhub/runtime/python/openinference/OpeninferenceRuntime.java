@@ -37,6 +37,7 @@ import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
+import it.smartcommunitylabdhub.framework.k8s.model.InferenceV2Service;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceDetails;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.framework.k8s.objects.AppProtocol;
@@ -45,7 +46,6 @@ import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRu
 import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.python.config.PythonProperties;
-import it.smartcommunitylabdhub.runtime.python.openinference.model.InferenceV2Service;
 import it.smartcommunitylabdhub.runtime.python.openinference.runners.OpeninferenceBuildRunner;
 import it.smartcommunitylabdhub.runtime.python.openinference.runners.OpeninferenceServeRunner;
 import it.smartcommunitylabdhub.runtime.python.openinference.specs.OpeninferenceBuildRunSpec;
@@ -250,18 +250,7 @@ public class OpeninferenceRuntime
             status.setService(service);
 
             //add inference specific info
-            InferenceV2Service inferenceService = new InferenceV2Service();
-            inferenceService.setBaseUrl(baseUrl);
-
-            inferenceService.setModel(funSpec.getModelName());
-            inferenceService.setInferenceUrl(baseUrl + "/v2/models/" + funSpec.getModelName() + "/infer");
-            inferenceService.setModelMetadataUrl(baseUrl + "/v2/models/" + funSpec.getModelName());
-            inferenceService.setModelReadinessUrl(baseUrl + "/v2/models/" + funSpec.getModelName() + "/ready");
-            inferenceService.setReadinessUrl(baseUrl + "/v2/health/ready");
-            inferenceService.setLivenessUrl(baseUrl + "/v2/health/live");
-            //TODO
-            // inferenceService.setStatus(service.getStatus());
-            status.setInferenceV2(inferenceService);
+            status.setInferenceV2(InferenceV2Service.from(baseUrl, funSpec.getModelName()));
         }
 
         return status;

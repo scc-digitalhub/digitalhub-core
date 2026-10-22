@@ -16,8 +16,15 @@ speed) and serves it with the **Open Inference Protocol v2** over REST and gRPC.
 | `tvm+serve`   | serves the compiled model                 | Deployment + Service, serve image   | Open Inference v2 endpoint                  |
 
 The tasks are chained through the function: build writes `ir_model`, compile reads it and
-writes `so_model`, serve reads that. Any task can also be pointed at a specific Model with
+writes `so_model` on the **same function version**. Serve uses that `so_model` reference,
+without searching compile history. A compile or serve run can override its Model with
 `model_path`, so one IR can be compiled for many targets.
+
+Tasks hold the function reference and common Kubernetes settings (`profile`, `resources`,
+`envs`, `secrets`, `volumes`). TVM options belong to each run: build conversion settings,
+compile target/optimization/tuning, and serve model/image/workers/service settings.
+Old TVM options stored in tasks are not used or migrated; pass them in the run instead.
+For scheduled or lifecycle-triggered runs, put the same run options in `trigger.spec.template`.
 
 ---
 
@@ -41,27 +48,40 @@ spec:
   model: store://my-project/model/onnx/yolov8n
 ```
 
-**3. Run the three tasks**, one after the other:
+**3. Start a run for each action**, one after the other. The console creates/selects
+the corresponding task. With the API, create a task for each action first; for example:
+
+```yaml
+kind: tvm+compile
+spec:
+  function: tvm://my-project/yolov8n:<function-id>
+  resources: { cpu: "4", mem: 8Gi }
+```
+
+Use the returned task IDs in the run payloads below:
 
 ```yaml
 # build: source -> tvm-ir
-kind: tvm+build
+kind: tvm+build:run
 spec:
+  task: tvm+build://my-project/<build-task-id>
   resources: { cpu: "2", mem: 4Gi }
 ```
 
 ```yaml
 # compile: tvm-ir -> tvm-so
-kind: tvm+compile
+kind: tvm+compile:run
 spec:
-  target_architecture: x86_v3
+  task: tvm+compile://my-project/<compile-task-id>
+  target_architecture: amd64_v3
   resources: { cpu: "4", mem: 8Gi }
 ```
 
 ```yaml
 # serve: tvm-so -> endpoint
-kind: tvm+serve
+kind: tvm+serve:run
 spec:
+  task: tvm+serve://my-project/<serve-task-id>
   service_type: NodePort
   resources: { cpu: "4" }
 ```
@@ -96,7 +116,7 @@ works, with the format taken from the file extension.
 | `onnx`   | `inputs`, `outputs`, `parameters`, `opset` (opset used at export) |
 | `tflite` | `inputs`, `outputs`, `parameters`                                 |
 
-**Produced models**, created by the tasks:
+**Produced models**, created by the runs:
 
 | Kind     | Files                                                                                          | Fields                                                                                        |
 | -------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
@@ -113,7 +133,9 @@ Each tensor in `inputs` / `outputs` has `name`, `dtype` and `shape`. Quantized t
 
 Every option is optional unless marked as required.
 
-### Common to all tasks
+### Common task settings
+
+Runs inherit these settings from the task and can override them for one execution.
 
 | Option      | Description                                                                           |
 | ----------- | ------------------------------------------------------------------------------------- |
@@ -122,7 +144,8 @@ Every option is optional unless marked as required.
 | `secrets`   | Secrets exposed to the container as environment variables.                            |
 | `volumes`   | Extra volumes to mount.                                                               |
 | `profile`   | Resource profile defined by the platform.                                             |
-| `image`     | Use another image for this run instead of the configured one.                         |
+
+`image` belongs to the run, for all three actions. Empty uses the platform's configured image.
 
 ### `tvm+build`
 
@@ -145,22 +168,60 @@ onnxsim and converts it again, and `metadata.json` records `simplified_automatic
 
 ### `tvm+compile`
 
+The console uses two collapsible groups, defined by this runtime's schemas:
+`optimization` (advanced compilation settings, still used when tuning is off) and
+`tuning` (MetaSchedule mode and its active settings). No console extension is needed.
+In the console, common settings are in the **Task** step and TVM options in the **Run**
+step. For example, the canonical compile run spec contains:
+
+```yaml
+target_architecture: amd64
+optimization:
+  opt_level: 3
+  benchmark_runs: 10
+tuning:
+  tuning_mode: tune
+  tuning_trials: 8000
+  tuning_runner: local
+```
+
+Flat API/YAML run parameters remain valid inputs, including the examples below;
+CORE exports newly saved specs in grouped form. When both forms set the same option,
+the grouped value wins within that run. No TVM options are inherited from tasks.
+New runs use their own options or the defaults, independently of previous runs.
+
+With `off`, tuning-only values are ignored before conversion/validation and no tuning
+database is downloaded. With `apply`, only the database and coverage options
+(`tuning_ops`, `allow_partial_tuning`) are used. Search/measurement options are used only with `tune`; RPC settings only
+with `tune` + `rpc`. Inactive fields are not displayed in the form.
+Their values are retained when saving, so disabling tuning does not erase a previous
+configuration. Enabling tuning fills unset fields with their typed baseline defaults;
+the total `tuning_trials` budget remains an explicit user choice.
+
+An explicit compile `model_path` overrides the function's `ir_model`, including after
+a new build. If compilation reports `model.relax.json not found`, check that reference
+and its stored files. To compile the latest IR linked to the function, clear
+`model_path` in **the run**. CORE does not silently fall
+back from a broken explicit reference to a different model.
+
 **Model and build**
 
 | Option                | Default                | Description                                                                                                                                |
 | --------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `model_path`          | function `ir_model`    | `store://` key of the `tvm-ir` Model to compile.                                                                                           |
-| `target_architecture` | `cpu`                  | Hardware target, see [Targets](#targets).                                                                                                  |
+| `target_architecture` | `auto`                 | Target CPU profile, see [Targets](#targets).                                                                                               |
 | `target_num_cores`    | `resources.cpu`        | Cores the generated code is optimized for. Use the same number when serving.                                                               |
 | `opt_level`           | `3`                    | TVM optimization level, 0 to 3.                                                                                                            |
 | `exec_mode`           | `bytecode`             | How the model graph runs: `bytecode` (interpreted by the Relax VM) or `compiled` (native code).                                            |
 | `relax_pipeline`      | `default`              | Name of the Relax optimization pipeline.                                                                                                   |
 | `tir_pipeline`        | `default`              | Name of the TIR optimization pipeline.                                                                                                     |
-| `cross_cc`            | set by target          | Cross C++ compiler. Filled in for the ARM targets; set it only to use another one.                                                         |
+| `target` | — | Explicit standard LLVM target object; omit the profile or leave it at `auto`. |
+| `cross_cc` | set by profile | C++ compiler that links `model.so`. For an explicit cross target, supply its compiler. |
+| `cross_cc_options` | `[]` | Separate C++ compiler arguments, e.g. `["--sysroot=/opt/sysroots/arm64"]`. Paths are inside the Job. |
 | `system_lib`          | `false`                | Advanced: build a system-lib module. It cannot be served by the serve images.                                                              |
 | `params_path`         | `params.bin` of the IR | `params.bin` to embed, as a path inside the pod.                                                                                           |
 | `tag`                 | `so`                   | The Model is named `<function>-<tag>`; the tag is also saved in `metadata.json`.                                                           |
-| `benchmark_runs`      | `10`                   | Timed inferences of the finished `model.so`, saved in `metadata.json` (`benchmark`). `0` turns it off. Skipped for cross-compiled targets. |
+| `benchmark_runs` | `10` | Timed inferences saved in `metadata.json`; `0` disables them. Skipped when the target cannot run on the compile host. |
 
 **Tuning** (MetaSchedule, see [Making models fast](#making-models-fast))
 
@@ -183,6 +244,10 @@ onnxsim and converts it again, and `metadata.json` records `simplified_automatic
 | `tuning_runner_timeout_sec`     | `30`            | Time limit to run one candidate.                                                                 |
 | `allow_partial_tuning`          | `false`         | Accept a budget or a database that does not cover every task. For quick tests only.              |
 
+Failed candidates are counted in `tuning/errors.json`, with the first error returned
+by TVM, and reported in the Job log. A busy node may need a larger explicit builder
+or runner timeout. A database without valid records stops compilation before publication.
+
 **Tuning on a device**
 
 | Option                    | Default | Description                                                                     |
@@ -193,24 +258,66 @@ onnxsim and converts it again, and `metadata.json` records `simplified_automatic
 | `rpc_tracker_key`         | —       | Key the device is registered with. **Required** with `rpc`.                     |
 | `rpc_session_timeout_sec` | `60`    | Time limit of one RPC session.                                                  |
 
-Settings that cannot work are rejected when the run is submitted: for example `tune`
-without `tuning_trials`, `apply` without `tuning_model_path`, or local tuning of an ARM
-target.
+CORE rejects missing tuning budgets or databases. Inside the Job, Python checks the
+actual host architecture, ABI and CPU instructions detectable by LLVM before local
+tuning or benchmarking. This is not an exhaustive CPU compatibility certification.
+An ARM target can be tuned locally on a compatible ARM node. `cross_cc` alone does
+not imply cross-execution. Otherwise, use RPC tuning or apply a matching database.
 
 ### `tvm+serve`
 
 | Option         | Default             | Description                                                                   |
 | -------------- | ------------------- | ----------------------------------------------------------------------------- |
-| `model_path`   | function `so_model` | `store://` key of the `tvm-so` Model to serve.                                |
+| `model_path`   | `function.spec.so_model` | `store://` key of the `tvm-so` Model to serve; an explicit value always wins. |
 | `served_name`  | function name       | Model name in the URLs, `/v2/models/<served_name>`.                           |
 | `replicas`     | `1`                 | Number of pods.                                                               |
 | `workers`      | `1`                 | Inferences run in parallel in each pod; each worker loads its own model copy. |
 | `service_type` | `ClusterIP`         | `ClusterIP`, `NodePort` or `LoadBalancer`.                                    |
 | `service_name` | —                   | Extra Service name, `<function>-<service_name>`.                              |
 
+Selection order is an explicit run `model_path`, otherwise
+**`function.spec.so_model` of the exact function version referenced by the run**. There
+is no search through compile history. An empty function reference without an explicit
+model fails with an actionable error. The selected key is pinned in the serve run's
+`model_path`, not in the reusable task: existing serves keep their model; new serves
+read the current function reference. If you copy a serve run to make a new one, clear
+its `model_path` to use the current default again.
+
+Build updates only `ir_model`; compile updates only `so_model`, without creating a new
+function version or replacing its other fields. Compiling ARM then x86 for version V1
+updates V1's `so_model` to x86; V2 is unaffected. A new build deliberately leaves the
+previous `so_model` usable until the next compile. With concurrent compiles, the last
+successful function-reference update wins, **not** the last submitted job. To serve
+a particular architecture/build independently of this pointer, set `model_path`.
+
+Output registration retries transient HTTP/network failures up to three attempts,
+re-reading the run and verifying the stored output without re-uploading the model.
+CORE also retries function writeback up to three attempts, re-reading the function
+before each attempt. Missing outputs or a failed/unconfirmed function update make the
+run **ERROR**, not COMPLETED. The uploaded model is retained: its key stays in the job
+log and, when output registration succeeded, in `run.status.outputs`, for recovery.
+
+TVM build/compile writebacks are serialized **within one CORE instance**, so their
+read/modify/write operations cannot overwrite each other's `ir_model`/`so_model` changes.
+This is not distributed locking: concurrent external function edits or multiple CORE
+instances require shared persistence-level concurrency control. REST run updates are
+also read/modify/write, not atomic PATCH/CAS operations.
+
 The serve pod exposes REST on `8080` and gRPC on `9000`. When the task requests CPUs,
 each worker gets `resources.cpu / workers` TVM threads (`TVM_NUM_THREADS`); set
 `TVM_NUM_THREADS` in `envs` to choose it yourself.
+
+Running serves expose the same `status.inference_v2` fields as the other inference
+runtimes: `baseUrl`, `model`, `inferenceUrl`, `modelMetadataUrl`, `modelReadinessUrl`,
+`readinessUrl` and `livenessUrl`. They also add `/v2` to `status.service.urls` with
+the `openinference_v2` protocol for the console client. The model name is
+`served_name`, or the function name when unset; it is the same name passed to the
+server as `TVM_MODEL_NAME`. HTTP uses port `8080`, not the gRPC port `9000`.
+
+The base URL comes directly from the platform's Kubernetes service metadata, as
+for the other inference runtimes. TVM does not reconstruct the hostname or add a
+scheme. The inference metadata type and URL construction are shared with MLflow,
+Sklearn and OpenInference.
 
 The serve images only load models compiled with the same TVM build and for their CPU
 architecture: recompile the models after upgrading the images.
@@ -225,22 +332,110 @@ this choice.
 
 ## Targets
 
-| `target_architecture` | Runs on                                                         |
-| --------------------- | --------------------------------------------------------------- |
-| `cpu`                 | Generic code for the architecture of the compile Job.           |
-| `x86`                 | x86-64 CPUs with SSE4.2 (x86-64-v2, about 2009 and newer).      |
-| `x86_v3`              | x86-64 CPUs with AVX2 (Intel Haswell, AMD Excavator and newer). |
-| `x86_native`          | Exactly the CPU model of the compile Job.                       |
-| `arm64`               | Any 64-bit ARM (aarch64).                                       |
-| `arm64_pi5`           | Raspberry Pi 5 (Cortex-A76, 4 cores).                           |
-| `armv7l`              | 32-bit ARM hard-float (Raspberry Pi OS 32-bit).                 |
+The console calls this field **Target CPU Profile**. Values describe the architecture
+first; suffixes select a CPU feature level or a specific board.
 
-The more specific the target, the faster the code, but it only runs on that kind of CPU.
-The serve images exist for `linux/amd64`, `linux/arm64` and `linux/arm/v7`.
+| `target_architecture` | Console label | Requirements |
+| --------------------- | ------------- | ------------ |
+| `auto` | Compile node CPU - generic | Generic LLVM code for the architecture of the compile Job; not native CPU optimization. |
+| `amd64` | Intel/AMD 64-bit - x86-64-v2 | A 64-bit Intel/AMD CPU with the full x86-64-v2 feature set. Not 32-bit x86. |
+| `amd64_v3` | Intel/AMD 64-bit - x86-64-v3 (AVX2) | The full x86-64-v3 feature set, including AVX2 and FMA. |
+| `amd64_native` | Intel/AMD 64-bit - compile node CPU (native) | CPU features matching the compile node. |
+| `arm64` | ARM 64-bit - generic (AArch64) | AArch64 Linux; for example Raspberry Pi 3, 4 or 5 with a 64-bit OS. |
+| `arm64_pi5` | Raspberry Pi 5 - ARM 64-bit (Cortex-A76) | Cortex-A76, a 64-bit OS and 4 cores. Not portable to Pi 3/4. |
+| `arm32` | ARM 32-bit - ARMv7 (hard-float, NEON) | ARMv7-compatible Linux with the hard-float ABI and NEON; not every 32-bit ARM CPU. |
 
-The compile Job of the `x86` targets runs on an `amd64` node, because the library is
-generated and linked by the native toolchain. The ARM targets are cross-compiled on any
-node, and `cpu` builds for the node where the Job runs.
+`arm64`/AArch64 and `arm32` describe the bitness/execution environment; Armv7, Armv8
+and Armv9 describe architecture generations. They are not interchangeable labels.
+The OS and runtime must match the compiled library's bitness and ABI.
+A more specific target can improve performance, but requires compatible CPU features.
+The toolkit images run on AMD64 and ARM64 and compile for AMD64, ARM64 and ARM32.
+Both Go and Rust runtime image builds cover `linux/amd64`, `linux/arm64` and
+`linux/arm/v7`; ARM32 compilation and inference remain supported.
+CORE's default init image currently covers only AMD64 and ARM64. Serving on an ARM32
+cluster node also requires an ARMv7-compatible init image to download the model;
+the ARMv7 runtime image alone does not complete this deployment path.
+
+Both toolkit image variants (AMD64 and ARM64) include compilers for AMD64, ARM64 and
+ARM32. Only `amd64_native` pins the compiler to AMD64; `auto` follows the compile node.
+Use the existing run profile to select the compiler node. Compiler placement and
+the architecture of the generated model are separate choices.
+
+### Configure the target catalogue
+
+`src/main/resources/runtime-tvm.yaml` is the single source for the target catalogue.
+Each profile separates its display name (`label`), standard TVM options (`target`)
+and the C++ linker that produces `model.so` (`linker`). Spring's YAML processor reads
+the configuration; the TVM reader converts each target mapping to the JSON already
+used by the compiler, preserving lists and numbers. The compile runner and the
+generated form schema use the same configuration. There is no Java or SDK target
+enumeration.
+
+To add or override profiles without rebuilding CORE, mount an override file and set
+`RUNTIME_TVM_CONFIG=file:/etc/digitalhub/runtime-tvm.yaml`, then restart CORE.
+The file is merged with the bundled defaults; omitted profiles remain available.
+An explicit `target` replaces that profile's whole target definition, so old CPU
+features are not accidentally inherited. Other omitted profile fields retain their
+defaults. Without an override, only the bundled file is loaded.
+
+```yaml
+runtime:
+  tvm:
+    targets:
+      arm64_pi4:
+        label: Raspberry Pi 4 - ARM 64-bit (Cortex-A72)
+        target:
+          kind: llvm
+          mtriple: aarch64-linux-gnu
+          mcpu: cortex-a72
+          mattr: [+neon]
+          num-cores: 4
+        linker:
+          command: aarch64-linux-gnu-g++
+          options: []
+```
+
+Select `target_architecture: arm64_pi4` on a compile Run. `linker.options` sets
+default compiler arguments, for example `["--sysroot=/opt/sysroots/arm64"]`.
+`aliases` contains alternative profile names. `compiler-architecture` optionally
+constrains the compiler node (as for `amd64_native`); it does not select the model's
+target. The separate Run `profile` still selects where the Job executes.
+
+Run options do not change: `optimization.cross_cc` overrides `linker.command`, and
+`optimization.cross_cc_options` overrides `linker.options`. The form offers
+**Profile defaults** or **Custom arguments**; an explicit empty list clears the
+profile's arguments. SDK requests, compiler environment variables and model metadata
+keep their existing formats.
+
+When upgrading an external configuration, expand the old quoted JSON `target` into
+a YAML mapping and move `cross-cc` / `cross-cc-options` to `linker.command` /
+`linker.options`. Old configuration forms are rejected with an explanatory error.
+
+For a one-off configuration, use an explicit target instead of a non-auto profile:
+
+```yaml
+target:
+  kind: llvm
+  mtriple: aarch64-linux-gnu
+  mcpu: cortex-a72
+optimization:
+  cross_cc: aarch64-linux-gnu-g++
+  cross_cc_options: []
+```
+
+The backend, compiler and target libraries must exist in the Job image. The compile
+script links a small LLVM probe first and records the effective target, triple and
+toolchain in `metadata.json`. MetaSchedule candidates use the same linker/options.
+Adding a profile does not build a new runtime image or add CUDA support.
+CPU instruction compatibility remains a deployment requirement even when the
+architecture and ELF checks pass.
+
+Older API values remain accepted: `cpu`/`llvm` → `auto`, `x86` → `amd64`,
+`x86_v3` → `amd64_v3`, `x86_native` → `amd64_native`, `armv7l` → `arm32`.
+Aliases are resolved from YAML; stored run values are not rewritten. The console
+lists canonical profile names.
+LLVM triples, compiler names and container platforms keep their standard names, such
+as `aarch64-linux-gnu`, `armv7l-unknown-linux-gnueabihf` and `linux/arm/v7`.
 
 ---
 
@@ -254,9 +449,10 @@ The weights are also rearranged for that code.
 1. **Tune once**, on the same kind of CPU used for serving:
 
    ```yaml
-   kind: tvm+compile
+   kind: tvm+compile:run
    spec:
-     target_architecture: x86_native
+     task: tvm+compile://my-project/<compile-task-id>
+     target_architecture: amd64_native
      target_num_cores: 4
      tuning_mode: tune
      tuning_trials: 8000
@@ -271,9 +467,10 @@ The weights are also rearranged for that code.
    of the tuned Model in `tuning_model_path`:
 
    ```yaml
-   kind: tvm+compile
+   kind: tvm+compile:run
    spec:
-     target_architecture: x86_native
+     task: tvm+compile://my-project/<compile-task-id>
+     target_architecture: amd64_native
      target_num_cores: 4
      tuning_mode: apply
      tuning_model_path: store://my-project/model/tvm-so/yolov8n-so:<id>
@@ -315,7 +512,7 @@ Set on CORE with environment variables:
 | `RUNTIME_TVM_USER_ID` / `RUNTIME_TVM_GROUP_ID` | platform user and group                        | User and group the pods run as.                                          |
 
 The files are stored in the default S3 store of the platform; the runtime has no bucket
-setting of its own. The defaults live in `src/main/resources/runtime-tvm.yml`.
+setting of its own. The defaults live in `src/main/resources/runtime-tvm.yaml`.
 
 ## How it works
 
@@ -330,7 +527,8 @@ setting of its own. The defaults live in `src/main/resources/runtime-tvm.yml`.
   - `build_onnx.py` and `build_tflite.py` convert the source model into Relax IR;
   - `compile_model.py` compiles the IR into `model.so`, with `tuning.py` (MetaSchedule)
     and `benchmark.py`;
-  - `publish.py` uploads the result as a `tvm-ir` or `tvm-so` Model with the DigitalHub SDK;
+  - `publish.py` uploads the result through signed URLs from CORE and registers a
+    `tvm-ir` or `tvm-so` Model with direct HTTP calls; it does not use the DigitalHub SDK;
   - `common.py` holds the helpers shared by the other scripts.
 - **Serving**: an init container downloads the `tvm-so` Model into the serve pod, and the
   serve image loads it. No image is built per model.
@@ -356,7 +554,8 @@ export JAVA_HOME=~/.sdkman/candidates/java/21.0.4-graal
 mvn -pl runtimes/runtime-tvm install
 ```
 
-Test the pod scripts inside the toolkit image:
+Tests in `src/test/` and `test_infer/` are kept locally and are not versioned.
+If you have the local Python tests, run them inside the toolkit image:
 
 ```bash
 docker run --rm -v "$PWD/runtimes/runtime-tvm":/work -w /work \
