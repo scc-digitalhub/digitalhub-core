@@ -81,7 +81,7 @@ if __name__ == "__main__":
             **run.status.to_dict(),
         }
         run.set_status(new_status)
-        run.save(update=True)
+        run.update()
 
     except Exception as e:
         raise e
