@@ -163,7 +163,7 @@ def link_consumed_model(model, source_key: str) -> None:
         from digitalhub.entities._commons.enums import Relationship
 
         model.add_relationship(relation=Relationship.CONSUMES.value, dest=source_key)
-        model.save(update=True)
+        model.update()
         print(f"      relationship CONSUMES -> {source_key}")
     except Exception as error:  # noqa: BLE001
         print(f"WARN: cannot link the source Model: {error}")
