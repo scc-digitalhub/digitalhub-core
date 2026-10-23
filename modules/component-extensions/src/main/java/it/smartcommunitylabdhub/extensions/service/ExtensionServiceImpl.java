@@ -32,7 +32,6 @@ import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.services.EntityService;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
-import it.smartcommunitylabdhub.events.EntityOperation;
 import it.smartcommunitylabdhub.extensions.ExtensionManager;
 import it.smartcommunitylabdhub.extensions.model.Extension;
 import it.smartcommunitylabdhub.extensions.persistence.ExtensionEntity;
@@ -553,17 +552,18 @@ public class ExtensionServiceImpl implements EntityService<Extension>, Extension
     }
 
     @Override
-    public void delete(@NotNull String id, @Nullable Boolean cascade) throws StoreException {
-        //finalize if available
-        if (finalizer != null && Boolean.TRUE.equals(cascade)) {
-            Extension extension = entityRepository.find(id);
-            if (extension != null) {
+    public Extension delete(@NotNull String id, @Nullable Boolean cascade) throws StoreException {
+        Extension extension = entityRepository.find(id);
+        if (extension != null) {
+            //finalize if available
+            if (finalizer != null && Boolean.TRUE.equals(cascade)) {
                 finalizer.finalize(extension);
             }
-        }
 
-        log.debug("delete extension with id {} (cascade: {})", id, cascade);
-        entityRepository.delete(id);
+            log.debug("delete extension with id {} (cascade: {})", id, cascade);
+            entityRepository.delete(id);
+        }
+        return extension;
     }
 
     @Override

@@ -50,7 +50,9 @@ public interface EntityService<D extends BaseDTO> {
     D update(@NotNull String id, @NotNull D dto, boolean forceUpdate)
         throws BindException, IllegalArgumentException, NoSuchEntityException, StoreException;
 
-    void delete(@NotNull String id, @Nullable Boolean cascade) throws StoreException;
+    @Nullable
+    D delete(@NotNull String id, @Nullable Boolean cascade) throws StoreException;
+
     void deleteAll(@Nullable Boolean cascade) throws StoreException;
     void deleteByUser(@NotNull String user, @Nullable Boolean cascade) throws StoreException;
     void deleteByProject(@NotNull String project, @Nullable Boolean cascade) throws StoreException;

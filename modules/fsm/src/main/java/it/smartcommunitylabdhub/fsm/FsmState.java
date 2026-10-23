@@ -25,6 +25,8 @@ package it.smartcommunitylabdhub.fsm;
 
 import java.util.List;
 import java.util.Optional;
+
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
 /*
@@ -48,10 +50,10 @@ public class FsmState<S, E, C> {
      * @param event
      * @return
      */
-    public Optional<Transition<S, E, C>> getTransitionForEvent(E event) {
+    public Optional<Transition<S, E, C>> getTransitionForEvent(@NotNull E event) {
         return transitions
             .stream()
-            .filter(t -> t.getEvent().equals(event))
+            .filter(t -> event.equals(t.getEvent()))
             .findFirst();
     }
 
@@ -62,10 +64,10 @@ public class FsmState<S, E, C> {
      * @return An Optional containing the transition event if found, or an empty Optional if not
      * found.
      */
-    public Optional<Transition<S, E, C>> getTransitionForNext(S nextState) {
+    public Optional<Transition<S, E, C>> getTransitionForNext(@NotNull S nextState) {
         return transitions
             .stream()
-            .filter(t -> t.getNextState().equals(nextState))
+            .filter(t -> nextState.equals(t.getNextState()))
             .findFirst();
     }
 

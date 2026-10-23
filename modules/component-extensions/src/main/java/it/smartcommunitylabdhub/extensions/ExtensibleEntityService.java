@@ -228,7 +228,7 @@ public class ExtensibleEntityService<D extends ExtensibleDTO & BaseDTO> implemen
     }
 
     @Override
-    public void delete(@NotNull String id, @Nullable Boolean cascade) throws StoreException {
+    public D delete(@NotNull String id, @Nullable Boolean cascade) throws StoreException {
         //cleanup extensions
         try {
             String parent = ExtensionBuilder.from(delegate.get(id)).getParent();
@@ -237,7 +237,7 @@ public class ExtensibleEntityService<D extends ExtensibleDTO & BaseDTO> implemen
             log.error("error cleaning up extensions for id {}: {}", id, e.getMessage());
         }
 
-        delegate.delete(id, cascade);
+        return delegate.delete(id, cascade);
     }
 
     @Override

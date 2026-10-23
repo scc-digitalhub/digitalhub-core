@@ -45,7 +45,7 @@ public class Transition<S, E, C> {
 
     // event definition
     @Getter
-    @NotNull
+    @Nullable
     private final E event;
 
     // destination state
