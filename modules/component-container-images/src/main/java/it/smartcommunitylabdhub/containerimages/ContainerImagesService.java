@@ -92,7 +92,7 @@ public class ContainerImagesService {
     private static final int BEARER_GROUP_SCOPE = 3;
 
     private final RestTemplate restTemplate;
-    private final ContainerImagesProperties properties;
+    private final ContainerImagesProperties.Credentials properties;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     LoadingCache<String, ManifestAndDigest<ManifestTemplate>> cache = CacheBuilder.newBuilder()
@@ -119,7 +119,11 @@ public class ContainerImagesService {
 
     public ContainerImagesService(ContainerImagesProperties properties) {
         Assert.notNull(properties, "properties can not be null");
-        this.properties = properties;
+        //prefer admin credentials if available
+        this.properties =
+            properties.getAdmin() != null && properties.getAdmin().username() != null
+                ? properties.getAdmin()
+                : properties.getUser();
 
         restTemplate = new RestTemplate();
 
@@ -445,6 +449,48 @@ public class ContainerImagesService {
         return null;
     }
 
+    public void deleteImage(@NotNull String imageReference) throws IOException, StoreException {
+        ImageReference imageRef;
+        try {
+            imageRef = ImageReference.parse(imageReference);
+        } catch (InvalidImageReferenceException e) {
+            throw new IOException("Invalid image reference: " + imageReference, e);
+        }
+
+        //sanity check: delete without credentials doesn't make sense
+        Credential credential = buildCredential(imageRef.getRegistry());
+        if (credential != null) {
+            String digest = imageRef.getDigest().orElse(null);
+            if (!StringUtils.hasText(digest)) {
+                try {
+                    digest = getDigest(imageReference);
+                } catch (InvalidImageReferenceException e) {
+                    throw new IOException("Invalid image reference: " + imageReference, e);
+                }
+            }
+            if (!StringUtils.hasText(digest)) {
+                throw new StoreException("Unable to resolve image digest for deletion: " + imageReference);
+            }
+
+            String manifestUrl = buildManifestUrlByDigest(imageRef, digest);
+            log.debug("Deleting image: {} from URL: {}", imageReference, manifestUrl);
+
+            withAuth(imageRef.getRegistry(), authHeader -> {
+                restTemplate.exchange(
+                    manifestUrl,
+                    HttpMethod.DELETE,
+                    new HttpEntity<>(buildManifestHeaders(authHeader)),
+                    Void.class
+                );
+                return null;
+            });
+        }
+
+        //always cleanup cache
+        cache.invalidate(imageReference);
+        descriptionCache.invalidate(imageReference);
+    }
+
     /**
      * Executes {@code call} anonymously first; on HTTP 401 resolves credentials for the registry,
      * derives an Authorization header via the WWW-Authenticate challenge, and retries once.
@@ -542,21 +588,25 @@ public class ContainerImagesService {
     }
 
     private Credential buildCredential(String registry) {
-        if (StringUtils.hasText(properties.getUsername()) && StringUtils.hasText(properties.getPassword())) {
+        if (properties == null) {
+            return null;
+        }
+
+        if (StringUtils.hasText(properties.username()) && StringUtils.hasText(properties.password())) {
             //if registry is defined restrict credentials to it, otherwise use for all registries
-            if (StringUtils.hasText(properties.getRegistry())) {
-                if (registry.equals(properties.getRegistry())) {
-                    return Credential.from(properties.getUsername(), properties.getPassword());
+            if (StringUtils.hasText(properties.registry())) {
+                if (registry.equals(properties.registry())) {
+                    return Credential.from(properties.username(), properties.password());
                 } else {
                     log.debug(
                         "Registry {} does not match configured registry {}, skipping credentials",
                         registry,
-                        properties.getRegistry()
+                        properties.registry()
                     );
                     return null;
                 }
             } else {
-                return Credential.from(properties.getUsername(), properties.getPassword());
+                return Credential.from(properties.username(), properties.password());
             }
         }
 

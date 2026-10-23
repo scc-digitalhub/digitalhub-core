@@ -49,12 +49,12 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 @Slf4j
 @Tag(name = "ContainerImage context API", description = "Endpoints related to containerImages management in project")
-public class ContainerImagesController {
+public class ContainerImagesServiceController {
 
     private final EntityService<ContainerImage> entityService;
     private final ContainerImagesService containerImagesService;
 
-    public ContainerImagesController(
+    public ContainerImagesServiceController(
         EntityService<ContainerImage> entityService,
         ContainerImagesService containerImagesService
     ) {

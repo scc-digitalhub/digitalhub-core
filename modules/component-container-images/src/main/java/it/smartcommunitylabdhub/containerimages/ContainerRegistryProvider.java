@@ -24,9 +24,7 @@ package it.smartcommunitylabdhub.containerimages;
 
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.CredentialsProvider;
-import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.ConfigurationProvider;
-import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.containerimages.config.ContainerImagesProperties;
 import it.smartcommunitylabdhub.containerimages.model.ContainerRegistryConfig;
 import it.smartcommunitylabdhub.containerimages.model.ContainerRegistryCredentials;
@@ -41,25 +39,25 @@ public class ContainerRegistryProvider
     implements CredentialsProvider<ContainerRegistryCredentials>, ConfigurationProvider
 {
 
-    private final ContainerImagesProperties properties;
+    private final ContainerImagesProperties.Credentials properties;
 
     private final ContainerRegistryConfig config;
     private final ContainerRegistryCredentials credentials;
 
     public ContainerRegistryProvider(ContainerImagesProperties properties) {
         Assert.notNull(properties, "properties are required");
-        this.properties = properties;
+        this.properties = properties.getUser();
 
-        if (this.properties.getRegistry() != null) {
-            this.config = ContainerRegistryConfig.builder().registry(this.properties.getRegistry()).build();
+        if (this.properties.registry() != null) {
+            this.config = ContainerRegistryConfig.builder().registry(this.properties.registry()).build();
         } else {
             this.config = null;
         }
 
-        if (this.properties.getUsername() != null && this.properties.getPassword() != null) {
+        if (this.properties.username() != null && this.properties.password() != null) {
             this.credentials = ContainerRegistryCredentials.builder()
-                .username(this.properties.getUsername())
-                .password(this.properties.getPassword())
+                .username(this.properties.username())
+                .password(this.properties.password())
                 .build();
         } else {
             this.credentials = null;

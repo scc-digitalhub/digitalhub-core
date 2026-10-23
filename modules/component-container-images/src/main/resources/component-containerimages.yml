@@ -1,5 +1,10 @@
 containerimages:
-  username: ${CONTAINER_IMAGES_USERNAME:}
-  password: ${CONTAINER_IMAGES_PASSWORD:}
-  registry: ${CONTAINER_IMAGES_REGISTRY:}
+  user:
+    username: ${CONTAINER_IMAGES_USERNAME:}
+    password: ${CONTAINER_IMAGES_PASSWORD:}
+    registry: ${CONTAINER_IMAGES_REGISTRY:}
+  admin:
+    username: ${CONTAINER_IMAGES_ADMIN_USERNAME:${containerimages.user.username}}
+    password: ${CONTAINER_IMAGES_ADMIN_PASSWORD:${containerimages.user.password}} 
+    registry: ${CONTAINER_IMAGES_ADMIN_REGISTRY:${containerimages.user.registry}}
   
