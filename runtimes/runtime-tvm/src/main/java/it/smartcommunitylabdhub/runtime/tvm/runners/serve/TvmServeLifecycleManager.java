@@ -14,7 +14,6 @@ import it.smartcommunitylabdhub.runtime.tvm.specs.serve.TvmServeRunSpec;
 import it.smartcommunitylabdhub.runtime.tvm.status.TvmRunStatus;
 import it.smartcommunitylabdhub.runtimes.lifecycle.RunLifecycleManager;
 
-// Registers the tvm+serve run kind with the standard RunLifecycleManager.
 @RuntimeComponent(runtime = TvmServeRunSpec.KIND)
 public class TvmServeLifecycleManager extends RunLifecycleManager<TvmRunSpec, TvmRunStatus, K8sRunnable> {
 

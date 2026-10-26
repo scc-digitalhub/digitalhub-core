@@ -6,14 +6,17 @@
 
 package it.smartcommunitylabdhub.runtime.tvm.config;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import org.springframework.util.StringUtils;
 
-// Binds runtime.tvm.*: task images, injected pod scripts, and pod identity defaults.
 @Getter
 @Setter
 @AllArgsConstructor
@@ -21,23 +24,51 @@ import lombok.ToString;
 @ToString
 public class TvmProperties {
 
-    // Pod identity and storage defaults applied to the task pods.
     private Integer userId;
     private Integer groupId;
     private String homeDir;
     private String volumeSize;
 
-    // Source format (onnx, tflite) -> builder image used by tvm+build.
+    // Source format -> builder image.
     private Map<String, String> builders;
 
-    // Image running compile_model.py for tvm+compile (Relax IR -> model.so).
     private String compiler;
 
-    // Generic serve image for tvm+serve (the Go runtime by default); an init container
-    // drops the tvm-so Model into it.
     private String serve;
 
-    // entrypoint.sh and the per-format builder scripts injected into the Job pods.
     private String entrypoint;
     private Map<String, String> builderScripts;
+
+    private Map<String, Target> targets = new LinkedHashMap<>();
+
+    public Target target(String name) {
+        String key = StringUtils.hasText(name) ? name.trim().toLowerCase(Locale.ROOT) : "auto";
+        Target target = targets.get(key);
+        if (target == null) {
+            target = targets.values().stream().filter(value -> value.getAliases().contains(key)).findFirst().orElse(null);
+        }
+        if (target == null || !StringUtils.hasText(target.getTarget())) {
+            throw new IllegalArgumentException("Unknown or unconfigured target_architecture: " + key);
+        }
+        return target;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class Target {
+        private String label;
+        private String target;
+        private Linker linker = new Linker();
+        private String compilerArchitecture;
+        private List<String> aliases = List.of();
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class Linker {
+        private String command;
+        private List<String> options = List.of();
+    }
 }

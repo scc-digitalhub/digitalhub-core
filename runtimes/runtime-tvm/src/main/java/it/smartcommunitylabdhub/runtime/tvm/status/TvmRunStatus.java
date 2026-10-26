@@ -18,7 +18,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-// Status for the three TVM tasks: build/compile report the produced Model key; serve reports the K8s service.
 @Getter
 @Setter
 @NoArgsConstructor
@@ -34,12 +33,16 @@ public class TvmRunStatus extends RunBaseStatus {
     // Populated by tvm+serve only.
     private K8sServiceInfo service;
 
+    @JsonProperty("inference_v2")
+    private InferenceV2Service inferenceV2;
+
     @Override
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
         TvmRunStatus s = mapper.convertValue(data, TvmRunStatus.class);
         this.modelKey = s.getModelKey();
         this.service = s.getService();
+        this.inferenceV2 = s.getInferenceV2();
     }
 
     public static TvmRunStatus with(Map<String, Serializable> data) {

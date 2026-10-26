@@ -31,8 +31,6 @@ import lombok.Setter;
 )
 public class TvmFunctionSpec extends FunctionBaseSpec {
 
-    // Source model: an s3:// or https:// path, or the store:// key of a Model. Upload the
-    // file as a Model of kind onnx or tflite and tvm+build knows its format right away.
     @JsonProperty("model")
     @NotNull
     @Schema(
@@ -41,8 +39,6 @@ public class TvmFunctionSpec extends FunctionBaseSpec {
     )
     private String model;
 
-    // Source format (onnx, tflite). "auto" takes it from the kind of the referenced Model,
-    // or from the file extension for generic models and plain paths.
     @JsonProperty("format")
     @Schema(
         title = "Model Format",
@@ -51,7 +47,6 @@ public class TvmFunctionSpec extends FunctionBaseSpec {
     )
     private TvmFormat format;
 
-    // store:// key of the built Relax IR model (tvm-ir), set on build completion.
     @JsonProperty("ir_model")
     @Schema(
         title = "Relax IR Model",
@@ -59,7 +54,6 @@ public class TvmFunctionSpec extends FunctionBaseSpec {
     )
     private String irModel;
 
-    // store:// key of the compiled model.so (tvm-so), set on compile completion.
     @JsonProperty("so_model")
     @Schema(
         title = "Compiled Model",
