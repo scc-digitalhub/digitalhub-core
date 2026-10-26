@@ -161,7 +161,7 @@ def resolve_target(target_text: str, num_cores: Optional[int]):
         triple = tvm.target.codegen.llvm_get_system_triple()
         if triple:
             config["mtriple"] = triple
-        num_cores = num_cores or cpu_count()
+        config.setdefault("num-cores", cpu_count())
         print(f"      mcpu=native -> mcpu={cpu}, mtriple={config.get('mtriple')}")
     if num_cores is not None:
         config["num-cores"] = num_cores
