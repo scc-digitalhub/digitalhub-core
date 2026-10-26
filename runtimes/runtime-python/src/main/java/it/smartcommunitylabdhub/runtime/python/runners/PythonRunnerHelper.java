@@ -275,18 +275,16 @@ public class PythonRunnerHelper {
             requirements.addAll(dependencies);
         }
 
-        if (!requirements.isEmpty()) {
-            //write file
-            String path = "requirements.txt";
-            String content = String.join("\n", requirements);
+        //always write requirements file, even if empty
+        String path = "requirements.txt";
+        String content = requirements.isEmpty() ? "" : String.join("\n", requirements);
 
-            contextSources.add(
-                ContextSource.builder()
-                    .name(path)
-                    .base64(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)))
-                    .build()
-            );
-        }
+        contextSources.add(
+            ContextSource.builder()
+                .name(path)
+                .base64(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)))
+                .build()
+        );
 
         return contextSources;
     }

@@ -32,7 +32,6 @@ import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.metrics.NumberOrNumberArray;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
@@ -45,7 +44,6 @@ import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.RunManager;
 import it.smartcommunitylabdhub.runs.filters.RunEntityFilter;
 import it.smartcommunitylabdhub.runs.lifecycle.RunEvent;
-import it.smartcommunitylabdhub.runs.lifecycle.RunState;
 import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
@@ -196,11 +194,7 @@ public class RunContextController {
         }
 
         //delete via manager
-        runManager.deleteRun(id, true);
-
-        //mock status to DELETING for response, as manager will delete the entity asynchronously
-        run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), Map.of("state", RunState.DELETING.name())));
-        return run;
+        return runManager.deleteRun(id, true);
     }
 
     /*

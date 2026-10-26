@@ -300,11 +300,11 @@ public class RunManagerImpl implements RunManager {
     }
 
     @Override
-    public void deleteRun(@NotNull String id, @Nullable Boolean cascade) {
+    public Run deleteRun(@NotNull String id, @Nullable Boolean cascade) {
         log.debug("delete run with id {}", String.valueOf(id));
         try {
             //delete the run
-            entityService.delete(id, cascade);
+            return entityService.delete(id, cascade);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());

@@ -179,7 +179,7 @@ def handler(context: Context, event: Event) -> Response:
             **context.run.status.to_dict(),
         }
         context.run.set_status(new_status)
-        context.run.save(update=True)
+        context.run.update()
 
     except BaseException as e:
         context.logger.error(f"Function execution failed with error: {str(e)}")

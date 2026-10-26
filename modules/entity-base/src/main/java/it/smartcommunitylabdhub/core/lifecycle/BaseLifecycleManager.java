@@ -387,8 +387,7 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
                 return d;
             } catch (InvalidTransitionException e) {
                 log.debug("Invalid transition {} -> {}", e.getFromState(), e.getToState());
-                //TODO evaluate if we want to throw an exception here to avoid UPDATE on db
-                return d;
+                throw e;
             } catch (RuntimeException ex) {
                 log.debug("Error performing transition on {}: {}", d.getId(), ex.getMessage());
                 throw new CoreRuntimeException(ex.getMessage());

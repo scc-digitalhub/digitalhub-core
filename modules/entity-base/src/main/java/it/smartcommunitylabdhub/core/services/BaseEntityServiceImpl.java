@@ -491,7 +491,7 @@ public abstract class BaseEntityServiceImpl<
     }
 
     @Override
-    public void delete(@NotNull String id, @Nullable Boolean cascade) throws StoreException {
+    public D delete(@NotNull String id, @Nullable Boolean cascade) throws StoreException {
         log.debug("delete with id {}", id);
 
         D e = repository.find(id);
@@ -503,7 +503,7 @@ public abstract class BaseEntityServiceImpl<
             if (getLifecycleManager() != null && !"DELETED".equals(curState)) {
                 //delegate to lifecycle manager, will perform cascade effect on success
                 log.debug("handle delete via lifecycle manager for {}", id);
-                lifecycleManager.perform(e, "DELETE", null, (dto, r) -> {
+                return lifecycleManager.perform(e, "DELETE", null, (dto, r) -> {
                     try {
                         if (Boolean.TRUE.equals(cascade) && getFinalizer() != null) {
                             if (operationsPublisher != null) {
@@ -537,6 +537,7 @@ public abstract class BaseEntityServiceImpl<
                 repository.delete(id);
             }
         }
+        return null;
     }
 
     @Override

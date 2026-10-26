@@ -44,5 +44,5 @@ public interface TransitionLogic<S, E, C, I, R> {
      * @param stateMachine The state machine instance.
      * @return The optional result from applying the logic.
      */
-    Optional<R> apply(S currentState, S nextState, E event, @Nullable C context, @Nullable I input);
+    Optional<R> apply(S currentState, S nextState, @Nullable E event, @Nullable C context, @Nullable I input);
 }

@@ -482,10 +482,6 @@ public class VLLMServeRunner {
                 throw new CoreRuntimeException("invalid entity reference, model not found");
             }
 
-            if (!HuggingfaceModelSpec.KIND.equals(model.getKind())) {
-                throw new CoreRuntimeException("invalid entity reference, expected HuggingFace model");
-            }
-
             return model;
         } catch (NoSuchElementException e) {
             throw new CoreRuntimeException("invalid entity reference, model not found", e);

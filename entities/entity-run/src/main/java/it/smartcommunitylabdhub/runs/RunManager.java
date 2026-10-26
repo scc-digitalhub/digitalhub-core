@@ -141,5 +141,6 @@ public interface RunManager {
      * @param id
      * @param cascade
      */
-    void deleteRun(@NotNull String id, @Nullable Boolean cascade) throws SystemException;
+    @Nullable
+    Run deleteRun(@NotNull String id, @Nullable Boolean cascade) throws SystemException;
 }
