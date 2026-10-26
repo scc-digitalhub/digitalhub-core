@@ -29,8 +29,8 @@ import lombok.Setter;
     "risk_classification",
     "actor_role",
     "actor_role_value",
-    "affected_group",
-    "vulnerable_group",
+    "affected_groups",
+    "vulnerable_groups",
     "protected_attributes",
     "foreseeable_misuse",
     "human_oversight",
@@ -55,12 +55,12 @@ public class ComplianceContext {
     @JsonProperty("actor_role_value")
     private String actorRoleValue;
 
-    @Schema(title = "fields.compliance.context.affected_group.title", description = "fields.compliance.context.affected_group.description")
-    @JsonProperty("affected_group")
+    @Schema(title = "fields.compliance.context.affected_groups.title", description = "fields.compliance.context.affected_groups.description")
+    @JsonProperty("affected_groups")
     private Set<GroupSpec> affectedGroups;
 
-    @Schema(title = "fields.compliance.context.vulnerable_group.title", description = "fields.compliance.context.vulnerable_group.description")
-    @JsonProperty("vulnerable_group")
+    @Schema(title = "fields.compliance.context.vulnerable_groups.title", description = "fields.compliance.context.vulnerable_groups.description")
+    @JsonProperty("vulnerable_groups")
     private Set<GroupSpec> vulnerableGroups;
 
     // TODO: clarify usage
