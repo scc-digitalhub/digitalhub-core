@@ -6,13 +6,13 @@ runtime:
     volume-size: ${RUNTIME_TVM_VOLUME_SIZE:4Gi}
 
     builders:
-      onnx: ${RUNTIME_TVM_BUILDER_ONNX:ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0}
-      tflite: ${RUNTIME_TVM_BUILDER_TFLITE:ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0}
+      onnx: ${RUNTIME_TVM_BUILDER_ONNX:ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0-r1}
+      tflite: ${RUNTIME_TVM_BUILDER_TFLITE:ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0-r1}
 
-    compiler: ${RUNTIME_TVM_COMPILER:ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0}
+    compiler: ${RUNTIME_TVM_COMPILER:ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0-r1}
 
     # Override with the Rust image here or in run.image.
-    serve: ${RUNTIME_TVM_SERVE:ghcr.io/scc-digitalhub/tvm-runtime-go:0.26.0}
+    serve: ${RUNTIME_TVM_SERVE:ghcr.io/scc-digitalhub/tvm-runtime-go:0.26.0-r2}
 
     entrypoint: classpath:/runtime-tvm/scripts/entrypoint.sh
     builder-scripts:

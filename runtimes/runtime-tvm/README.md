@@ -242,14 +242,17 @@ family still needs its LLVM backend, linker/sysroot, runtime build and tests.
 | CORE environment variable | Default |
 | --- | --- |
 | `RUNTIME_TVM_CONFIG` | No external file; bundled YAML only |
-| `RUNTIME_TVM_BUILDER_ONNX`, `RUNTIME_TVM_BUILDER_TFLITE`, `RUNTIME_TVM_COMPILER` | `ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0` |
-| `RUNTIME_TVM_SERVE` | `ghcr.io/scc-digitalhub/tvm-runtime-go:0.26.0` |
+| `RUNTIME_TVM_BUILDER_ONNX`, `RUNTIME_TVM_BUILDER_TFLITE`, `RUNTIME_TVM_COMPILER` | `ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0-r1` |
+| `RUNTIME_TVM_SERVE` | `ghcr.io/scc-digitalhub/tvm-runtime-go:0.26.0-r2` |
 | `RUNTIME_TVM_HOME_DIR` | `/shared` |
 | `RUNTIME_TVM_VOLUME_SIZE` | `4Gi` |
 | `RUNTIME_TVM_USER_ID`, `RUNTIME_TVM_GROUP_ID` | Platform Kubernetes user/group |
 
-Each Run can override its image. Set `RUNTIME_TVM_SERVE` to the Rust image to use
-Rust globally. Storage uses the platform's default store; there is no TVM bucket setting.
+Each Run can override its image. Set `RUNTIME_TVM_SERVE` to
+`ghcr.io/scc-digitalhub/tvm-runtime-rust:0.26.0-r1` to use Rust globally.
+These image revisions bundle Apache TVM 0.26.0; the `-rN` suffix identifies the
+DigitalHub image revision. Storage uses the platform's default store; there is
+no TVM bucket setting.
 
 ## Code map and development
 
