@@ -19,63 +19,44 @@ runtime:
       onnx: classpath:/runtime-tvm/scripts/build_onnx.py
       tflite: classpath:/runtime-tvm/scripts/build_tflite.py
 
-    # Standard TVM options and the linker used to produce model.so.
+    # JSON strings preserve TVM option types and replace the complete target on override.
     targets:
       auto:
         label: Compile node CPU - generic
-        target:
-          kind: llvm
+        target: '{"kind":"llvm"}'
         aliases: [cpu, llvm]
       amd64:
         label: Intel/AMD 64-bit - x86-64-v2
-        target:
-          kind: llvm
-          mtriple: x86_64-linux-gnu
-          mcpu: x86-64-v2
+        target: '{"kind":"llvm","mtriple":"x86_64-linux-gnu","mcpu":"x86-64-v2"}'
         linker:
           command: x86_64-linux-gnu-g++
         aliases: [x86]
       amd64_v3:
         label: Intel/AMD 64-bit - x86-64-v3 (AVX2)
-        target:
-          kind: llvm
-          mtriple: x86_64-linux-gnu
-          mcpu: x86-64-v3
+        target: '{"kind":"llvm","mtriple":"x86_64-linux-gnu","mcpu":"x86-64-v3"}'
         linker:
           command: x86_64-linux-gnu-g++
         aliases: [x86_v3]
       amd64_native:
         label: Intel/AMD 64-bit - compile node CPU (native)
-        target:
-          kind: llvm
-          mtriple: x86_64-linux-gnu
-          mcpu: native
+        target: '{"kind":"llvm","mtriple":"x86_64-linux-gnu","mcpu":"native"}'
         compiler-architecture: amd64
         aliases: [x86_native]
       arm64:
         label: ARM 64-bit - generic (AArch64)
-        target:
-          kind: llvm
-          mtriple: aarch64-linux-gnu
+        target: '{"kind":"llvm","mtriple":"aarch64-linux-gnu"}'
         linker:
           command: aarch64-linux-gnu-g++
       arm64_pi5:
         label: Raspberry Pi 5 - ARM 64-bit (Cortex-A76)
-        target:
-          kind: llvm
-          mtriple: aarch64-linux-gnu
-          mcpu: cortex-a76
-          mattr: [+neon]
-          num-cores: 4
+        target: >-
+          {"kind":"llvm","mtriple":"aarch64-linux-gnu","mcpu":"cortex-a76","mattr":["+neon"],"num-cores":4}
         linker:
           command: aarch64-linux-gnu-g++
       arm32:
         label: ARM 32-bit - ARMv7 (hard-float, NEON)
-        target:
-          kind: llvm
-          mtriple: armv7l-unknown-linux-gnueabihf
-          mfloat-abi: hard
-          mattr: [+neon]
+        target: >-
+          {"kind":"llvm","mtriple":"armv7l-unknown-linux-gnueabihf","mfloat-abi":"hard","mattr":["+neon"]}
         linker:
           command: arm-linux-gnueabihf-g++
         aliases: [armv7l]

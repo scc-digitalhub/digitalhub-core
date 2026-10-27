@@ -1,5 +1,6 @@
 /*
  * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+ *
  * SPDX-License-Identifier: Apache-2.0
  */
 package it.smartcommunitylabdhub.runtime.tvm.specs.compile;
@@ -15,7 +16,10 @@ import com.github.victools.jsonschema.generator.SchemaGeneratorConfigBuilder;
 import it.smartcommunitylabdhub.runtime.tvm.config.TvmProperties;
 import java.util.List;
 
-/** Group TVM options using the console's existing accordions and schema dependencies. */
+/**
+ * Group TVM options using the console's existing accordions and schema
+ * dependencies.
+ */
 public class TvmCompileSchemaModule implements com.github.victools.jsonschema.generator.Module {
 
     private final TvmProperties properties;
@@ -27,28 +31,32 @@ public class TvmCompileSchemaModule implements com.github.victools.jsonschema.ge
     @Override
     public void applyToConfigBuilder(SchemaGeneratorConfigBuilder builder) {
         // Entity registries share this builder: install the provider only once.
-        if (
-            builder
+        if (builder
                 .forTypesInGeneral()
                 .getCustomDefinitionProviders()
                 .stream()
-                .anyMatch(CompileProvider.class::isInstance)
-        ) return;
+                .anyMatch(CompileProvider.class::isInstance))
+            return;
         builder
-            .forFields()
-            .withInstanceAttributeOverride((attributes, field, context) -> {
-                String declaringType = field.getDeclaringType().getErasedType().getName();
-                if (!declaringType.startsWith("it.smartcommunitylabdhub.runtime.tvm.")) return;
-                JsonNode value = attributes.get("default");
-                if (value == null || !value.isTextual()) return;
-                Class<?> type = field.getType().getErasedType();
-                if (type == Integer.class) attributes.put("default", Integer.parseInt(value.asText()));
-                else if (type == Double.class) attributes.put("default", Double.parseDouble(value.asText()));
-                else if (type == Boolean.class) attributes.put("default", Boolean.parseBoolean(value.asText()));
-            });
+                .forFields()
+                .withInstanceAttributeOverride((attributes, field, context) -> {
+                    String declaringType = field.getDeclaringType().getErasedType().getName();
+                    if (!declaringType.startsWith("it.smartcommunitylabdhub.runtime.tvm."))
+                        return;
+                    JsonNode value = attributes.get("default");
+                    if (value == null || !value.isTextual())
+                        return;
+                    Class<?> type = field.getType().getErasedType();
+                    if (type == Integer.class)
+                        attributes.put("default", Integer.parseInt(value.asText()));
+                    else if (type == Double.class)
+                        attributes.put("default", Double.parseDouble(value.asText()));
+                    else if (type == Boolean.class)
+                        attributes.put("default", Boolean.parseBoolean(value.asText()));
+                });
         builder
-            .forTypesInGeneral()
-            .withCustomDefinitionProvider(new CompileProvider(properties));
+                .forTypesInGeneral()
+                .withCustomDefinitionProvider(new CompileProvider(properties));
     }
 
     private static class CompileProvider implements CustomDefinitionProviderV2 {
@@ -62,10 +70,9 @@ public class TvmCompileSchemaModule implements com.github.victools.jsonschema.ge
         @Override
         public CustomDefinition provideCustomSchemaDefinition(ResolvedType type, SchemaGenerationContext context) {
             String name = type.getErasedType().getName();
-            if (
-                !name.equals(TvmCompileRunSpec.class.getName()) &&
-                !name.equals(TvmCompileRunSpec.class.getName() + "Proxy")
-            ) return null;
+            if (!name.equals(TvmCompileRunSpec.class.getName()) &&
+                    !name.equals(TvmCompileRunSpec.class.getName() + "Proxy"))
+                return null;
             ObjectNode schema = context.createStandardDefinition(type, this);
             ObjectNode properties = (ObjectNode) schema.get("properties");
             properties.set("target_architecture", targetProfileSchema(properties, config));
@@ -81,11 +88,10 @@ public class TvmCompileSchemaModule implements com.github.victools.jsonschema.ge
 
     private static ObjectNode targetProfileSchema(ObjectNode factory, TvmProperties config) {
         ObjectNode profile = factory.objectNode()
-            .put("type", "string").put("title", "Target CPU Profile").put("default", "auto");
+                .put("type", "string").put("title", "Target CPU Profile").put("default", "auto");
         ArrayNode profiles = profile.putArray("oneOf");
-        config.getTargets().forEach((name, target) ->
-            profiles.addObject().put("const", name).put("title", target.getLabel() != null ? target.getLabel() : name)
-        );
+        config.getTargets().forEach((name, target) -> profiles.addObject().put("const", name).put("title",
+                target.label() != null ? target.label() : name));
         return profile;
     }
 
@@ -101,7 +107,8 @@ public class TvmCompileSchemaModule implements com.github.victools.jsonschema.ge
         target.putObject("if").put("minProperties", 1);
         target.putObject("then").putArray("required").add("kind");
         target.put("additionalProperties", true);
-        target.put("description", "Optional standard TVM LLVM target; leave the profile at auto. Example: kind=llvm, mtriple=aarch64-linux-gnu, mcpu=cortex-a72.");
+        target.put("description",
+                "Optional standard TVM LLVM target; leave the profile at auto. Example: kind=llvm, mtriple=aarch64-linux-gnu, mcpu=cortex-a72.");
         return target;
     }
 
@@ -120,11 +127,12 @@ public class TvmCompileSchemaModule implements com.github.victools.jsonschema.ge
         ObjectNode arguments = fields.objectNode().put("type", "array").put("title", "Custom arguments");
         arguments.putObject("items").put("type", "string");
         ObjectNode compilerOptions = options.putObject("cross_cc_options").put("title", "Compiler Options");
-        compilerOptions.put("description", "Use profile defaults, or replace them with separate compiler arguments. Example item: --sysroot=/opt/sysroots/arm64.");
+        compilerOptions.put("description",
+                "Use profile defaults, or replace them with separate compiler arguments. Example item: --sysroot=/opt/sysroots/arm64.");
         compilerOptions.putNull("default");
         compilerOptions.putArray("oneOf")
-            .add(arguments.objectNode().put("type", "null").put("title", "Profile defaults"))
-            .add(arguments);
+                .add(arguments.objectNode().put("type", "null").put("title", "Profile defaults"))
+                .add(arguments);
         return optimization;
     }
 
@@ -161,7 +169,8 @@ public class TvmCompileSchemaModule implements com.github.victools.jsonschema.ge
 
     private static ObjectNode object(ObjectNode factory, String title) {
         ObjectNode result = factory.objectNode().put("type", "object");
-        if (title != null) result.put("title", title);
+        if (title != null)
+            result.put("title", title);
         result.putObject("properties");
         return result;
     }
@@ -176,13 +185,16 @@ public class TvmCompileSchemaModule implements com.github.victools.jsonschema.ge
     }
 
     private static ObjectNode withDefaults(ObjectNode branch) {
-        // Defaults belong to each active branch so the form resolves dependencies before prefilling.
+        // Defaults belong to each active branch so the form resolves dependencies
+        // before prefilling.
         ObjectNode defaults = branch.objectNode();
         for (var field : branch.get("properties").properties()) {
             JsonNode value = field.getValue().findValue("default");
-            if (value != null) defaults.set(field.getKey(), value);
+            if (value != null)
+                defaults.set(field.getKey(), value);
         }
-        if (!defaults.isEmpty()) branch.set("default", defaults);
+        if (!defaults.isEmpty())
+            branch.set("default", defaults);
         return branch;
     }
 

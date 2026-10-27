@@ -72,7 +72,8 @@ public final class TvmCompileOptions {
         }
     }
 
-    public record Selection(Map<String, Serializable> active, Map<String, Serializable> inactive) {}
+    public record Selection(Map<String, Serializable> active, Map<String, Serializable> inactive) {
+    }
 
     public static Selection select(Map<String, Serializable> data) {
         Map<String, Serializable> inactive = flatten(data);

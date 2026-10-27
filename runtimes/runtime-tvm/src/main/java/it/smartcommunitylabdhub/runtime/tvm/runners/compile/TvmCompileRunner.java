@@ -63,7 +63,7 @@ public class TvmCompileRunner extends TvmBaseRunner {
         }
         String target = explicitTarget
             ? JacksonMapper.CUSTOM_OBJECT_MAPPER.valueToTree(runSpec.getTarget()).toString()
-            : profile.getTarget();
+            : profile.target();
 
         String irModelKey = StringUtils.hasText(runSpec.getModelPath())
             ? runSpec.getModelPath()
@@ -80,10 +80,10 @@ public class TvmCompileRunner extends TvmBaseRunner {
         Integer targetNumCores = runSpec.getTargetNumCores() != null ? runSpec.getTargetNumCores() : cpuCores;
         String crossCc = StringUtils.hasText(runSpec.getCrossCc())
             ? runSpec.getCrossCc()
-            : (explicitTarget ? null : profile.getLinker().getCommand());
+            : (explicitTarget ? null : profile.linker().command());
         List<String> crossCcOptions = runSpec.getCrossCcOptions() != null
             ? runSpec.getCrossCcOptions()
-            : (explicitTarget ? List.of() : profile.getLinker().getOptions());
+            : (explicitTarget ? List.of() : profile.linker().options());
         validateTuning(runSpec, targetNumCores, cpuCores);
 
         List<CoreEnv> envs = createEnvList(run, taskSpec);
@@ -137,7 +137,7 @@ public class TvmCompileRunner extends TvmBaseRunner {
 
         return applyCommon(
             K8sJobRunnable.builder()
-                .nodeSelector(architectureSelector(explicitTarget ? null : profile.getCompilerArchitecture()))
+                .nodeSelector(architectureSelector(explicitTarget ? null : profile.compilerArchitecture()))
                 .command("/bin/bash")
                 .args(new String[] { homeDir + "/" + TvmRunnerHelper.ENTRYPOINT_NAME })
                 .contextSources(contextSources)

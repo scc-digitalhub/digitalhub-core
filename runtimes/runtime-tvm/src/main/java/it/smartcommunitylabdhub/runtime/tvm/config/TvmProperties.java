@@ -6,6 +6,9 @@
 
 package it.smartcommunitylabdhub.runtime.tvm.config;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -45,30 +48,72 @@ public class TvmProperties {
         String key = StringUtils.hasText(name) ? name.trim().toLowerCase(Locale.ROOT) : "auto";
         Target target = targets.get(key);
         if (target == null) {
-            target = targets.values().stream().filter(value -> value.getAliases().contains(key)).findFirst().orElse(null);
+            target = targets.values().stream().filter(value -> value.aliases().contains(key)).findFirst()
+                    .orElse(null);
         }
-        if (target == null || !StringUtils.hasText(target.getTarget())) {
+        if (target == null || !StringUtils.hasText(target.target())) {
             throw new IllegalArgumentException("Unknown or unconfigured target_architecture: " + key);
         }
         return target;
     }
 
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    public static class Target {
-        private String label;
-        private String target;
-        private Linker linker = new Linker();
-        private String compilerArchitecture;
-        private List<String> aliases = List.of();
+    public record Target(
+            String label,
+            String target,
+            Linker linker,
+            String compilerArchitecture,
+            List<String> aliases) {
+
+        public Target {
+            if (!StringUtils.hasText(target)) {
+                throw new IllegalArgumentException("TVM target must be a non-empty JSON object string");
+            }
+            try {
+                var definition = JacksonMapper.OBJECT_MAPPER.reader()
+                    .with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+                    .readTree(target);
+                if (!definition.isObject() || definition.isEmpty()) {
+                    throw new IllegalArgumentException("TVM target must be a non-empty JSON object string");
+                }
+            } catch (JsonProcessingException e) {
+                throw new IllegalArgumentException("TVM target must be a valid JSON object string", e);
+            }
+            linker = linker == null ? new Linker(null, List.of()) : linker;
+            aliases = aliases == null ? List.of() : List.copyOf(aliases);
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public String getTarget() {
+            return target;
+        }
+
+        public Linker getLinker() {
+            return linker;
+        }
+
+        public String getCompilerArchitecture() {
+            return compilerArchitecture;
+        }
+
+        public List<String> getAliases() {
+            return aliases;
+        }
     }
 
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    public static class Linker {
-        private String command;
-        private List<String> options = List.of();
+    public record Linker(String command, List<String> options) {
+        public Linker {
+            options = options == null ? List.of() : List.copyOf(options);
+        }
+
+        public String getCommand() {
+            return command;
+        }
+
+        public List<String> getOptions() {
+            return options;
+        }
     }
 }

@@ -29,12 +29,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(
-    runtime = TvmRuntime.RUNTIME,
-    kind = TvmCompileRunSpec.KIND,
-    entity = Run.class,
-    uiSchema = "runtime-tvm/tvm-compile-run/uiSchema.json"
-)
+@SpecType(runtime = TvmRuntime.RUNTIME, kind = TvmCompileRunSpec.KIND, entity = Run.class, uiSchema = "runtime-tvm/tvm-compile-run/uiSchema.json")
 public final class TvmCompileRunSpec extends TvmRunSpec {
 
     public static final String KIND = TvmCompileTaskSpec.KIND + ":run";
@@ -229,9 +224,8 @@ public final class TvmCompileRunSpec extends TvmRunSpec {
         this.crossCc = spec.getCrossCc();
         // Preserve an explicit [] when replacing a profile's compiler arguments.
         this.crossCcOptions = mapper.convertValue(
-            active.get("cross_cc_options"),
-            mapper.getTypeFactory().constructCollectionType(List.class, String.class)
-        );
+                active.get("cross_cc_options"),
+                mapper.getTypeFactory().constructCollectionType(List.class, String.class));
         this.execMode = spec.getExecMode();
         this.relaxPipeline = spec.getRelaxPipeline();
         this.tirPipeline = spec.getTirPipeline();
