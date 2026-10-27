@@ -174,7 +174,8 @@ CUDA/GPU execution is not integrated.
 ### Add or override a preset
 
 Mount a file, set `RUNTIME_TVM_CONFIG=file:/etc/digitalhub/runtime-tvm.yaml` and
-restart CORE. For example:
+restart CORE. Keep all settings in one YAML document: the shared loader reads the
+first document only. For example:
 
 ```yaml
 runtime:
@@ -182,12 +183,9 @@ runtime:
     targets:
       arm64_pi4:
         label: Raspberry Pi 4 - ARM 64-bit (Cortex-A72)
-        target:
-          kind: llvm
-          mtriple: aarch64-linux-gnu
-          mcpu: cortex-a72
-          mattr: [+neon]
-          num-cores: 4
+        target: >-
+          {"kind": "llvm", "mtriple": "aarch64-linux-gnu", "mcpu": "cortex-a72",
+           "mattr": ["+neon"], "num-cores": 4}
         linker:
           command: aarch64-linux-gnu-g++
           options: []
@@ -198,7 +196,7 @@ Select it with `target_architecture: arm64_pi4`. Each entry has:
 | Field | Meaning |
 | --- | --- |
 | `label` | Console display text |
-| `target` | Non-empty mapping of standard TVM options: `kind`, triple, CPU, features, etc. |
+| `target` | String containing a non-empty JSON object of standard TVM options: `kind`, triple, CPU, features, etc. |
 | `linker.command` | C++ compiler that links `model.so` |
 | `linker.options` | Separate compiler arguments, such as `["--sysroot=/opt/sysroots/arm64"]` |
 | `aliases` | Optional alternative names; use lowercase, unique names |
@@ -208,7 +206,8 @@ Omitted profiles and fields retain their bundled defaults. Supplying `target`
 replaces the whole target, preventing old CPU features from leaking into the override.
 Run `optimization.cross_cc` and `optimization.cross_cc_options` override linker
 settings; an explicit `[]` clears the arguments. Paths refer to the compile container.
-An explicit Run `target` does not inherit a preset's linker settings.
+An explicit Run `target` remains an object and does not inherit a preset's linker
+settings. Only the administrator's YAML catalogue stores it as a JSON string.
 
 `optimization.target_num_cores` takes precedence over the Job CPU request; either
 one overrides `target.num-cores`. Without either, the target value remains, including
@@ -217,16 +216,26 @@ configured. Tuning and serving should use the same threads per worker.
 
 Older API aliases remain configured: `cpu`/`llvm` → `auto`, `x86` → `amd64`,
 `x86_v3` → `amd64_v3`, `x86_native` → `amd64_native`, `armv7l` → `arm32`.
-Old YAML configuration forms are rejected: expand quoted JSON targets into mappings
-and move `cross-cc`/`cross-cc-options` to `linker.command`/`linker.options`.
+
+When migrating older override files:
+
+- Replace each `target` YAML mapping with a JSON string as shown above.
+- Move profile-level `cross-cc` to `linker.command`.
+- Move profile-level `cross-cc-options` to `linker.options`.
+- Combine settings from documents separated by `---` into one YAML document;
+  only the first document is loaded.
+
+These changes apply only to the administrator's catalogue. An explicit Run `target`
+remains an object; `optimization.cross_cc`/`optimization.cross_cc_options` remain
+Run options.
+Invalid target JSON or unknown target-profile fields prevent CORE from starting.
 
 ### How targets reach TVM
 
 1. `TvmConfig` loads the bundled YAML and, if configured, the external override.
-2. `TvmYamlPropertySourceFactory` uses Spring's `YamlProcessor` to read each file
-   once. It stores each target mapping as JSON so Spring binding preserves lists,
-   numbers and nested options as one complete value.
-3. `TvmProperties` binds the catalogue and resolves names/aliases.
+2. The shared `commons.YamlPropertySourceFactory` loads the properties. Each target
+   is already a JSON string, preserving lists, numbers and nested options together.
+3. `TvmProperties` binds and validates the catalogue and resolves names/aliases.
    `TvmCompileSchemaModule` uses the same catalogue for the console choices.
 4. `TvmCompileRunner` selects the preset or explicit target and sends it as
    `TVM_TARGET`, with the linker and thread options, to the Job.
