@@ -48,7 +48,7 @@ import org.springframework.util.Assert;
 public class MetricsManager {
 
     @Value("${metrics.max-column-size}")
-    private int maxColumnSize;
+    private Integer maxColumnSize;
 
     @Autowired
     private MetricsEntityBuilder entityBuilder;
