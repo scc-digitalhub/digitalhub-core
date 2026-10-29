@@ -9,5 +9,11 @@
     "ui:description@en": "Time in seconds after which the run will be automatically stopped",
     "ui:title@it": "Arresto automatico",
     "ui:description@it": "Tempo in secondi dopo il quale la run sarà arrestata automaticamente"
+  },
+  "auto_restart": {
+    "ui:title@en": "Auto Restart",
+    "ui:description@en": "If set the execution will be automatically restarted on error as a new run",
+    "ui:title@it": "Riavvio automatico",
+    "ui:description@it": "Se impostato, l'esecuzione sarà automaticamente riavviata in caso di errore come nuova run"
   }
 }
