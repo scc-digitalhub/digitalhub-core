@@ -1478,7 +1478,7 @@ public abstract class K8sBaseFramework<
         }
 
         if (!data.isEmpty()) {
-            V1Secret secret = k8sSecretHelper.convertSecrets(initSecretsName + "-" + runnable.getId(), data);
+            V1Secret secret = k8sSecretHelper.convertSecrets(k8sSecretHelper.getSecretName(runnable.getId()), data);
 
             if (secret != null && secret.getMetadata() != null) {
                 //attach labels
@@ -1508,7 +1508,7 @@ public abstract class K8sBaseFramework<
     }
 
     protected void cleanRunSecret(T runnable) {
-        String secretName = initSecretsName + "-" + runnable.getId();
+        String secretName = k8sSecretHelper.getSecretName(runnable.getId());
         try {
             k8sSecretHelper.deleteSecret(secretName);
         } catch (ApiException e) {

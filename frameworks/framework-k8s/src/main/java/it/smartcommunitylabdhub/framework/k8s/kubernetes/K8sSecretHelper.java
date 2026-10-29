@@ -72,6 +72,9 @@ public class K8sSecretHelper {
     @Value("${kubernetes.config.secret}")
     private List<String> sharedSecrets;
 
+    @Value("${kubernetes.secrets.name}")
+    protected String initSecretsName = "init-secrets";
+
     public K8sSecretHelper(ApiClient client) {
         api = new CoreV1Api(client);
     }
@@ -309,8 +312,8 @@ public class K8sSecretHelper {
     }
 
     // Generate and return job name
-    public String getSecretName(String runtime, String task, String id) {
-        return K8sBuilderHelper.sanitizeNames("sec" + "-" + task + "-" + id);
+    public String getSecretName(@NotNull String id) {
+        return K8sBuilderHelper.sanitizeNames(initSecretsName + "-" + id);
     }
 
     public record PatchBody(Object value, String path) {
