@@ -14,7 +14,9 @@ import it.smartcommunitylabdhub.projects.Project;
 import it.smartcommunitylabdhub.projects.persistence.ProjectEntity;
 import it.smartcommunitylabdhub.projects.persistence.ProjectEntity_;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
@@ -47,12 +49,23 @@ public class ProjectFilterConverter extends AbstractEntityFilterConverter<Projec
 
                         try {
                             //clear createdBy and replace with id in
-                            List<String> shares = sharingService
+                            List<String> sharedWithMe = sharingService
                                 .listByUser(user)
                                 .stream()
                                 .filter(s -> EntityUtils.getEntityName(Project.class).equalsIgnoreCase(s.getEntity()))
                                 .map(ResourceShareEntity::getEntityId)
                                 .toList();
+
+                            List<String> sharedWithEveryone = sharingService
+                                .listByUser("*")
+                                .stream()
+                                .filter(s -> EntityUtils.getEntityName(Project.class).equalsIgnoreCase(s.getEntity()))
+                                .map(ResourceShareEntity::getEntityId)
+                                .toList();
+
+                            Set<String> shares = new HashSet<>();
+                            shares.addAll(sharedWithMe);
+                            shares.addAll(sharedWithEveryone);
 
                             BaseEntitySearchCriteria<Project> sc = BaseEntitySearchCriteria.<Project>builder()
                                 .field(ProjectEntity_.ID)
