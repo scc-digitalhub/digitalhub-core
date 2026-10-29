@@ -58,6 +58,8 @@ public class RunStateCreated<
         List<Transition<String, String, Run>> txs = List.of(
             //(BUILD)->BUILT
             toBuilt().build(),
+            //(READY)->READY
+            toReady().build(),
             //(ERROR)->ERROR
             toError().build(),
             //(DELETE)->DELETING
