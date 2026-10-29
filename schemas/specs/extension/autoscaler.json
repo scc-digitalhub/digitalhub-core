@@ -1,0 +1,18 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "type" : "object",
+  "properties" : {
+    "auto_restart" : {
+      "type" : "boolean",
+      "title" : "Auto Restart",
+      "description" : "If set the execution will be automatically restarted on error as a new run"
+    },
+    "auto_stop" : {
+      "type" : "integer",
+      "title" : "Auto Stop",
+      "description" : "Time in seconds after which the run will be automatically stopped"
+    }
+  },
+  "title" : "specs.autoscaler.title",
+  "description" : "specs.autoscaler.description"
+}

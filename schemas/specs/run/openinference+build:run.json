@@ -35,26 +35,26 @@
       "properties" : {
         "cpu" : {
           "type" : "string",
-          "title" : "fields.cpu.title",
-          "description" : "fields.cpu.description",
+          "title" : "fields.k8s.resources.cpu.title",
+          "description" : "fields.k8s.resources.cpu.description",
           "pattern" : "^\\d+([a-zA-Z]+)?$"
         },
         "disk" : {
           "type" : "string",
-          "title" : "fields.disk.title",
-          "description" : "fields.disk.description",
+          "title" : "fields.k8s.resources.disk.title",
+          "description" : "fields.k8s.resources.disk.description",
           "pattern" : "^\\d+([a-zA-Z]+)?$"
         },
         "gpu" : {
           "type" : "string",
-          "title" : "fields.gpu.title",
-          "description" : "fields.gpu.description",
+          "title" : "fields.k8s.resources.gpu.title",
+          "description" : "fields.k8s.resources.gpu.description",
           "pattern" : "^\\d+([a-zA-Z]+)?$"
         },
         "mem" : {
           "type" : "string",
-          "title" : "fields.mem.title",
-          "description" : "fields.mem.description",
+          "title" : "fields.k8s.resources.memory.title",
+          "description" : "fields.k8s.resources.memory.description",
           "pattern" : "^\\d+([a-zA-Z]+)?$"
         }
       }
@@ -132,7 +132,7 @@
     },
     "VolumeType" : {
       "type" : "string",
-      "enum" : [ "shared_volume", "persistent_volume_claim", "ephemeral", "empty_dir", "image" ]
+      "enum" : [ "shared_volume", "persistent_volume_claim", "ephemeral", "empty_dir", "image", "workflow_volume" ]
     }
   },
   "type" : "object",

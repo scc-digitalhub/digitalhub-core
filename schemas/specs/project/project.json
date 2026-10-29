@@ -32,6 +32,12 @@
           "description" : "fields.id.description",
           "pattern" : "^[a-zA-Z0-9._+-]+$"
         },
+        "key" : {
+          "type" : "string",
+          "title" : "fields.key.title",
+          "description" : "fields.key.description",
+          "pattern" : "store://([^/]+)/([^/]+)/([^/]+)/([^:]+):(.+)|store://([^/]+)/([^/]+)/([^/]+)/([^:]+)"
+        },
         "kind" : {
           "type" : "string",
           "title" : "fields.kind.title",
@@ -52,7 +58,7 @@
           "type" : "string",
           "title" : "fields.name.title",
           "description" : "fields.name.description",
-          "pattern" : "^[a-zA-Z0-9._+-]+$"
+          "pattern" : "^(?!\\.\\.?$)(?!.*__)[\\p{L}\\p{N}._~!$'()+,;=@\\-\\s\\p{Zs}]+$"
         },
         "project" : {
           "type" : "string",
@@ -116,6 +122,12 @@
           "description" : "fields.id.description",
           "pattern" : "^[a-zA-Z0-9._+-]+$"
         },
+        "key" : {
+          "type" : "string",
+          "title" : "fields.key.title",
+          "description" : "fields.key.description",
+          "pattern" : "store://([^/]+)/([^/]+)/([^/]+)/([^:]+):(.+)|store://([^/]+)/([^/]+)/([^/]+)/([^:]+)"
+        },
         "kind" : {
           "type" : "string",
           "title" : "fields.kind.title",
@@ -136,7 +148,7 @@
           "type" : "string",
           "title" : "fields.name.title",
           "description" : "fields.name.description",
-          "pattern" : "^[a-zA-Z0-9._+-]+$"
+          "pattern" : "^(?!\\.\\.?$)(?!.*__)[\\p{L}\\p{N}._~!$'()+,;=@\\-\\s\\p{Zs}]+$"
         },
         "project" : {
           "type" : "string",
@@ -180,6 +192,12 @@
           "title" : "fields.id.title",
           "description" : "fields.id.description",
           "pattern" : "^[a-zA-Z0-9._+-]+$"
+        },
+        "key" : {
+          "type" : "string",
+          "title" : "fields.key.title",
+          "description" : "fields.key.description",
+          "pattern" : "store://([^/]+)/([^/]+)/([^/]+)/([^:]+):(.+)|store://([^/]+)/([^/]+)/([^/]+)/([^:]+)"
         },
         "kind" : {
           "type" : "string",
@@ -267,6 +285,12 @@
           "description" : "fields.id.description",
           "pattern" : "^[a-zA-Z0-9._+-]+$"
         },
+        "key" : {
+          "type" : "string",
+          "title" : "fields.key.title",
+          "description" : "fields.key.description",
+          "pattern" : "store://([^/]+)/([^/]+)/([^/]+)/([^:]+):(.+)|store://([^/]+)/([^/]+)/([^/]+)/([^:]+)"
+        },
         "kind" : {
           "type" : "string",
           "title" : "fields.kind.title",
@@ -287,7 +311,7 @@
           "type" : "string",
           "title" : "fields.name.title",
           "description" : "fields.name.description",
-          "pattern" : "^[a-zA-Z0-9._+-]+$"
+          "pattern" : "^(?!\\.\\.?$)(?!.*__)[\\p{L}\\p{N}._~!$'()+,;=@\\-\\s\\p{Zs}]+$"
         },
         "project" : {
           "type" : "string",
@@ -367,6 +391,12 @@
           "title" : "fields.id.title",
           "description" : "fields.id.description",
           "pattern" : "^[a-zA-Z0-9._+-]+$"
+        },
+        "key" : {
+          "type" : "string",
+          "title" : "fields.key.title",
+          "description" : "fields.key.description",
+          "pattern" : "store://([^/]+)/([^/]+)/([^/]+)/([^:]+):(.+)|store://([^/]+)/([^/]+)/([^/]+)/([^:]+)"
         },
         "kind" : {
           "type" : "string",

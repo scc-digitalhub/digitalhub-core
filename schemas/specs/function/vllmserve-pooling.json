@@ -47,6 +47,11 @@
       "title" : "fields.vllm.url.title",
       "description" : "fields.vllm.url.description",
       "pattern" : "^(store://([^/]+)/model/huggingface/.*)"
+    },
+    "use_cpu_image" : {
+      "type" : "boolean",
+      "title" : "fields.vllm.useCpuImage.title",
+      "description" : "fields.vllm.useCpuImage.description"
     }
   },
   "required" : [ "url" ],
