@@ -294,13 +294,13 @@ public abstract class BaseEntityServiceImpl<
         if (dto.getName() != null && AbstractEntity.class.isAssignableFrom(clazz)) {
             String key = KeyUtils.encode(dto.getName());
 
-            Collection<String> existingNames = Collections.emptySet();
+            Collection<NameAndKind> existing = Collections.emptySet();
 
             try {
                 // try specification-based search first, more efficient
                 String likePattern = key.replaceAll("%[0-9A-Fa-f]{2}", "%").replace("__", "%");
 
-                existingNames = repository
+                existing = repository
                     .searchAll(
                         (root, query, cb) -> {
                             query.distinct(true);
@@ -309,10 +309,9 @@ public abstract class BaseEntityServiceImpl<
                                 cb.like(root.get("name"), likePattern)
                             );
                         },
-                        NameOnly.class
+                        NameAndKind.class
                     )
                     .stream()
-                    .map(NameOnly::getName)
                     .collect(Collectors.toSet());
             } catch (UnsupportedOperationException | IllegalArgumentException e) {
                 //fallback to example-based search
@@ -322,20 +321,24 @@ public abstract class BaseEntityServiceImpl<
                 E probe = JacksonMapper.OBJECT_MAPPER.convertValue(probeData, clazz);
                 Example<E> example = Example.of(probe);
 
-                existingNames = repository
-                    .searchAll(example, NameOnly.class)
-                    .stream()
-                    .map(NameOnly::getName)
-                    .collect(Collectors.toSet());
+                existing = repository.searchAll(example, NameAndKind.class).stream().collect(Collectors.toSet());
             }
 
             //check for existing entities with the same encoded name but different actual name
-            boolean collision = existingNames
+            boolean collision = existing
                 .stream()
-                .anyMatch(n -> !dto.getName().equals(n) && key.equals(KeyUtils.encode(n)));
+                .anyMatch(n -> !dto.getName().equals(n.getName()) && key.equals(KeyUtils.encode(n.getName())));
 
             if (collision) {
                 throw new DuplicatedEntityException(type, dto.getName());
+            }
+
+            //sanity check: same name must have same kind
+            boolean kindMismatch = existing
+                .stream()
+                .anyMatch(n -> dto.getName().equals(n.getName()) && !dto.getKind().equals(n.getKind()));
+            if (kindMismatch) {
+                throw new IllegalArgumentException("name already exists with different kind");
             }
         }
 
@@ -1025,5 +1028,10 @@ public abstract class BaseEntityServiceImpl<
 
     private interface NameOnly {
         String getName();
+    }
+
+    private interface NameAndKind {
+        String getName();
+        String getKind();
     }
 }
