@@ -1,0 +1,156 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "$defs" : {
+    "ArrayField" : {
+      "type" : "array",
+      "items" : {
+        "$ref" : "#/$defs/Serializable"
+      },
+      "title" : "array"
+    },
+    "BooleanField" : {
+      "type" : "boolean",
+      "title" : "boolean"
+    },
+    "Map_String.Serializable_" : {
+      "type" : "object",
+      "additionalProperties" : {
+        "$ref" : "#/$defs/Serializable"
+      }
+    },
+    "NumberField" : {
+      "type" : "number",
+      "title" : "number"
+    },
+    "ObjectField" : {
+      "type" : "object",
+      "title" : "object"
+    },
+    "Serializable" : {
+      "anyOf" : [ {
+        "$ref" : "#/$defs/StringField"
+      }, {
+        "$ref" : "#/$defs/NumberField"
+      }, {
+        "$ref" : "#/$defs/BooleanField"
+      }, {
+        "$ref" : "#/$defs/ObjectField"
+      }, {
+        "$ref" : "#/$defs/ArrayField"
+      } ],
+      "title" : "object"
+    },
+    "StringField" : {
+      "type" : "string",
+      "title" : "string"
+    },
+    "TvmTensorSpec" : {
+      "type" : "object",
+      "properties" : {
+        "dtype" : {
+          "type" : "string",
+          "title" : "Data Type",
+          "description" : "Element type, e.g. float32 or int8."
+        },
+        "name" : {
+          "type" : "string",
+          "title" : "Name",
+          "description" : "Tensor name."
+        },
+        "quantized_dimension" : {
+          "type" : "integer",
+          "title" : "Quantized Dimension",
+          "description" : "Axis of per-axis quantization."
+        },
+        "scale" : {
+          "title" : "Scale",
+          "description" : "Quantization scale: real = (quantized - zero point) * scale.",
+          "type" : "array",
+          "items" : {
+            "type" : "number",
+            "title" : "fields.scale.item.title",
+            "description" : "fields.scale.item.description"
+          }
+        },
+        "shape" : {
+          "title" : "Shape",
+          "description" : "Dimensions, e.g. [1, 3, 640, 640].",
+          "type" : "array",
+          "items" : {
+            "type" : "integer",
+            "title" : "fields.shape.item.title",
+            "description" : "fields.shape.item.description"
+          }
+        },
+        "zero_point" : {
+          "title" : "Zero Point",
+          "description" : "Quantization zero point.",
+          "type" : "array",
+          "items" : {
+            "type" : "integer",
+            "title" : "fields.zeroPoint.item.title",
+            "description" : "fields.zeroPoint.item.description"
+          }
+        }
+      }
+    }
+  },
+  "type" : "object",
+  "properties" : {
+    "algorithm" : {
+      "type" : "string",
+      "title" : "fields.algorithm.title",
+      "description" : "fields.algorithm.description"
+    },
+    "framework" : {
+      "type" : "string",
+      "title" : "fields.framework.title",
+      "description" : "fields.framework.description"
+    },
+    "inputs" : {
+      "title" : "Inputs",
+      "description" : "Input tensors of the model: name, data type, shape and, when quantized, scale and zero point.",
+      "type" : "array",
+      "items" : {
+        "$ref" : "#/$defs/TvmTensorSpec",
+        "title" : "fields.inputs.item.title",
+        "description" : "fields.inputs.item.description"
+      }
+    },
+    "opset" : {
+      "type" : "integer",
+      "title" : "Opset Version",
+      "description" : "ONNX operator set version the model was exported with, e.g. 17.",
+      "minimum" : 1
+    },
+    "outputs" : {
+      "title" : "Outputs",
+      "description" : "Output tensors of the model.",
+      "type" : "array",
+      "items" : {
+        "$ref" : "#/$defs/TvmTensorSpec",
+        "title" : "fields.outputs.item.title",
+        "description" : "fields.outputs.item.description"
+      }
+    },
+    "parameters" : {
+      "$ref" : "#/$defs/Map_String.Serializable_",
+      "title" : "Parameters",
+      "description" : "Free-form extra information, e.g. the dataset or the export tool.",
+      "additionalProperties" : {
+        "$ref" : "#/$defs/Serializable",
+        "title" : "fields.parameters.item.title",
+        "description" : "fields.parameters.item.description"
+      }
+    },
+    "path" : {
+      "type" : "string",
+      "title" : "fields.path.title",
+      "description" : "fields.path.description",
+      "minLength" : 1
+    }
+  },
+  "required" : [ "path" ],
+  "title" : "specs.onnx.title",
+  "description" : "specs.onnx.description"
+}

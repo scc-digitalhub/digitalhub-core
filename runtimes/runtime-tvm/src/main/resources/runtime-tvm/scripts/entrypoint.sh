@@ -3,9 +3,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# Entrypoint of the tvm+build and tvm+compile Jobs. CORE mounts the scripts in TVM_HOME_DIR
-# and sets TVM_TASK_SCRIPT to the one to run; every script reads its options from the
-# TVM_* variables of the Job.
 set -euo pipefail
 
 cd "${TVM_HOME_DIR:-/shared}"
