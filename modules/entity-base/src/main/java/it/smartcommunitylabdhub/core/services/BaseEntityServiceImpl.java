@@ -237,6 +237,10 @@ public abstract class BaseEntityServiceImpl<
         try {
             log.debug("perform action {} on id {}", action, dto.getId());
             switch (operation.getAction()) {
+                case EntityAction.CREATE:
+                    //create via service
+                    create(dto);
+                    break;
                 case EntityAction.UPDATE:
                     //update via service
                     update(dto.getId(), dto);
@@ -262,7 +266,7 @@ public abstract class BaseEntityServiceImpl<
                     //no-op
                     break;
             }
-        } catch (StoreException | IllegalArgumentException e) {
+        } catch (StoreException | IllegalArgumentException | BindException | DuplicatedEntityException e) {
             log.error("error handling event for {} {}: {}", clazz.getSimpleName(), action, e.getMessage());
         }
     }
