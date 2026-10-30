@@ -29,6 +29,9 @@ import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1Service;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import jakarta.validation.constraints.NotNull;
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -52,6 +55,8 @@ public class K8sTemplate<T extends K8sRunnable> {
     private V1Deployment deployment;
     private V1Service service;
     private V1CronJob cronJob;
+
+    private Map<String, Map<String, Serializable>> specs = new HashMap<>();
 
     public String getId() {
         return getProfile().getId();

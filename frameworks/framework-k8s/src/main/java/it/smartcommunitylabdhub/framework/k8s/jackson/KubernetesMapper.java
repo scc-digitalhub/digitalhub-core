@@ -99,6 +99,10 @@ public class KubernetesMapper {
                     template.setCronJob(YAML_OBJECT_MAPPER.convertValue(map, V1CronJob.class));
                 } else if ("Service".equals(kind)) {
                     template.setService(YAML_OBJECT_MAPPER.convertValue(map, V1Service.class));
+                } else {
+                    //generic spec, store in specs map
+                    String specKey = kind.toLowerCase();
+                    template.getSpecs().put(specKey, map);
                 }
             } else if (map.get("id") != null) {
                 //base profile
