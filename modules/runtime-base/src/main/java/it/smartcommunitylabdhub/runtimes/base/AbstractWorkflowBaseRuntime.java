@@ -84,20 +84,40 @@ public abstract class AbstractWorkflowBaseRuntime<
 
             //run must reference a specific task for a workflow, either via taskId or workflow + task kind
             if (specAccessor.getTaskId() != null) {
+                log.debug("Building run spec for task ID {}", specAccessor.getTaskId());
                 //favour task reference, this must be valid
                 Task task = taskService.getTask(specAccessor.getTaskId());
                 TaskSpecAccessor taskSpecAccessor = TaskSpecAccessor.with(task.getSpec());
 
+                //sanity check
                 if (taskSpecAccessor.getWorkflowId() == null) {
                     throw new IllegalArgumentException("Task does not reference a workflow");
                 }
+                if (
+                    specAccessor.getWorkflowId() != null &&
+                    !specAccessor.getWorkflowId().equals(taskSpecAccessor.getWorkflowId())
+                ) {
+                    throw new IllegalArgumentException("Workflow ID mismatch between task and run spec");
+                }
 
                 Workflow workflow = workflowManager.getWorkflow(taskSpecAccessor.getWorkflowId());
+                if (log.isTraceEnabled()) {
+                    log.trace("build for workflow {}", workflow);
+                    log.trace("build for task {}", task);
+                }
 
                 return build(workflow, task, run);
-            } else if (specAccessor.getWorkflowId() != null && specAccessor.getTask() != null) {
+            } else if (specAccessor.getWorkflow() != null && specAccessor.getTask() != null) {
+                log.debug(
+                    "Building run spec for workflow {} and task {}",
+                    specAccessor.getWorkflow(),
+                    specAccessor.getTask()
+                );
                 //dereference task
-                Workflow workflow = workflowManager.getWorkflow(specAccessor.getWorkflowId());
+                Workflow workflow =
+                    specAccessor.getWorkflowId() != null
+                        ? workflowManager.getWorkflow(specAccessor.getWorkflowId())
+                        : workflowManager.getLatestWorkflowByName(run.getProject(), specAccessor.getWorkflow());
                 List<Task> tasks = workflowManager.getTasksByWorkflowId(workflow.getId());
                 Task task = tasks
                     .stream()
@@ -128,17 +148,30 @@ public abstract class AbstractWorkflowBaseRuntime<
                         log.error("Error auto-creating task: {}", e.getMessage());
                         throw new StoreException("Error auto-creating task", e);
                     }
-
-                    //patch run spec with task reference
-                    run.setSpec(
-                        MapUtils.mergeMultipleMaps(
-                            run.getSpec(),
-                            Map.of(Fields.TASK, RunSpecAccessor.build(task.getKind(), task.getProject(), task.getId()))
-                        )
-                    );
-
-                    return build(workflow, task, run);
                 }
+                //patch run spec with task reference
+                run.setSpec(
+                    MapUtils.mergeMultipleMaps(
+                        run.getSpec(),
+                        Map.of(
+                            Fields.TASK,
+                            RunSpecAccessor.build(task.getKind(), task.getProject(), task.getId()),
+                            Fields.WORKFLOW,
+                            TaskSpecAccessor.build(
+                                workflow.getKind(),
+                                workflow.getProject(),
+                                workflow.getName(),
+                                workflow.getId()
+                            )
+                        )
+                    )
+                );
+
+                if (log.isTraceEnabled()) {
+                    log.trace("build for workflow {}", workflow);
+                    log.trace("build for task {}", task);
+                }
+                return build(workflow, task, run);
             }
 
             throw new IllegalArgumentException("Run spec must reference a specific task or function");

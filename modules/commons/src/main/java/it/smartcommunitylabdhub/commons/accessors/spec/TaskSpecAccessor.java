@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.springframework.util.StringUtils;
 
 public interface TaskSpecAccessor extends Accessor<String> {
     default String getRuntime() {
@@ -94,41 +95,46 @@ public interface TaskSpecAccessor extends Accessor<String> {
         }
 
         //try function first
-        Matcher matcher = Pattern.compile(Keys.FUNCTION_PATTERN).matcher((String) fn);
-        if (matcher.matches()) {
-            String runtime = matcher.group(1);
-            String project = matcher.group(2);
-            String function = matcher.group(3);
-            String functionId = matcher.group(4);
+        String function = (String) fn;
+        if (StringUtils.hasText(function)) {
+            Matcher matcher = Pattern.compile(Keys.FUNCTION_PATTERN).matcher(function);
+            if (matcher.matches()) {
+                Map<String, String> m = new HashMap<>();
+                m.put(Fields.RUNTIME, matcher.group(1));
+                m.put(Fields.PROJECT, matcher.group(2));
+                m.put(Fields.FUNCTION, matcher.group(3));
+                m.put("functionId", matcher.group(4));
+                m.put("functionKey", function);
 
-            Map<String, String> m = new HashMap<>();
-            m.put(Fields.RUNTIME, runtime);
-            m.put(Fields.PROJECT, project);
-            m.put(Fields.FUNCTION, function);
-            m.put("functionId", functionId);
-            m.put("functionKey", (String) fn);
-
-            return () -> m;
+                return () -> m;
+            } else {
+                //keep as is
+                Map<String, String> m = new HashMap<>();
+                m.put("functionKey", function);
+                return () -> m;
+            }
         }
 
         //try workflow
-        matcher = Pattern.compile(Keys.WORKFLOW_PATTERN).matcher((String) wk);
-        if (matcher.matches()) {
-            String runtime = matcher.group(1);
-            String project = matcher.group(2);
-            String workflow = matcher.group(3);
-            String workflowId = matcher.group(4);
+        String workflow = (String) wk;
+        if (StringUtils.hasText(workflow)) {
+            Matcher matcher = Pattern.compile(Keys.WORKFLOW_PATTERN).matcher(workflow);
+            if (matcher.matches()) {
+                Map<String, String> m = new HashMap<>();
+                m.put(Fields.RUNTIME, matcher.group(1));
+                m.put(Fields.PROJECT, matcher.group(2));
+                m.put(Fields.WORKFLOW, matcher.group(3));
+                m.put("workflowId", matcher.group(4));
+                m.put("workflowKey", (workflow));
 
-            Map<String, String> m = new HashMap<>();
-            m.put(Fields.RUNTIME, runtime);
-            m.put(Fields.PROJECT, project);
-            m.put(Fields.WORKFLOW, workflow);
-            m.put("workflowId", workflowId);
-            m.put("workflowKey", (String) wk);
-
-            return () -> m;
+                return () -> m;
+            } else {
+                //keep as is
+                Map<String, String> m = new HashMap<>();
+                m.put("workflowKey", (workflow));
+                return () -> m;
+            }
         }
-
         throw new IllegalArgumentException("Cannot create accessor for the given task string.");
     }
 

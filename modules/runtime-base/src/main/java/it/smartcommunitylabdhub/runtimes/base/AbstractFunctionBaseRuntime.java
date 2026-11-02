@@ -84,20 +84,40 @@ public abstract class AbstractFunctionBaseRuntime<
 
             //run must reference a specific task for a function, either via taskId or function + task kind
             if (specAccessor.getTaskId() != null) {
-                //favour task reference, this must be valid
+                log.debug("Building run spec for task ID {}", specAccessor.getTaskId());
+                //favour task reference, this must be valid!
                 Task task = taskService.getTask(specAccessor.getTaskId());
                 TaskSpecAccessor taskSpecAccessor = TaskSpecAccessor.with(task.getSpec());
 
+                //sanity check
                 if (taskSpecAccessor.getFunctionId() == null) {
                     throw new IllegalArgumentException("Task does not reference a function");
                 }
+                if (
+                    specAccessor.getFunctionId() != null &&
+                    !specAccessor.getFunctionId().equals(taskSpecAccessor.getFunctionId())
+                ) {
+                    throw new IllegalArgumentException("Function ID mismatch between task and run spec");
+                }
 
                 Function function = functionManager.getFunction(taskSpecAccessor.getFunctionId());
+                if (log.isTraceEnabled()) {
+                    log.trace("build for function {}", function);
+                    log.trace("build for task {}", task);
+                }
 
                 return build(function, task, run);
-            } else if (specAccessor.getFunctionId() != null && specAccessor.getTask() != null) {
+            } else if (specAccessor.getFunction() != null && specAccessor.getTask() != null) {
+                log.debug(
+                    "Building run spec for function {} and task {}",
+                    specAccessor.getFunction(),
+                    specAccessor.getTask()
+                );
                 //dereference task
-                Function function = functionManager.getFunction(specAccessor.getFunctionId());
+                Function function =
+                    specAccessor.getFunctionId() != null
+                        ? functionManager.getFunction(specAccessor.getFunctionId())
+                        : functionManager.getLatestFunctionByName(run.getProject(), specAccessor.getFunction());
                 List<Task> tasks = functionManager.getTasksByFunctionId(function.getId());
                 Task task = tasks
                     .stream()
@@ -128,17 +148,32 @@ public abstract class AbstractFunctionBaseRuntime<
                         log.error("Error auto-creating task: {}", e.getMessage());
                         throw new StoreException("Error auto-creating task", e);
                     }
-
-                    //patch run spec with task reference
-                    run.setSpec(
-                        MapUtils.mergeMultipleMaps(
-                            run.getSpec(),
-                            Map.of(Fields.TASK, RunSpecAccessor.build(task.getKind(), task.getProject(), task.getId()))
-                        )
-                    );
-
-                    return build(function, task, run);
                 }
+
+                //patch run spec with correct references
+                run.setSpec(
+                    MapUtils.mergeMultipleMaps(
+                        run.getSpec(),
+                        Map.of(
+                            Fields.TASK,
+                            RunSpecAccessor.build(task.getKind(), task.getProject(), task.getId()),
+                            Fields.FUNCTION,
+                            TaskSpecAccessor.build(
+                                function.getKind(),
+                                function.getProject(),
+                                function.getName(),
+                                function.getId()
+                            )
+                        )
+                    )
+                );
+
+                if (log.isTraceEnabled()) {
+                    log.trace("build for function {}", function);
+                    log.trace("build for task {}", task);
+                }
+
+                return build(function, task, run);
             }
 
             throw new IllegalArgumentException("Run spec must reference a specific task or function");

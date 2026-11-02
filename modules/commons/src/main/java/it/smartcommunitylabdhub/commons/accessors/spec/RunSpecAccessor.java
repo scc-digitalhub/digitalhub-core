@@ -84,6 +84,16 @@ public interface RunSpecAccessor extends Accessor<Serializable> {
         return get("workflowId");
     }
 
+    //get function *key*
+    default String getFunctionKey() {
+        return get("functionKey");
+    }
+
+    //get workflow *key*
+    default String getWorkflowKey() {
+        return get("workflowKey");
+    }
+
     // static RunSpecAccessor with(Map<String, String> map) {
     //     return () -> map;
     // }
