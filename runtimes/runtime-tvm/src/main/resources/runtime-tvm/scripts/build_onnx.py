@@ -3,18 +3,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""tvm+build for ONNX models: converts the model into Relax IR and publishes it as a
-Model of kind tvm-ir.
-
-1. load the ONNX file;
-2. optionally convert it to another opset and simplify it with onnxsim;
-3. run the ONNX shape inference;
-4. convert it into Relax IR (weights inside as constants, or apart in params.bin); when some
-   outputs come out without a shape, which TVM cannot compile, convert again after
-   simplifying the graph with onnxsim;
-5. write model.relax.json and metadata.json;
-6. publish the folder as a tvm-ir Model.
-"""
+"""Convert ONNX to Relax IR and publish a tvm-ir Model."""
 
 from __future__ import annotations
 
@@ -65,9 +54,6 @@ def parse_args(argv=None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-# --------------------------------------------------------------------------- tensor signatures
-
-
 def tensor_spec(value_info) -> dict:
     """name, shape and dtype of a graph input or output; unknown dims become -1."""
     tensor_type = value_info.type.tensor_type
@@ -79,12 +65,7 @@ def tensor_spec(value_info) -> dict:
 
 
 def quantization(model, tensor_name: str, is_output: bool) -> dict:
-    """scale, zero_point and axis of a quantized boundary tensor, read from its QDQ node.
-
-    ONNX keeps them on the node next to the tensor: a DequantizeLinear right after an int8
-    input, a QuantizeLinear right before an int8 output, with inputs 1 and 2 as scale and
-    zero point. TFLite keeps the same values on the tensor itself.
-    """
+    """Read boundary quantization from the adjacent Q/DQ node, not the tensor."""
     from onnx import numpy_helper
 
     op_type = "QuantizeLinear" if is_output else "DequantizeLinear"
@@ -104,11 +85,7 @@ def quantization(model, tensor_name: str, is_output: bool) -> dict:
 
 
 def signature(model) -> tuple[list, list]:
-    """Inputs and outputs of the model, with the quantization of int8/uint8 tensors.
-
-    Some exporters list the weights among the graph inputs: they are left out. Relax needs
-    static shapes, so unknown input dims become 1.
-    """
+    """Exclude weights from inputs; use 1 for unknown input dimensions required by Relax."""
     weights = {init.name for init in model.graph.initializer}
     inputs = []
     for graph_input in model.graph.input:
@@ -125,16 +102,12 @@ def signature(model) -> tuple[list, list]:
     return inputs, outputs
 
 
-# --------------------------------------------------------------------------- steps
-
-
 class SimplifyError(Exception):
     """onnxsim is missing or could not simplify the graph."""
 
 
 def simplify_graph(model):
-    """The graph simplified by onnxsim, which also computes in advance every value that
-    depends only on the shapes."""
+    """Simplify with onnxsim, including constant shape arithmetic."""
     try:
         from onnxsim import simplify
     except ImportError as error:
@@ -149,8 +122,7 @@ def simplify_graph(model):
 
 
 def prepare(model, args: argparse.Namespace, simplify: bool):
-    """Opset conversion, simplification when asked, then shape inference. The opset comes
-    first because shape inference depends on it. Raises SimplifyError."""
+    """Convert the opset before simplification and shape inference, which depend on it."""
     from onnx import shape_inference, version_converter
 
     if args.target_opset is not None:
@@ -171,14 +143,13 @@ def prepare(model, args: argparse.Namespace, simplify: bool):
             model, check_type=False, strict_mode=args.strict_shape_inference, data_prop=args.data_prop
         )
     except Exception as error:  # noqa: BLE001
-        # The importer can often work without the inferred shapes: go on and let it decide.
+        # The importer may still succeed without inferred shapes.
         print(f"WARN: shape inference skipped: {error}")
     return model
 
 
 def convert(model, args: argparse.Namespace):
-    """ONNX -> Relax IR. Returns (module, weights): weights is None unless they are kept
-    apart with keep_params_in_input."""
+    """Return (Relax module, optional detached weights)."""
     from tvm import relax
     from tvm.relax.frontend.onnx import from_onnx
 
@@ -200,8 +171,7 @@ def convert(model, args: argparse.Namespace):
 
 
 def outputs_without_shape(mod) -> list[int]:
-    """Positions of the IR outputs that have only a rank and no shape. TVM cannot generate
-    code for the operations that produce them, so tvm+compile would fail on them."""
+    """Find rank-only outputs whose producers TVM cannot compile."""
     from tvm import relax
 
     returned = mod["main"].ret_ty
@@ -233,9 +203,7 @@ def main(argv=None) -> None:
     mod, weights = convert(prepared, args)
     simplified = args.simplify
     if not simplified and outputs_without_shape(mod):
-        # TVM 0.26 imports some shape arithmetic, such as the box decoding of YOLOv8, as slices
-        # sized at run time: the outputs lose their shape and the compile fails. onnxsim
-        # computes those values in advance, so the graph is simplified and converted again.
+        # Fold shape arithmetic (e.g. YOLOv8 decoding) that TVM 0.26 imports as dynamic slices.
         print("      some outputs have no shape: simplifying the graph with onnxsim and converting again")
         try:
             prepared = prepare(onnx.load(str(source)), args, simplify=True)

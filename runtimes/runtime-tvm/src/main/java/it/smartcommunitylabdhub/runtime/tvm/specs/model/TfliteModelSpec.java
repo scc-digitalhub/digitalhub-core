@@ -11,14 +11,6 @@ import it.smartcommunitylabdhub.models.Model;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * Model kind "tflite": a TensorFlow Lite flatbuffer uploaded as the source of a tvm
- * function.
- *
- * When a tvm function points at a model of this kind, tvm+build picks the TFLite builder
- * without looking at the file extension. Quantized models describe their affine
- * parameters (scale, zero_point) on the tensors in inputs/outputs.
- */
 @Getter
 @Setter
 @SpecType(kind = TfliteModelSpec.KIND, entity = Model.class, uiSchema = "runtime-tvm/tflite/uiSchema.json")

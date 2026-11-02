@@ -3,15 +3,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""tvm+build for TFLite models: converts the model into Relax IR and publishes it as a
-Model of kind tvm-ir.
+"""Convert TFLite to Relax IR and publish a tvm-ir Model.
 
-1. load the TFLite flatbuffer;
-2. convert it into Relax IR (the weights stay inside as constants);
-3. write model.relax.json and metadata.json, with the quantization of the boundary tensors;
-4. publish the folder as a tvm-ir Model.
-
-The ONNX conversion options do not apply to TFLite and are ignored.
+ONNX conversion options are ignored.
 """
 
 from __future__ import annotations
@@ -41,11 +35,7 @@ def dtype_name(code: int) -> str:
 
 
 def tensor_spec(tensor) -> dict:
-    """name, shape, dtype and, for a quantized tensor, its scale and zero point.
-
-    real = (q - zero_point) * scale: without these values a client receiving int8 cannot
-    read the numbers, so they travel with the model and the serve images expose them.
-    """
+    """Include quantization so clients can decode real = (q - zero_point) * scale."""
     spec = {
         "name": tensor.Name().decode("utf-8") if tensor.Name() else "unknown",
         # TFLite marks dynamic dims as -1; the served model needs a concrete shape.
@@ -62,7 +52,6 @@ def tensor_spec(tensor) -> dict:
 
 
 def signature(model) -> tuple[list, list]:
-    """Inputs and outputs of the main subgraph."""
     graph = model.Subgraphs(0)
     inputs = [tensor_spec(graph.Tensors(graph.Inputs(i))) for i in range(graph.InputsLength())]
     outputs = [tensor_spec(graph.Tensors(graph.Outputs(i))) for i in range(graph.OutputsLength())]
@@ -85,9 +74,7 @@ def main(argv=None) -> None:
 
     step(2, STEPS, "converting to Relax IR")
     mod = from_tflite(model)
-    # The weights are already constants in the graph, and the importer also attaches a copy
-    # as the "params" attribute: detaching drops that copy, so the IR does not store the
-    # weights twice. The copy is discarded on purpose: there is no params.bin for TFLite.
+    # Weights are already graph constants; discard the duplicate params attribute.
     try:
         mod, _ = relax.frontend.detach_params(mod)
     except Exception as error:  # noqa: BLE001
