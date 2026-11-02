@@ -1,92 +1,13 @@
 {
   "$schema" : "https://json-schema.org/draft/2020-12/schema",
-  "$defs" : {
-    "ArrayField" : {
-      "type" : "array",
-      "items" : {
-        "$ref" : "#/$defs/Serializable"
-      },
-      "title" : "array"
-    },
-    "BooleanField" : {
-      "type" : "boolean",
-      "title" : "boolean"
-    },
-    "Map_String.Serializable_" : {
-      "type" : "object",
-      "additionalProperties" : {
-        "$ref" : "#/$defs/Serializable"
-      }
-    },
-    "NumberField" : {
-      "type" : "number",
-      "title" : "number"
-    },
-    "ObjectField" : {
-      "type" : "object",
-      "title" : "object"
-    },
-    "Serializable" : {
-      "anyOf" : [ {
-        "$ref" : "#/$defs/StringField"
-      }, {
-        "$ref" : "#/$defs/NumberField"
-      }, {
-        "$ref" : "#/$defs/BooleanField"
-      }, {
-        "$ref" : "#/$defs/ObjectField"
-      }, {
-        "$ref" : "#/$defs/ArrayField"
-      } ],
-      "title" : "object"
-    },
-    "StringField" : {
-      "type" : "string",
-      "title" : "string"
-    }
-  },
   "type" : "object",
   "properties" : {
-    "algorithm" : {
-      "type" : "string",
-      "title" : "fields.algorithm.title",
-      "description" : "fields.algorithm.description"
-    },
-    "base_model" : {
-      "type" : "string",
-      "title" : "fields.baseModel.title",
-      "description" : "fields.baseModel.description"
-    },
-    "framework" : {
-      "type" : "string",
-      "title" : "fields.framework.title",
-      "description" : "fields.framework.description"
-    },
-    "model_id" : {
-      "type" : "string",
-      "title" : "fields.huggingface.modelid.title",
-      "description" : "fields.huggingface.modelid.description"
-    },
-    "model_revision" : {
-      "type" : "string",
-      "title" : "fields.huggingface.modelrevision.title",
-      "description" : "fields.huggingface.modelrevision.description"
-    },
-    "parameters" : {
-      "$ref" : "#/$defs/Map_String.Serializable_",
-      "title" : "fields.parameters.title",
-      "description" : "fields.parameters.description",
-      "additionalProperties" : {
-        "$ref" : "#/$defs/Serializable",
-        "title" : "fields.parameters.item.title",
-        "description" : "fields.parameters.item.description"
-      }
-    },
     "path" : {
       "type" : "string",
       "title" : "fields.path.title",
       "description" : "fields.path.description",
-      "minLength" : 1
+      "minLength" : 1,
+      "pattern" : "^(huggingface|hf)://[^/\\s:]+/[^/\\s:]+(:\\S+)?$"
     }
   },
   "required" : [ "path" ],

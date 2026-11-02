@@ -54,10 +54,19 @@ public class RunAutoscalerSpec extends BaseSpec {
     @Schema(title = "Auto Stop", description = "Time in seconds after which the run will be automatically stopped")
     private Integer autoStop;
 
+    // auto restart on error
+    @JsonProperty("auto_restart")
+    @Schema(
+        title = "Auto Restart",
+        description = "If set the execution will be automatically restarted on error as a new run"
+    )
+    private Boolean autoRestart;
+
     @Override
     public void configure(Map<String, Serializable> data) {
         RunAutoscalerSpec spec = mapper.convertValue(data, RunAutoscalerSpec.class);
         this.autoStop = spec.getAutoStop();
+        this.autoRestart = spec.getAutoRestart();
     }
 
     public static RunAutoscalerSpec with(Map<String, Serializable> data) {

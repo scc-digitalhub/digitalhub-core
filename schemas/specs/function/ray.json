@@ -1,0 +1,71 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "$defs" : {
+    "RaySourceCode" : {
+      "type" : "object",
+      "properties" : {
+        "base64" : {
+          "type" : "string",
+          "title" : "fields.sourceCode.base64.title",
+          "description" : "fields.sourceCode.base64.description"
+        },
+        "handler" : {
+          "type" : "string",
+          "title" : "fields.sourceCode.handler.title",
+          "description" : "fields.sourceCode.handler.description"
+        },
+        "lang" : {
+          "$ref" : "#/$defs/RaySourceCodeLanguages",
+          "title" : "fields.sourceCode.lang.title",
+          "description" : "fields.sourceCode.lang.description",
+          "default" : "python"
+        },
+        "source" : {
+          "type" : "string",
+          "title" : "fields.sourceCode.source.title",
+          "description" : "fields.sourceCode.source.description"
+        }
+      }
+    },
+    "RaySourceCodeLanguages" : {
+      "type" : "string",
+      "enum" : [ "python" ]
+    }
+  },
+  "type" : "object",
+  "properties" : {
+    "base_image" : {
+      "type" : "string",
+      "title" : "fields.container.baseImage.title",
+      "description" : "fields.container.baseImage.description"
+    },
+    "image" : {
+      "type" : "string",
+      "title" : "fields.container.image.title",
+      "description" : "fields.container.image.description"
+    },
+    "ray_version" : {
+      "type" : "string",
+      "title" : "fields.rayVersion.title",
+      "description" : "fields.rayVersion.description"
+    },
+    "requirements" : {
+      "title" : "fields.python.requirements.title",
+      "description" : "fields.python.requirements.description",
+      "type" : "array",
+      "items" : {
+        "type" : "string",
+        "title" : "fields.requirements.item.title",
+        "description" : "fields.requirements.item.description"
+      }
+    },
+    "source" : {
+      "$ref" : "#/$defs/RaySourceCode",
+      "title" : "fields.sourceCode.title",
+      "description" : "fields.sourceCode.description"
+    }
+  },
+  "required" : [ "source" ],
+  "title" : "specs.ray.title",
+  "description" : "specs.ray.description"
+}

@@ -1,0 +1,187 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "$defs" : {
+    "CoreEnv" : {
+      "type" : "object",
+      "properties" : {
+        "name" : {
+          "type" : "string",
+          "title" : "fields.name.title",
+          "description" : "fields.name.description",
+          "minLength" : 1
+        },
+        "value" : {
+          "type" : "string",
+          "title" : "fields.value.title",
+          "description" : "fields.value.description",
+          "minLength" : 1
+        }
+      },
+      "required" : [ "name", "value" ]
+    },
+    "CoreResource" : {
+      "type" : "object",
+      "properties" : {
+        "cpu" : {
+          "type" : "string",
+          "title" : "fields.k8s.resources.cpu.title",
+          "description" : "fields.k8s.resources.cpu.description",
+          "pattern" : "^\\d+([a-zA-Z]+)?$"
+        },
+        "disk" : {
+          "type" : "string",
+          "title" : "fields.k8s.resources.disk.title",
+          "description" : "fields.k8s.resources.disk.description",
+          "pattern" : "^\\d+([a-zA-Z]+)?$"
+        },
+        "gpu" : {
+          "type" : "string",
+          "title" : "fields.k8s.resources.gpu.title",
+          "description" : "fields.k8s.resources.gpu.description",
+          "pattern" : "^\\d+([a-zA-Z]+)?$"
+        },
+        "mem" : {
+          "type" : "string",
+          "title" : "fields.k8s.resources.memory.title",
+          "description" : "fields.k8s.resources.memory.description",
+          "pattern" : "^\\d+([a-zA-Z]+)?$"
+        }
+      }
+    },
+    "CoreVolume" : {
+      "type" : "object",
+      "properties" : {
+        "mount_path" : {
+          "type" : "string",
+          "title" : "fields.mountPath.title",
+          "description" : "fields.mountPath.description",
+          "minLength" : 1
+        },
+        "name" : {
+          "type" : "string",
+          "title" : "fields.name.title",
+          "description" : "fields.name.description",
+          "minLength" : 1
+        },
+        "spec" : {
+          "$ref" : "#/$defs/Map_String.String_",
+          "title" : "fields.spec.title",
+          "description" : "fields.spec.description",
+          "additionalProperties" : {
+            "type" : "string",
+            "title" : "fields.spec.item.title",
+            "description" : "fields.spec.item.description"
+          }
+        },
+        "volume_type" : {
+          "$ref" : "#/$defs/VolumeType",
+          "title" : "fields.volumeType.title",
+          "description" : "fields.volumeType.description"
+        }
+      },
+      "required" : [ "mount_path", "name", "volume_type" ]
+    },
+    "Map_String.String_" : {
+      "type" : "object",
+      "additionalProperties" : {
+        "type" : "string"
+      }
+    },
+    "VolumeType" : {
+      "type" : "string",
+      "enum" : [ "shared_volume", "persistent_volume_claim", "ephemeral", "empty_dir", "image", "workflow_volume" ]
+    }
+  },
+  "type" : "object",
+  "properties" : {
+    "data_prop" : {
+      "type" : "boolean",
+      "title" : "Data Propagation",
+      "description" : "Lets the shape inference compute values for a limited set of operators, to work out more tensor shapes."
+    },
+    "envs" : {
+      "title" : "fields.envs.title",
+      "description" : "fields.envs.description",
+      "type" : "array",
+      "items" : {
+        "$ref" : "#/$defs/CoreEnv",
+        "title" : "fields.envs.item.title",
+        "description" : "fields.envs.item.description"
+      }
+    },
+    "function" : {
+      "type" : "string",
+      "title" : "fields.function.title",
+      "description" : "fields.function.description",
+      "minLength" : 1
+    },
+    "image" : {
+      "type" : "string",
+      "title" : "Container Image",
+      "description" : "Image of the build Job; empty uses the TVM toolkit image configured on the platform."
+    },
+    "keep_params_in_input" : {
+      "type" : "boolean",
+      "title" : "Keep Params in Input",
+      "description" : "Treats the weights as input variables saved in params.bin instead of folding them into the graph; tvm+compile embeds them again."
+    },
+    "opset_override" : {
+      "type" : "integer",
+      "title" : "Opset Override",
+      "description" : "Makes the TVM importer use this opset instead of the one declared by the model, without changing the model."
+    },
+    "profile" : {
+      "type" : "string",
+      "title" : "fields.profile.title",
+      "description" : "fields.profile.description"
+    },
+    "resources" : {
+      "$ref" : "#/$defs/CoreResource",
+      "title" : "fields.resources.title",
+      "description" : "fields.resources.description"
+    },
+    "sanitize_input_names" : {
+      "type" : "boolean",
+      "title" : "Sanitize Input Names",
+      "description" : "Rewrites the input names so they are valid Relax identifiers."
+    },
+    "secrets" : {
+      "title" : "fields.secrets.title",
+      "description" : "fields.secrets.description",
+      "type" : "array",
+      "items" : {
+        "type" : "string",
+        "title" : "fields.secrets.item.title",
+        "description" : "fields.secrets.item.description"
+      }
+    },
+    "simplify" : {
+      "type" : "boolean",
+      "title" : "Simplify ONNX Model",
+      "description" : "Runs ONNX Simplifier to pre-compute constant operations and remove redundant nodes before the conversion. When off, it still runs by itself if the converted model has outputs without a shape, which TVM cannot compile."
+    },
+    "strict_shape_inference" : {
+      "type" : "boolean",
+      "title" : "Strict Shape Inference",
+      "description" : "Runs the ONNX shape inference in strict mode: an error skips the whole inference instead of single nodes."
+    },
+    "target_opset" : {
+      "type" : "integer",
+      "title" : "Target Opset Version",
+      "description" : "Converts the ONNX model to this opset version first; leave empty to keep the original."
+    },
+    "volumes" : {
+      "title" : "fields.volumes.title",
+      "description" : "fields.volumes.description",
+      "type" : "array",
+      "items" : {
+        "$ref" : "#/$defs/CoreVolume",
+        "title" : "fields.volumes.item.title",
+        "description" : "fields.volumes.item.description"
+      }
+    }
+  },
+  "required" : [ "function" ],
+  "title" : "specs.tvm+build.title",
+  "description" : "specs.tvm+build.description"
+}

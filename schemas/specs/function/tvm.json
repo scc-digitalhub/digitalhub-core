@@ -1,0 +1,36 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "$defs" : {
+    "TvmFormat" : {
+      "type" : "string",
+      "enum" : [ "auto", "onnx", "tflite" ]
+    }
+  },
+  "type" : "object",
+  "properties" : {
+    "format" : {
+      "$ref" : "#/$defs/TvmFormat",
+      "title" : "Model Format",
+      "description" : "Format of the source model: auto takes it from the Model kind or the file extension; onnx or tflite set it.",
+      "default" : "auto"
+    },
+    "ir_model" : {
+      "type" : "string",
+      "title" : "Relax IR Model",
+      "description" : "Key of the tvm-ir Model written by tvm+build and compiled by tvm+compile. Leave it empty."
+    },
+    "model" : {
+      "type" : "string",
+      "title" : "Source Model",
+      "description" : "The ONNX or TFLite model to convert: the store:// key of a Model, or an s3:// or https:// path."
+    },
+    "so_model" : {
+      "type" : "string",
+      "title" : "Compiled Model",
+      "description" : "Key of the tvm-so Model written by tvm+compile and deployed by tvm+serve. Leave it empty."
+    }
+  },
+  "required" : [ "model" ],
+  "title" : "specs.tvm.title",
+  "description" : "specs.tvm.description"
+}

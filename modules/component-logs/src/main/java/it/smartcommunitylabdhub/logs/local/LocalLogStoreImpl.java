@@ -60,7 +60,7 @@ public class LocalLogStoreImpl implements LogStore {
     public static final int MAX_LENGTH = 2 * 1024 * 1024; //2MB
 
     @Value("${logs.max-length}")
-    private int maxLength = MAX_LENGTH;
+    private Integer maxLength = MAX_LENGTH;
 
     private LogRepository logRepository;
     private Converter<LogEntity, Log> entityConverter;
