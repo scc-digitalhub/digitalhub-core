@@ -29,7 +29,6 @@ import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.enums.State;
-import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.services.TaskService;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.lifecycle.BaseLifecycleManager;
@@ -130,13 +129,12 @@ public class TriggerLifecycleManager<
 
                 //access task details from ref, same as run
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(tr.getSpec());
-                if (!StringUtils.hasText(specAccessor.getTaskId())) {
+                if (!StringUtils.hasText(specAccessor.getTask())) {
                     throw new IllegalArgumentException("spec: invalid task");
                 }
 
                 //fetch for build
                 TriggerBaseSpec baseSpec = TriggerBaseSpec.from(tr.getSpec());
-                Task task = taskService.getTask(specAccessor.getTaskId());
 
                 //build meta
                 List<RelationshipDetail> rels = new ArrayList<>();
@@ -152,6 +150,10 @@ public class TriggerLifecycleManager<
                 Map<String, Serializable> runStatus = MapUtils.mergeMultipleMaps(triggerRunStatus, baseStatus.toMap());
 
                 //build either function or workflow run
+                if (baseSpec.getFunction() == null && baseSpec.getWorkflow() == null) {
+                    throw new IllegalArgumentException("spec: missing function or workflow");
+                }
+
                 Map<String, Serializable> addSpec = StringUtils.hasText(baseSpec.getFunction())
                     ? Map.of(Fields.FUNCTION, baseSpec.getFunction(), Fields.TASK, baseSpec.getTask())
                     : Map.of(Fields.WORKFLOW, baseSpec.getWorkflow(), Fields.TASK, baseSpec.getTask());

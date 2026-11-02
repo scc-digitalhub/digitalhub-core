@@ -131,4 +131,8 @@ public interface TaskSpecAccessor extends Accessor<String> {
 
         throw new IllegalArgumentException("Cannot create accessor for the given task string.");
     }
+
+    static String build(String runtime, String project, String function, String functionId) {
+        return String.format("%s://%s/%s:%s", runtime, project, function, functionId);
+    }
 }

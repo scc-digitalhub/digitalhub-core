@@ -84,10 +84,6 @@ public interface RunSpecAccessor extends Accessor<Serializable> {
         return get("workflowId");
     }
 
-    default boolean isValid() {
-        return getProject() != null && getTask() != null && getTaskId() != null;
-    }
-
     // static RunSpecAccessor with(Map<String, String> map) {
     //     return () -> map;
     // }
@@ -122,6 +118,7 @@ public interface RunSpecAccessor extends Accessor<Serializable> {
         //try parse
         Matcher matcher = Pattern.compile(Keys.TASK_PATTERN).matcher((String) tsk);
         if (matcher.matches()) {
+            //extract full reference from the task string
             String task = matcher.group(1);
             String project = matcher.group(2);
             String taskId = matcher.group(3);
@@ -129,10 +126,15 @@ public interface RunSpecAccessor extends Accessor<Serializable> {
             m.put(Fields.TASK, task);
             m.put(Fields.PROJECT, project);
             m.put("taskId", taskId);
-
-            return () -> m;
+        } else {
+            //keep only task string as is
+            m.put(Fields.TASK, (String) tsk);
         }
 
-        throw new IllegalArgumentException("Cannot create accessor for the given task string.");
+        return () -> m;
+    }
+
+    static String build(String task, String project, String taskId) {
+        return String.format("%s://%s/%s", task, project, taskId);
     }
 }

@@ -232,17 +232,18 @@ public class RunManagerImpl implements RunManager {
             if (!StringUtils.hasText(runSpecAccessor.getTask())) {
                 throw new IllegalArgumentException("spec: missing task");
             }
-            if (!StringUtils.hasText(runSpecAccessor.getTaskId())) {
-                throw new IllegalArgumentException("spec: missing task id");
-            }
 
             //check if task exists and matches
-            Task task = taskEntityService.find(runSpecAccessor.getTaskId());
-            if (task == null) {
-                throw new IllegalArgumentException("invalid task");
-            }
-            if (!projectId.equals(task.getProject())) {
-                throw new IllegalArgumentException("project mismatch");
+            if (StringUtils.hasText(runSpecAccessor.getTaskId())) {
+                //check if task exists and matches
+                Task task = taskEntityService.find(runSpecAccessor.getTaskId());
+                if (task == null) {
+                    throw new IllegalArgumentException("invalid task");
+                }
+
+                if (!projectId.equals(task.getProject())) {
+                    throw new IllegalArgumentException("project mismatch");
+                }
             }
 
             //TODO check if run kind matches allowed for task/runtime
