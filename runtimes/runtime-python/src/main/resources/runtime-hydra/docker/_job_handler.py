@@ -18,7 +18,7 @@ from digitalhub.entities.run.crud import get_run
 from digitalhub.runtimes.enums import RuntimeEnvVar
 
 from digitalhub_runtime_python.utils.configuration import (
-    _get_function_path, import_function_and_init_from_source, has_git_scheme, has_remote_scheme, has_s3_scheme, 
+    _get_function_path, import_function_and_init_from_source, has_git_scheme, has_remote_scheme, has_s3_scheme,
     _clone_git_source, _download_remote_source, _download_s3_source
 )
 from digitalhub_runtime_python.utils.inputs import compose_init, compose_inputs
@@ -179,7 +179,7 @@ def handler(context: Context, event: Event) -> Response:
             **context.run.status.to_dict(),
         }
         context.run.set_status(new_status)
-        context.run.update()
+        context.run.save(update=True)
 
     except BaseException as e:
         context.logger.error(f"Function execution failed with error: {str(e)}")
@@ -262,7 +262,7 @@ def _configure_execution(spec: dict, run: dict, ctx: Context) -> tuple[Callable,
         # In this case we need anticipate the command line arguments overwriting the config path and config name
         if "base64" in config:
             path = runtime_dir
-            sys.argv = args + [f"--config-path={path.absolute()}", "--config-name=config"]        
+            sys.argv = args + [f"--config-path={path.absolute()}", "--config-name=config"]
         # download config to runtime dir
         elif "source" in config:
             path = runtime_dir / "config"
@@ -274,9 +274,9 @@ def _configure_execution(spec: dict, run: dict, ctx: Context) -> tuple[Callable,
             sys.argv = args + [f"--config-path={path.absolute()}"]
 
     sys.argv += [
-        f"--config-dir={(runtime_dir / "dh_extra_conf" ).absolute()}", 
-        "hydra/launcher=dh_launcher", 
-        f"hydra.launcher.job_ref={run.id}", 
+        f"--config-dir={(runtime_dir / "dh_extra_conf" ).absolute()}",
+        "hydra/launcher=dh_launcher",
+        f"hydra.launcher.job_ref={run.id}",
         f"hydra.sweep.dir={(runtime_dir / "multirun_output" ).absolute()}"
     ]
     if "parameters" in spec:
