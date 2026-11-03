@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import io.argoproj.workflow.models.IoArgoprojWorkflowV1alpha1Arguments;
 import io.argoproj.workflow.models.IoArgoprojWorkflowV1alpha1ArtifactRepositoryRef;
 import io.argoproj.workflow.models.IoArgoprojWorkflowV1alpha1ExecutorConfig;
+import io.argoproj.workflow.models.IoArgoprojWorkflowV1alpha1Metadata;
 import io.argoproj.workflow.models.IoArgoprojWorkflowV1alpha1Parameter;
 import io.argoproj.workflow.models.IoArgoprojWorkflowV1alpha1Template;
 import io.argoproj.workflow.models.IoArgoprojWorkflowV1alpha1Workflow;
@@ -317,6 +318,12 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
             sanitize(workflow);
             //build labels
             Map<String, String> labels = buildLabels(runnable);
+            // set pod metadata as well to propagate labels to pods
+            IoArgoprojWorkflowV1alpha1Metadata podMetadata = Optional.ofNullable(
+                workflow.getSpec().getPodMetadata()
+            ).orElse(new IoArgoprojWorkflowV1alpha1Metadata());
+            podMetadata.setLabels(labels);
+            workflow.getSpec().setPodMetadata(podMetadata);
             // Create the Job metadata
             workflow.getMetadata().labels(labels);
             //populate template defaults
