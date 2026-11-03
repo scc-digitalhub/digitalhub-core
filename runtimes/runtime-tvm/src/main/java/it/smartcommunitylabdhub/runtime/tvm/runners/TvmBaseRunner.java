@@ -52,8 +52,8 @@ public abstract class TvmBaseRunner {
         this.k8sBuilderHelper = k8sBuilderHelper;
         this.k8sLabelHelper = k8sLabelHelper;
 
-        this.userId = Objects.requireNonNullElse(properties.getUserId(), TvmRuntime.UID);
-        this.groupId = Objects.requireNonNullElse(properties.getGroupId(), TvmRuntime.GID);
+        this.userId = properties.getUserId().orElse(TvmRuntime.UID);
+        this.groupId = properties.getGroupId().orElse(TvmRuntime.GID);
         this.homeDir = Objects.requireNonNullElse(properties.getHomeDir(), TvmRuntime.HOME_DIR);
         this.volumeSizeSpec = properties.getVolumeSize();
         this.entrypoint = TvmRunnerHelper.loadClasspath(
