@@ -14,7 +14,6 @@ import argparse
 import json
 import os
 from pathlib import Path
-from typing import Optional
 
 import tvm
 from tvm import relax
@@ -27,7 +26,7 @@ from common import INPUT_DIR, OUTPUT_DIR, fail, option, read_json, step, target_
 STEPS = 7
 
 
-def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Relax IR -> model.so (Model tvm-so)", allow_abbrev=False)
 
     model = parser.add_argument_group("model")
@@ -70,7 +69,7 @@ def validate_options(args: argparse.Namespace) -> None:
     tuning.validate_options(args)
 
 
-def load_ir(ir_dir: Path):
+def load_ir(ir_dir: Path) -> tvm.IRModule:
     path = ir_dir / "model.relax.json"
     if not path.is_file():
         source = os.environ.get("TVM_SOURCE_IR_KEY", "the selected IR model")
@@ -83,7 +82,7 @@ def load_ir(ir_dir: Path):
     return tvm.ir.load_json(path.read_text())
 
 
-def load_weights(ir_dir: Path, params_file: Optional[str]) -> Optional[dict]:
+def load_weights(ir_dir: Path, params_file: str | None) -> dict | None:
     """The weights kept apart by tvm+build (keep_params_in_input), if any."""
     from tvm.runtime import load_param_dict
 
@@ -120,6 +119,18 @@ def embed_weights(mod, weights: dict):
     return entry, len(named), relax.transform.BindParams(entry, named)(mod)
 
 
+def load_model(ir_dir: Path, params_file: str | None) -> tuple[tvm.IRModule, dict]:
+    """Load the IR and metadata, embedding any separately saved weights."""
+    mod = load_ir(ir_dir)
+    metadata_file = ir_dir / "metadata.json"
+    metadata = read_json(metadata_file) if metadata_file.exists() else {"entry": "main"}
+    weights = load_weights(ir_dir, params_file)
+    if weights:
+        entry, count, mod = embed_weights(mod, weights)
+        print(f"      embedded {count} weights into {entry}()")
+    return mod, metadata
+
+
 def cpu_count() -> int:
     """CPUs this process may use (the container limit, not the size of the node)."""
     try:
@@ -128,7 +139,7 @@ def cpu_count() -> int:
         return os.cpu_count() or 1
 
 
-def resolve_target(target_text: str, num_cores: Optional[int]):
+def resolve_target(target_text: str, num_cores: int | None) -> tuple[tvm.target.Target, str]:
     """Resolve mcpu=native to avoid LLVM's generic-CPU fallback.
 
     Return (Target, effective target text), including num-cores for tuning.
@@ -173,6 +184,17 @@ def resolve_target(target_text: str, num_cores: Optional[int]):
     return target, text
 
 
+def prepare_execution(args: argparse.Namespace, target: tvm.target.Target) -> str | None:
+    """Check local execution and use the target's thread count when tuning."""
+    execution_error = toolchain.local_execution_error(target)
+    if args.tuning_mode == "tune" and args.tuning_runner == "local" and execution_error:
+        fail(execution_error + "; use tuning_runner=rpc or tuning_mode=apply")
+    if args.tuning_mode == "tune" and target.attrs.get("num-cores") is not None:
+        os.environ.setdefault("TVM_NUM_THREADS", str(target.attrs["num-cores"]))
+        print(f"      tuning threads={os.environ['TVM_NUM_THREADS']}")
+    return execution_error
+
+
 def build_library(mod, args: argparse.Namespace, target, out_dir: Path, pass_ctx) -> Path:
     options = {"target": target, "relax_pipeline": args.relax_pipeline, "tir_pipeline": args.tir_pipeline,
                "exec_mode": args.exec_mode}
@@ -190,7 +212,7 @@ def build_library(mod, args: argparse.Namespace, target, out_dir: Path, pass_ctx
 
 
 def compiled_metadata(ir_metadata: dict, args: argparse.Namespace, target, effective_target: str,
-                      tuning_summary: Optional[dict], benchmark: Optional[dict]) -> dict:
+                      tuning_summary: dict | None, benchmark: dict | None) -> dict:
     """Extend IR metadata with build details consumed by the serve images."""
     metadata = {**ir_metadata, "target": effective_target, "tvm_version": tvm.__version__}
     triple = target_triple(target)
@@ -217,30 +239,19 @@ def compiled_metadata(ir_metadata: dict, args: argparse.Namespace, target, effec
     return metadata
 
 
-def main(argv: Optional[list[str]] = None) -> None:
+def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     ir_dir = Path(args.ir_dir).resolve()
     out_dir = Path(args.output)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     step(1, STEPS, f"loading the IR from {ir_dir}")
-    mod = load_ir(ir_dir)
-    ir_metadata = read_json(ir_dir / "metadata.json") if (ir_dir / "metadata.json").exists() else {"entry": "main"}
-    weights = load_weights(ir_dir, args.params_file)
-    if weights:
-        entry, count, mod = embed_weights(mod, weights)
-        print(f"      embedded {count} weights into {entry}()")
+    mod, ir_metadata = load_model(ir_dir, args.params_file)
 
     step(2, STEPS, f"target {args.target} (opt_level={args.opt_level}, exec_mode={args.exec_mode})")
     target, effective_target = resolve_target(args.target, args.target_num_cores)
     args.cross_cc = toolchain.check_toolchain(target, args.cross_cc, args.cross_cc_options)
-    execution_error = toolchain.local_execution_error(target)
-    if args.tuning_mode == "tune" and args.tuning_runner == "local" and execution_error:
-        fail(execution_error + "; use tuning_runner=rpc or tuning_mode=apply")
-    if args.tuning_mode == "tune" and target.attrs.get("num-cores") is not None:
-        # Candidates must be timed with the thread count the schedules are built for.
-        os.environ.setdefault("TVM_NUM_THREADS", str(target.attrs["num-cores"]))
-        print(f"      tuning threads={os.environ['TVM_NUM_THREADS']}")
+    execution_error = prepare_execution(args, target)
     pass_ctx = tvm.transform.PassContext(opt_level=args.opt_level)
 
     tuning_summary = None

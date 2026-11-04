@@ -27,13 +27,13 @@ from common import (
 STEPS = 6
 
 # ONNX TensorProto.DataType -> dtype name
-ONNX_DTYPES = {
+ONNX_DTYPES: dict[int, str] = {
     1: "float32", 2: "uint8", 3: "int8", 4: "uint16", 5: "int16", 6: "int32",
     7: "int64", 9: "bool", 10: "float16", 11: "float64", 12: "uint32", 13: "uint64",
 }
 
 
-def parse_args(argv=None) -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="ONNX -> Relax IR (Model tvm-ir)")
     option(parser, "--input", "TVM_INPUT_FILE", default="model.onnx", help="ONNX file, a path or a name in the input folder")
     option(parser, "--output", "TVM_OUTPUT_DIR", default=str(OUTPUT_DIR), help="folder that receives the IR")
@@ -84,7 +84,7 @@ def quantization(model, tensor_name: str, is_output: bool) -> dict:
     return {}
 
 
-def signature(model) -> tuple[list, list]:
+def signature(model) -> tuple[list[dict], list[dict]]:
     """Exclude weights from inputs; use 1 for unknown input dimensions required by Relax."""
     weights = {init.name for init in model.graph.initializer}
     inputs = []
@@ -179,27 +179,10 @@ def outputs_without_shape(mod) -> list[int]:
     return [index for index, output in enumerate(outputs) if isinstance(output, relax.TensorType) and output.shape is None]
 
 
-def main(argv=None) -> None:
-    args = parse_args(argv)
+def convert_with_fallback(source: Path, prepared, args: argparse.Namespace):
+    """Return the prepared graph, IR, weights and final simplification flag."""
     import onnx
-    import tvm
 
-    source = Path(args.input) if Path(args.input).is_file() else source_model_file(INPUT_DIR, args.input, ".onnx")
-    out_dir = Path(args.output)
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    step(1, STEPS, f"loading {source}")
-    model = onnx.load(str(source))
-    print(f"      {len(model.graph.node)} nodes, opset {model.opset_import[0].version}")
-
-    step(2, STEPS, "preparing the ONNX graph")
-    try:
-        prepared = prepare(model, args, simplify=args.simplify)
-    except SimplifyError as error:
-        fail(str(error), code=4)
-
-    step(3, STEPS, f"converting to Relax IR (opset={args.opset}, keep_params_in_input={args.keep_params_in_input}, "
-                   f"sanitize_input_names={args.sanitize_input_names})")
     mod, weights = convert(prepared, args)
     simplified = args.simplify
     if not simplified and outputs_without_shape(mod):
@@ -215,17 +198,16 @@ def main(argv=None) -> None:
     missing = outputs_without_shape(mod)
     if missing:
         print(f"WARN: outputs {missing} still have no shape: tvm+compile will probably fail on them")
+    return prepared, mod, weights, simplified
 
-    step(4, STEPS, "writing the IR")
-    save_relax_ir(mod, out_dir, weights)
 
-    step(5, STEPS, "writing metadata.json")
+def build_metadata(source: Path, prepared, args: argparse.Namespace, simplified: bool, tvm_version: str) -> dict:
     inputs, outputs = signature(prepared)
-    metadata = {
+    return {
         "entry": "main",
         "source_format": "onnx",
         "source_sha256": sha256_of(source),
-        "tvm_version": tvm.__version__,
+        "tvm_version": tvm_version,
         "opset": prepared.opset_import[0].version,
         "model_name": args.name,
         "keep_params_in_input": args.keep_params_in_input,
@@ -235,8 +217,38 @@ def main(argv=None) -> None:
         "inputs": inputs,
         "outputs": outputs,
     }
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
+    import onnx
+    import tvm
+
+    source = source_model_file(INPUT_DIR, args.input, ".onnx")
+    out_dir = Path(args.output)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    step(1, STEPS, f"loading {source}")
+    model = onnx.load(str(source))
+    print(f"      {len(model.graph.node)} nodes, opset {model.opset_import[0].version}")
+
+    step(2, STEPS, "preparing the ONNX graph")
+    try:
+        prepared = prepare(model, args, simplify=args.simplify)
+    except SimplifyError as error:
+        fail(str(error), code=4)
+
+    step(3, STEPS, f"converting to Relax IR (opset={args.opset}, keep_params_in_input={args.keep_params_in_input}, "
+                   f"sanitize_input_names={args.sanitize_input_names})")
+    prepared, mod, weights, simplified = convert_with_fallback(source, prepared, args)
+
+    step(4, STEPS, "writing the IR")
+    save_relax_ir(mod, out_dir, weights)
+
+    step(5, STEPS, "writing metadata.json")
+    metadata = build_metadata(source, prepared, args, simplified, tvm.__version__)
     write_json(out_dir / "metadata.json", metadata)
-    print_signature(inputs, outputs)
+    print_signature(metadata["inputs"], metadata["outputs"])
 
     step(6, STEPS, "publishing the Model (kind tvm-ir)")
     from publish import publish_ir_model

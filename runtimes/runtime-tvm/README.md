@@ -142,10 +142,20 @@ Tensor metadata includes `name`, `dtype`, `shape` and optional quantization fiel
 and `mcpu: native`; it is diagnostic, not another Run option.
 
 Publication uses direct HTTP calls to CORE and signed storage URLs, including multipart
-uploads. No DigitalHub SDK is installed or called by the toolkit. Output registration
-and Function writeback each retry transient failures up to three attempts. Missing
-outputs or an unconfirmed writeback fail the Run; uploaded Models remain recoverable
-from the log and, if registered, `run.status.outputs`.
+uploads. No DigitalHub SDK is installed or called by the toolkit. The publisher follows
+the SDK's Model lifecycle: `CREATED` → `UPLOADING` → `READY`, recording file information
+before marking the Model ready. Upload failures mark the Model `ERROR`. A `READY`
+Model is distinct from a `COMPLETED` Run: wait for the Run to finish before continuing.
+
+Output registration and Function writeback each retry transient failures up to three
+attempts. If the monitor advances a Run from `PENDING` to `RUNNING` during an output
+update, the publisher rereads the Run and retries the merge. Other HTTP 400 responses
+remain errors. Missing outputs or an unconfirmed writeback fail the Run; registered
+Models remain recoverable from the log and, when recorded, `run.status.outputs`.
+
+Registration errors include CORE's validation message. A Model name can have multiple
+versions of the same kind, but cannot be reused for a different kind in the same
+project. Generated artifact names are normalized to CORE's Model naming rules.
 
 Writebacks are serialized within one CORE instance. This does not provide distributed
 locking against other CORE instances or external Function edits.
@@ -173,9 +183,10 @@ CUDA/GPU execution is not integrated.
 
 ### Add or override a preset
 
-Mount a file, set `RUNTIME_TVM_CONFIG=file:/etc/digitalhub/runtime-tvm.yaml` and
-restart CORE. Keep all settings in one YAML document: the shared loader reads the
-first document only. For example:
+Mount a file, set
+`SPRING_CONFIG_ADDITIONAL_LOCATION=file:/etc/digitalhub/runtime-tvm.yaml` and restart
+CORE. Spring Boot loads the external file alongside the usual application settings;
+no TVM-specific loader is needed. For example:
 
 ```yaml
 runtime:
@@ -202,8 +213,11 @@ Select it with `target_architecture: arm64_pi4`. Each entry has:
 | `aliases` | Optional alternative names; use lowercase, unique names |
 | `compiler-architecture` | Optional compile-node architecture constraint, as for `amd64_native` |
 
-Omitted profiles and fields retain their bundled defaults. Supplying `target`
-replaces the whole target, preventing old CPU features from leaking into the override.
+The external file can also be named `runtime-tvm.yaml`: it does not replace the
+bundled property source. Omitted profiles and fields retain their bundled defaults.
+Lists replace lower-priority lists; `aliases: []` or `linker.options: []` clears them.
+Supplying `target` replaces the whole target, preventing old CPU features from
+leaking into the override.
 Run `optimization.cross_cc` and `optimization.cross_cc_options` override linker
 settings; an explicit `[]` clears the arguments. Paths refer to the compile container.
 An explicit Run `target` remains an object and does not inherit a preset's linker
@@ -219,23 +233,28 @@ Older API aliases remain configured: `cpu`/`llvm` → `auto`, `x86` → `amd64`,
 
 When migrating older override files:
 
+- Replace `RUNTIME_TVM_CONFIG` with `SPRING_CONFIG_ADDITIONAL_LOCATION` and unset
+  the old variable. The dedicated TVM configuration path is no longer read.
 - Replace each `target` YAML mapping with a JSON string as shown above.
 - Move profile-level `cross-cc` to `linker.command`.
 - Move profile-level `cross-cc-options` to `linker.options`.
-- Combine settings from documents separated by `---` into one YAML document;
-  only the first document is loaded.
 
 These changes apply only to the administrator's catalogue. An explicit Run `target`
 remains an object; `optimization.cross_cc`/`optimization.cross_cc_options` remain
 Run options.
-Invalid target JSON or unknown target-profile fields prevent CORE from starting.
+Invalid target JSON or unknown configuration-file properties under `runtime.tvm`
+prevent CORE from starting. As in standard Spring Boot binding, unknown environment
+variables and JVM system properties are ignored. External files use standard
+configuration precedence and profile rules. A configured file must exist unless its
+location starts with `optional:`.
 
 ### How targets reach TVM
 
-1. `TvmConfig` loads the bundled YAML and, if configured, the external override.
-2. The shared `commons.YamlPropertySourceFactory` loads the properties. Each target
-   is already a JSON string, preserving lists, numbers and nested options together.
-3. `TvmProperties` binds and validates the catalogue and resolves names/aliases.
+1. `TvmConfig` loads the bundled YAML through the shared
+   `commons.YamlPropertySourceFactory`; Spring Boot loads any additional configuration.
+2. Each target is a JSON string, preserving lists, numbers and nested options together.
+3. Standard `@ConfigurationProperties` binding populates `TvmProperties`, which
+   validates the catalogue and resolves names/aliases.
    `TvmCompileSchemaModule` uses the same catalogue for the console choices.
 4. `TvmCompileRunner` selects the preset or explicit target and sends it as
    `TVM_TARGET`, with the linker and thread options, to the Job.
@@ -250,15 +269,15 @@ family still needs its LLVM backend, linker/sysroot, runtime build and tests.
 
 | CORE environment variable | Default |
 | --- | --- |
-| `RUNTIME_TVM_CONFIG` | No external file; bundled YAML only |
-| `RUNTIME_TVM_BUILDER_ONNX`, `RUNTIME_TVM_BUILDER_TFLITE`, `RUNTIME_TVM_COMPILER` | `ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0-r1` |
-| `RUNTIME_TVM_SERVE` | `ghcr.io/scc-digitalhub/tvm-runtime-go:0.26.0-r2` |
+| `SPRING_CONFIG_ADDITIONAL_LOCATION` | No additional TVM file; bundled YAML supplies the catalogue |
+| `RUNTIME_TVM_BUILDER_ONNX`, `RUNTIME_TVM_BUILDER_TFLITE`, `RUNTIME_TVM_COMPILER` | `ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0-r2` |
+| `RUNTIME_TVM_SERVE` | `ghcr.io/scc-digitalhub/tvm-runtime-go:0.26.0-r3` |
 | `RUNTIME_TVM_HOME_DIR` | `/shared` |
 | `RUNTIME_TVM_VOLUME_SIZE` | `4Gi` |
 | `RUNTIME_TVM_USER_ID`, `RUNTIME_TVM_GROUP_ID` | Platform Kubernetes user/group |
 
 Each Run can override its image. Set `RUNTIME_TVM_SERVE` to
-`ghcr.io/scc-digitalhub/tvm-runtime-rust:0.26.0-r1` to use Rust globally.
+`ghcr.io/scc-digitalhub/tvm-runtime-rust:0.26.0-r2` to use Rust globally.
 These image revisions bundle Apache TVM 0.26.0; the `-rN` suffix identifies the
 DigitalHub image revision. Storage uses the platform's default store; there is
 no TVM bucket setting.
@@ -289,11 +308,14 @@ mvn -pl runtimes/runtime-tvm -am install -DskipTests
 ```
 
 Local tests under `src/test/` and `test_infer/` are not distributed in this repository.
+SDK validation reads the exported TVM schemas in `schemas/specs/` from CORE's `main`
+branch. Keep those exports aligned with the specs and merge CORE before dependent
+SDK changes.
 The public [tutorial](https://scc-digitalhub.github.io/docs/0.16/tutorials/tvm/intro/)
 contains a standalone inference client.
 
 Related components: [toolkit](https://github.com/scc-digitalhub/digitalhub-tvm-toolkit),
-[Go runtime](https://github.com/scc-digitalhub/digitalhub-serverless/tree/serverless-tvm/pkg/processor/runtime/tvm),
+[Go runtime](https://github.com/scc-digitalhub/digitalhub-serverless/tree/main/pkg/processor/runtime/tvm),
 [Rust runtime](https://github.com/scc-digitalhub/digitalhub-tvm-rust),
 [SDK TVM extension](https://github.com/scc-digitalhub/digitalhub-sdk-runtime-tvm).
 

@@ -18,7 +18,7 @@ from common import INPUT_DIR, OUTPUT_DIR, option, print_signature, save_relax_ir
 STEPS = 4
 
 
-def parse_args(argv=None) -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="TFLite -> Relax IR (Model tvm-ir)")
     option(parser, "--input", "TVM_INPUT_FILE", default="model.tflite", help="TFLite file, a path or a name in the input folder")
     option(parser, "--output", "TVM_OUTPUT_DIR", default=str(OUTPUT_DIR), help="folder that receives the IR")
@@ -51,21 +51,21 @@ def tensor_spec(tensor) -> dict:
     return spec
 
 
-def signature(model) -> tuple[list, list]:
+def signature(model) -> tuple[list[dict], list[dict]]:
     graph = model.Subgraphs(0)
     inputs = [tensor_spec(graph.Tensors(graph.Inputs(i))) for i in range(graph.InputsLength())]
     outputs = [tensor_spec(graph.Tensors(graph.Outputs(i))) for i in range(graph.OutputsLength())]
     return inputs, outputs
 
 
-def main(argv=None) -> None:
+def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     import tflite
     import tvm
     from tvm import relax
     from tvm.relax.frontend.tflite import from_tflite
 
-    source = Path(args.input) if Path(args.input).is_file() else source_model_file(INPUT_DIR, args.input, ".tflite")
+    source = source_model_file(INPUT_DIR, args.input, ".tflite")
     out_dir = Path(args.output)
     out_dir.mkdir(parents=True, exist_ok=True)
 

@@ -123,7 +123,20 @@
       "ui:description@en": "Optional weights file inside the Job. Example: /shared/input/params.bin; empty detects it next to the IR.",
       "ui:title@it": "File dei parametri",
       "ui:description@it": "File facoltativo dei pesi dentro il Job. Esempio: /shared/input/params.bin; vuoto lo cerca accanto all'IR."
-    }
+    },
+    "ui:order": [
+      "target_num_cores",
+      "opt_level",
+      "cross_cc",
+      "cross_cc_options",
+      "exec_mode",
+      "relax_pipeline",
+      "tir_pipeline",
+      "system_lib",
+      "benchmark_runs",
+      "params_path",
+      "*"
+    ]
   },
   "tuning": {
     "ui:title@en": "MetaSchedule tuning",

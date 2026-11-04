@@ -23,9 +23,6 @@ import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
-import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceDetails;
-import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
-import it.smartcommunitylabdhub.framework.k8s.objects.AppProtocol;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.models.ModelManager;
@@ -235,8 +232,7 @@ public class TvmRuntime
             return status;
         }
 
-        K8sServiceInfo service = status.getService();
-        String baseUrl = service.getUrl();
+        String baseUrl = status.getService().getUrl();
         TvmServeRunSpec spec = TvmServeRunSpec.with(run.getSpec());
         String model = TvmServeRunner.resolveServedName(
             spec.getServedName(), RunSpecAccessor.with(run.getSpec()).getFunction()
@@ -244,13 +240,6 @@ public class TvmRuntime
         if (!StringUtils.hasText(baseUrl) || !StringUtils.hasText(model)) {
             return status;
         }
-
-        String v2Url = baseUrl + "/v2";
-        List<K8sServiceDetails> urls = new ArrayList<>(service.getUrls() != null ? service.getUrls() : List.of());
-        if (urls.stream().noneMatch(endpoint -> v2Url.equals(endpoint.getUrl()))) {
-            urls.add(new K8sServiceDetails(v2Url, TvmServeRunner.HTTP_PORT, AppProtocol.openinference_v2.name()));
-        }
-        service.setUrls(urls);
 
         status.setInferenceV2(InferenceV2Service.from(baseUrl, model));
         return status;

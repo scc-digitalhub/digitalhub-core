@@ -16,12 +16,11 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Optional
 
 TIMEOUT_SEC = 900
 
 
-def benchmark_library(so_path: Path, metadata: dict, runs: int, execution_error: Optional[str], system_lib: bool) -> Optional[dict]:
+def benchmark_library(so_path: Path, metadata: dict, runs: int, execution_error: str | None, system_lib: bool) -> dict | None:
     """The timings of `runs` inferences, the reason they were skipped, or None when off."""
     if runs <= 0:
         return None

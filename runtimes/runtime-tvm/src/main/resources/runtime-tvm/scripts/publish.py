@@ -12,7 +12,7 @@ import re
 import time
 import uuid
 from pathlib import Path
-from typing import Optional
+from typing import Any, BinaryIO
 from urllib.parse import quote
 
 import requests
@@ -20,6 +20,7 @@ import requests
 MODEL_OUTPUTS = {"tvm-ir": "ir_module", "tvm-so": "compiled_so"}
 RETRYABLE = {408, 409, 412, 429, 500, 502, 503, 504}
 PART_SIZE = 64 * 1024 * 1024
+MAX_FILES_IN_STATUS = 100
 
 
 def publish_ir_model(out_dir: Path, name: str, metadata: dict, parameters: dict) -> str:
@@ -41,7 +42,7 @@ def publish_ir_model(out_dir: Path, name: str, metadata: dict, parameters: dict)
     )
 
 
-def publish_compiled_model(out_dir: Path, name: str, metadata: dict, source_ir_key: Optional[str]) -> str:
+def publish_compiled_model(out_dir: Path, name: str, metadata: dict, source_ir_key: str | None) -> str:
     return publish_model(
         kind="tvm-so",
         name=name,
@@ -60,15 +61,39 @@ def publish_compiled_model(out_dir: Path, name: str, metadata: dict, source_ir_k
     )
 
 
-def core_request(method: str, path: str, *, timeout: int = 30, **kwargs):
+def core_error_message(response: requests.Response) -> str:
+    """Keep CORE's reason bounded and free of credentials or signed URLs."""
+    try:
+        body = response.json()
+    except ValueError:
+        return ""
+    message = body.get("message") if isinstance(body, dict) else None
+    if not isinstance(message, str):
+        return ""
+    for name in ("DHCORE_ACCESS_TOKEN", "DHCORE_PASSWORD", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN"):
+        if secret := os.environ.get(name):
+            message = message.replace(secret, "<redacted>")
+    message = re.sub(r"(?:https?|s3)://[^\s\"'<>]+", "<url>", message)
+    return " ".join(message.split())[:1000]
+
+
+def core_request(method: str, path: str, *, timeout: int = 30, **kwargs) -> Any:
     auth, headers = core_auth()
     url = os.environ["DHCORE_ENDPOINT"].rstrip("/") + "/api/v1/-/" + path
     response = requests.request(method, url, auth=auth, headers=headers, timeout=timeout, **kwargs)
-    response.raise_for_status()
-    return response.json()
+    try:
+        response.raise_for_status()
+    except requests.HTTPError:
+        message = core_error_message(response)
+        detail = f": {message}" if message else ""
+        raise requests.HTTPError(
+            f"CORE {method} {path}: HTTP {response.status_code}{detail}",
+            response=response, request=response.request,
+        ) from None
+    return response.json() if response.content else None
 
 
-def send_file(info: dict, content, filename: str):
+def send_file(info: dict, content: BinaryIO, filename: str) -> requests.Response:
     """Never forward CORE credentials or expose a signed URL in an upload error."""
     empty = content.seek(0, os.SEEK_END) == 0
     for attempt in range(3):
@@ -112,17 +137,32 @@ def upload_file(api: str, source: Path, name: str, filename: str) -> str:
     return info["path"]
 
 
-def register_model(collection: str, descriptor: dict) -> dict:
-    """Recover a lost POST response using the same model ID, without re-uploading."""
+def find_or_create_model(collection: str, descriptor: dict) -> dict:
+    """Recover a lost POST response using the same ID."""
     api = collection + "/" + descriptor["id"]
+    try:
+        return core_request("GET", api)
+    except requests.HTTPError as error:
+        if error.response is None or error.response.status_code != 404:
+            raise
+
+    try:
+        return core_request("POST", collection, json=descriptor)
+    except requests.HTTPError as error:
+        if error.response is None or error.response.status_code != 400:
+            raise
+        # CORE also reports duplicate IDs as HTTP 400 after a lost POST response.
+        try:
+            return core_request("GET", api)
+        except requests.RequestException:
+            raise error from None
+
+
+def register_model(collection: str, descriptor: dict) -> dict:
+    """Confirm identity and storage, retrying transient failures with the same ID."""
     for attempt in range(3):
         try:
-            try:
-                model = core_request("GET", api)
-            except requests.HTTPError as error:
-                if error.response is None or error.response.status_code != 404:
-                    raise
-                model = core_request("POST", collection, json=descriptor)
+            model = find_or_create_model(collection, descriptor)
             if any(model.get(field) != descriptor[field] for field in ("id", "kind", "name", "project")):
                 raise RuntimeError("CORE returned a different model identity")
             if model.get("spec", {}).get("path") != descriptor["spec"]["path"]:
@@ -137,7 +177,12 @@ def register_model(collection: str, descriptor: dict) -> dict:
         time.sleep(0.5 * (attempt + 1))
 
 
-def publish_model(kind: str, name: str, folder: Path, spec: dict, consumes: Optional[str] = None) -> str:
+def update_model_status(api: str, model: dict, state: str, **fields) -> dict:
+    model = {**model, "status": {**(model.get("status") or {}), **fields, "state": state}}
+    return core_request("PUT", api, json=model)
+
+
+def publish_model(kind: str, name: str, folder: Path, spec: dict, consumes: str | None = None) -> str:
     project = os.environ["PROJECT_NAME"]
     run_id = os.environ.get("RUN_ID")
     if not run_id:
@@ -151,17 +196,7 @@ def publish_model(kind: str, name: str, folder: Path, spec: dict, consumes: Opti
     model_id = uuid.uuid4().hex
     collection = quote(project, safe="") + "/models"
     api = collection + "/" + model_id
-    base_path = None
-    for source in files:
-        filename = source.relative_to(folder).as_posix()
-        path = upload_file(api, source, name, filename)
-        if not path.endswith("/" + filename):
-            raise RuntimeError("CORE returned an unexpected upload path")
-        root = path[:-len(filename)]
-        if base_path is not None and root != base_path:
-            raise RuntimeError("CORE returned different storage folders for the same model")
-        base_path = root
-
+    base_path = core_request("POST", api + "/files/upload", params={"name": name})["path"]
     descriptor = {
         "id": model_id, "project": project, "name": name, "kind": kind,
         "spec": {**spec, "path": base_path},
@@ -170,6 +205,33 @@ def publish_model(kind: str, name: str, folder: Path, spec: dict, consumes: Opti
     model = register_model(collection, descriptor)
     key = model["key"]
     print(f"      Model created: {key}")
+    model = update_model_status(api, model, "UPLOADING")
+    try:
+        file_info = []
+        for source in files:
+            filename = source.relative_to(folder).as_posix()
+            path = upload_file(api, source, name, filename)
+            if path != base_path.rstrip("/") + "/" + filename:
+                raise RuntimeError("CORE returned an unexpected upload path")
+            info = core_request("GET", quote(project, safe="") + "/files/info", params={"path": path})["content"]
+            if len(info) != 1:
+                raise RuntimeError(f"CORE did not confirm uploaded file {filename}")
+            file_info.append({**info[0], "path": filename})
+
+        if len(file_info) > MAX_FILES_IN_STATUS:
+            model = update_model_status(api, model, "UPLOADING", files=[])
+            core_request("PUT", api + "/files/info", json=file_info)
+            file_info = []
+    except Exception:  # noqa: BLE001
+        try:
+            update_model_status(api, model, "ERROR", message="Upload failed; see the run logs.")
+        except Exception as status_error:  # noqa: BLE001
+            print(f"      Could not mark Model {key} as ERROR: {type(status_error).__name__}")
+        raise
+
+    model = update_model_status(api, model, "READY", files=file_info, message=None)
+    if model.get("status", {}).get("state") != "READY" or "files" not in model.get("status", {}):
+        raise RuntimeError(f"CORE did not confirm Model {key} readiness and file information")
     try:
         set_run_output(project, run_id, output, key)
     except Exception as error:  # noqa: BLE001
@@ -197,7 +259,13 @@ def set_run_output(project: str, run_id: str, output: str, value: str) -> None:
             if attempt == 2:
                 raise RuntimeError(f"CORE did not confirm run {run_id} output {output} = {value}")
         except requests.HTTPError as error:
-            if error.response is None or error.response.status_code not in RETRYABLE or attempt == 2:
+            response = error.response
+            # The monitor can advance the run between GET and PUT.
+            stale_state = (
+                response is not None and response.status_code == 400
+                and core_error_message(response) == "Invalid transition from state RUNNING to state PENDING."
+            )
+            if response is None or (response.status_code not in RETRYABLE and not stale_state) or attempt == 2:
                 raise
         except (requests.ConnectionError, requests.Timeout):
             if attempt == 2:
@@ -205,7 +273,7 @@ def set_run_output(project: str, run_id: str, output: str, value: str) -> None:
         time.sleep(0.5 * (attempt + 1))
 
 
-def core_auth():
+def core_auth() -> tuple[tuple[str, str] | None, dict[str, str]]:
     token = os.environ.get("DHCORE_ACCESS_TOKEN")
     if token:
         return None, {"Authorization": f"Bearer {token}"}
@@ -217,4 +285,5 @@ def core_auth():
 
 def entity_name(name: str) -> str:
     clean = re.sub(r"-+", "-", re.sub(r"[^a-z0-9._+\-]+", "-", (name or "").lower())).strip("-")
-    return clean or "tvm-model"
+    clean = re.sub(r"_{2,}", "_", clean)
+    return clean if clean and clean not in (".", "..") else "tvm-model"

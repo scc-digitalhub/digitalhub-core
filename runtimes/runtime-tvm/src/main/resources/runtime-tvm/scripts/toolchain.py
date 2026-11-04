@@ -4,6 +4,8 @@
 
 """LLVM target checks and standard TVM library export."""
 
+from __future__ import annotations
+
 import json
 import shutil
 import tempfile
@@ -14,14 +16,14 @@ from tvm import tirx
 from tvm.support import cc
 
 
-def compiler_options(text):
+def compiler_options(text: str) -> list[str]:
     options = json.loads(text)
     if not isinstance(options, list) or any(not isinstance(value, str) or "\0" in value for value in options):
         raise ValueError("cross_cc_options must be a JSON array of compiler arguments")
     return options
 
 
-def platform_key(triple):
+def platform_key(triple: str) -> tuple[str, str]:
     arch = triple.split("-", 1)[0].lower()
     if arch in ("amd64", "x86_64"):
         arch = "x86_64"
@@ -34,7 +36,7 @@ def platform_key(triple):
     return arch, triple.split("-linux-", 1)[1]
 
 
-def local_execution_error(target):
+def local_execution_error(target: tvm.target.Target) -> str | None:
     """Check the platform and the CPU instructions detectable by LLVM."""
     host_triple = tvm.target.codegen.llvm_get_system_triple()
     triple = str(target.attrs["mtriple"])
@@ -49,7 +51,7 @@ def local_execution_error(target):
     return None
 
 
-def check_toolchain(target, compiler, options):
+def check_toolchain(target: tvm.target.Target, compiler: str | None, options: list[str]) -> str:
     compiler = compiler or cc.get_cc()
     if not compiler or not shutil.which(compiler):
         raise ValueError(f"C++ compiler not found: {compiler!r}; set cross_cc or use a suitable compile image")

@@ -10,8 +10,9 @@ import hashlib
 import json
 import os
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Never
 
 HOME_DIR = Path(os.environ.get("TVM_HOME_DIR", "/shared"))
 INPUT_DIR = Path(os.environ.get("TVM_INPUT_DIR", HOME_DIR / "input"))
@@ -22,7 +23,7 @@ def to_bool(text: str) -> bool:
     return str(text).strip().lower() in ("1", "true", "yes", "y", "on")
 
 
-def to_list(text: str) -> Optional[list[str]]:
+def to_list(text: str) -> list[str] | None:
     items = [item.strip() for item in str(text).split(",") if item.strip()]
     return items or None
 
@@ -34,7 +35,7 @@ def option(
     *,
     type: Callable[[str], Any] = str,
     default: Any = None,
-    choices: Optional[list[str]] = None,
+    choices: list[str] | None = None,
     help: str = "",
     active: bool = True,
 ) -> None:
@@ -53,7 +54,7 @@ def step(number: int, total: int, text: str) -> None:
     print(f"[{number}/{total}] {text}", flush=True)
 
 
-def fail(message: str, code: int = 2) -> None:
+def fail(message: str, code: int = 2) -> Never:
     print(f"ERROR: {message}", file=sys.stderr, flush=True)
     raise SystemExit(code)
 
@@ -77,7 +78,7 @@ def sha256_of(path: Path) -> str:
         return hashlib.file_digest(source, "sha256").hexdigest()
 
 
-def target_triple(target) -> Optional[str]:
+def target_triple(target) -> str | None:
     """Return the effective LLVM triple, or None for non-LLVM targets."""
     import tvm
 
@@ -95,6 +96,9 @@ def print_signature(inputs: list[dict], outputs: list[dict]) -> None:
 
 def source_model_file(input_dir: Path, file_name: str, extension: str) -> Path:
     """Find the named source, falling back to a unique file with the requested extension."""
+    explicit = Path(file_name)
+    if explicit.is_file():
+        return explicit
     path = Path(input_dir) / file_name
     if path.is_file():
         return path
@@ -104,7 +108,7 @@ def source_model_file(input_dir: Path, file_name: str, extension: str) -> Path:
     fail(f"source model {path} not found ({len(candidates)} *{extension} files in {input_dir})")
 
 
-def save_relax_ir(mod, out_dir: Path, weights: Optional[dict] = None) -> None:
+def save_relax_ir(mod, out_dir: Path, weights: dict | None = None) -> None:
     """Save round-trip JSON, a readable IR dump and optional detached weights."""
     import tvm
 
