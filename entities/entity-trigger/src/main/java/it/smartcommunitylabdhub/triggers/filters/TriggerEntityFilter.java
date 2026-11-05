@@ -53,6 +53,16 @@ public class TriggerEntityFilter extends AbstractEntityFilter<Trigger> {
     @Schema(example = "kind://my-project/kind/task-id", defaultValue = "", description = "Task path")
     private String task;
 
+    @Nullable
+    @Pattern(regexp = Keys.FUNCTION_PATTERN + "|" + Keys.TASK_PATTERN)
+    @Schema(example = "kind://my-project/function-name:id", defaultValue = "", description = "Function key")
+    private String function;
+
+    @Nullable
+    @Pattern(regexp = Keys.WORKFLOW_PATTERN + "|" + Keys.TASK_PATTERN)
+    @Schema(example = "kind://my-project/workflow-name:id", defaultValue = "", description = "Workflow key")
+    private String workflow;
+
     @Override
     public SearchFilter<Trigger> toSearchFilter() {
         List<SearchCriteria<Trigger>> criteria = new ArrayList<>();
@@ -64,6 +74,18 @@ public class TriggerEntityFilter extends AbstractEntityFilter<Trigger> {
         Optional.ofNullable(task).ifPresent(value ->
             criteria.add(new BaseEntitySearchCriteria<>(Fields.TASK, value, SearchCriteria.Operation.equal))
         );
+
+        //function match
+        Optional.ofNullable(function).ifPresent(value -> {
+            //exact match
+            criteria.add(new BaseEntitySearchCriteria<>("function", value, SearchCriteria.Operation.equal));
+        });
+
+        //workflow exact match
+        Optional.ofNullable(workflow).ifPresent(value -> {
+            //exact match
+            criteria.add(new BaseEntitySearchCriteria<>("workflow", value, SearchCriteria.Operation.equal));
+        });
 
         return BaseEntityFilter.<Trigger>builder().criteria(criteria).condition(SearchFilter.Condition.and).build();
     }

@@ -32,6 +32,7 @@ import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.services.TaskService;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.lifecycle.BaseLifecycleManager;
+import it.smartcommunitylabdhub.fsm.exceptions.InvalidTransitionException;
 import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
 import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipName;
@@ -198,7 +199,13 @@ public class TriggerLifecycleManager<
                     //dispatch for run
                     //TODO evaluate detaching via async
                     taskRun = runManager.perform(taskRun, RunEvent.RUN.name());
-                } catch (NoSuchEntityException | SystemException | DuplicatedEntityException | BindException e) {
+                } catch (
+                    NoSuchEntityException
+                    | SystemException
+                    | DuplicatedEntityException
+                    | BindException
+                    | InvalidTransitionException e
+                ) {
                     log.error("Error creating run for trigger {} FIRE: {} ", tr.getId(), e.getMessage());
                 }
             };
