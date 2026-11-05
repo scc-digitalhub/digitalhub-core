@@ -19,7 +19,6 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 import tvm
 from tvm import relax
@@ -80,7 +79,7 @@ def add_options(parser: argparse.ArgumentParser, mode: str, runner: str) -> None
     add(rpc, "--rpc-session-timeout-sec", "TVM_RPC_SESSION_TIMEOUT_SEC", type=int, default=60, help="session_timeout_sec")
 
 
-def parse_options(parser: argparse.ArgumentParser, argv: Optional[list[str]]) -> argparse.Namespace:
+def parse_options(parser: argparse.ArgumentParser, argv: list[str] | None) -> argparse.Namespace:
     """Ignore inactive CLI/env values before argparse converts their types."""
     selector = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
     option(selector, "--tuning-mode", "TVM_TUNING_MODE", default="off", choices=["off", "tune", "apply"])
@@ -220,7 +219,7 @@ def find_database(path: Path) -> Path:
     raise FileNotFoundError(f"MetaSchedule database not found under {path}; expected {WORKLOAD_FILE} and {RECORD_FILE}")
 
 
-def open_database(out_dir: Path, database_path: Optional[str], identity: dict, weight_prepack: bool) -> TuningDatabase:
+def open_database(out_dir: Path, database_path: str | None, identity: dict, weight_prepack: bool) -> TuningDatabase:
     """Create tuning/, validating and copying a previous database when supplied."""
     work_dir = out_dir / "tuning"
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -323,7 +322,8 @@ class MeasurementErrors(ms.measure_callback.PyMeasureCallback):
             write_json(self.path, self.errors)
 
 
-def tune(args, prepared, selected, all_tasks, target, database: TuningDatabase, pass_ctx, cpu_count: int, errors: dict) -> int:
+def tune(args: argparse.Namespace, prepared, selected, all_tasks, target, database: TuningDatabase,
+         pass_ctx, cpu_count: int, errors: dict) -> int:
     """Tune candidates and return the worker count."""
     budget = first_round_budget(len(selected), args.max_trials_per_task, args.tuning_trials_per_iter)
     print(f"      tune: {len(selected)}/{len(all_tasks)} tasks, trials={args.tuning_trials}, "
@@ -358,11 +358,11 @@ def tune(args, prepared, selected, all_tasks, target, database: TuningDatabase, 
     return workers
 
 
-def matches_ops(name: str, op_names: Optional[list[str]]) -> bool:
+def matches_ops(name: str, op_names: list[str] | None) -> bool:
     return not op_names or any(op in name for op in op_names)
 
 
-def record_timing(record) -> tuple[bool, Optional[float]]:
+def record_timing(record) -> tuple[bool, float | None]:
     """Return whether the record succeeded and its best time in milliseconds."""
     if record is None or not record.run_secs:
         return False, None
@@ -394,41 +394,11 @@ def coverage(work_dir: Path, mod, target, op_names) -> tuple[int, int, list]:
     return len(records), usable, functions
 
 
-def run(args: argparse.Namespace, mod, target, effective_target: str, ir_metadata: dict, out_dir: Path, pass_ctx, cpu_count: int):
-    """Runs tune or apply. Returns the tuned module and the summary saved in metadata.json."""
-    identity = {
-        "schema_version": 1,
-        "tvm_version": tvm.__version__,
-        "target": effective_target,
-        "ir_sha256": module_sha256(mod),
-        "source_sha256": ir_metadata.get("source_sha256"),
-        "tvm_git_commit": os.environ.get("TVM_GIT_COMMIT"),
-    }
-    triple = target_triple(target)
-    if triple:
-        identity["target_triple"] = triple
-    database = open_database(out_dir, args.tuning_database, identity, weight_prepack=target.kind.name == "llvm")
-    prepared = prepare(mod, target, pass_ctx, database.weight_prepack)
-    tasks = extract_tasks(prepared, target, params={})
-    selected = [t for t in tasks if matches_ops(t.task_name, args.tuning_ops)]
-    if not selected:
-        fail(f"no MetaSchedule task matches {args.tuning_ops}; available tasks: {[t.task_name for t in tasks]}")
-    write_json(database.work_dir / TASKS_FILE, {
-        "all": [{"name": t.task_name, "weight": int(t.weight)} for t in tasks],
-        "selected": [t.task_name for t in selected],
-        "filters": args.tuning_ops,
-    })
-
-    workers = None
-    errors = {}
-    if args.tuning_mode == "tune":
-        workers = tune(args, prepared, selected, tasks, target, database, pass_ctx, cpu_count, errors)
-    else:
-        print(f"      apply: the database may cover up to {len(tasks)} tasks")
-
-    attempts, records, functions = coverage(database.work_dir, prepared, target, args.tuning_ops)
+def check_coverage(args: argparse.Namespace, prepared, target, work_dir: Path, errors: dict) -> dict:
+    """Write the coverage report and reject unusable or unintended partial results."""
+    attempts, records, functions = coverage(work_dir, prepared, target, args.tuning_ops)
     missing = [f["name"] for f in functions if not f["covered"]]
-    write_json(database.work_dir / COVERAGE_FILE, {
+    write_json(work_dir / COVERAGE_FILE, {
         "selected_function_count": len(functions),
         "covered_function_count": len(functions) - len(missing),
         "missing_functions": missing,
@@ -441,8 +411,17 @@ def run(args: argparse.Namespace, mod, target, effective_target: str, ir_metadat
     if missing and not args.allow_partial_tuning:
         fail(f"MetaSchedule database does not cover every selected function: {missing}; "
              "set --allow-partial-tuning true only when partial optimization is intentional")
+    return {
+        "attempt_count": attempts,
+        "record_count": records,
+        "covered_function_count": len(functions) - len(missing),
+        "missing_functions": missing,
+    }
 
-    tuned = apply_database(prepared, database, target, pass_ctx, args.allow_partial_tuning)
+
+def tuning_summary(args: argparse.Namespace, database: TuningDatabase, tasks, selected,
+                   workers: int | None, coverage_summary: dict, errors: dict) -> dict:
+    """Build the metadata shared by tuned and reused databases."""
     summary = {
         "mode": args.tuning_mode,
         "database": "tuning",
@@ -467,11 +446,47 @@ def run(args: argparse.Namespace, mod, target, effective_target: str, ir_metadat
             "min_repeat_ms": args.tuning_min_repeat_ms,
             "enable_cpu_cache_flush": args.tuning_enable_cpu_cache_flush,
         },
-        "attempt_count": attempts,
-        "record_count": records,
-        "covered_function_count": len(functions) - len(missing),
-        "missing_functions": missing,
+        **coverage_summary,
     }
     if errors:
         summary["measurement_errors"] = errors
+    return summary
+
+
+def run(args: argparse.Namespace, mod, target, effective_target: str, ir_metadata: dict, out_dir: Path,
+        pass_ctx, cpu_count: int) -> tuple[tvm.IRModule, dict]:
+    """Run tune or apply, returning the module and its metadata summary."""
+    identity = {
+        "schema_version": 1,
+        "tvm_version": tvm.__version__,
+        "target": effective_target,
+        "ir_sha256": module_sha256(mod),
+        "source_sha256": ir_metadata.get("source_sha256"),
+        "tvm_git_commit": os.environ.get("TVM_GIT_COMMIT"),
+    }
+    triple = target_triple(target)
+    if triple:
+        identity["target_triple"] = triple
+    database = open_database(out_dir, args.tuning_database, identity, weight_prepack=target.kind.name == "llvm")
+    prepared = prepare(mod, target, pass_ctx, database.weight_prepack)
+    tasks = extract_tasks(prepared, target, params={})
+    selected = [task for task in tasks if matches_ops(task.task_name, args.tuning_ops)]
+    if not selected:
+        fail(f"no MetaSchedule task matches {args.tuning_ops}; available tasks: {[task.task_name for task in tasks]}")
+    write_json(database.work_dir / TASKS_FILE, {
+        "all": [{"name": task.task_name, "weight": int(task.weight)} for task in tasks],
+        "selected": [task.task_name for task in selected],
+        "filters": args.tuning_ops,
+    })
+
+    workers = None
+    errors = {}
+    if args.tuning_mode == "tune":
+        workers = tune(args, prepared, selected, tasks, target, database, pass_ctx, cpu_count, errors)
+    else:
+        print(f"      apply: the database may cover up to {len(tasks)} tasks")
+
+    coverage_summary = check_coverage(args, prepared, target, database.work_dir, errors)
+    tuned = apply_database(prepared, database, target, pass_ctx, args.allow_partial_tuning)
+    summary = tuning_summary(args, database, tasks, selected, workers, coverage_summary, errors)
     return tuned, summary

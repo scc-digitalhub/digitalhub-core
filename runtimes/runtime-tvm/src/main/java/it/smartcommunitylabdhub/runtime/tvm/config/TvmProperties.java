@@ -13,6 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -27,8 +28,8 @@ import org.springframework.util.StringUtils;
 @ToString
 public class TvmProperties {
 
-    private Integer userId;
-    private Integer groupId;
+    private Optional<Integer> userId = Optional.empty();
+    private Optional<Integer> groupId = Optional.empty();
     private String homeDir;
     private String volumeSize;
 

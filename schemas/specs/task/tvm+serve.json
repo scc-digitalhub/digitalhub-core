@@ -48,10 +48,6 @@
         }
       }
     },
-    "CoreServiceType" : {
-      "type" : "string",
-      "enum" : [ "ExternalName", "ClusterIP", "NodePort", "LoadBalancer" ]
-    },
     "CoreVolume" : {
       "type" : "object",
       "properties" : {
@@ -114,27 +110,10 @@
       "description" : "fields.function.description",
       "minLength" : 1
     },
-    "image" : {
-      "type" : "string",
-      "title" : "Serve Image",
-      "description" : "Image that serves the model; empty uses the serve image configured on the platform (Go)."
-    },
-    "model_path" : {
-      "type" : "string",
-      "title" : "Compiled Model",
-      "description" : "The tvm-so Model to serve; empty uses the one written by tvm+compile in the function.",
-      "pattern" : "^(store://[^/]+/model/[^/]+/[^:]+(:.+)?)?$"
-    },
     "profile" : {
       "type" : "string",
       "title" : "fields.profile.title",
       "description" : "fields.profile.description"
-    },
-    "replicas" : {
-      "type" : "integer",
-      "title" : "Replicas",
-      "description" : "Number of pods that serve the model.",
-      "minimum" : 0
     },
     "resources" : {
       "$ref" : "#/$defs/CoreResource",
@@ -151,23 +130,6 @@
         "description" : "fields.secrets.item.description"
       }
     },
-    "served_name" : {
-      "type" : "string",
-      "title" : "Served Model Name",
-      "description" : "Name of the model in the API, /v2/models/<name>; empty uses the function name.",
-      "pattern" : "^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$"
-    },
-    "service_name" : {
-      "type" : "string",
-      "title" : "Service Name",
-      "description" : "Extra Service name, <function>-<service name>."
-    },
-    "service_type" : {
-      "$ref" : "#/$defs/CoreServiceType",
-      "title" : "Service Type",
-      "description" : "Kubernetes Service type: ClusterIP, NodePort or LoadBalancer.",
-      "default" : "ClusterIP"
-    },
     "volumes" : {
       "title" : "fields.volumes.title",
       "description" : "fields.volumes.description",
@@ -177,12 +139,6 @@
         "title" : "fields.volumes.item.title",
         "description" : "fields.volumes.item.description"
       }
-    },
-    "workers" : {
-      "type" : "integer",
-      "title" : "Workers",
-      "description" : "Requests handled in parallel by each pod; each worker loads its own copy of the model.",
-      "minimum" : 1
     }
   },
   "required" : [ "function" ],
