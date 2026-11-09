@@ -1,17 +1,6 @@
 {
   "$schema" : "https://json-schema.org/draft/2020-12/schema",
   "$defs" : {
-    "ArrayField" : {
-      "type" : "array",
-      "items" : {
-        "$ref" : "#/$defs/Serializable"
-      },
-      "title" : "array"
-    },
-    "BooleanField" : {
-      "type" : "boolean",
-      "title" : "boolean"
-    },
     "CoreEnv" : {
       "type" : "object",
       "properties" : {
@@ -92,43 +81,15 @@
       },
       "required" : [ "mount_path", "name", "volume_type" ]
     },
-    "Map_String.Serializable_" : {
-      "type" : "object",
-      "additionalProperties" : {
-        "$ref" : "#/$defs/Serializable"
-      }
-    },
     "Map_String.String_" : {
       "type" : "object",
       "additionalProperties" : {
         "type" : "string"
       }
     },
-    "NumberField" : {
-      "type" : "number",
-      "title" : "number"
-    },
-    "ObjectField" : {
-      "type" : "object",
-      "title" : "object"
-    },
-    "Serializable" : {
-      "anyOf" : [ {
-        "$ref" : "#/$defs/StringField"
-      }, {
-        "$ref" : "#/$defs/NumberField"
-      }, {
-        "$ref" : "#/$defs/BooleanField"
-      }, {
-        "$ref" : "#/$defs/ObjectField"
-      }, {
-        "$ref" : "#/$defs/ArrayField"
-      } ],
-      "title" : "object"
-    },
-    "StringField" : {
+    "TvmTargetArchitecture" : {
       "type" : "string",
-      "title" : "string"
+      "enum" : [ "cpu", "x86", "x86_v3", "x86_native", "arm64", "arm64_pi5", "armv7l" ]
     },
     "TvmTuningMode" : {
       "type" : "string",
@@ -145,11 +106,6 @@
   },
   "type" : "object",
   "properties" : {
-    "image" : {
-      "type" : "string",
-      "title" : "Container Image",
-      "description" : "Image of the compile Job; empty uses the TVM toolkit image configured on the platform."
-    },
     "inputs" : {
       "$ref" : "#/$defs/Map_String.String_",
       "title" : "fields.inputs.title",
@@ -165,500 +121,37 @@
       "title" : "fields.localExecution.title",
       "description" : "fields.localExecution.description"
     },
-    "model_path" : {
-      "type" : "string",
-      "title" : "IR Model",
-      "description" : "Explicit IR override. Empty uses function.ir_model. Example: store://my-project/model/tvm-ir/xinet-ir:version."
-    },
-    "optimization" : {
-      "type" : "object",
-      "properties" : {
-        "benchmark_runs" : {
-          "type" : "integer",
-          "title" : "Benchmark Runs",
-          "description" : "Timed inferences after compilation; 0 disables them. Example: 10.",
-          "default" : 10,
-          "minimum" : 0
-        },
-        "cross_cc" : {
-          "type" : "string",
-          "title" : "Cross Compiler",
-          "description" : "C++ compiler used to link model.so; empty selects it from the target. ARM64 example: aarch64-linux-gnu-g++."
-        },
-        "cross_cc_options" : {
-          "title" : "Compiler Options",
-          "description" : "Use profile defaults, or replace them with separate compiler arguments. Example item: --sysroot=/opt/sysroots/arm64.",
-          "default" : null,
-          "oneOf" : [ {
-            "type" : "null",
-            "title" : "Profile defaults"
-          }, {
-            "type" : "array",
-            "title" : "Custom arguments",
-            "items" : {
-              "type" : "string"
-            }
-          } ]
-        },
-        "exec_mode" : {
-          "type" : "string",
-          "title" : "Execution Mode",
-          "description" : "Relax VM graph execution: bytecode or compiled. Example: compiled generates native graph code.",
-          "default" : "bytecode",
-          "enum" : [ "bytecode", "compiled" ]
-        },
-        "opt_level" : {
-          "type" : "integer",
-          "title" : "Optimization Level",
-          "description" : "TVM optimization level, from 0 to 3. Example: 3.",
-          "default" : 3,
-          "minimum" : 0,
-          "maximum" : 3
-        },
-        "params_path" : {
-          "type" : "string",
-          "title" : "Parameters File",
-          "description" : "Optional weights file inside the Job. Example: /shared/input/params.bin; empty detects it next to the IR."
-        },
-        "relax_pipeline" : {
-          "type" : "string",
-          "title" : "Relax Pipeline",
-          "description" : "Named graph optimization pipeline. Example: default. Enable MetaSchedule with tuning_mode.",
-          "default" : "default"
-        },
-        "system_lib" : {
-          "type" : "boolean",
-          "title" : "System Library",
-          "description" : "Self-registering library for static linking; not supported by the serve images. Example: false.",
-          "default" : false
-        },
-        "target_num_cores" : {
-          "type" : "integer",
-          "title" : "Target Number of Cores",
-          "description" : "Cores of the target CPU; empty uses the Job CPU request. Example: 4 for a Raspberry Pi 5.",
-          "minimum" : 1
-        },
-        "tir_pipeline" : {
-          "type" : "string",
-          "title" : "TIR Pipeline",
-          "description" : "Named low-level compilation pipeline. Example: default.",
-          "default" : "default"
-        }
-      },
-      "title" : "Advanced compilation",
-      "description" : "fields.optimization.description"
-    },
-    "tag" : {
-      "type" : "string",
-      "title" : "Tag",
-      "description" : "Suffix of the compiled Model name. Example: x86 or pi5; use one per target."
-    },
-    "target" : {
-      "type" : "object",
-      "title" : "Explicit TVM Target",
-      "properties" : {
-        "kind" : {
-          "type" : "string",
-          "pattern" : "^llvm$"
-        }
-      },
-      "dependencies" : {
-        "kind" : {
-          "properties" : {
-            "mtriple" : {
-              "type" : "string"
-            },
-            "mcpu" : {
-              "type" : "string"
-            },
-            "mfloat-abi" : {
-              "type" : "string"
-            },
-            "mattr" : {
-              "type" : "array",
-              "items" : {
-                "type" : "string"
-              }
-            },
-            "num-cores" : {
-              "type" : "integer",
-              "minimum" : 1
-            }
-          }
-        }
-      },
-      "if" : {
-        "minProperties" : 1
-      },
-      "then" : {
-        "required" : [ "kind" ]
-      },
-      "additionalProperties" : true,
-      "description" : "Optional standard TVM LLVM target; leave the profile at auto. Example: kind=llvm, mtriple=aarch64-linux-gnu, mcpu=cortex-a72."
-    },
-    "target_architecture" : {
-      "type" : "string",
-      "title" : "Target CPU Profile",
-      "default" : "auto",
-      "oneOf" : [ {
-        "const" : "auto",
-        "title" : "Compile node CPU - generic"
-      }, {
-        "const" : "amd64",
-        "title" : "Intel/AMD 64-bit - x86-64-v2"
-      }, {
-        "const" : "amd64_v3",
-        "title" : "Intel/AMD 64-bit - x86-64-v3 (AVX2)"
-      }, {
-        "const" : "amd64_native",
-        "title" : "Intel/AMD 64-bit - compile node CPU (native)"
-      }, {
-        "const" : "arm64",
-        "title" : "ARM 64-bit - generic (AArch64)"
-      }, {
-        "const" : "arm64_pi5",
-        "title" : "Raspberry Pi 5 - ARM 64-bit (Cortex-A76)"
-      }, {
-        "const" : "arm32",
-        "title" : "ARM 32-bit - ARMv7 (hard-float, NEON)"
-      } ]
-    },
     "task" : {
       "type" : "string",
       "title" : "fields.task.title",
       "description" : "fields.task.description",
       "minLength" : 1
-    },
-    "tuning" : {
-      "type" : "object",
-      "title" : "MetaSchedule tuning",
-      "properties" : {
-        "tuning_mode" : {
-          "$ref" : "#/$defs/TvmTuningMode",
-          "title" : "Tuning Mode",
-          "description" : "off ignores tuning settings without deleting them; tune searches schedules; apply reuses a database.",
-          "default" : "off"
-        }
-      },
-      "description" : "fields.tuning.description",
-      "dependencies" : {
-        "tuning_mode" : {
-          "oneOf" : [ {
-            "type" : "object",
-            "properties" : {
-              "tuning_mode" : {
-                "enum" : [ "off" ]
-              }
-            }
-          }, {
-            "type" : "object",
-            "properties" : {
-              "tuning_model_path" : {
-                "allOf" : [ {
-                  "type" : "string"
-                }, {
-                  "title" : "Tuning Database Source",
-                  "description" : "Compiled Model containing the tuning database; required with apply. Example: store://my-project/model/tvm-so/xinet-tuned:version."
-                } ]
-              },
-              "tuning_ops" : {
-                "title" : "Operator Names",
-                "description" : "Optional filters on task names; empty tunes all. Example item: conv2d.",
-                "type" : "array",
-                "items" : {
-                  "allOf" : [ {
-                    "type" : "string"
-                  }, {
-                    "title" : "fields.tuningOps.item.title",
-                    "description" : "fields.tuningOps.item.description"
-                  } ]
-                }
-              },
-              "allow_partial_tuning" : {
-                "allOf" : [ {
-                  "type" : "boolean"
-                }, {
-                  "title" : "Allow Partial Tuning",
-                  "description" : "Allow incomplete task coverage, for quick tests only. Example: false.",
-                  "default" : false
-                } ]
-              },
-              "tuning_trials" : {
-                "allOf" : [ {
-                  "type" : "integer"
-                }, {
-                  "title" : "Max Trials (Global)",
-                  "description" : "Global search budget, required with tune. Example: 2000; the required budget depends on the model.",
-                  "minimum" : 1
-                } ]
-              },
-              "max_trials_per_task" : {
-                "allOf" : [ {
-                  "type" : "integer"
-                }, {
-                  "title" : "Max Trials Per Task",
-                  "description" : "Maximum candidates measured per task. Example: 16.",
-                  "default" : 16,
-                  "minimum" : 1
-                } ]
-              },
-              "tuning_trials_per_iter" : {
-                "allOf" : [ {
-                  "type" : "integer"
-                }, {
-                  "title" : "Trials Per Iteration",
-                  "description" : "Candidates measured per task in one round. Example: 64, capped by max_trials_per_task.",
-                  "default" : 64,
-                  "minimum" : 1
-                } ]
-              },
-              "tuning_runner" : {
-                "allOf" : [ {
-                  "$ref" : "#/$defs/TvmTuningRunner"
-                }, {
-                  "title" : "Runner",
-                  "description" : "local measures on the Job; rpc measures on a remote target. Example: rpc for a Raspberry Pi cross-compile.",
-                  "default" : "local"
-                } ]
-              },
-              "tuning_workers" : {
-                "allOf" : [ {
-                  "type" : "integer"
-                }, {
-                  "title" : "Max Workers",
-                  "description" : "Parallel compiler workers; empty uses requested Job cores. Example: 2 with a 2-core Job.",
-                  "minimum" : 1
-                } ]
-              },
-              "tuning_seed" : {
-                "allOf" : [ {
-                  "type" : "integer"
-                }, {
-                  "title" : "Random Seed",
-                  "description" : "Random seed for the search. Example: 0.",
-                  "default" : 0,
-                  "minimum" : 0
-                } ]
-              },
-              "tuning_number" : {
-                "allOf" : [ {
-                  "type" : "integer"
-                }, {
-                  "title" : "Runs Per Repeat",
-                  "description" : "Inference runs averaged into each measurement. Example: 3.",
-                  "default" : 3,
-                  "minimum" : 1
-                } ]
-              },
-              "tuning_repeat" : {
-                "allOf" : [ {
-                  "type" : "integer"
-                }, {
-                  "title" : "Measurement Repeats",
-                  "description" : "Independent measurements per candidate. Example: 1.",
-                  "default" : 1,
-                  "minimum" : 1
-                } ]
-              },
-              "tuning_min_repeat_ms" : {
-                "allOf" : [ {
-                  "type" : "integer"
-                }, {
-                  "title" : "Min Repeat Time (ms)",
-                  "description" : "Minimum measurement duration in milliseconds. Example: 100.",
-                  "default" : 100,
-                  "minimum" : 0
-                } ]
-              },
-              "tuning_alloc_repeat" : {
-                "allOf" : [ {
-                  "type" : "integer"
-                }, {
-                  "title" : "Allocation Repeats",
-                  "description" : "Random input allocations per candidate. Example: 1.",
-                  "default" : 1,
-                  "minimum" : 1
-                } ]
-              },
-              "tuning_enable_cpu_cache_flush" : {
-                "allOf" : [ {
-                  "type" : "boolean"
-                }, {
-                  "title" : "Flush CPU Cache",
-                  "description" : "Flush CPU caches before measurements. Example: false.",
-                  "default" : false
-                } ]
-              },
-              "tuning_builder_timeout_sec" : {
-                "allOf" : [ {
-                  "type" : "number"
-                }, {
-                  "title" : "Builder Timeout (s)",
-                  "description" : "Maximum seconds to compile one candidate. Example: 30.",
-                  "default" : 30.0,
-                  "exclusiveMinimum" : 0.0
-                } ]
-              },
-              "tuning_mode" : {
-                "enum" : [ "tune" ]
-              }
-            },
-            "if" : {
-              "required" : [ "tuning_runner" ],
-              "properties" : {
-                "tuning_runner" : {
-                  "const" : "rpc"
-                }
-              }
-            },
-            "then" : {
-              "type" : "object",
-              "properties" : {
-                "rpc_tracker_host" : {
-                  "allOf" : [ {
-                    "type" : "string"
-                  }, {
-                    "title" : "RPC Tracker Host",
-                    "description" : "TVM RPC tracker address. Example: 192.168.1.50; use your tracker host."
-                  } ]
-                },
-                "rpc_tracker_port" : {
-                  "allOf" : [ {
-                    "type" : "integer"
-                  }, {
-                    "title" : "RPC Tracker Port",
-                    "description" : "TVM RPC tracker port. Example: 9190; must match your tracker.",
-                    "minimum" : 1,
-                    "maximum" : 65535
-                  } ]
-                },
-                "rpc_tracker_key" : {
-                  "allOf" : [ {
-                    "type" : "string"
-                  }, {
-                    "title" : "RPC Tracker Key",
-                    "description" : "Device key registered with the tracker. Example: raspberry-pi."
-                  } ]
-                },
-                "rpc_session_timeout_sec" : {
-                  "allOf" : [ {
-                    "type" : "integer"
-                  }, {
-                    "title" : "RPC Session Timeout (s)",
-                    "description" : "Maximum seconds per remote measurement session. Example: 60.",
-                    "default" : 60,
-                    "minimum" : 1
-                  } ]
-                }
-              },
-              "required" : [ "rpc_tracker_host", "rpc_tracker_port", "rpc_tracker_key" ],
-              "default" : {
-                "rpc_session_timeout_sec" : 60
-              }
-            },
-            "else" : {
-              "type" : "object",
-              "properties" : {
-                "tuning_runner_timeout_sec" : {
-                  "allOf" : [ {
-                    "type" : "number"
-                  }, {
-                    "title" : "Runner Timeout (s)",
-                    "description" : "Maximum seconds to measure locally; RPC uses its session timeout. Example: 30.",
-                    "default" : 30.0,
-                    "exclusiveMinimum" : 0.0
-                  } ]
-                }
-              },
-              "default" : {
-                "tuning_runner_timeout_sec" : 30.0
-              }
-            },
-            "required" : [ "tuning_trials" ],
-            "default" : {
-              "allow_partial_tuning" : false,
-              "max_trials_per_task" : 16,
-              "tuning_trials_per_iter" : 64,
-              "tuning_runner" : "local",
-              "tuning_seed" : 0,
-              "tuning_number" : 3,
-              "tuning_repeat" : 1,
-              "tuning_min_repeat_ms" : 100,
-              "tuning_alloc_repeat" : 1,
-              "tuning_enable_cpu_cache_flush" : false,
-              "tuning_builder_timeout_sec" : 30.0
-            }
-          }, {
-            "type" : "object",
-            "properties" : {
-              "tuning_model_path" : {
-                "minLength" : 1,
-                "allOf" : [ {
-                  "allOf" : [ {
-                    "type" : "string"
-                  }, {
-                    "title" : "Tuning Database Source",
-                    "description" : "Compiled Model containing the tuning database; required with apply. Example: store://my-project/model/tvm-so/xinet-tuned:version."
-                  } ]
-                } ]
-              },
-              "tuning_ops" : {
-                "title" : "Operator Names",
-                "description" : "Optional filters on task names; empty tunes all. Example item: conv2d.",
-                "type" : "array",
-                "items" : {
-                  "allOf" : [ {
-                    "type" : "string"
-                  }, {
-                    "title" : "fields.tuningOps.item.title",
-                    "description" : "fields.tuningOps.item.description"
-                  } ]
-                }
-              },
-              "allow_partial_tuning" : {
-                "allOf" : [ {
-                  "type" : "boolean"
-                }, {
-                  "title" : "Allow Partial Tuning",
-                  "description" : "Allow incomplete task coverage, for quick tests only. Example: false.",
-                  "default" : false
-                } ]
-              },
-              "tuning_mode" : {
-                "enum" : [ "apply" ]
-              }
-            },
-            "required" : [ "tuning_model_path" ],
-            "default" : {
-              "allow_partial_tuning" : false
-            }
-          } ]
-        }
-      }
     }
   },
   "required" : [ "task" ],
   "title" : "specs.tvm+compile:run.title",
   "description" : "specs.tvm+compile:run.description",
   "allOf" : [ {
-    "if" : {
-      "required" : [ "target" ],
-      "properties" : {
-        "target" : {
-          "minProperties" : 1
-        }
-      }
-    },
-    "then" : {
-      "properties" : {
-        "target_architecture" : {
-          "const" : "auto"
-        }
-      }
-    }
-  }, {
     "type" : "object",
     "properties" : {
+      "allow_partial_tuning" : {
+        "type" : "boolean",
+        "title" : "Allow Partial Tuning",
+        "description" : "Accepts a budget or a database that does not cover every task; for quick tests only.",
+        "default" : "false"
+      },
+      "benchmark_runs" : {
+        "type" : "integer",
+        "title" : "Benchmark Runs",
+        "description" : "Timed inferences of the finished library, saved in metadata.json; 0 turns the benchmark off.",
+        "default" : "10",
+        "minimum" : 0
+      },
+      "cross_cc" : {
+        "type" : "string",
+        "title" : "Cross Compiler",
+        "description" : "C++ compiler that links model.so for another architecture; empty chooses it from the target."
+      },
       "envs" : {
         "title" : "fields.envs.title",
         "description" : "fields.envs.description",
@@ -669,21 +162,83 @@
           "description" : "fields.envs.item.description"
         }
       },
+      "exec_mode" : {
+        "type" : "string",
+        "title" : "Execution Mode",
+        "description" : "bytecode: the Relax VM interprets the model graph; compiled: the graph becomes native code."
+      },
       "function" : {
         "type" : "string",
         "title" : "fields.function.title",
         "description" : "fields.function.description",
         "minLength" : 1
       },
+      "image" : {
+        "type" : "string",
+        "title" : "Container Image",
+        "description" : "Image of the compile Job; empty uses the TVM toolkit image configured on the platform."
+      },
+      "max_trials_per_task" : {
+        "type" : "integer",
+        "title" : "Max Trials Per Task",
+        "description" : "Most candidates measured for a single task.",
+        "default" : "16",
+        "minimum" : 1
+      },
+      "model_path" : {
+        "type" : "string",
+        "title" : "IR Model",
+        "description" : "The tvm-ir Model to compile; empty uses the one written by tvm+build in the function."
+      },
+      "opt_level" : {
+        "type" : "integer",
+        "title" : "Optimization Level",
+        "description" : "TVM optimization level, from 0 to 3: higher values turn on more optimizations.",
+        "minimum" : 0
+      },
+      "params_path" : {
+        "type" : "string",
+        "title" : "Parameters File",
+        "description" : "Path, inside the Job, of a params.bin to embed; empty uses the one of the IR."
+      },
       "profile" : {
         "type" : "string",
         "title" : "fields.profile.title",
         "description" : "fields.profile.description"
       },
+      "relax_pipeline" : {
+        "type" : "string",
+        "title" : "Relax Pipeline",
+        "description" : "Predefined graph-level optimization passes."
+      },
       "resources" : {
         "$ref" : "#/$defs/CoreResource",
         "title" : "fields.resources.title",
         "description" : "fields.resources.description"
+      },
+      "rpc_session_timeout_sec" : {
+        "type" : "integer",
+        "title" : "RPC Session Timeout (s)",
+        "description" : "Maximum seconds of one remote measurement session.",
+        "default" : "60",
+        "minimum" : 1
+      },
+      "rpc_tracker_host" : {
+        "type" : "string",
+        "title" : "RPC Tracker Host",
+        "description" : "Address of the TVM RPC tracker; required with the rpc runner."
+      },
+      "rpc_tracker_key" : {
+        "type" : "string",
+        "title" : "RPC Tracker Key",
+        "description" : "Key the target devices are registered with; required with the rpc runner."
+      },
+      "rpc_tracker_port" : {
+        "type" : "integer",
+        "title" : "RPC Tracker Port",
+        "description" : "Port of the TVM RPC tracker; required with the rpc runner.",
+        "minimum" : 1,
+        "maximum" : 65535
       },
       "secrets" : {
         "title" : "fields.secrets.title",
@@ -694,6 +249,134 @@
           "title" : "fields.secrets.item.title",
           "description" : "fields.secrets.item.description"
         }
+      },
+      "system_lib" : {
+        "type" : "boolean",
+        "title" : "System Library",
+        "description" : "Builds a library whose functions register themselves, for systems without dynamic loading; the serve images cannot load it."
+      },
+      "tag" : {
+        "type" : "string",
+        "title" : "Tag",
+        "description" : "Suffix of the compiled Model name, <function>-<tag>; use one tag per target."
+      },
+      "target_architecture" : {
+        "$ref" : "#/$defs/TvmTargetArchitecture",
+        "title" : "Target",
+        "description" : "Hardware the library is built for: cpu (generic, node of the Job), x86 (x86-64-v2), x86_v3 (AVX2), x86_native (CPU of the Job), arm64, arm64_pi5 (Raspberry Pi 5), armv7l (32-bit ARM).",
+        "default" : "cpu"
+      },
+      "target_num_cores" : {
+        "type" : "integer",
+        "title" : "Target Number of Cores",
+        "description" : "Physical cores of the target: the tuned schedules and the tuning threads use this value; empty uses the CPU request of the Job.",
+        "minimum" : 1
+      },
+      "tir_pipeline" : {
+        "type" : "string",
+        "title" : "TIR Pipeline",
+        "description" : "Predefined low-level passes run before code generation."
+      },
+      "tuning_alloc_repeat" : {
+        "type" : "integer",
+        "title" : "Allocation Repeats",
+        "description" : "Sets of random inputs each candidate is timed on.",
+        "default" : "1",
+        "minimum" : 1
+      },
+      "tuning_builder_timeout_sec" : {
+        "type" : "number",
+        "title" : "Builder Timeout (s)",
+        "description" : "Maximum seconds to compile one candidate.",
+        "default" : "30",
+        "exclusiveMinimum" : 0.0
+      },
+      "tuning_enable_cpu_cache_flush" : {
+        "type" : "boolean",
+        "title" : "Flush CPU Cache",
+        "description" : "Flushes the CPU caches before each measurement, for steadier results.",
+        "default" : "false"
+      },
+      "tuning_min_repeat_ms" : {
+        "type" : "integer",
+        "title" : "Min Repeat Time (ms)",
+        "description" : "Fast kernels run again until one measurement lasts at least this long.",
+        "default" : "100",
+        "minimum" : 0
+      },
+      "tuning_mode" : {
+        "$ref" : "#/$defs/TvmTuningMode",
+        "title" : "Tuning Mode",
+        "description" : "off skips tuning, tune searches the best schedules with MetaSchedule, apply reuses a database tuned earlier.",
+        "default" : "off"
+      },
+      "tuning_model_path" : {
+        "type" : "string",
+        "title" : "Tuning Database Source",
+        "description" : "Compiled Model whose tuning database tune resumes or apply reuses; required with apply."
+      },
+      "tuning_number" : {
+        "type" : "integer",
+        "title" : "Runs Per Repeat",
+        "description" : "Runs averaged into one measurement.",
+        "default" : "3",
+        "minimum" : 1
+      },
+      "tuning_ops" : {
+        "title" : "Operator Names",
+        "description" : "Tunes only the tasks whose name contains one of these words, e.g. conv2d; empty tunes all.",
+        "type" : "array",
+        "items" : {
+          "type" : "string",
+          "title" : "fields.tuningOps.item.title",
+          "description" : "fields.tuningOps.item.description"
+        }
+      },
+      "tuning_repeat" : {
+        "type" : "integer",
+        "title" : "Measurement Repeats",
+        "description" : "Independent measurements taken for each candidate.",
+        "default" : "1",
+        "minimum" : 1
+      },
+      "tuning_runner" : {
+        "$ref" : "#/$defs/TvmTuningRunner",
+        "title" : "Runner",
+        "description" : "Where candidates are timed: local on the compile Job, rpc on a device registered with a TVM RPC tracker.",
+        "default" : "local"
+      },
+      "tuning_runner_timeout_sec" : {
+        "type" : "number",
+        "title" : "Runner Timeout (s)",
+        "description" : "Maximum seconds to time one candidate with the local runner; rpc uses the session timeout.",
+        "default" : "30",
+        "exclusiveMinimum" : 0.0
+      },
+      "tuning_seed" : {
+        "type" : "integer",
+        "title" : "Random Seed",
+        "description" : "Seed of the search, for reproducible results.",
+        "default" : "0",
+        "minimum" : 0
+      },
+      "tuning_trials" : {
+        "type" : "integer",
+        "title" : "Max Trials (Global)",
+        "description" : "Total candidates measured across all tasks; required with tune.",
+        "minimum" : 1
+      },
+      "tuning_trials_per_iter" : {
+        "type" : "integer",
+        "title" : "Trials Per Iteration",
+        "description" : "Candidates built and measured for each task in one round.",
+        "default" : "64",
+        "minimum" : 1
+      },
+      "tuning_workers" : {
+        "type" : "integer",
+        "title" : "Max Workers",
+        "description" : "Candidates compiled in parallel; with rpc also the parallel device connections.",
+        "minimum" : 1
       },
       "volumes" : {
         "title" : "fields.volumes.title",
