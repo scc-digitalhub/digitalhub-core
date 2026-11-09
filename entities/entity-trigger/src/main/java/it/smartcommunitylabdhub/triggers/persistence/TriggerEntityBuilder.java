@@ -24,6 +24,7 @@
 package it.smartcommunitylabdhub.triggers.persistence;
 
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
+import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.commons.utils.KeyUtils;
@@ -53,6 +54,10 @@ public class TriggerEntityBuilder implements Converter<Trigger, TriggerEntity> {
         // Extract data
         BaseMetadata metadata = BaseMetadata.from(dto.getMetadata());
         StatusFieldAccessor statusFieldAccessor = StatusFieldAccessor.with(dto.getStatus());
+        String task = TriggerBaseSpec.from(dto.getSpec()).getTask();
+
+        // Extract task
+        TaskSpecAccessor taskSpecAccessor = TaskSpecAccessor.with(dto.getSpec());
 
         //build key
         String key = KeyUtils.buildKey(
@@ -77,7 +82,9 @@ public class TriggerEntityBuilder implements Converter<Trigger, TriggerEntity> {
                 statusFieldAccessor.getState() == null ? TriggerState.CREATED.name() : statusFieldAccessor.getState()
             )
             //extract refs from specs
-            .task(TriggerBaseSpec.from(dto.getSpec()).getTask())
+            .task(task)
+            .function(taskSpecAccessor.getFunctionKey())
+            .workflow(taskSpecAccessor.getWorkflowKey())
             // Metadata Extraction
             .created(
                 metadata.getCreated() != null

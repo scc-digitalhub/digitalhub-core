@@ -97,8 +97,8 @@ public class RunEntityFilter extends AbstractEntityFilter<Run> {
         //function match
         Optional.ofNullable(function).ifPresent(value -> {
             Matcher matcher = java.util.regex.Pattern.compile(Keys.FUNCTION_PATTERN).matcher(value);
-            if (matcher.matches()) {
-                //exact match
+            if (matcher.matches() && matcher.groupCount() > 3 && matcher.group(4) != null) {
+                //exact match with id
                 criteria.add(new BaseEntitySearchCriteria<>("function", value, SearchCriteria.Operation.equal));
             } else {
                 //like match
@@ -113,8 +113,8 @@ public class RunEntityFilter extends AbstractEntityFilter<Run> {
         //workflow exact match
         Optional.ofNullable(workflow).ifPresent(value -> {
             Matcher matcher = java.util.regex.Pattern.compile(Keys.WORKFLOW_PATTERN).matcher(value);
-            if (matcher.matches()) {
-                //exact match
+            if (matcher.matches() && matcher.groupCount() > 3 && matcher.group(4) != null) {
+                //exact match with id
                 criteria.add(new BaseEntitySearchCriteria<>("workflow", value, SearchCriteria.Operation.equal));
             } else {
                 //like match

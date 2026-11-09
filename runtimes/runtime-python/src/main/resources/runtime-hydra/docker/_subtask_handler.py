@@ -120,7 +120,7 @@ def handler(context: Context, event: Event) -> Response:
             **context.run.status.to_dict(),
         }
         context.run.set_status(new_status)
-        context.run.update()
+        context.run.save(update=True)
 
     except BaseException as e:
         context.logger.error(f"Function execution failed with error: {str(e)}")
@@ -177,4 +177,4 @@ def compose_args(spec):
     except Exception as e:
         print(f"Failed to convert cfg to container. Exception: {e.__class__}. Error: {e.args}")
         args["cfg_passthrough"] = {}
-    return args 
+    return args

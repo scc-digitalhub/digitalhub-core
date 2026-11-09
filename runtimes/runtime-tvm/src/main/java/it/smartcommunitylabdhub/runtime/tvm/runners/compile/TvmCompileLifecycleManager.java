@@ -14,7 +14,6 @@ import it.smartcommunitylabdhub.runtime.tvm.specs.compile.TvmCompileRunSpec;
 import it.smartcommunitylabdhub.runtime.tvm.status.TvmRunStatus;
 import it.smartcommunitylabdhub.runtimes.lifecycle.RunLifecycleManager;
 
-// Registers the tvm+compile run kind with the standard RunLifecycleManager.
 @RuntimeComponent(runtime = TvmCompileRunSpec.KIND)
 public class TvmCompileLifecycleManager extends RunLifecycleManager<TvmRunSpec, TvmRunStatus, K8sRunnable> {
 

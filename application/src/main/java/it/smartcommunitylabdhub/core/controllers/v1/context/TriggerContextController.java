@@ -177,7 +177,11 @@ public class TriggerContextController {
         }
 
         //TODO via manager to avoid race condition between cleanup and delete
-        lifecycleManager.perform(trigger, TriggerEvent.STOP.name());
+        try {
+            lifecycleManager.perform(trigger, TriggerEvent.STOP.name());
+        } catch (Exception e) {
+            log.debug("Error stopping trigger: {}", e.getMessage());
+        }
         triggerManager.deleteTrigger(id, cascade != null && cascade);
     }
 

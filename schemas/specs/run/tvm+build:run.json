@@ -94,6 +94,16 @@
   },
   "type" : "object",
   "properties" : {
+    "data_prop" : {
+      "type" : "boolean",
+      "title" : "Data Propagation",
+      "description" : "Lets the shape inference compute values for a limited set of operators, to work out more tensor shapes."
+    },
+    "image" : {
+      "type" : "string",
+      "title" : "Container Image",
+      "description" : "Image of the build Job; empty uses the TVM toolkit image configured on the platform."
+    },
     "inputs" : {
       "$ref" : "#/$defs/Map_String.String_",
       "title" : "fields.inputs.title",
@@ -104,10 +114,40 @@
         "description" : "fields.inputs.item.description"
       }
     },
+    "keep_params_in_input" : {
+      "type" : "boolean",
+      "title" : "Keep Params in Input",
+      "description" : "Treats the weights as input variables saved in params.bin instead of folding them into the graph; tvm+compile embeds them again."
+    },
     "local_execution" : {
       "type" : "boolean",
       "title" : "fields.localExecution.title",
       "description" : "fields.localExecution.description"
+    },
+    "opset_override" : {
+      "type" : "integer",
+      "title" : "Opset Override",
+      "description" : "Makes the TVM importer use this opset instead of the one declared by the model, without changing the model."
+    },
+    "sanitize_input_names" : {
+      "type" : "boolean",
+      "title" : "Sanitize Input Names",
+      "description" : "Rewrites the input names so they are valid Relax identifiers."
+    },
+    "simplify" : {
+      "type" : "boolean",
+      "title" : "Simplify ONNX Model",
+      "description" : "Runs ONNX Simplifier to pre-compute constant operations and remove redundant nodes before the conversion. When off, it still runs by itself if the converted model has outputs without a shape, which TVM cannot compile."
+    },
+    "strict_shape_inference" : {
+      "type" : "boolean",
+      "title" : "Strict Shape Inference",
+      "description" : "Runs the ONNX shape inference in strict mode: an error skips the whole inference instead of single nodes."
+    },
+    "target_opset" : {
+      "type" : "integer",
+      "title" : "Target Opset Version",
+      "description" : "Converts the ONNX model to this opset version first; leave empty to keep the original."
     },
     "task" : {
       "type" : "string",
@@ -122,11 +162,6 @@
   "allOf" : [ {
     "type" : "object",
     "properties" : {
-      "data_prop" : {
-        "type" : "boolean",
-        "title" : "Data Propagation",
-        "description" : "Lets the shape inference compute values for a limited set of operators, to work out more tensor shapes."
-      },
       "envs" : {
         "title" : "fields.envs.title",
         "description" : "fields.envs.description",
@@ -143,21 +178,6 @@
         "description" : "fields.function.description",
         "minLength" : 1
       },
-      "image" : {
-        "type" : "string",
-        "title" : "Container Image",
-        "description" : "Image of the build Job; empty uses the TVM toolkit image configured on the platform."
-      },
-      "keep_params_in_input" : {
-        "type" : "boolean",
-        "title" : "Keep Params in Input",
-        "description" : "Treats the weights as input variables saved in params.bin instead of folding them into the graph; tvm+compile embeds them again."
-      },
-      "opset_override" : {
-        "type" : "integer",
-        "title" : "Opset Override",
-        "description" : "Makes the TVM importer use this opset instead of the one declared by the model, without changing the model."
-      },
       "profile" : {
         "type" : "string",
         "title" : "fields.profile.title",
@@ -168,11 +188,6 @@
         "title" : "fields.resources.title",
         "description" : "fields.resources.description"
       },
-      "sanitize_input_names" : {
-        "type" : "boolean",
-        "title" : "Sanitize Input Names",
-        "description" : "Rewrites the input names so they are valid Relax identifiers."
-      },
       "secrets" : {
         "title" : "fields.secrets.title",
         "description" : "fields.secrets.description",
@@ -182,21 +197,6 @@
           "title" : "fields.secrets.item.title",
           "description" : "fields.secrets.item.description"
         }
-      },
-      "simplify" : {
-        "type" : "boolean",
-        "title" : "Simplify ONNX Model",
-        "description" : "Runs ONNX Simplifier to pre-compute constant operations and remove redundant nodes before the conversion. When off, it still runs by itself if the converted model has outputs without a shape, which TVM cannot compile."
-      },
-      "strict_shape_inference" : {
-        "type" : "boolean",
-        "title" : "Strict Shape Inference",
-        "description" : "Runs the ONNX shape inference in strict mode: an error skips the whole inference instead of single nodes."
-      },
-      "target_opset" : {
-        "type" : "integer",
-        "title" : "Target Opset Version",
-        "description" : "Converts the ONNX model to this opset version first; leave empty to keep the original."
       },
       "volumes" : {
         "title" : "fields.volumes.title",

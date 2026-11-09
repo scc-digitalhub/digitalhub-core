@@ -15,12 +15,10 @@ import java.util.Map;
 import lombok.Getter;
 import lombok.Setter;
 
-// Base spec for the TVM model kinds (tvm-ir, tvm-so): Relax entry point + input/output tensor signatures.
 @Getter
 @Setter
 public class TvmModelSpec extends ModelBaseSpec {
 
-    // Relax entry function to invoke, e.g. "main".
     @JsonProperty("entry")
     @Schema(title = "Entry Function", description = "Function of the model to call, usually main.")
     private String entry;
