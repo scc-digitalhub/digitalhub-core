@@ -9,13 +9,14 @@ cat <<'EOF'
 |--------|----------------------|---------|
 EOF
 
-find . -type f \
-  \( -path "*/src/main/resources/*.yaml" -o -path "*/src/main/resources/*.yml" \) |
+git ls-files --cached --others --exclude-standard -- \
+  '*/src/main/resources/*.yaml' '*/src/main/resources/*.yml' |
 while read -r file; do
 
-  folder=$(echo "$file" | sed -E 's#.*/([^/]+)/src/main/resources/.*#\1#')
+  folder=$(echo "$file" | sed -E 's#/src/main/resources/.*##; s#.*/##')
 
-  grep -oE '\$\{[A-Za-z_][A-Za-z0-9_]*(:[^}]*)?\}' "$file" |
+  sed '/^[[:space:]]*#/d' "$file" |
+  grep -oE '\$\{[A-Za-z_][A-Za-z0-9_]*(:[^}]*)?\}' |
   while read -r placeholder; do
 
     expr=$(echo "$placeholder" | sed -E 's/^\$\{//; s/\}$//')
@@ -38,4 +39,5 @@ while read -r file; do
 
 done |
 sort -t'|' -k1,1 |
-sed 's/^[^|]*|/| &/' 
+uniq |
+sed 's/^[^|]*|/| &/'
