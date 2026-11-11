@@ -26,6 +26,7 @@ package it.smartcommunitylabdhub.core.controllers.v1.context;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.smartcommunitylabdhub.commons.Keys;
+import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
@@ -44,6 +45,7 @@ import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.RunManager;
 import it.smartcommunitylabdhub.runs.filters.RunEntityFilter;
 import it.smartcommunitylabdhub.runs.lifecycle.RunEvent;
+import it.smartcommunitylabdhub.runs.lifecycle.RunState;
 import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
@@ -114,13 +116,15 @@ public class RunContextController {
         //create as new, will check for duplicated
         Run run = runManager.createRun(dto);
 
-        //if !local then also build+run
-        RunBaseSpec runBaseSpec = new RunBaseSpec();
-        runBaseSpec.configure(run.getSpec());
+        if (run != null && RunState.CREATED.name().equals(StatusFieldAccessor.with(run.getStatus()).getState())) {
+            //if !local then also build+run
+            RunBaseSpec runBaseSpec = new RunBaseSpec();
+            runBaseSpec.configure(run.getSpec());
 
-        if (Boolean.FALSE.equals(runBaseSpec.getLocalExecution())) {
-            run = lifecycleManager.perform(run, RunEvent.BUILD.name());
-            run = lifecycleManager.perform(run, RunEvent.RUN.name());
+            if (Boolean.FALSE.equals(runBaseSpec.getLocalExecution())) {
+                run = lifecycleManager.perform(run, RunEvent.BUILD.name());
+                run = lifecycleManager.perform(run, RunEvent.RUN.name());
+            }
         }
 
         return run;
