@@ -21,7 +21,7 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.vllm.base.models;
+package it.smartcommunitylabdhub.runtime.modelserve.models;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -35,7 +35,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class VLLMAdapter {
+public class LoRAAdapter {
 
     @Schema(title = "fields.vllm.url.title", description = "fields.vllm.url.description")
     private String url;

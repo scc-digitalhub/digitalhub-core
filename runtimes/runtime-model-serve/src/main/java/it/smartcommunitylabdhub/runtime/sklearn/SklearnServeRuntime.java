@@ -44,7 +44,7 @@ import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.models.ModelManager;
 import it.smartcommunitylabdhub.runs.Run;
-import it.smartcommunitylabdhub.runtime.modelserve.specs.InferenceV2Service;
+import it.smartcommunitylabdhub.runtime.modelserve.models.InferenceV2Service;
 import it.smartcommunitylabdhub.runtime.modelserve.specs.ModelServeRunStatus;
 import it.smartcommunitylabdhub.runtime.sklearn.specs.SklearnServeFunctionSpec;
 import it.smartcommunitylabdhub.runtime.sklearn.specs.SklearnServeRunSpec;

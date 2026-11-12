@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.runtime.vllm.base.specs;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
-import it.smartcommunitylabdhub.runtime.vllm.base.models.OpenAIService;
+import it.smartcommunitylabdhub.runtime.modelserve.models.OpenAIService;
 import java.io.Serializable;
 import java.util.Map;
 import lombok.AllArgsConstructor;

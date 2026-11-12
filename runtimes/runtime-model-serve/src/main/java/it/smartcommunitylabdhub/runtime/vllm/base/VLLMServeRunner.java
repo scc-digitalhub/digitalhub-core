@@ -54,8 +54,7 @@ import it.smartcommunitylabdhub.relationships.RelationshipDetail;
 import it.smartcommunitylabdhub.relationships.RelationshipName;
 import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
 import it.smartcommunitylabdhub.runs.Run;
-import it.smartcommunitylabdhub.runtime.huggingface.specs.HuggingfaceModelSpec;
-import it.smartcommunitylabdhub.runtime.vllm.base.models.VLLMAdapter;
+import it.smartcommunitylabdhub.runtime.modelserve.models.LoRAAdapter;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeFunctionSpec;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeRunSpec;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeTaskSpec;
@@ -175,8 +174,6 @@ public class VLLMServeRunner {
         List<CoreEnv> coreEnvList = new ArrayList<>(
             List.of(new CoreEnv("PROJECT_NAME", run.getProject()), new CoreEnv("RUN_ID", run.getId()))
         );
-        // workaround for mc config dir to avoid eventual user permissions issues
-        coreEnvList.add(new CoreEnv("MC_CONFIG_DIR", "/shared/mc"));
 
         List<CoreEnv> coreSecrets =
             secretData == null
@@ -335,7 +332,7 @@ public class VLLMServeRunner {
             args.add("--enable-lora");
             args.add("--lora-modules");
 
-            for (VLLMAdapter adapter : runSpec.getAdapters()) {
+            for (LoRAAdapter adapter : runSpec.getAdapters()) {
                 String adapterUrl = adapter.getUrl();
                 if (adapterUrl == null || !adapterUrl.startsWith(Keys.STORE_PREFIX)) {
                     //enforce model from store
