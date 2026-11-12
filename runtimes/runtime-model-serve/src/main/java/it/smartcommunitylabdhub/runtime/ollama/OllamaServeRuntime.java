@@ -247,10 +247,11 @@ public class OllamaServeRuntime
             OpenAIService openai = status.getOpenai();
             openai.setBaseUrl(baseUrl + "/v1");
             status.setOpenai(openai);
+
+            status.setState(RunState.RUNNING.name());
+            status.setMessage("Model %s ready".formatted(openai.getModel()));
         }
 
-        status.setState(RunState.RUNNING.name());
-        status.setMessage("Model %s ready".formatted(runSpec.getModelName()));
         return status;
     }
 
