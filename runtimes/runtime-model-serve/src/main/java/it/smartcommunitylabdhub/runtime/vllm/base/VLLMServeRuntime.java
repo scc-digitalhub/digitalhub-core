@@ -36,8 +36,8 @@ import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.models.ModelManager;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.lifecycle.RunState;
-import it.smartcommunitylabdhub.runtime.vllm.base.models.OpenAIService;
-import it.smartcommunitylabdhub.runtime.vllm.base.models.VLLMAdapter;
+import it.smartcommunitylabdhub.runtime.modelserve.models.LoRAAdapter;
+import it.smartcommunitylabdhub.runtime.modelserve.models.OpenAIService;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeFunctionSpec;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeRunSpec;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeRunStatus;
@@ -122,7 +122,7 @@ public abstract class VLLMServeRuntime<F extends VLLMServeFunctionSpec, R extend
                     functionSpec
                         .getAdapters()
                         .stream()
-                        .map(a -> VLLMAdapter.builder().name(a.getName()).build())
+                        .map(a -> LoRAAdapter.builder().name(a.getName()).build())
                         .toList()
                 );
             }

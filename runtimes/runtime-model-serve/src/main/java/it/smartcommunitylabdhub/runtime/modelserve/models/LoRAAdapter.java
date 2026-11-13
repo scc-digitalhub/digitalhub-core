@@ -21,9 +21,9 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.modelserve.specs;
+package it.smartcommunitylabdhub.runtime.modelserve.models;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -35,18 +35,15 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public class InferenceV2Service {
+public class LoRAAdapter {
 
-    private String baseUrl;
-    private String status;
+    @Schema(title = "fields.vllm.url.title", description = "fields.vllm.url.description")
+    private String url;
 
-    private String model;
-
-    private String inferenceUrl;
-    private String modelMetadataUrl;
-    private String modelReadinessUrl;
-
-    private String readinessUrl;
-    private String livenessUrl;
+    @Schema(
+        title = "fields.modelserve.modelname.title",
+        description = "fields.modelserve.modelname.description",
+        defaultValue = ""
+    )
+    private String name;
 }

@@ -1,9 +1,3 @@
-/*
- * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 /**
  * Copyright 2025 the original author or authors
  *
@@ -20,31 +14,29 @@
  * limitations under the License.
  */
 
-package it.smartcommunitylabdhub.runtime.vllm.base.models;
+package it.smartcommunitylabdhub.runtime.ollama.config;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import java.util.List;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @Getter
 @Setter
-@NoArgsConstructor
 @AllArgsConstructor
-@Builder
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public class OpenAIService {
+@NoArgsConstructor
+@ToString
+@ConfigurationProperties(prefix = "runtime.ollama", ignoreUnknownFields = true)
+public class OllamaProperties {
 
-    private String baseUrl;
-    private String status;
+    private String image;
 
-    private String engine;
-    private String model;
-    private String modelUrl;
-    private List<VLLMAdapter> adapters;
+    private Integer userId;
+    private Integer groupId;
+    private String homeDir;
 
-    private List<String> features;
+    private String volumeSize;
+    private String memSize;
 }

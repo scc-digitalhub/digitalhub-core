@@ -1,0 +1,4 @@
+providers:
+  ollama:
+    apiUrl: ${OLLAMA_API_URL:https://ollama.kinduff.com}
+    metadata: ${OLLAMA_METADATA:author,pipeline_tag,library_name,tags,cardData,config,safetensors,sha}

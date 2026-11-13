@@ -1,0 +1,35 @@
+{
+  "ui:title@en": "SGLang",
+  "ui:description@en": "SGLang is an open-source inference framework for large language, vision-language, and diffusion models",
+  "ui:title@it": "SGLang",
+  "ui:description@it": "SGLang è un framework open-source per l'inferenza di modelli di linguaggio, visione-linguaggio e diffusione",
+  "image": {
+    "ui:title@en": "Container image",
+    "ui:description@en": "Container image for the SGLang runtime, leave blank to use default",
+    "ui:title@it": "Immagine del container",
+    "ui:description@it": "Immagine del container per il runtime SGLang, lasciare vuoto per usare il valore predefinito"
+  },
+  "path": {
+    "ui:title@en": "Model path",
+    "ui:description@en": "Store path for model to load. Add the id for the specific version, or use the name for latest",
+    "ui:title@it": "Percorso del modello",
+    "ui:description@it": "Percorso dello store per il modello da caricare. Aggiungi l'id per la versione specifica, oppure usa il nome per l'ultima."
+  },
+  "model_name": {
+    "ui:title@en": "Model name",
+    "ui:description@en": "Name of the model to expose; Leave blank to infer from model",
+    "ui:title@it": "Nome del modello",
+    "ui:description@it": "Nome del modello da esporre"
+  },
+  "adapters": {
+    "ui:title@en": "LoRA Adapters",
+    "ui:description@en": "List of LoRA adapters to add",
+    "ui:title@it": "Adattatori LoRA",
+    "ui:description@it": "Elenco degli adattatori LoRA da aggiungere",
+    "items": {
+      "ui:title": "",
+      "ui:label": false,
+      "ui:layout": [3, 9]
+    }
+  }
+}

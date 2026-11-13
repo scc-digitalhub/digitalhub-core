@@ -14,6 +14,20 @@ runtime:
     user-id: ${RUNTIME_HUGGINGFACE_USER_ID:${kubernetes.security.user}}
     group-id: ${RUNTIME_HUGGINGFACE_GROUP_ID:${kubernetes.security.group}}
     volume-size: ${RUNTIME_HUGGINGFACE_VOLUME_SIZE:10Gi}
+  ollama:
+    image: ${RUNTIME_OLLAMA_IMAGE:ollama/ollama:latest}
+    user-id: ${RUNTIME_OLLAMA_USER_ID:${kubernetes.security.user}}
+    group-id: ${RUNTIME_OLLAMA_GROUP_ID:${kubernetes.security.group}}
+    home-dir: ${RUNTIME_OLLAMA_HOME_DIR:/shared}
+    volume-size: ${RUNTIME_OLLAMA_VOLUME_SIZE:10Gi}
+    mem-size: ${RUNTIME_OLLAMA_MEM_SIZE:16Gi}
+  sglang:
+    image: ${RUNTIME_SGLANG_IMAGE:lmsysorg/sglang:latest}
+    user-id: ${RUNTIME_SGLANG_USER_ID:${kubernetes.security.user}}
+    group-id: ${RUNTIME_SGLANG_GROUP_ID:${kubernetes.security.group}}
+    home-dir: ${RUNTIME_SGLANG_HOME_DIR:/shared}
+    volume-size: ${RUNTIME_SGLANG_VOLUME_SIZE:10Gi}
+    mem-size: ${RUNTIME_SGLANG_MEM_SIZE:16Gi}    
   vllm:
     image: ${RUNTIME_VLLM_SERVE_IMAGE:vllm/vllm-openai:latest}
     cpu-image: ${RUNTIME_VLLM_SERVE_CPU_IMAGE:public.ecr.aws/q9t5s3a7/vllm-cpu-release-repo:latest}

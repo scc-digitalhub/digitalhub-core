@@ -21,9 +21,9 @@
  *
  */
 
-package it.smartcommunitylabdhub.runtime.vllm.base.models;
+package it.smartcommunitylabdhub.runtime.modelserve.models;
 
-import io.swagger.v3.oas.annotations.media.Schema;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -35,15 +35,18 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class VLLMAdapter {
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class InferenceV2Service {
 
-    @Schema(title = "fields.vllm.url.title", description = "fields.vllm.url.description")
-    private String url;
+    private String baseUrl;
+    private String status;
 
-    @Schema(
-        title = "fields.modelserve.modelname.title",
-        description = "fields.modelserve.modelname.description",
-        defaultValue = "model"
-    )
-    private String name;
+    private String model;
+
+    private String inferenceUrl;
+    private String modelMetadataUrl;
+    private String modelReadinessUrl;
+
+    private String readinessUrl;
+    private String livenessUrl;
 }
