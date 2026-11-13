@@ -43,7 +43,7 @@ public class LoRAAdapter {
     @Schema(
         title = "fields.modelserve.modelname.title",
         description = "fields.modelserve.modelname.description",
-        defaultValue = "model"
+        defaultValue = ""
     )
     private String name;
 }
