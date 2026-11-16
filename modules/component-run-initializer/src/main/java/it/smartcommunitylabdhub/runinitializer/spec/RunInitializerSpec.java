@@ -44,7 +44,7 @@ import lombok.Setter;
 @Setter
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @SpecType(kind = RunInitializerSpec.KIND, entity = Extension.class, uiSchema = "run-initializer/uiSchema.json")
-@ExtensionType(appliesTo = { Run.class })
+@ExtensionType(appliesTo = { Run.class }, showIn="default")
 public class RunInitializerSpec extends BaseSpec {
 
     public static final String KIND = "run-initializer";
