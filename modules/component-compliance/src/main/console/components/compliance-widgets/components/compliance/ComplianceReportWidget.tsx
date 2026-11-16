@@ -14,6 +14,7 @@ import type { JsonRecord } from "../../types";
 import { fieldLabel } from "../schemaForm/fieldHelpers";
 import SchemaForm from "../schemaForm/SchemaForm";
 import { SchemaReadOnlyProvider } from "../schemaForm/SchemaReadOnlyContext";
+import { ReferenceEntityProvider } from "../schemaForm/ReferenceEntityContext";
 import { PathInput } from "@digitalhub/console/features/files/upload/components/PathInput";
 import { FileInfoTree } from "@digitalhub/console/features/files/fileInfoTree/components/FileInfoTree";
 import { useResolveUploadPath } from "@digitalhub/console/features/files/upload/useResolveUploadPath";
@@ -23,6 +24,7 @@ import { useResourceUploader } from "@digitalhub/console/features/files/upload/u
 
 interface ComplianceReportWidgetProps {
   report: JsonRecord;
+  referenceEntity: JsonRecord | undefined;
   index: number;
   canManage: boolean;
   managementLocked: boolean;
@@ -44,6 +46,7 @@ function PathWatcher({ onChange }: { onChange: (path: string | undefined) => voi
 
 export default function ComplianceReportWidget({
   report,
+  referenceEntity,
   index,
   canManage,
   managementLocked,
@@ -224,12 +227,14 @@ export default function ComplianceReportWidget({
                     {t("compliance.guidance.report.editor")}
                   </Typography>
                 )}
-                <SchemaForm
-                  schemaName="ReportSpec"
-                  value={spec}
-                  omit={["path"]}
-                  onChange={(nextSpec) => setDraft({ ...activeReport, spec: nextSpec })}
-                />
+                <ReferenceEntityProvider entity={referenceEntity} resource={parentResource}>
+                  <SchemaForm
+                    schemaName="ReportSpec"
+                    value={spec}
+                    omit={["path"]}
+                    onChange={(nextSpec) => setDraft({ ...activeReport, spec: nextSpec })}
+                  />
+                </ReferenceEntityProvider>
                 {editing && <PathInput
                         source="path"
                         defaultValue={String(spec.path ?? "")}

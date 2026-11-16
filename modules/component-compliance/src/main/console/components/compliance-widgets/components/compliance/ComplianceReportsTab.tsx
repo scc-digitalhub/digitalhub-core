@@ -93,6 +93,7 @@ export default function ComplianceReportsTab() {
         <ComplianceReportWidget
           key={(report.id as string) ?? index}
           report={report}
+          referenceEntity={refreshedEntity ?? entity}
           index={index + 1}
           canManage={canManageReports}
           managementLocked={reportEditing}
@@ -106,6 +107,7 @@ export default function ComplianceReportsTab() {
         <ComplianceReportWidget
           key={newReport.id as string}
           report={newReport}
+          referenceEntity={refreshedEntity ?? entity}
           index={reports.length + 1}
           canManage
           managementLocked={false}

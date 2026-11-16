@@ -8,6 +8,7 @@ import ObjectiveConditionField from "./ObjectiveConditionField";
 import SchemaForm from "./SchemaForm";
 import { useRegulatoryOptions } from "./RegulatoryOptionsContext";
 import { useSchemaReadOnly } from "./SchemaReadOnlyContext";
+import { getReferenceObjectives, useReferenceEntity } from "./ReferenceEntityContext";
 
 interface CustomFieldWidgetProps {
   label: string;
@@ -209,10 +210,9 @@ function RegulatoryReferenceWidget({ label, value, onChange, required }: CustomF
   );
 }
 
-function ProjectObjectivesWidget({ label, value, onChange }: CustomFieldWidgetProps) {
+function ReferenceObjectivesWidget({ label, value, onChange }: CustomFieldWidgetProps) {
   const readOnly = useSchemaReadOnly();
-  const { spec, loading } = useProjectCompliance();
-  const objectives = (spec?.objectives as JsonRecord[] | undefined) ?? [];
+  const objectives = getReferenceObjectives(useReferenceEntity());
   const options = objectives.flatMap((objective) => {
     const name = typeof objective.name === "string" ? objective.name : undefined;
     return name ? [{ id: name, name }] : [];
@@ -226,7 +226,6 @@ function ProjectObjectivesWidget({ label, value, onChange }: CustomFieldWidgetPr
       multiple
       size="small"
       disabled={readOnly}
-      loading={loading}
       options={allOptions}
       value={selected}
       getOptionLabel={(option) => option.name}
@@ -273,7 +272,7 @@ const CUSTOM_WIDGETS: Record<CustomFieldWidget, ComponentType<CustomFieldWidgetP
   "objective-condition": ObjectiveConditionWidget,
   "regulatory-reference": RegulatoryReferenceWidget,
   "report-content": ReportContentWidget,
-  "project-objectives": ProjectObjectivesWidget,
+  "project-objectives": ReferenceObjectivesWidget,
   "entity-reference": EntityReferenceWidget,
 };
 
