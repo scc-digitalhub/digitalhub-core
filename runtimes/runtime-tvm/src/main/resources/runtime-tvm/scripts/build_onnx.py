@@ -29,7 +29,7 @@ STEPS = 6
 # ONNX TensorProto.DataType -> dtype name
 ONNX_DTYPES: dict[int, str] = {
     1: "float32", 2: "uint8", 3: "int8", 4: "uint16", 5: "int16", 6: "int32",
-    7: "int64", 9: "bool", 10: "float16", 11: "float64", 12: "uint32", 13: "uint64",
+    7: "int64", 9: "bool", 10: "float16", 11: "float64", 12: "uint32", 13: "uint64", 16: "bfloat16",
 }
 
 
@@ -57,10 +57,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def tensor_spec(value_info) -> dict:
     """name, shape and dtype of a graph input or output; unknown dims become -1."""
     tensor_type = value_info.type.tensor_type
+    if tensor_type.elem_type not in ONNX_DTYPES:
+        raise ValueError(f"Unsupported ONNX tensor dtype {tensor_type.elem_type} for {value_info.name}")
     return {
         "name": value_info.name,
-        "shape": [dim.dim_value if dim.dim_value > 0 else -1 for dim in tensor_type.shape.dim],
-        "dtype": ONNX_DTYPES.get(tensor_type.elem_type, "float32"),
+        "shape": [dim.dim_value if dim.HasField("dim_value") else -1 for dim in tensor_type.shape.dim],
+        "dtype": ONNX_DTYPES[tensor_type.elem_type],
     }
 
 
@@ -85,14 +87,13 @@ def quantization(model, tensor_name: str, is_output: bool) -> dict:
 
 
 def signature(model) -> tuple[list[dict], list[dict]]:
-    """Exclude weights from inputs; use 1 for unknown input dimensions required by Relax."""
+    """Exclude weights from inputs and preserve dynamic dimensions in metadata."""
     weights = {init.name for init in model.graph.initializer}
     inputs = []
     for graph_input in model.graph.input:
         if graph_input.name in weights:
             continue
         spec = tensor_spec(graph_input)
-        spec["shape"] = [dim if dim > 0 else 1 for dim in spec["shape"]]
         inputs.append(spec)
     outputs = [tensor_spec(output) for output in model.graph.output]
     for specs, is_output in ((inputs, False), (outputs, True)):
@@ -125,6 +126,8 @@ def prepare(model, args: argparse.Namespace, simplify: bool):
     """Convert the opset before simplification and shape inference, which depend on it."""
     from onnx import shape_inference, version_converter
 
+    model = normalize_graph(model)
+
     if args.target_opset is not None:
         print(f"      converting opset {model.opset_import[0].version} -> {args.target_opset}")
         try:
@@ -145,7 +148,18 @@ def prepare(model, args: argparse.Namespace, simplify: bool):
     except Exception as error:  # noqa: BLE001
         # The importer may still succeed without inferred shapes.
         print(f"WARN: shape inference skipped: {error}")
-    return model
+    return normalize_graph(model)
+
+
+def normalize_graph(model):
+    """Sort standard ONNX dependencies, including subgraphs, without changing the source file."""
+    import onnx
+    import onnx_ir as ir
+    from onnx_ir.passes.common import TopologicalSortPass
+
+    normalized = ir.to_proto(TopologicalSortPass()(ir.from_proto(model)).model)
+    onnx.checker.check_model(normalized)
+    return normalized
 
 
 def convert(model, args: argparse.Namespace):
@@ -156,7 +170,7 @@ def convert(model, args: argparse.Namespace):
     mod = from_onnx(
         model,
         shape_dict=None,
-        dtype_dict="float32",
+        dtype_dict={spec["name"]: spec["dtype"] for spec in signature(model)[0]},
         opset=args.opset,
         keep_params_in_input=args.keep_params_in_input,
         sanitize_input_names=args.sanitize_input_names,

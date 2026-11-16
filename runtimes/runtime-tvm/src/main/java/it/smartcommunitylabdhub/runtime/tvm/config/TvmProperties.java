@@ -6,9 +6,7 @@
 
 package it.smartcommunitylabdhub.runtime.tvm.config;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
+import it.smartcommunitylabdhub.runtime.tvm.specs.compile.TvmTargetValidator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -66,19 +64,7 @@ public class TvmProperties {
             List<String> aliases) {
 
         public Target {
-            if (!StringUtils.hasText(target)) {
-                throw new IllegalArgumentException("TVM target must be a non-empty JSON object string");
-            }
-            try {
-                var definition = JacksonMapper.OBJECT_MAPPER.reader()
-                    .with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
-                    .readTree(target);
-                if (!definition.isObject() || definition.isEmpty()) {
-                    throw new IllegalArgumentException("TVM target must be a non-empty JSON object string");
-                }
-            } catch (JsonProcessingException e) {
-                throw new IllegalArgumentException("TVM target must be a valid JSON object string", e);
-            }
+            TvmTargetValidator.parse(target);
             linker = linker == null ? new Linker(null, List.of()) : linker;
             aliases = aliases == null ? List.of() : List.copyOf(aliases);
         }

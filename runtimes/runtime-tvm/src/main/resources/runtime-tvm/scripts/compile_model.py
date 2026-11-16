@@ -5,7 +5,7 @@
 
 """Compile Relax IR into model.so and publish a tvm-so Model.
 
-Targets use TVM syntax: "llvm" or JSON, e.g. {"kind":"llvm","mcpu":"x86-64-v3"}.
+Targets use TVM syntax: "llvm" or JSON. CUDA requires an explicit arch and LLVM host.
 """
 
 from __future__ import annotations
@@ -13,15 +13,19 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
+from contextlib import nullcontext
+from math import prod
 from pathlib import Path
 
 import tvm
 from tvm import relax
+from tvm.support import cc
 
 import tuning
 import toolchain
 from benchmark import benchmark_library
-from common import INPUT_DIR, OUTPUT_DIR, fail, option, read_json, step, target_triple, to_bool, write_json
+from common import INPUT_DIR, OUTPUT_DIR, fail, host_target, option, read_json, step, target_triple, to_bool, write_json
 
 STEPS = 7
 
@@ -131,6 +135,49 @@ def load_model(ir_dir: Path, params_file: str | None) -> tuple[tvm.IRModule, dic
     return mod, metadata
 
 
+@relax.expr_functor.mutator
+class _ReshapeGuard(relax.PyExprMutator):
+    """Preserve element counts before TVM 0.26 lowers dynamic reshapes."""
+
+    def shape_values(self, shape):
+        values = shape.ty.values
+        if values is not None:
+            return list(values)
+        if shape.ty.ndim < 0:
+            raise ValueError("reshape validation requires known input and output ranks")
+        values = [tvm.tirx.Var("reshape_dim", "int64") for _ in range(shape.ty.ndim)]
+        self.builder_.match_cast(shape, relax.ShapeType(values), "reshape_shape")
+        return values
+
+    def visit_call_(self, call):
+        call = super().visit_call_(call)
+        if not isinstance(call.op, tvm.ir.Op) or call.op.name != "relax.reshape":
+            return call
+        data, shape = call.args
+        input_shape = data.ty.shape
+        if input_shape is None:
+            input_shape = self.builder_.emit(relax.op.shape_of(data))
+        old_size = prod(self.shape_values(input_shape))
+        new_shape = self.shape_values(shape)
+        new_size = prod(new_shape)
+        if not tvm.arith.Analyzer().can_prove_equal(old_size, new_size):
+            # Opaque size prevents inferred type equalities from erasing the runtime check.
+            size = relax.call_pure_packed("vm.builtin.copy", relax.ShapeExpr([old_size]),
+                                         ty_args=relax.ShapeType(ndim=1))
+            self.builder_.match_cast(size, relax.ShapeType([new_size]), "reshape_size")
+        if shape.ty.values is None:
+            return relax.op.reshape(data, relax.ShapeExpr(new_shape))
+        return call
+
+
+def guard_reshape_sizes(mod):
+    guard = _ReshapeGuard(mod)
+    for gv, function in mod.functions_items():
+        if isinstance(function, relax.Function):
+            guard.builder_.update_func(gv, guard.visit_expr(function))
+    return guard.builder_.get()
+
+
 def cpu_count() -> int:
     """CPUs this process may use (the container limit, not the size of the node)."""
     try:
@@ -140,9 +187,9 @@ def cpu_count() -> int:
 
 
 def resolve_target(target_text: str, num_cores: int | None) -> tuple[tvm.target.Target, str]:
-    """Resolve mcpu=native to avoid LLVM's generic-CPU fallback.
+    """Resolve LLVM or CUDA with an explicit LLVM host, preserving CPU identities.
 
-    Return (Target, effective target text), including num-cores for tuning.
+    Return (Target, effective target text); num-cores always belongs to the CPU host.
     """
     try:
         config = json.loads(target_text)
@@ -151,9 +198,42 @@ def resolve_target(target_text: str, num_cores: int | None) -> tuple[tvm.target.
             raise ValueError("use a standard JSON target or plain llvm") from error
         config = {"kind": "llvm"}
     if not isinstance(config, dict):
-        raise ValueError("an LLVM target must be a JSON object")
-    if config.get("kind") != "llvm":
-        raise ValueError("only LLVM CPU compilation is supported")
+        raise ValueError("a target must be a JSON object")
+    if config.get("kind") == "llvm":
+        return resolve_llvm_target(config, num_cores)
+    if config.get("kind") != "cuda":
+        raise ValueError("only LLVM CPU or CUDA compilation is supported")
+    if not isinstance(config.get("arch"), str) or not re.fullmatch(r"sm_[0-9]+[a-z]?", config["arch"]):
+        raise ValueError("a CUDA target requires an explicit arch such as sm_87")
+    host = config.get("host")
+    if not isinstance(host, dict) or host.get("kind") != "llvm":
+        raise ValueError("a CUDA target requires a nested host object with kind=llvm")
+    triple = host.get("mtriple")
+    if not isinstance(triple, str) or not re.fullmatch(
+        r"(x86_64|amd64|aarch64|arm64)(-[A-Za-z0-9_+.]+)*-linux-gnu", triple
+    ):
+        raise ValueError("a CUDA host requires an explicit AMD64 or ARM64 Linux GNU mtriple, "
+                         "such as x86_64-linux-gnu or aarch64-linux-gnu")
+    for values, names in ((config, ("max_shared_memory_per_block", "max_threads_per_block", "thread_warp_size")),
+                          (host, ("num-cores",))):
+        for name in names:
+            if name not in values:
+                continue
+            value = values[name]
+            if isinstance(value, float) and value.is_integer():
+                value = int(value)
+            if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+                raise ValueError(f"CUDA {name} must be a positive integer")
+            values[name] = value
+    _, host_text = resolve_llvm_target(host, num_cores)
+    config["host"] = json.loads(host_text)
+    # CUDA identities include the host and are insensitive to JSON object key order.
+    text = json.dumps(config, sort_keys=True, separators=(",", ":"))
+    return tvm.target.Target(text), text
+
+
+def resolve_llvm_target(config: dict, num_cores: int | None) -> tuple[tvm.target.Target, str]:
+    """Keep the existing LLVM resolution and serialized database identity."""
     host_triple = tvm.target.codegen.llvm_get_system_triple()
     config.setdefault("mtriple", host_triple)
     toolchain.platform_key(config["mtriple"])
@@ -186,11 +266,17 @@ def resolve_target(target_text: str, num_cores: int | None) -> tuple[tvm.target.
 
 def prepare_execution(args: argparse.Namespace, target: tvm.target.Target) -> str | None:
     """Check local execution and use the target's thread count when tuning."""
+    cuda = getattr(getattr(target, "kind", None), "name", "llvm") == "cuda"
     execution_error = toolchain.local_execution_error(target)
     if args.tuning_mode == "tune" and args.tuning_runner == "local" and execution_error:
         fail(execution_error + "; use tuning_runner=rpc or tuning_mode=apply")
-    if args.tuning_mode == "tune" and target.attrs.get("num-cores") is not None:
-        os.environ.setdefault("TVM_NUM_THREADS", str(target.attrs["num-cores"]))
+    if cuda and args.tuning_mode == "tune":
+        if args.tuning_enable_cpu_cache_flush:
+            fail("CUDA tuning does not support --tuning-enable-cpu-cache-flush; leave it false")
+        toolchain.check_cuda_tuning(target, args.target, args.tuning_runner == "local")
+    host = host_target(target) if cuda else target
+    if args.tuning_mode == "tune" and host.attrs.get("num-cores") is not None:
+        os.environ.setdefault("TVM_NUM_THREADS", str(host.attrs["num-cores"]))
         print(f"      tuning threads={os.environ['TVM_NUM_THREADS']}")
     return execution_error
 
@@ -200,13 +286,19 @@ def build_library(mod, args: argparse.Namespace, target, out_dir: Path, pass_ctx
                "exec_mode": args.exec_mode}
     if args.system_lib:
         options["system_lib"] = True
-    with pass_ctx:
+    # The standard nvcc callback reads arch from Target.current(), including offline builds.
+    target_scope = target if target.kind.name == "cuda" else nullcontext()
+    with target_scope, pass_ctx:
         executable = relax.build(mod, **options)
+    if target.kind.name == "cuda":
+        toolchain.check_cuda_modules(executable.mod)
 
     so_path = out_dir / "model.so"
     if args.cross_cc:
         print(f"      cross compiler: {args.cross_cc}")
-    executable.export_library(str(so_path), cc=args.cross_cc, options=args.cross_cc_options)
+    # A bytecode VM without LLVM kernels still needs the target triple to pack its imports.
+    compiler = cc.cross_compiler(args.cross_cc, get_target_triple=lambda: target_triple(target))
+    executable.export_library(str(so_path), fcompile=compiler, options=args.cross_cc_options)
     print(f"      written: {so_path} ({so_path.stat().st_size / 1e6:.1f} MB)")
     return so_path
 
@@ -247,6 +339,7 @@ def main(argv: list[str] | None = None) -> None:
 
     step(1, STEPS, f"loading the IR from {ir_dir}")
     mod, ir_metadata = load_model(ir_dir, args.params_file)
+    mod = guard_reshape_sizes(mod)
 
     step(2, STEPS, f"target {args.target} (opt_level={args.opt_level}, exec_mode={args.exec_mode})")
     target, effective_target = resolve_target(args.target, args.target_num_cores)
@@ -265,7 +358,7 @@ def main(argv: list[str] | None = None) -> None:
     so_path = build_library(mod, args, target, out_dir, pass_ctx)
 
     step(5, STEPS, "benchmarking model.so")
-    benchmark = benchmark_library(so_path, ir_metadata, args.benchmark_runs, execution_error, args.system_lib)
+    benchmark = benchmark_library(so_path, ir_metadata, args.benchmark_runs, execution_error, args.system_lib, target)
     print(f"      {json.dumps(benchmark) if benchmark is not None else 'off'}")
 
     step(6, STEPS, "writing metadata.json")

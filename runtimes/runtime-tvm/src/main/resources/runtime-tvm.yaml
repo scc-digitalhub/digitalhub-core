@@ -60,3 +60,9 @@ runtime:
         linker:
           command: arm-linux-gnueabihf-g++
         aliases: [armv7l]
+      jetson_orin_cuda:
+        label: NVIDIA Jetson Orin - CUDA (sm_87), ARM64 host
+        target: >-
+          {"kind":"cuda","arch":"sm_87","host":{"kind":"llvm","mtriple":"aarch64-linux-gnu"}}
+        linker:
+          command: aarch64-linux-gnu-g++

@@ -159,9 +159,21 @@ def module_sha256(mod) -> str:
     return hashlib.sha256(tvm.ir.save_json(mod).encode("utf-8")).hexdigest()
 
 
+def target_identity(text):
+    """Canonicalize CUDA JSON and its host; keep historical CPU identities intact."""
+    try:
+        config = json.loads(text)
+    except (TypeError, json.JSONDecodeError):
+        return text
+    if isinstance(config, dict) and config.get("kind") == "cuda":
+        return json.dumps(config, sort_keys=True, separators=(",", ":"))
+    return text
+
+
 def compatible_metadata(identity: dict, metadata: dict) -> bool:
     return (
-        all(metadata.get(key) == identity.get(key) for key in ("target", "tvm_version"))
+        target_identity(metadata.get("target")) == target_identity(identity.get("target"))
+        and metadata.get("tvm_version") == identity.get("tvm_version")
         and all(not metadata.get(key) or not identity.get(key) or metadata[key] == identity[key]
                 for key in ("source_sha256", "tvm_git_commit", "ir_sha256"))
     )
@@ -192,15 +204,19 @@ def database_identity(source: Path) -> tuple[dict, str]:
             target = json.loads(identity.get("target", ""))
         except (TypeError, json.JSONDecodeError):
             target = None
-        if isinstance(target, dict) and target.get("mtriple"):
-            identity["target_triple"] = target["mtriple"]
+        if isinstance(target, dict):
+            host = target.get("host") if target.get("kind") == "cuda" else target
+            if isinstance(host, dict) and host.get("mtriple"):
+                identity["target_triple"] = host["mtriple"]
     return identity, basis
 
 
 def check_identity(actual: dict, expected: dict, basis: str) -> None:
     """A database only helps the exact TVM build, target and model it was tuned on."""
     mismatches = [f"{key}: database={actual.get(key)!r}, requested={expected.get(key)!r}"
-                  for key in ("tvm_version", "target") if actual.get(key) != expected.get(key)]
+                  for key in ("tvm_version", "target")
+                  if (target_identity(actual.get(key)) if key == "target" else actual.get(key))
+                  != (target_identity(expected.get(key)) if key == "target" else expected.get(key))]
     mismatches += [f"{key}: database={actual[key]!r}, requested={expected[key]!r}"
                    for key in ("ir_sha256", "source_sha256", "tvm_git_commit")
                    if actual.get(key) and expected.get(key) and actual[key] != expected[key]]
@@ -230,6 +246,8 @@ def open_database(out_dir: Path, database_path: str | None, identity: dict, weig
     source = find_database(Path(database_path).resolve())
     actual, basis = database_identity(source)
     check_identity(actual, identity, basis)
+    if not weight_prepack and actual.get("cpu_weight_prepack", False):
+        raise ValueError("a CUDA tuning database cannot use CPU weight prepacking")
     # Legacy records require the original preparation, without weight prepacking.
     weight_prepack = bool(actual.get("cpu_weight_prepack", False))
     if source.resolve() != work_dir.resolve():
@@ -265,11 +283,30 @@ def first_round_budget(task_count: int, max_trials_per_task: int, trials_per_ite
     return task_count * min(trials_per_iter, max_trials_per_task)
 
 
-def builder_and_runner(args: argparse.Namespace, workers: int):
+def builder_and_runner(args: argparse.Namespace, workers: int, cuda: bool = False):
     compiler, options = args.cross_cc, args.cross_cc_options
+
+    def build_candidate(mod, target, params):
+        from tvm.s_tir.meta_schedule.builder.local_builder import default_build
+
+        # Upstream nvcc obtains the explicit architecture from this standard scope.
+        with target:
+            return default_build(mod, target, params)
 
     # A local callable is serialized by value into TVM's isolated builder workers.
     def export_candidate(module):
+        if cuda:
+            # Keep this worker callable self-contained: CORE modules are not on its sys.path.
+            pending = [module]
+            visited = set()
+            while pending:
+                current = pending.pop()
+                if current in visited:
+                    continue
+                visited.add(current)
+                if current.kind == "cuda" and not current.is_runnable():
+                    raise ValueError("CUDA tuning produced a non-runnable source fallback; use a CUDA-enabled TVM toolkit")
+                pending.extend(current.imports)
         path = str(Path(tempfile.mkdtemp(prefix="tvm-candidate-")) / "candidate.so")
         module.export_library(path, cc=compiler, options=options)
         return path
@@ -278,11 +315,12 @@ def builder_and_runner(args: argparse.Namespace, workers: int):
         number=args.tuning_number,
         repeat=args.tuning_repeat,
         min_repeat_ms=args.tuning_min_repeat_ms,
-        enable_cpu_cache_flush=args.tuning_enable_cpu_cache_flush,
+        enable_cpu_cache_flush=False if cuda else args.tuning_enable_cpu_cache_flush,
     )
+    build_options = {"f_build": build_candidate} if cuda else {}
     builder = ms.builder.LocalBuilder(
         max_workers=workers, timeout_sec=args.tuning_builder_timeout_sec,
-        f_export=export_candidate,
+        f_export=export_candidate, **build_options,
     )
     if args.tuning_runner == "rpc":
         runner = ms.runner.RPCRunner(
@@ -294,7 +332,8 @@ def builder_and_runner(args: argparse.Namespace, workers: int):
             ),
             evaluator_config=evaluator,
             alloc_repeat=args.tuning_alloc_repeat,
-            max_workers=workers,
+            # One RPC measurement at a time avoids concurrent timings on one GPU.
+            max_workers=1 if cuda else workers,
         )
     else:
         runner = ms.runner.LocalRunner(timeout_sec=args.tuning_runner_timeout_sec, evaluator_config=evaluator,
@@ -336,8 +375,9 @@ def tune(args: argparse.Namespace, prepared, selected, all_tasks, target, databa
             fail(message + "; set --allow-partial-tuning true for a smoke test")
         print(f"WARN: {message}", file=sys.stderr)
 
-    workers = args.tuning_workers or args.target_num_cores or cpu_count
-    builder, runner = builder_and_runner(args, workers)
+    cuda = target.kind.name == "cuda"
+    workers = args.tuning_workers or (1 if cuda else args.target_num_cores or cpu_count)
+    builder, runner = builder_and_runner(args, workers, cuda=cuda)
     print(f"      runner={args.tuning_runner}, workers={workers}, seed={args.tuning_seed}")
     with target, pass_ctx:
         tune_relax(
@@ -489,4 +529,6 @@ def run(args: argparse.Namespace, mod, target, effective_target: str, ir_metadat
     coverage_summary = check_coverage(args, prepared, target, database.work_dir, errors)
     tuned = apply_database(prepared, database, target, pass_ctx, args.allow_partial_tuning)
     summary = tuning_summary(args, database, tasks, selected, workers, coverage_summary, errors)
+    if target.kind.name == "cuda":
+        summary["measurement_workers"] = 1 if args.tuning_mode == "tune" else None
     return tuned, summary

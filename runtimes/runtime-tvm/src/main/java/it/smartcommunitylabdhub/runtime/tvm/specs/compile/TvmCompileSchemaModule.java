@@ -77,7 +77,8 @@ public class TvmCompileSchemaModule implements com.github.victools.jsonschema.ge
             ObjectNode properties = (ObjectNode) schema.get("properties");
             properties.set("target_architecture", targetProfileSchema(properties, config));
             properties.set("target", explicitTargetSchema(properties));
-            requireAutoProfileForExplicitTarget(schema);
+            requireAutoProfileForExplicitTarget(schema, config);
+            cudaTuningSchema(schema);
             return new CustomDefinition(schema);
         }
     }
@@ -86,42 +87,111 @@ public class TvmCompileSchemaModule implements com.github.victools.jsonschema.ge
         ObjectNode profile = factory
             .objectNode()
             .put("type", "string")
-            .put("title", "Target CPU Profile")
+            .put("title", "Target profile")
             .put("default", "auto");
         ArrayNode profiles = profile.putArray("oneOf");
-        config
-            .getTargets()
-            .forEach((name, target) ->
-                profiles.addObject().put("const", name).put("title", target.label() != null ? target.label() : name)
-            );
+        config.getTargets().forEach((name, target) -> {
+            profiles.addObject().put("const", name).put("title", target.label() != null ? target.label() : name);
+        });
+        config.getTargets().forEach((name, target) -> target.aliases().forEach(alias -> {
+            if (!config.getTargets().containsKey(alias)) {
+                profiles.addObject().put("const", alias).put("title", alias + " (alias of " + name + ")");
+            }
+        }));
         return profile;
     }
 
     private static ObjectNode explicitTargetSchema(ObjectNode factory) {
         ObjectNode target = object(factory, "Explicit TVM Target");
-        ((ObjectNode) target.get("properties")).putObject("kind").put("type", "string").put("pattern", "^llvm$");
-        ObjectNode fields = target.putObject("dependencies").putObject("kind").putObject("properties");
-        for (String field : List.of("mtriple", "mcpu", "mfloat-abi")) {
-            fields.putObject(field).put("type", "string");
+        ((ObjectNode) target.get("properties")).putObject("kind").put("type", "string")
+            .putArray("enum").add("llvm").add("cuda");
+
+        ObjectNode llvm = object(factory, null);
+        ObjectNode llvmFields = (ObjectNode) llvm.get("properties");
+        llvmFields.putObject("kind").putArray("enum").add("llvm");
+        llvmTargetFields(llvmFields);
+
+        ObjectNode cuda = object(factory, null);
+        ObjectNode cudaFields = (ObjectNode) cuda.get("properties");
+        cudaFields.putObject("kind").putArray("enum").add("cuda");
+        cudaFields.putObject("arch").put("type", "string")
+            .put("pattern", TvmTargetValidator.CUDA_ARCH_PATTERN)
+            .put("description", "Explicit CUDA architecture, for example sm_87 or sm_90a.");
+        ObjectNode host = object(factory, "LLVM host target");
+        ObjectNode hostFields = (ObjectNode) host.get("properties");
+        hostFields.putObject("kind").put("type", "string").put("const", "llvm");
+        llvmTargetFields(hostFields);
+        hostFields.withObject("/mtriple").put("pattern", TvmTargetValidator.CUDA_HOST_TRIPLE_PATTERN)
+            .put("description", "Explicit AMD64 or ARM64 Linux GNU host triple, for example aarch64-linux-gnu.");
+        host.putArray("required").add("kind").add("mtriple");
+        host.put("additionalProperties", true);
+        cudaFields.set("host", host);
+        for (String limit : TvmTargetValidator.CUDA_TUNING_LIMITS) {
+            cudaFields.putObject(limit).put("type", "integer").put("minimum", 1)
+                .put("description", "Real device limit required for CUDA tuning; obtain it from the target GPU.");
         }
-        fields.putObject("mattr").put("type", "array").putObject("items").put("type", "string");
-        fields.putObject("num-cores").put("type", "integer").put("minimum", 1);
+        cuda.putArray("required").add("arch").add("host");
+        target.putObject("dependencies").putObject("kind").putArray("oneOf").add(llvm).add(cuda);
+        target.putObject("dependentSchemas").set("kind", target.path("dependencies").get("kind"));
+        // The console resolves legacy dependencies; Draft 2020-12 validators use this condition.
+        ObjectNode cudaValidation = target.putArray("allOf").addObject();
+        ObjectNode isCuda = cudaValidation.putObject("if");
+        isCuda.putArray("required").add("kind");
+        isCuda.putObject("properties").putObject("kind").put("const", "cuda");
+        ObjectNode constraints = object(factory, null);
+        constraints.putArray("required").add("arch").add("host");
+        ObjectNode constraintFields = (ObjectNode) constraints.get("properties");
+        copy(cudaFields, constraintFields, List.of("arch"));
+        copy(cudaFields, constraintFields, TvmTargetValidator.CUDA_TUNING_LIMITS);
+        ObjectNode hostConstraints = object(factory, null);
+        hostConstraints.putArray("required").add("kind").add("mtriple");
+        copy(hostFields, (ObjectNode) hostConstraints.get("properties"), List.of(
+            "kind", "mtriple", "mcpu", "mfloat-abi", "mattr", "num-cores"
+        ));
+        constraintFields.set("host", hostConstraints);
+        cudaValidation.set("then", constraints);
         target.putObject("if").put("minProperties", 1);
         target.putObject("then").putArray("required").add("kind");
         target.put("additionalProperties", true);
         target.put(
             "description",
-            "Optional standard TVM LLVM target; leave the profile at auto. Example: kind=llvm, mtriple=aarch64-linux-gnu, mcpu=cortex-a72."
+            "Optional standard TVM LLVM or CUDA target; leave the profile at auto. CUDA requires arch and a nested LLVM host with an explicit AMD64 or ARM64 Linux GNU mtriple."
         );
         return target;
     }
 
-    private static void requireAutoProfileForExplicitTarget(ObjectNode schema) {
+    private static void llvmTargetFields(ObjectNode fields) {
+        for (String field : List.of("mtriple", "mcpu", "mfloat-abi")) {
+            fields.putObject(field).put("type", "string");
+        }
+        fields.putObject("mattr").put("type", "array").putObject("items").put("type", "string");
+        fields.putObject("num-cores").put("type", "integer").put("minimum", 1);
+    }
+
+    private static void requireAutoProfileForExplicitTarget(ObjectNode schema, TvmProperties config) {
         ObjectNode choice = schema.withArray("/allOf").addObject();
         ObjectNode explicit = choice.putObject("if");
         explicit.putArray("required").add("target");
         explicit.putObject("properties").putObject("target").put("minProperties", 1);
-        choice.putObject("then").putObject("properties").putObject("target_architecture").put("const", "auto");
+        ArrayNode names = choice.putObject("then").putObject("properties")
+            .putObject("target_architecture").putArray("enum").add("auto");
+        config.target("auto").aliases().forEach(names::add);
+    }
+
+    private static void cudaTuningSchema(ObjectNode schema) {
+        ObjectNode choice = schema.withArray("/allOf").addObject();
+        ObjectNode condition = choice.putObject("if");
+        condition.putArray("required").add("target").add("tuning");
+        ObjectNode fields = condition.putObject("properties");
+        fields.putObject("target").putArray("required").add("kind");
+        fields.withObject("/target").putObject("properties").putObject("kind").put("const", "cuda");
+        fields.putObject("tuning").putArray("required").add("tuning_mode");
+        fields.withObject("/tuning").putObject("properties").putObject("tuning_mode").put("const", "tune");
+        ObjectNode active = choice.putObject("then").putObject("properties");
+        active.putObject("tuning").putObject("properties")
+            .putObject("tuning_enable_cpu_cache_flush").put("const", false);
+        ArrayNode limits = active.putObject("target").putArray("required");
+        TvmTargetValidator.CUDA_TUNING_LIMITS.forEach(limits::add);
     }
 
     private static void compilerOptionsSchema(ObjectNode fields) {
@@ -142,6 +212,9 @@ public class TvmCompileSchemaModule implements com.github.victools.jsonschema.ge
     private static ObjectNode tuningSchema(ObjectNode fields) {
         ObjectNode tuning = object(fields, "MetaSchedule tuning");
         copy(fields, (ObjectNode) tuning.get("properties"), List.of("tuning_mode"));
+        // Known dormant values are preserved; active branches below validate their types.
+        TvmCompileOptions.TUNING.forEach(name -> ((ObjectNode) tuning.get("properties")).putObject(name));
+        tuning.put("additionalProperties", false);
 
         ObjectNode tune = object(fields, null);
         ObjectNode tuneProperties = (ObjectNode) tune.get("properties");
@@ -152,6 +225,12 @@ public class TvmCompileSchemaModule implements com.github.victools.jsonschema.ge
         copy(fields, (ObjectNode) local.get("properties"), List.of("tuning_runner_timeout_sec"));
         ObjectNode rpc = object(fields, null);
         copy(fields, (ObjectNode) rpc.get("properties"), TvmCompileOptions.RPC);
+        for (String name : List.of("rpc_tracker_host", "rpc_tracker_key")) {
+            ObjectNode nonblank = fields.objectNode().put("type", "string").put("pattern", "\\S");
+            JsonNode field = fields.get(name);
+            if (field != null && field.isObject()) nonblank.putArray("allOf").add(field);
+            ((ObjectNode) rpc.get("properties")).set(name, nonblank);
+        }
         rpc.putArray("required").add("rpc_tracker_host").add("rpc_tracker_port").add("rpc_tracker_key");
         ObjectNode runnerCondition = tune.putObject("if");
         runnerCondition.putArray("required").add("tuning_runner");
@@ -162,7 +241,7 @@ public class TvmCompileSchemaModule implements com.github.victools.jsonschema.ge
 
         ObjectNode apply = object(fields, null);
         copy(fields, (ObjectNode) apply.get("properties"), TvmCompileOptions.APPLY);
-        ObjectNode database = fields.objectNode().put("minLength", 1);
+        ObjectNode database = fields.objectNode().put("pattern", "\\S");
         database.putArray("allOf").add(fields.get("tuning_model_path"));
         ((ObjectNode) apply.get("properties")).set("tuning_model_path", database);
         apply.putArray("required").add("tuning_model_path");
@@ -203,5 +282,6 @@ public class TvmCompileSchemaModule implements com.github.victools.jsonschema.ge
             choices.add(withDefaults(branch));
         }
         parent.putObject("dependencies").set(selector, dependency);
+        parent.putObject("dependentSchemas").set(selector, dependency);
     }
 }

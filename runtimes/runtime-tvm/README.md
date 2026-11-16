@@ -1,6 +1,6 @@
 # runtime-tvm
 
-CORE converts ONNX or TFLite models to TVM Relax IR, compiles a Linux CPU library
+CORE converts ONNX or TFLite models to TVM Relax IR, compiles a Linux CPU or optional CUDA library
 and serves it through Open Inference v2 (REST `8080`, gRPC `9000`). This module
 contains the Java integration, form schemas and Python build/compile scripts.
 
@@ -33,8 +33,9 @@ The console shows them in the Run step; compile uses the **Advanced compilation*
 These are distinct choices:
 
 - `profile`: platform scheduling/resource profile, such as a Raspberry Pi node.
-- `target_architecture`: a named CPU preset from `runtime-tvm.yaml`.
-- `target`: a standard LLVM target object for one compile; use it with the preset
+- `target_architecture`: a named target preset from `runtime-tvm.yaml`; the console
+  labels it **Target profile**.
+- `target`: a standard LLVM or CUDA target object for one compile; use it with the preset
   omitted or set to `auto`.
 
 ### Quick start
@@ -173,13 +174,87 @@ The catalogue is [runtime-tvm.yaml](src/main/resources/runtime-tvm.yaml).
 | `arm64` | AArch64 Linux, for example Pi 3/4/5 with a 64-bit OS |
 | `arm64_pi5` | Cortex-A76, as on Pi 5 with a 64-bit OS |
 | `arm32` | ARMv7 Linux, hard-float ABI and NEON |
+| `jetson_orin_cuda` | CUDA `sm_87` with an AArch64 Linux GNU LLVM host; optional CUDA images required |
 
 Toolkit images run on AMD64 or ARM64; both include linkers for AMD64, ARM64 and ARM32.
-Only `amd64_native` restricts the compiler to AMD64. Go/Rust runtime builds cover all
+Only `amd64_native` restricts the compiler to AMD64. Go/Rust CPU runtime builds cover all
 three destinations. CORE's default init image is AMD64/ARM64 only: ARM32 serving
 through CORE also needs a compatible init image. Standalone ARM32 serving can mount
 the Model directly. CPU instructions, ABI and TVM build must match the runtime.
-CUDA/GPU execution is not integrated.
+CUDA uses separate AMD64/ARM64 toolkit and runtime images; CPU defaults and ARM32
+support remain independent of NVIDIA dependencies.
+
+### Optional CUDA FP32
+
+Orin deployment with the current ARM64 base requires NVIDIA Container Toolkit
+**1.19.1 or newer** on the host; verify with `nvidia-ctk --version`. Version 1.19.0
+fails in the CUDA compatibility hook before the container entrypoint. See the
+[NVIDIA fix](https://github.com/NVIDIA/nvidia-container-toolkit/releases/tag/v1.19.1).
+JetPack's version alone does not verify this requirement; real hardware checks remain pending.
+
+
+The Orin preset is a base compilation target, with no fabricated hardware limits:
+
+```json
+{"kind":"cuda","arch":"sm_87","host":{"kind":"llvm","mtriple":"aarch64-linux-gnu"}}
+```
+
+The nested LLVM host determines `target_triple` and the host ELF architecture.
+The preset supplies `aarch64-linux-gnu-g++`; an explicit target needs its own
+`optimization.cross_cc` when the native linker is unsuitable. AMD64 NVIDIA targets
+use an explicit `host.mtriple: x86_64-linux-gnu` and the actual GPU architecture.
+There is no separate top-level `target_host` or serving device field.
+
+An AMD64 CUDA toolkit can compile for AMD64 or ARM64 without a GPU. This offline
+Run explicitly opts into the toolkit's isolated driver stub:
+
+```yaml
+kind: tvm+compile:run
+spec:
+  task: tvm+compile://my-project/<compile-task-id>
+  target_architecture: jetson_orin_cuda
+  tag: orin-cuda
+  profile: amd64-compiler # Replace with the configured profile for an AMD64 node.
+  image: local/tvm-toolkit:0.26.0-cuda13.2.1-amd64
+  envs:
+    - name: LD_LIBRARY_PATH
+      value: /opt/tvm/cuda-driver-stubs:/opt/tvm/lib:/usr/local/cuda/lib64
+  resources: {cpu: "4", mem: 8Gi}
+  optimization: {benchmark_runs: 0}
+  tuning: {tuning_mode: "off"}
+```
+
+`local/...` names are development examples, not published CUDA tags. Build and
+load them on your nodes or replace them with your own registry references.
+`apply` can also compile offline using a compatible database. Never carry the
+driver-stub loader path into real GPU measurement or serving processes.
+Reusing a database requires the exact effective tuned target, including GPU limits
+and LLVM host settings; the base preset alone may not match it.
+
+For `tune`, query the actual measurement GPU with `tvm.target.Target.from_device`
+and supply its positive `max_shared_memory_per_block`, `max_threads_per_block`
+and `thread_warp_size` in an explicit target. Local tuning requires GPU access;
+the existing RPC runner can measure on a remote GPU with its supplied profile.
+CUDA builder workers default to one; explicit workers may build candidates in
+parallel, while GPU measurements remain sequential. CPU cache flushing is rejected
+for active CUDA tuning. `target_num_cores` only configures the LLVM host.
+
+Serve the selected CUDA artifact with a CUDA-enabled Go/Rust image and the existing
+GPU `profile`/`resources.gpu` settings. Node scheduling, image selection and Model
+selection remain separate: serve uses Run `model_path`, otherwise Function
+`so_model`; choosing a GPU profile does not select or recompile a Model. The runtime
+uses visible CUDA device 0 and refuses a missing CUDA backend/device without CPU
+fallback. A CPU artifact can still run on a compatible Jetson ARM64 CPU.
+
+CUDA benchmarks distinguish synchronized `input_resident` device timing from
+`input_transfer_inclusive` host-to-device-plus-inference timing; neither includes
+output transfer or HTTP. Client end-to-end latency is separate. A missing GPU
+produces a skipped benchmark, not a device performance result.
+
+The intended Jetson baseline is JetPack 7.2 / L4T 39.2 / CUDA 13.2.1 / Ubuntu 24.04.
+Real Jetson/AMD64 NVIDIA inference, accuracy, tuning and performance are **NOT_RUN**.
+See the authoritative [CUDA guide](https://scc-digitalhub.github.io/docs/0.16/runtimes/tvm/#cuda-fp32-optional)
+for image builds, complete serve examples and vendor compatibility information.
 
 ### Add or override a preset
 
@@ -227,6 +302,7 @@ settings. Only the administrator's YAML catalogue stores it as a JSON string.
 one overrides `target.num-cores`. Without either, the target value remains, including
 with `mcpu: native`. Native CPU detection supplies a core count only when none is
 configured. Tuning and serving should use the same threads per worker.
+For CUDA, this precedence applies to the nested LLVM host, independently of GPU limits.
 
 Older API aliases remain configured: `cpu`/`llvm` → `auto`, `x86` → `amd64`,
 `x86_v3` → `amd64_v3`, `x86_native` → `amd64_native`, `armv7l` → `arm32`.
@@ -292,7 +368,7 @@ no TVM bucket setting.
 | `config/` | YAML catalogue loading and binding |
 | `scripts/build_onnx.py`, `build_tflite.py` | Source import to Relax IR |
 | `scripts/compile_model.py`, `toolchain.py` | Target resolution, compilation and linking |
-| `scripts/tuning.py`, `benchmark.py` | MetaSchedule and CPU inference timing |
+| `scripts/tuning.py`, `benchmark.py` | MetaSchedule and synchronized CPU/CUDA inference timing |
 | `scripts/publish.py`, `common.py`, `entrypoint.sh` | Artifact publication and shared Job utilities |
 
 Script paths above are relative to `src/main/resources/runtime-tvm/`. CORE mounts
@@ -325,3 +401,34 @@ Copyright © 2025 DSLab – Fondazione Bruno Kessler and individual contributors
 
 This project is licensed under the Apache License, Version 2.0.
 You may not use this file except in compliance with the License. Ownership of contributions remains with the original authors and is governed by the terms of the Apache 2.0 License, including the requirement to grant a license to the project.
+
+### ONNX normalization and exported contracts
+
+The ONNX builder uses `onnx-ir`'s standard topological sort before shape inference
+and again after transformations, including automatic simplification. It validates
+the normalized graph without rewriting the source Model. Input dtypes reach the
+TVM importer unchanged; unknown dimensions remain `-1` in metadata, and zero
+length dimensions remain zero. Unsupported tensor dtypes raise an error.
+FP16/BFLOAT16 server inputs and outputs remain unsupported; accepting an ONNX dtype
+does not qualify its internal kernels or mixed precision accuracy on a GPU.
+
+For numerical comparisons, check the execution precision as well as the model's
+input and output dtypes. ONNX Runtime CPU can promote internal FP16 operators to
+FP32 and remove intermediate casts, even with graph optimizations disabled
+([ORT 1.31.1 cast transformation](https://github.com/microsoft/onnxruntime/blob/v1.31.1/onnxruntime/core/optimizer/insert_cast_transformer.cc)).
+Compare matching precision or execution graphs at the original tolerance. Keep
+any explicitly converted FP32 variant as a separate Model; the builder preserves
+the source model's precision.
+
+Compilation checks that reshapes preserve the number of elements, including
+symbolic dimensions and runtime shape tensors with a known rank. Incompatible
+sizes raise a native TVM error; subsequent valid requests remain usable. Unknown
+reshape ranks are rejected during compilation. Runtime shape tensors containing
+`-1` remain unsupported by pinned TVM; compile-time `-1` inference is supported.
+Recompile existing artifacts to include this validation.
+
+TVM options belong to the Run; Tasks contain common Kubernetes settings. The six
+TVM Task/Run exports must accompany the runtime changes. Static exports leave
+Kubernetes profile names open because deployments configure them; live schemas
+retain the configured choices. SDK CI uses CORE `main` by default, so local contract
+success does not make that CI compatible before the matching CORE schemas are integrated.

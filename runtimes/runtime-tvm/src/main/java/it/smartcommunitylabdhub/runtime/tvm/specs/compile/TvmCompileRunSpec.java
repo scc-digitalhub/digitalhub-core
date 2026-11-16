@@ -13,6 +13,7 @@ import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.jackson.annotations.JsonSchemaIgnore;
+import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.tvm.TvmRuntime;
 import it.smartcommunitylabdhub.runtime.tvm.specs.TvmFunctionSpec;
@@ -22,6 +23,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.io.Serializable;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.Getter;
@@ -60,8 +62,8 @@ public final class TvmCompileRunSpec extends TvmRunSpec {
 
     @JsonProperty("target_architecture")
     @Schema(
-        title = "Target CPU Profile",
-        description = "Profile from runtime-tvm.yaml. auto uses the compile node's architecture. Example: arm64_pi5.",
+        title = "Target profile",
+        description = "Profile from runtime-tvm.yaml. auto uses the compile node CPU. Examples: arm64_pi5 or jetson_orin_cuda.",
         defaultValue = "auto"
     )
     private String targetArchitecture;
@@ -69,7 +71,7 @@ public final class TvmCompileRunSpec extends TvmRunSpec {
     @JsonProperty("target")
     @Schema(
         title = "Explicit TVM Target",
-        description = "Optional standard LLVM target object; leave the profile at auto. Example: {\"kind\":\"llvm\",\"mtriple\":\"aarch64-linux-gnu\",\"mcpu\":\"cortex-a72\"}."
+        description = "Optional standard LLVM or CUDA target object; leave the profile at auto. CUDA requires explicit arch and a nested LLVM host with an AMD64 or ARM64 Linux GNU mtriple."
     )
     private Map<String, Serializable> target;
 
@@ -106,6 +108,13 @@ public final class TvmCompileRunSpec extends TvmRunSpec {
         this.modelPath = spec.getModelPath();
         this.targetArchitecture = spec.getTargetArchitecture();
         this.target = spec.getTarget();
+        // Preserve CUDA host option lists while keeping existing LLVM serialization unchanged.
+        if (options.active().get("target") instanceof Map<?, ?> rawTarget && "cuda".equals(rawTarget.get("kind"))) {
+            this.target = JacksonMapper.OBJECT_MAPPER.convertValue(
+                rawTarget,
+                mapper.getTypeFactory().constructMapType(Map.class, String.class, Serializable.class)
+            );
+        }
         this.optimization = spec.getOptimization();
         // The shared mapper omits empty lists while converting maps.
         this.optimization.setCrossCcOptions(mapper.convertValue(
@@ -119,7 +128,9 @@ public final class TvmCompileRunSpec extends TvmRunSpec {
 
     @Override
     public Map<String, Serializable> toMap() {
-        return TvmCompileOptions.stored(super.toMap(), inactiveTuning);
+        Map<String, Serializable> values = super.toMap();
+        if (target != null && "cuda".equals(target.get("kind"))) values.put("target", new LinkedHashMap<>(target));
+        return TvmCompileOptions.stored(values, inactiveTuning);
     }
 
     public static TvmCompileRunSpec with(Map<String, Serializable> data) {
@@ -138,7 +149,7 @@ public final class TvmCompileRunSpec extends TvmRunSpec {
         @Min(1)
         @Schema(
             title = "Target Number of Cores",
-            description = "Cores of the target CPU; empty uses the Job CPU request. Example: 4 for a Raspberry Pi 5."
+            description = "Cores of the target CPU, or the LLVM host for CUDA; empty uses the Job CPU request. Example: 4 for a Raspberry Pi 5."
         )
         private Integer targetNumCores;
 
@@ -282,7 +293,7 @@ public final class TvmCompileRunSpec extends TvmRunSpec {
         @Min(1)
         @Schema(
             title = "Max Workers",
-            description = "Parallel compiler workers; empty uses requested Job cores. Example: 2 with a 2-core Job."
+            description = "Parallel compiler workers; default is the requested Job cores for CPU and 1 for CUDA. CUDA measurements remain sequential."
         )
         private Integer tuningWorkers;
 
