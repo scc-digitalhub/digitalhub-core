@@ -1,0 +1,24 @@
+{
+  "ui:title@en": "Text Embeddings Inference (TEI)",
+  "ui:description@en": "Text Embeddings Inference (TEI) is a toolkit for deploying and serving open source text embeddings and sequence classification models. TEI enables high-performance extraction for the most popular models, including FlagEmbedding, Ember, GTE and E5",
+  "ui:title@it": "Text Embeddings Inference (TEI)",
+  "ui:description@it": "Text Embeddings Inference (TEI) è un toolkit per il deployment e la servizione di modelli open-source di text embeddings e sequence classification. TEI permette l'estrazione ad alte prestazioni per i modelli più popolari, inclusi FlagEmbedding, Ember, GTE e E5",
+  "image": {
+    "ui:title@en": "Container image",
+    "ui:description@en": "Container image for the Text Embeddings Inference (TEI) runtime, leave blank to use default",
+    "ui:title@it": "Immagine del container",
+    "ui:description@it": "Immagine del container per il runtime Text Embeddings Inference (TEI), lasciare vuoto per usare il valore predefinito"
+  },
+  "path": {
+    "ui:title@en": "Model path",
+    "ui:description@en": "Store path for model to load. Add the id for the specific version, or use the name for latest",
+    "ui:title@it": "Percorso del modello",
+    "ui:description@it": "Percorso dello store per il modello da caricare. Aggiungi l'id per la versione specifica, oppure usa il nome per l'ultima."
+  },
+  "model_name": {
+    "ui:title@en": "Model name",
+    "ui:description@en": "Name of the model to expose; Leave blank to infer from model",
+    "ui:title@it": "Nome del modello",
+    "ui:description@it": "Nome del modello da esporre"
+  }
+}

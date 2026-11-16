@@ -28,6 +28,13 @@ runtime:
     home-dir: ${RUNTIME_SGLANG_HOME_DIR:/shared}
     volume-size: ${RUNTIME_SGLANG_VOLUME_SIZE:10Gi}
     mem-size: ${RUNTIME_SGLANG_MEM_SIZE:16Gi}    
+  tei:
+    image: ${RUNTIME_TEI_IMAGE:ghcr.io/huggingface/text-embeddings-inference:cpu-latest}
+    user-id: ${RUNTIME_TEI_USER_ID:${kubernetes.security.user}}
+    group-id: ${RUNTIME_TEI_GROUP_ID:${kubernetes.security.group}}
+    home-dir: ${RUNTIME_TEI_HOME_DIR:/shared}
+    volume-size: ${RUNTIME_TEI_VOLUME_SIZE:10Gi}
+    mem-size: ${RUNTIME_TEI_MEM_SIZE:16Gi}        
   vllm:
     image: ${RUNTIME_VLLM_SERVE_IMAGE:vllm/vllm-openai:latest}
     cpu-image: ${RUNTIME_VLLM_SERVE_CPU_IMAGE:public.ecr.aws/q9t5s3a7/vllm-cpu-release-repo:latest}
