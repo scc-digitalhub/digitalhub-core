@@ -139,6 +139,12 @@
       "title" : "Simplify ONNX Model",
       "description" : "Runs ONNX Simplifier to pre-compute constant operations and remove redundant nodes before the conversion. When off, it still runs by itself if the converted model has outputs without a shape, which TVM cannot compile."
     },
+    "sort_onnx" : {
+      "type" : "boolean",
+      "title" : "Sort ONNX Graph",
+      "description" : "Topologically sorts the ONNX graph before conversion. Defaults to false. Model validation remains enabled when false.",
+      "default" : false
+    },
     "strict_shape_inference" : {
       "type" : "boolean",
       "title" : "Strict Shape Inference",
