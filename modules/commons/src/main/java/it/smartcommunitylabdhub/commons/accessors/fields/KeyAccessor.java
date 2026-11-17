@@ -65,8 +65,8 @@ public interface KeyAccessor extends Accessor<String> {
         return get(Fields.ID);
     }
 
-    static KeyAccessor with(Map<String, String> map) {
-        return () -> map;
+    static KeyAccessor with(@Nullable Map<String, String> map) {
+        return () -> map != null ? map : Map.of();
     }
 
     static KeyAccessor with(String key) {

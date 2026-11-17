@@ -26,6 +26,7 @@ package it.smartcommunitylabdhub.files.models;
 import it.smartcommunitylabdhub.commons.accessors.Accessor;
 import java.io.Serializable;
 import java.util.Map;
+import org.springframework.lang.Nullable;
 
 public interface PathAccessor extends Accessor<Serializable> {
     /*
@@ -35,7 +36,7 @@ public interface PathAccessor extends Accessor<Serializable> {
         return get("path");
     }
 
-    static PathAccessor with(Map<String, Serializable> map) {
-        return () -> map;
+    static PathAccessor with(@Nullable Map<String, Serializable> map) {
+        return () -> map != null ? map : Map.of();
     }
 }

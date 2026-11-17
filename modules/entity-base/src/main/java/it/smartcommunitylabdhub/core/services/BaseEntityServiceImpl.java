@@ -419,6 +419,12 @@ public abstract class BaseEntityServiceImpl<
     @Override
     public D update(@NotNull String id, @NotNull D dto, boolean forceUpdate)
         throws NoSuchEntityException, StoreException {
+        return update(id, dto, forceUpdate, false);
+    }
+
+    @Override
+    public D update(@NotNull String id, @NotNull D dto, boolean forceUpdate, boolean merge)
+        throws NoSuchEntityException, StoreException {
         log.debug("update with id {}", String.valueOf(dto.getId()));
         if (log.isTraceEnabled()) {
             log.trace("dto: {}", dto);
@@ -427,6 +433,33 @@ public abstract class BaseEntityServiceImpl<
         D current = repository.get(id);
         if (current == null) {
             throw new StoreException("Invalid or broken entity in store");
+        }
+
+        boolean specProvided = dto.getSpec() != null &&
+            (!merge || !dto.getSpec().isEmpty() || current.getSpec() == null);
+        if (merge) {
+            if (dto instanceof MetadataDTO metadata && current instanceof MetadataDTO currentMetadata) {
+                metadata.setMetadata(
+                    metadata.getMetadata() == null
+                        ? currentMetadata.getMetadata()
+                        : MapUtils.applyMergePatch(
+                            currentMetadata.getMetadata() != null ? currentMetadata.getMetadata() : Map.of(),
+                            metadata.getMetadata()
+                        )
+                );
+            }
+            dto.setStatus(
+                dto.getStatus() == null
+                    ? current.getStatus()
+                    : MapUtils.applyMergePatch(current.getStatus() != null ? current.getStatus() : Map.of(), dto.getStatus())
+            );
+            if (forceUpdate && specProvided) {
+                dto.setSpec(
+                    MapUtils.applyMergePatch(current.getSpec() != null ? current.getSpec() : Map.of(), dto.getSpec())
+                );
+            } else if (forceUpdate) {
+                dto.setSpec(current.getSpec());
+            }
         }
 
         //we assume that missing status means CREATED
@@ -447,7 +480,7 @@ public abstract class BaseEntityServiceImpl<
         if (!forceUpdate) {
             //spec is not modifiable: enforce current
             dto.setSpec(current.getSpec());
-        } else {
+        } else if (!merge || specProvided) {
             //validate spec if changed
             //TODO diff check to avoid reparsing on same spec
             if (getSpecRegistry() != null) {

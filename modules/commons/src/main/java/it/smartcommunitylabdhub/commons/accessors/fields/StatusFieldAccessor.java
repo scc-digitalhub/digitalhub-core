@@ -57,7 +57,7 @@ public interface StatusFieldAccessor extends Accessor<Serializable> {
         return null;
     }
 
-    static StatusFieldAccessor with(Map<String, Serializable> map) {
-        return () -> map;
+    static StatusFieldAccessor with(@Nullable Map<String, Serializable> map) {
+        return () -> map != null ? map : Map.of();
     }
 }

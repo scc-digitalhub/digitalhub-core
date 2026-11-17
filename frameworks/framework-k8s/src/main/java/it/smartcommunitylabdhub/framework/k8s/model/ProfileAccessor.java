@@ -26,6 +26,7 @@ package it.smartcommunitylabdhub.framework.k8s.model;
 import it.smartcommunitylabdhub.commons.accessors.Accessor;
 import java.io.Serializable;
 import java.util.Map;
+import org.springframework.lang.Nullable;
 
 public interface ProfileAccessor extends Accessor<Serializable> {
     /*
@@ -35,7 +36,7 @@ public interface ProfileAccessor extends Accessor<Serializable> {
         return get("profile");
     }
 
-    static ProfileAccessor with(Map<String, Serializable> map) {
-        return () -> map;
+    static ProfileAccessor with(@Nullable Map<String, Serializable> map) {
+        return () -> map != null ? map : Map.of();
     }
 }

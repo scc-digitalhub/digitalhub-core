@@ -52,7 +52,7 @@ public interface FileInfoFieldAccessor extends Accessor<Serializable> {
         return null;
     }
 
-    static FileInfoFieldAccessor with(Map<String, Serializable> map) {
-        return () -> map;
+    static FileInfoFieldAccessor with(@Nullable Map<String, Serializable> map) {
+        return () -> map != null ? map : Map.of();
     }
 }
