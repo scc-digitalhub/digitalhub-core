@@ -408,6 +408,8 @@ The ONNX builder defaults `sort_onnx` to `false`. Setting it to `true` uses `onn
 standard topological sort before shape inference and again after transformations,
 including automatic simplification. ONNX validation remains enabled when sorting is
 disabled, so an unordered graph is rejected. The `simplify` option is independent.
+If sorting alone fixes a rejected graph, the build error recommends `sort_onnx=True`.
+Other invalid graphs retain the ONNX checker's reason.
 Validation does not rewrite the source Model. Input dtypes reach the
 TVM importer unchanged; unknown dimensions remain `-1` in metadata, and zero
 length dimensions remain zero. Unsupported tensor dtypes raise an error.

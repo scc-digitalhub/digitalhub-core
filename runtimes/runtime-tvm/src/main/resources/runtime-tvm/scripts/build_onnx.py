@@ -260,13 +260,31 @@ def normalize_graph(model, sort_onnx: bool = False):
     """Optionally sort the graph, then validate without rewriting the source."""
     import onnx
 
-    if sort_onnx:
+    def sorted_graph():
         import onnx_ir as ir
         from onnx_ir.passes.common import TopologicalSortPass
 
-        model = ir.to_proto(TopologicalSortPass()(ir.from_proto(model)).model)
+        return ir.to_proto(TopologicalSortPass()(ir.from_proto(model)).model)
 
-    onnx.checker.check_model(model)
+    if sort_onnx:
+        model = sorted_graph()
+
+    try:
+        onnx.checker.check_model(model)
+    except onnx.checker.ValidationError as error:
+        if not sort_onnx and "must be topologically sorted" in str(error):
+            # Suggest sorting only if it fixes the model; missing inputs and cycles also fail this check.
+            try:
+                onnx.checker.check_model(sorted_graph())
+            except Exception:
+                pass
+            else:
+                raise onnx.checker.ValidationError(
+                    "The ONNX graph is not topologically sorted. "
+                    "Set sort_onnx=True in the tvm+build Run (CLI: --sort-onnx true), "
+                    f"then retry the build. ONNX checker: {error}"
+                ) from error
+        raise
     return model
 
 
@@ -372,6 +390,8 @@ def main(argv: list[str] | None = None) -> None:
         prepared = prepare(model, args, simplify=args.simplify)
     except SimplifyError as error:
         fail(str(error), code=4)
+    except onnx.checker.ValidationError as error:
+        fail(f"ONNX validation failed: {error}", code=3)
 
     step(
         3,
@@ -379,7 +399,10 @@ def main(argv: list[str] | None = None) -> None:
         f"converting to Relax IR (opset={args.opset}, keep_params_in_input={args.keep_params_in_input}, "
         f"sanitize_input_names={args.sanitize_input_names})",
     )
-    prepared, mod, weights, simplified = convert_with_fallback(source, prepared, args)
+    try:
+        prepared, mod, weights, simplified = convert_with_fallback(source, prepared, args)
+    except onnx.checker.ValidationError as error:
+        fail(f"ONNX validation failed: {error}", code=3)
 
     step(4, STEPS, "writing the IR")
     save_relax_ir(mod, out_dir, weights)
