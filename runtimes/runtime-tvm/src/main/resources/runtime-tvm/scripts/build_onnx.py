@@ -256,7 +256,7 @@ def prepare(model, args: argparse.Namespace, simplify: bool):
     return normalize_graph(model, sort_onnx=args.sort_onnx)
 
 
-def normalize_graph(model, sort_onnx: bool = True):
+def normalize_graph(model, sort_onnx: bool = False):
     """Optionally sort the graph, then validate without rewriting the source."""
     import onnx
 

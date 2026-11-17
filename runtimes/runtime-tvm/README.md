@@ -100,7 +100,7 @@ adds a Kubernetes Service name; it does not change this model URL.
 
 ### Option groups
 
-Build accepts `simplify`, `target_opset`, `opset_override`, `strict_shape_inference`,
+Build accepts `sort_onnx`, `simplify`, `target_opset`, `opset_override`, `strict_shape_inference`,
 `data_prop`, `keep_params_in_input` and `sanitize_input_names`. They apply to ONNX;
 TFLite conversion reads its configuration from the model.
 
@@ -404,9 +404,11 @@ You may not use this file except in compliance with the License. Ownership of co
 
 ### ONNX normalization and exported contracts
 
-The ONNX builder uses `onnx-ir`'s standard topological sort before shape inference
-and again after transformations, including automatic simplification. It validates
-the normalized graph without rewriting the source Model. Input dtypes reach the
+The ONNX builder defaults `sort_onnx` to `false`. Setting it to `true` uses `onnx-ir`'s
+standard topological sort before shape inference and again after transformations,
+including automatic simplification. ONNX validation remains enabled when sorting is
+disabled, so an unordered graph is rejected. The `simplify` option is independent.
+Validation does not rewrite the source Model. Input dtypes reach the
 TVM importer unchanged; unknown dimensions remain `-1` in metadata, and zero
 length dimensions remain zero. Unsupported tensor dtypes raise an error.
 FP16/BFLOAT16 server inputs and outputs remain unsupported; accepting an ONNX dtype

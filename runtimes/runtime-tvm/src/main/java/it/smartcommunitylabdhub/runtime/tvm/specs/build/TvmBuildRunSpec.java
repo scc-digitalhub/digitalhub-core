@@ -45,7 +45,11 @@ public final class TvmBuildRunSpec extends TvmRunSpec {
     private Boolean simplify;
 
     @JsonProperty("sort_onnx")
-    @Schema(title = "Sort ONNX", description = "Sorts the ONNX nodes topologically before processing.")
+    @Schema(
+        title = "Sort ONNX Graph",
+        description = "Topologically sorts the ONNX graph before conversion. Defaults to false. Model validation remains enabled when false.",
+        defaultValue = "false"
+    )
     private Boolean sortOnnx;
 
     @JsonProperty("target_opset")
