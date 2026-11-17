@@ -28,29 +28,109 @@ STEPS = 6
 
 # ONNX TensorProto.DataType -> dtype name
 ONNX_DTYPES: dict[int, str] = {
-    1: "float32", 2: "uint8", 3: "int8", 4: "uint16", 5: "int16", 6: "int32",
-    7: "int64", 9: "bool", 10: "float16", 11: "float64", 12: "uint32", 13: "uint64", 16: "bfloat16",
+    1: "float32",
+    2: "uint8",
+    3: "int8",
+    4: "uint16",
+    5: "int16",
+    6: "int32",
+    7: "int64",
+    9: "bool",
+    10: "float16",
+    11: "float64",
+    12: "uint32",
+    13: "uint64",
+    16: "bfloat16",
 }
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="ONNX -> Relax IR (Model tvm-ir)")
-    option(parser, "--input", "TVM_INPUT_FILE", default="model.onnx", help="ONNX file, a path or a name in the input folder")
-    option(parser, "--output", "TVM_OUTPUT_DIR", default=str(OUTPUT_DIR), help="folder that receives the IR")
-    option(parser, "--name", "TVM_FUNCTION_NAME", default="model", help="function name; the Model is <name>-ir")
+    option(
+        parser,
+        "--input",
+        "TVM_INPUT_FILE",
+        default="model.onnx",
+        help="ONNX file, a path or a name in the input folder",
+    )
+    option(
+        parser,
+        "--output",
+        "TVM_OUTPUT_DIR",
+        default=str(OUTPUT_DIR),
+        help="folder that receives the IR",
+    )
+    option(
+        parser,
+        "--name",
+        "TVM_FUNCTION_NAME",
+        default="model",
+        help="function name; the Model is <name>-ir",
+    )
 
     conversion = parser.add_argument_group("ONNX conversion")
-    option(conversion, "--target-opset", "TVM_TARGET_OPSET", type=int, help="convert the model to this opset first")
-    option(conversion, "--simplify", "TVM_SIMPLIFY", type=to_bool, default=False, help="simplify the graph with onnxsim")
-    option(conversion, "--strict-shape-inference", "TVM_STRICT_SHAPE_INFER", type=to_bool, default=False,
-           help="strict mode of the ONNX shape inference")
-    option(conversion, "--data-prop", "TVM_DATA_PROP", type=to_bool, default=False,
-           help="data propagation in the ONNX shape inference")
-    option(conversion, "--opset", "TVM_OPSET_OVERRIDE", type=int, help="opset the TVM importer assumes")
-    option(conversion, "--keep-params-in-input", "TVM_KEEP_PARAMS_IN_INPUT", type=to_bool, default=False,
-           help="keep the weights apart in params.bin")
-    option(conversion, "--sanitize-input-names", "TVM_SANITIZE_INPUT_NAMES", type=to_bool, default=True,
-           help="rewrite the input names into valid identifiers")
+    option(
+        conversion,
+        "--target-opset",
+        "TVM_TARGET_OPSET",
+        type=int,
+        help="convert the model to this opset first",
+    )
+    option(
+        conversion,
+        "--simplify",
+        "TVM_SIMPLIFY",
+        type=to_bool,
+        default=False,
+        help="simplify the graph with onnxsim",
+    )
+    option(
+        conversion,
+        "--sort-onnx",
+        "TVM_SORT_ONNX",
+        type=to_bool,
+        default=False,
+        help="sort the ONNX graph nodes topologically",
+    )
+    option(
+        conversion,
+        "--strict-shape-inference",
+        "TVM_STRICT_SHAPE_INFER",
+        type=to_bool,
+        default=False,
+        help="strict mode of the ONNX shape inference",
+    )
+    option(
+        conversion,
+        "--data-prop",
+        "TVM_DATA_PROP",
+        type=to_bool,
+        default=False,
+        help="data propagation in the ONNX shape inference",
+    )
+    option(
+        conversion,
+        "--opset",
+        "TVM_OPSET_OVERRIDE",
+        type=int,
+        help="opset the TVM importer assumes",
+    )
+    option(
+        conversion,
+        "--keep-params-in-input",
+        "TVM_KEEP_PARAMS_IN_INPUT",
+        type=to_bool,
+        default=False,
+        help="keep the weights apart in params.bin",
+    )
+    option(
+        conversion,
+        "--sanitize-input-names",
+        "TVM_SANITIZE_INPUT_NAMES",
+        type=to_bool,
+        default=True,
+        help="rewrite the input names into valid identifiers",
+    )
     return parser.parse_args(argv)
 
 
@@ -58,10 +138,15 @@ def tensor_spec(value_info) -> dict:
     """name, shape and dtype of a graph input or output; unknown dims become -1."""
     tensor_type = value_info.type.tensor_type
     if tensor_type.elem_type not in ONNX_DTYPES:
-        raise ValueError(f"Unsupported ONNX tensor dtype {tensor_type.elem_type} for {value_info.name}")
+        raise ValueError(
+            f"Unsupported ONNX tensor dtype {tensor_type.elem_type} for {value_info.name}"
+        )
     return {
         "name": value_info.name,
-        "shape": [dim.dim_value if dim.HasField("dim_value") else -1 for dim in tensor_type.shape.dim],
+        "shape": [
+            dim.dim_value if dim.HasField("dim_value") else -1
+            for dim in tensor_type.shape.dim
+        ],
         "dtype": ONNX_DTYPES[tensor_type.elem_type],
     }
 
@@ -74,11 +159,24 @@ def quantization(model, tensor_name: str, is_output: bool) -> dict:
     initializers = {init.name: init for init in model.graph.initializer}
     for node in model.graph.node:
         edge = node.output[0] if is_output else (node.input[0] if node.input else None)
-        if node.op_type != op_type or edge != tensor_name or len(node.input) < 2 or node.input[1] not in initializers:
+        if (
+            node.op_type != op_type
+            or edge != tensor_name
+            or len(node.input) < 2
+            or node.input[1] not in initializers
+        ):
             continue
-        params = {"scale": [float(v) for v in numpy_helper.to_array(initializers[node.input[1]]).reshape(-1)]}
+        params = {
+            "scale": [
+                float(v)
+                for v in numpy_helper.to_array(initializers[node.input[1]]).reshape(-1)
+            ]
+        }
         if len(node.input) > 2 and node.input[2] in initializers:
-            params["zero_point"] = [int(v) for v in numpy_helper.to_array(initializers[node.input[2]]).reshape(-1)]
+            params["zero_point"] = [
+                int(v)
+                for v in numpy_helper.to_array(initializers[node.input[2]]).reshape(-1)
+            ]
         axis = next((attr.i for attr in node.attribute if attr.name == "axis"), 0)
         if axis:
             params["quantized_dimension"] = int(axis)
@@ -115,7 +213,7 @@ def simplify_graph(model):
         raise SimplifyError("simplify needs onnxsim in the builder image") from error
     try:
         simplified, valid = simplify(model)
-    except Exception as error:  # noqa: BLE001
+    except Exception as error:
         raise SimplifyError(f"ONNX simplification failed: {error}") from error
     if not valid:
         raise SimplifyError("onnxsim could not validate the simplified graph")
@@ -126,10 +224,12 @@ def prepare(model, args: argparse.Namespace, simplify: bool):
     """Convert the opset before simplification and shape inference, which depend on it."""
     from onnx import shape_inference, version_converter
 
-    model = normalize_graph(model)
+    model = normalize_graph(model, sort_onnx=args.sort_onnx)
 
     if args.target_opset is not None:
-        print(f"      converting opset {model.opset_import[0].version} -> {args.target_opset}")
+        print(
+            f"      converting opset {model.opset_import[0].version} -> {args.target_opset}"
+        )
         try:
             model = version_converter.convert_version(model, args.target_opset)
         except Exception as error:  # noqa: BLE001
@@ -140,26 +240,34 @@ def prepare(model, args: argparse.Namespace, simplify: bool):
         model = simplify_graph(model)
         print(f"      simplified graph: {len(model.graph.node)} nodes")
 
-    print(f"      shape inference (strict={args.strict_shape_inference}, data_prop={args.data_prop})")
+    print(
+        f"      shape inference (strict={args.strict_shape_inference}, data_prop={args.data_prop})"
+    )
     try:
         model = shape_inference.infer_shapes(
-            model, check_type=False, strict_mode=args.strict_shape_inference, data_prop=args.data_prop
+            model,
+            check_type=False,
+            strict_mode=args.strict_shape_inference,
+            data_prop=args.data_prop,
         )
     except Exception as error:  # noqa: BLE001
         # The importer may still succeed without inferred shapes.
         print(f"WARN: shape inference skipped: {error}")
-    return normalize_graph(model)
+    return normalize_graph(model, sort_onnx=args.sort_onnx)
 
 
-def normalize_graph(model):
-    """Sort standard ONNX dependencies, including subgraphs, without changing the source file."""
+def normalize_graph(model, sort_onnx: bool = True):
+    """Optionally sort the graph, then validate without rewriting the source."""
     import onnx
-    import onnx_ir as ir
-    from onnx_ir.passes.common import TopologicalSortPass
 
-    normalized = ir.to_proto(TopologicalSortPass()(ir.from_proto(model)).model)
-    onnx.checker.check_model(normalized)
-    return normalized
+    if sort_onnx:
+        import onnx_ir as ir
+        from onnx_ir.passes.common import TopologicalSortPass
+
+        model = ir.to_proto(TopologicalSortPass()(ir.from_proto(model)).model)
+
+    onnx.checker.check_model(model)
+    return model
 
 
 def convert(model, args: argparse.Namespace):
@@ -189,8 +297,14 @@ def outputs_without_shape(mod) -> list[int]:
     from tvm import relax
 
     returned = mod["main"].ret_ty
-    outputs = list(returned.fields) if isinstance(returned, relax.TupleType) else [returned]
-    return [index for index, output in enumerate(outputs) if isinstance(output, relax.TensorType) and output.shape is None]
+    outputs = (
+        list(returned.fields) if isinstance(returned, relax.TupleType) else [returned]
+    )
+    return [
+        index
+        for index, output in enumerate(outputs)
+        if isinstance(output, relax.TensorType) and output.shape is None
+    ]
 
 
 def convert_with_fallback(source: Path, prepared, args: argparse.Namespace):
@@ -201,7 +315,9 @@ def convert_with_fallback(source: Path, prepared, args: argparse.Namespace):
     simplified = args.simplify
     if not simplified and outputs_without_shape(mod):
         # Fold shape arithmetic (e.g. YOLOv8 decoding) that TVM 0.26 imports as dynamic slices.
-        print("      some outputs have no shape: simplifying the graph with onnxsim and converting again")
+        print(
+            "      some outputs have no shape: simplifying the graph with onnxsim and converting again"
+        )
         try:
             prepared = prepare(onnx.load(str(source)), args, simplify=True)
         except SimplifyError as error:
@@ -211,11 +327,15 @@ def convert_with_fallback(source: Path, prepared, args: argparse.Namespace):
             simplified = True
     missing = outputs_without_shape(mod)
     if missing:
-        print(f"WARN: outputs {missing} still have no shape: tvm+compile will probably fail on them")
+        print(
+            f"WARN: outputs {missing} still have no shape: tvm+compile will probably fail on them"
+        )
     return prepared, mod, weights, simplified
 
 
-def build_metadata(source: Path, prepared, args: argparse.Namespace, simplified: bool, tvm_version: str) -> dict:
+def build_metadata(
+    source: Path, prepared, args: argparse.Namespace, simplified: bool, tvm_version: str
+) -> dict:
     inputs, outputs = signature(prepared)
     return {
         "entry": "main",
@@ -227,6 +347,7 @@ def build_metadata(source: Path, prepared, args: argparse.Namespace, simplified:
         "keep_params_in_input": args.keep_params_in_input,
         "sanitize_input_names": args.sanitize_input_names,
         "simplify": simplified,
+        "sort_onnx": args.sort_onnx,
         "simplified_automatically": simplified and not args.simplify,
         "inputs": inputs,
         "outputs": outputs,
@@ -252,8 +373,12 @@ def main(argv: list[str] | None = None) -> None:
     except SimplifyError as error:
         fail(str(error), code=4)
 
-    step(3, STEPS, f"converting to Relax IR (opset={args.opset}, keep_params_in_input={args.keep_params_in_input}, "
-                   f"sanitize_input_names={args.sanitize_input_names})")
+    step(
+        3,
+        STEPS,
+        f"converting to Relax IR (opset={args.opset}, keep_params_in_input={args.keep_params_in_input}, "
+        f"sanitize_input_names={args.sanitize_input_names})",
+    )
     prepared, mod, weights, simplified = convert_with_fallback(source, prepared, args)
 
     step(4, STEPS, "writing the IR")
@@ -267,8 +392,16 @@ def main(argv: list[str] | None = None) -> None:
     step(6, STEPS, "publishing the Model (kind tvm-ir)")
     from publish import publish_ir_model
 
-    publish_ir_model(out_dir, args.name, metadata,
-                     parameters={"opset": metadata["opset"], "model_name": args.name, "simplify": simplified})
+    publish_ir_model(
+        out_dir,
+        args.name,
+        metadata,
+        parameters={
+            "opset": metadata["opset"],
+            "model_name": args.name,
+            "simplify": simplified,
+        },
+    )
     print("Done")
 
 

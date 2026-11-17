@@ -32,11 +32,10 @@ public class TvmBuildRunner extends TvmBaseRunner {
     private final ModelManager modelManager;
 
     public TvmBuildRunner(
-        TvmProperties properties,
-        K8sBuilderHelper k8sBuilderHelper,
-        K8sLabelHelper k8sLabelHelper,
-        ModelManager modelManager
-    ) {
+            TvmProperties properties,
+            K8sBuilderHelper k8sBuilderHelper,
+            K8sLabelHelper k8sLabelHelper,
+            ModelManager modelManager) {
         super(properties, k8sBuilderHelper, k8sLabelHelper);
         this.modelManager = modelManager;
     }
@@ -58,6 +57,7 @@ public class TvmBuildRunner extends TvmBaseRunner {
         addEnv(envs, "TVM_KEEP_PARAMS_IN_INPUT", runSpec.getKeepParamsInInput());
         addEnv(envs, "TVM_SANITIZE_INPUT_NAMES", runSpec.getSanitizeInputNames());
         addEnv(envs, "TVM_SIMPLIFY", runSpec.getSimplify());
+        addEnv(envs, "TVM_SORT_ONNX", runSpec.getSortOnnx());
         addEnv(envs, "TVM_TARGET_OPSET", runSpec.getTargetOpset());
         addEnv(envs, "TVM_OPSET_OVERRIDE", runSpec.getOpsetOverride());
         addEnv(envs, "TVM_STRICT_SHAPE_INFER", runSpec.getStrictShapeInference());
@@ -67,38 +67,34 @@ public class TvmBuildRunner extends TvmBaseRunner {
         String scriptName = TvmRunnerHelper.scriptName(scriptLocation);
         envs.add(new CoreEnv("TVM_TASK_SCRIPT", scriptName));
         List<ContextSource> contextSources = TvmRunnerHelper.createContextSources(
-            entrypoint,
-            scriptName,
-            TvmRunnerHelper.loadClasspath(scriptLocation)
-        );
+                entrypoint,
+                scriptName,
+                TvmRunnerHelper.loadClasspath(scriptLocation));
 
         // HTTP downloads require a destination filename; S3 accepts a folder.
         boolean http = sourceUri.startsWith("http://") || sourceUri.startsWith("https://");
         List<ContextRef> contextRefs = Collections.singletonList(
-            TvmRunnerHelper.inputContextRef(sourceUri, http ? "input/" + inputFile : "input/")
-        );
+                TvmRunnerHelper.inputContextRef(sourceUri, http ? "input/" + inputFile : "input/"));
 
         String image = resolveImage(
-            runSpec.getImage(),
-            properties.getBuilders() != null ? properties.getBuilders().get(format.name()) : null,
-            "no builder image configured for format: " + format.name()
-        );
+                runSpec.getImage(),
+                properties.getBuilders() != null ? properties.getBuilders().get(format.name()) : null,
+                "no builder image configured for format: " + format.name());
 
         return applyCommon(
-            K8sJobRunnable.builder()
-                .command("/bin/bash")
-                .args(new String[] { homeDir + "/" + TvmRunnerHelper.ENTRYPOINT_NAME })
-                .contextSources(contextSources)
-                .build(),
-            run,
-            TvmBuildTaskSpec.KIND,
-            funcName,
-            image,
-            envs,
-            secretData,
-            contextRefs,
-            taskSpec
-        );
+                K8sJobRunnable.builder()
+                        .command("/bin/bash")
+                        .args(new String[] { homeDir + "/" + TvmRunnerHelper.ENTRYPOINT_NAME })
+                        .contextSources(contextSources)
+                        .build(),
+                run,
+                TvmBuildTaskSpec.KIND,
+                funcName,
+                image,
+                envs,
+                secretData,
+                contextRefs,
+                taskSpec);
     }
 
     // Format precedence: explicit setting, Model kind, file extension.
