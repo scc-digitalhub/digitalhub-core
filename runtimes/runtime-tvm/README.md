@@ -7,7 +7,7 @@ contains the Java integration, form schemas and Python build/compile scripts.
 | Action | Result | Execution |
 | --- | --- | --- |
 | `tvm+build` | `tvm-ir` Model; updates `function.spec.ir_model` | Job using the toolkit image |
-| `tvm+compile` | `tvm-so` Model; updates `function.spec.so_model` | Job using the toolkit image |
+| `tvm+compile` | `tvm-so` Model; records `run.status.outputs.compiled_so` | Job using the toolkit image |
 | `tvm+serve` | Inference service | Deployment using the Go or Rust image |
 
 For all options, defaults and tuning examples, see the
@@ -19,11 +19,11 @@ shows Python usage.
 
 | Entity | Settings |
 | --- | --- |
-| Function (`tvm`) | Required source `model`; optional `format` (`auto`, `onnx`, `tflite`); generated `ir_model` and `so_model` references |
+| Function (`tvm`) | Required source `model`; optional `format` (`auto`, `onnx`, `tflite`); generated `ir_model` reference |
 | Task (`tvm+build`, `tvm+compile`, `tvm+serve`) | Function reference and common Kubernetes settings: `profile`, `resources`, `envs`, `secrets`, `volumes` |
 | Build Run (`tvm+build:run`) | `image` and ONNX conversion options |
 | Compile Run (`tvm+compile:run`) | `model_path`, `target_architecture` or `target`, `tag`, `image`, `optimization`, `tuning` |
-| Serve Run (`tvm+serve:run`) | `model_path`, `served_name`, `image`, `replicas`, `workers`, `service_type`, `service_name` |
+| Serve Run (`tvm+serve:run`) | Required versioned `model_path` from the selected Compile; `served_name`, `image`, `replicas`, `workers`, `service_type`, `service_name` |
 
 Runs can override common Task settings. TVM options belong to the Run and are not
 inherited from old Tasks or previous Runs. Triggers put them in `spec.template`.
@@ -83,12 +83,14 @@ spec:
     tuning_mode: "off"
 ```
 
-Finally start a serve Run and wait for `RUNNING`:
+Copy `status.outputs.compiled_so` from the completed Compile into the Serve
+Run's `model_path`. Start the Run and wait for `RUNNING`.
 
 ```yaml
 kind: tvm+serve:run
 spec:
   task: tvm+serve://my-project/<serve-task-id>
+  model_path: store://my-project/model/tvm-so/<compiled-model-name>:<compiled-model-id>
   served_name: yolo
   workers: 1
   resources: {cpu: "4", mem: 2Gi}
@@ -121,15 +123,17 @@ with `tuning_runner: rpc`; that mode ignores the local runner timeout.
 
 ## Model references and files
 
-Compile uses Run `model_path`, otherwise the Function's `ir_model`. Serve uses Run
-`model_path`, otherwise its `so_model`. These are references on the **exact Function
-version** associated with the Run; CORE does not search compile history.
+Compile uses Run `model_path`, otherwise the Function's `ir_model`. Build updates
+only `ir_model` on the exact Function version. Each Compile publishes its own
+`tvm-so` Model and records its key in `status.outputs.compiled_so`, without changing
+the Function.
 
-Build changes only `ir_model`, compile changes only `so_model`, without creating a
-Function version. A new build keeps the old SO usable. With concurrent compiles,
-the last successful reference update wins. Set a versioned `model_path` to select
-a specific architecture/build. Existing services keep their selected Model; clear
-`model_path` when copying a serve Run if the new Run should use the Function default.
+Serve requires a versioned `model_path` containing the selected Compile's
+`status.outputs.compiled_so`. Compiles for AMD64, ARM64 or other targets can therefore
+share one IR without replacing each other's serving reference. CORE does not select
+the latest Compile or use a legacy Function `so_model`. Existing services keep their
+selected Model; changing the served build requires an explicit new `model_path`.
+Existing stored `so_model` fields are ignored, not migrated or deleted.
 
 | Model | Files |
 | --- | --- |
@@ -148,9 +152,10 @@ the SDK's Model lifecycle: `CREATED` → `UPLOADING` → `READY`, recording file
 before marking the Model ready. Upload failures mark the Model `ERROR`. A `READY`
 Model is distinct from a `COMPLETED` Run: wait for the Run to finish before continuing.
 
-Output registration and Function writeback each retry transient failures up to three
-attempts. If the monitor advances a Run from `PENDING` to `RUNNING` during an output
-update, the publisher rereads the Run and retries the merge. Other HTTP 400 responses
+Output registration and the Build's update of `function.spec.ir_model` each allow
+up to three attempts on transient errors. If the monitor advances a Run from
+`PENDING` to `RUNNING` during an output update, the publisher rereads the Run
+and retries the merge. Other HTTP 400 responses
 remain errors. Missing outputs or an unconfirmed writeback fail the Run; registered
 Models remain recoverable from the log and, when recorded, `run.status.outputs`.
 
@@ -158,8 +163,8 @@ Registration errors include CORE's validation message. A Model name can have mul
 versions of the same kind, but cannot be reused for a different kind in the same
 project. Generated artifact names are normalized to CORE's Model naming rules.
 
-Writebacks are serialized within one CORE instance. This does not provide distributed
-locking against other CORE instances or external Function edits.
+Build updates to the Function are serialized within one CORE instance. Other CORE
+instances and clients can still edit the Function concurrently.
 
 ## Target configuration
 
@@ -239,10 +244,9 @@ CUDA builder workers default to one; explicit workers may build candidates in
 parallel, while GPU measurements remain sequential. CPU cache flushing is rejected
 for active CUDA tuning. `target_num_cores` only configures the LLVM host.
 
-Serve the selected CUDA artifact with a CUDA-enabled Go/Rust image and the existing
-GPU `profile`/`resources.gpu` settings. Node scheduling, image selection and Model
-selection remain separate: serve uses Run `model_path`, otherwise Function
-`so_model`; choosing a GPU profile does not select or recompile a Model. The runtime
+To serve a CUDA artifact, copy `status.outputs.compiled_so` from the selected CUDA
+Compile into the Serve Run's `model_path`. Choose a CUDA-enabled Go or Rust image
+and use `profile` and `resources.gpu` to schedule the service on a GPU node. The runtime
 uses visible CUDA device 0 and refuses a missing CUDA backend/device without CPU
 fallback. A CPU artifact can still run on a compatible Jetson ARM64 CPU.
 

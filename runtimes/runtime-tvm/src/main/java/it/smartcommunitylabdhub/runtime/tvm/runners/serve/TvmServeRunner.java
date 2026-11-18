@@ -6,7 +6,7 @@
 
 package it.smartcommunitylabdhub.runtime.tvm.runners.serve;
 
-import it.smartcommunitylabdhub.commons.Keys;
+import it.smartcommunitylabdhub.commons.accessors.fields.KeyAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
@@ -24,13 +24,13 @@ import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.tvm.config.TvmProperties;
 import it.smartcommunitylabdhub.runtime.tvm.runners.TvmBaseRunner;
 import it.smartcommunitylabdhub.runtime.tvm.runners.TvmRunnerHelper;
-import it.smartcommunitylabdhub.runtime.tvm.specs.TvmFunctionSpec;
 import it.smartcommunitylabdhub.runtime.tvm.specs.serve.TvmServeRunSpec;
 import it.smartcommunitylabdhub.runtime.tvm.specs.serve.TvmServeTaskSpec;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 
@@ -56,21 +56,15 @@ public class TvmServeRunner extends TvmBaseRunner {
 
     public K8sRunnable produce(Run run, Map<String, String> secretData) {
         TvmServeRunSpec runSpec = TvmServeRunSpec.with(run.getSpec());
-        TvmFunctionSpec functionSpec = runSpec.getFunctionSpec();
         TvmServeTaskSpec taskSpec = runSpec.getTaskServeSpec();
         TaskSpecAccessor taskAccessor = TaskSpecAccessor.with(run.getSpec());
         String funcName = taskAccessor.getFunction();
 
         String servedName = resolveServedName(runSpec.getServedName(), funcName);
 
-        String modelKey = resolveModelKey(
-                runSpec.getModelPath(),
-                functionSpec != null ? functionSpec.getSoModel() : null);
-        Model model = modelKey.startsWith(Keys.STORE_PREFIX)
-                ? TvmRunnerHelper.resolveModel(modelKey, modelManager)
-                : null;
-        String modelFolder = TvmRunnerHelper.modelDir(
-                model != null ? TvmRunnerHelper.modelPath(model, modelKey) : modelKey);
+        String modelKey = resolveModelKey(runSpec.getModelPath());
+        Model model = resolveCompiledModel(modelKey);
+        String modelFolder = TvmRunnerHelper.modelDir(TvmRunnerHelper.modelPath(model, modelKey));
         String modelDir = homeDir + "/model";
         String architecture = modelArchitecture(modelKey, model);
 
@@ -135,15 +129,28 @@ public class TvmServeRunner extends TvmBaseRunner {
         return StringUtils.hasText(servedName) ? servedName : functionName;
     }
 
-    // The function reference is the default; never infer a model from run history.
-    public static String resolveModelKey(String modelPath, String soModel) {
-        String modelKey = StringUtils.hasText(modelPath) ? modelPath : soModel;
-        if (!StringUtils.hasText(modelKey)) {
-            throw new IllegalArgumentException(
-                    "tvm+serve needs a compiled .so model: set model_path or run tvm+compile first " +
-                            "(function.spec.so_model is empty)");
+    private Model resolveCompiledModel(String modelKey) {
+        Model model = TvmRunnerHelper.resolveModel(modelKey, modelManager);
+        KeyAccessor key = KeyAccessor.with(modelKey);
+        if (!Objects.equals(key.getProject(), model.getProject()) ||
+                !Objects.equals(key.getKind(), model.getKind()) ||
+                !Objects.equals(key.getName(), model.getName()) ||
+                !Objects.equals(key.getId(), model.getId())) {
+            throw new IllegalArgumentException("model_path does not match the resolved tvm-so Model: " + modelKey);
         }
-        return modelKey;
+        return model;
+    }
+
+    public static String resolveModelKey(String modelPath) {
+        if (!StringUtils.hasText(modelPath)) {
+            throw new IllegalArgumentException(
+                    "tvm+serve requires run.model_path: use status.outputs.compiled_so from the selected tvm+compile Run");
+        }
+        if (!modelPath.matches(TvmServeRunSpec.COMPILED_PATH_REGEX)) {
+            throw new IllegalArgumentException(
+                    "tvm+serve model_path must be a versioned tvm-so Model key from status.outputs.compiled_so");
+        }
+        return modelPath;
     }
 
     private String modelArchitecture(String modelKey, Model model) {

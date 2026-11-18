@@ -153,9 +153,7 @@ public class TvmRuntime
         runSpec.configure(map);
         if (runSpec instanceof TvmServeRunSpec serveSpec) {
             // Pin the model in this run, not in the reusable task.
-            String model = TvmServeRunner.resolveModelKey(
-                    serveSpec.getModelPath(),
-                    funSpec.getSoModel());
+            String model = TvmServeRunner.resolveModelKey(serveSpec.getModelPath());
             serveSpec.setModelPath(model);
         }
         return runSpec;
@@ -247,12 +245,22 @@ public class TvmRuntime
 
     @Override
     public TvmRunStatus onComplete(@NotNull Run run, RunRunnable runnable) {
-        // The lifecycle marks the run ERROR if saving its model reference fails.
+        // Missing outputs and failed IR reference updates must fail the Run.
         return switch (run.getKind()) {
             case TvmBuildRunSpec.KIND -> writeModelKeyBack(run, "ir_module", "ir_model");
-            case TvmCompileRunSpec.KIND -> writeModelKeyBack(run, "compiled_so", "so_model");
+            case TvmCompileRunSpec.KIND -> compiledModelStatus(run);
             default -> null;
         };
+    }
+
+    private TvmRunStatus compiledModelStatus(Run run) {
+        String modelKey = readOutput(run, "compiled_so");
+        if (!StringUtils.hasText(modelKey)) {
+            throw new CoreRuntimeException(
+                "TVM run %s has no status.outputs.compiled_so".formatted(run.getId())
+            );
+        }
+        return TvmRunStatus.builder().modelKey(modelKey).build();
     }
 
     private TvmRunStatus writeModelKeyBack(Run run, String outputKey, String specField) {

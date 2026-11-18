@@ -39,12 +39,6 @@
     "ui:title@it": "Semplifica modello ONNX",
     "ui:description@it": "Esegue ONNX Simplifier per precalcolare le operazioni costanti e rimuovere i nodi ridondanti prima della conversione. Se disattivato, viene eseguito comunque in automatico quando il modello convertito ha uscite senza forma, che TVM non può compilare."
   },
-  "sort_onnx": {
-    "ui:title@en": "Sort ONNX Graph",
-    "ui:description@en": "Topologically sorts the ONNX graph before conversion. Disabled by default. Model validation remains enabled when disabled.",
-    "ui:title@it": "Ordina grafo ONNX",
-    "ui:description@it": "Ordina i nodi secondo le dipendenze prima della conversione. Disattivato per impostazione predefinita. Il controllo del modello resta attivo anche disabilitando l'ordinamento."
-  },
   "target_opset": {
     "ui:title@en": "Target Opset Version",
     "ui:description@en": "Converts the ONNX model to this opset version first; leave empty to keep the original.",
@@ -85,7 +79,6 @@
     "task",
     "inputs",
     "image",
-    "sort_onnx",
     "simplify",
     "target_opset",
     "opset_override",

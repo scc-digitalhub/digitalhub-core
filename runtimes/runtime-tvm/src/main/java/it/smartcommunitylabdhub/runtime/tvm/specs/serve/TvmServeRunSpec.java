@@ -17,6 +17,7 @@ import it.smartcommunitylabdhub.runtime.tvm.TvmRuntime;
 import it.smartcommunitylabdhub.runtime.tvm.specs.TvmFunctionSpec;
 import it.smartcommunitylabdhub.runtime.tvm.specs.TvmRunSpec;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.Map;
@@ -44,12 +45,13 @@ public final class TvmServeRunSpec extends TvmRunSpec {
     @JsonUnwrapped
     private TvmServeTaskSpec taskServeSpec;
 
-    // Empty or store://<project>/model/<kind>/<name>[:<id>].
-    public static final String COMPILED_PATH_REGEX = "^(store://[^/]+/model/[^/]+/[^:]+(:.+)?)?$";
+    // Pin a specific compiled model version, independent of other compilations.
+    public static final String COMPILED_PATH_REGEX = "^store://[^/]+/model/tvm-so/[^/:]+:[^/]+$";
 
     @JsonProperty("model_path")
+    @NotBlank
     @Pattern(regexp = COMPILED_PATH_REGEX)
-    @Schema(title = "Compiled Model", description = "The tvm-so Model to serve; empty uses the one written by tvm+compile in the function.")
+    @Schema(title = "Compiled Model", description = "Required versioned tvm-so Model key: use status.outputs.compiled_so from the selected tvm+compile Run.")
     private String modelPath;
 
     // Restrict characters because the name is used in URLs and generated YAML.
