@@ -21,17 +21,11 @@
     "ui:title@it": "Modello Relax IR",
     "ui:description@it": "Chiave del Model tvm-ir scritto da tvm+build e compilato da tvm+compile. Lascialo vuoto."
   },
-  "so_model": {
-    "ui:title@en": "Compiled Model",
-    "ui:description@en": "Key of the tvm-so Model written by tvm+compile and deployed by tvm+serve. Leave it empty.",
-    "ui:title@it": "Modello compilato",
-    "ui:description@it": "Chiave del Model tvm-so scritto da tvm+compile e servito da tvm+serve. Lascialo vuoto."
-  },
   "model_path": {
     "ui:title@en": "Compiled Model",
-    "ui:description@en": "The tvm-so Model to serve; empty uses function.spec.so_model of this exact function version. The selected reference is saved in this run.",
+    "ui:description@en": "Required versioned tvm-so Model key: use status.outputs.compiled_so from the selected Compile Run. The selected reference is saved in this run.",
     "ui:title@it": "Modello compilato",
-    "ui:description@it": "Il Model tvm-so da servire; vuoto usa function.spec.so_model di questa precisa versione della funzione. Il riferimento scelto viene salvato in questo run."
+    "ui:description@it": "Chiave obbligatoria di una versione del Model tvm-so: usa status.outputs.compiled_so della Run di Compile scelta. Il riferimento viene salvato in questa Run."
   },
   "served_name": {
     "ui:title@en": "Served Model Name",

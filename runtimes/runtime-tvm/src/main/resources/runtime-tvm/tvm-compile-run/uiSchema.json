@@ -21,12 +21,6 @@
     "ui:title@it": "Modello Relax IR",
     "ui:description@it": "Chiave del Model tvm-ir scritto da tvm+build e compilato da tvm+compile. Lascialo vuoto."
   },
-  "so_model": {
-    "ui:title@en": "Compiled Model",
-    "ui:description@en": "Key of the tvm-so Model written by tvm+compile and deployed by tvm+serve. Leave it empty.",
-    "ui:title@it": "Modello compilato",
-    "ui:description@it": "Chiave del Model tvm-so scritto da tvm+compile e servito da tvm+serve. Lascialo vuoto."
-  },
   "model_path": {
     "ui:title@en": "IR Model",
     "ui:description@en": "Explicit IR override for this run. Empty uses function.ir_model. Example: store://my-project/model/tvm-ir/xinet-ir:version.",
@@ -34,16 +28,16 @@
     "ui:description@it": "Override del modello IR per questa run. Vuoto usa function.ir_model. Esempio: store://my-project/model/tvm-ir/xinet-ir:version."
   },
   "target_architecture": {
-    "ui:title@en": "Target CPU Profile",
-    "ui:description@en": "Profile configured in runtime-tvm.yaml. auto uses the compile node's architecture. Leave auto selected when setting an explicit target.",
-    "ui:title@it": "Profilo CPU di destinazione",
-    "ui:description@it": "Profilo configurato in runtime-tvm.yaml. auto usa l'architettura del nodo di compilazione. Lascia auto quando imposti un target esplicito."
+    "ui:title@en": "Target profile",
+    "ui:description@en": "CPU or CUDA profile configured in runtime-tvm.yaml. auto uses the compile node CPU. Leave auto selected when setting an explicit target.",
+    "ui:title@it": "Profilo di destinazione",
+    "ui:description@it": "Profilo CPU o CUDA configurato in runtime-tvm.yaml. auto usa la CPU del nodo di compilazione. Lascia auto quando imposti un target esplicito."
   },
   "target": {
     "ui:title@en": "Explicit TVM target (advanced)",
-    "ui:description@en": "Optional LLVM target object. Example: kind=llvm, mtriple=aarch64-linux-gnu, mcpu=cortex-a72. The compile image must contain the matching toolchain.",
+    "ui:description@en": "Standard LLVM or CUDA target object. CUDA requires arch (for example sm_87) and host={kind:llvm,mtriple:aarch64-linux-gnu} or an AMD64 Linux GNU host. The compile image must contain the matching toolchain and CUDA support. CUDA tuning additionally requires real max_shared_memory_per_block, max_threads_per_block and thread_warp_size limits.",
     "ui:title@it": "Target TVM esplicito (avanzato)",
-    "ui:description@it": "Oggetto LLVM facoltativo. Esempio: kind=llvm, mtriple=aarch64-linux-gnu, mcpu=cortex-a72. L'immagine di compilazione deve contenere la toolchain corrispondente.",
+    "ui:description@it": "Oggetto TVM standard LLVM o CUDA. CUDA richiede arch (per esempio sm_87) e host={kind:llvm,mtriple:aarch64-linux-gnu} oppure un host AMD64 Linux GNU. L'immagine di compilazione deve contenere la toolchain corrispondente e il supporto CUDA. Il tuning CUDA richiede anche i limiti reali max_shared_memory_per_block, max_threads_per_block e thread_warp_size.",
     "ui:expandable": true
   },
   "tag": {
@@ -66,9 +60,9 @@
     "ui:expandable": true,
     "target_num_cores": {
       "ui:title@en": "Target Number of Cores",
-      "ui:description@en": "Cores of the target CPU; empty uses the Job CPU request. Example: 4 for a Raspberry Pi 5.",
+      "ui:description@en": "Cores of the target CPU, or the LLVM host for CUDA; empty uses the Job CPU request. Example: 4 for a Raspberry Pi 5.",
       "ui:title@it": "Numero di core del target",
-      "ui:description@it": "Core della CPU target; vuoto usa la CPU richiesta dal Job. Esempio: 4 per un Raspberry Pi 5."
+      "ui:description@it": "Core della CPU target, o dell'host LLVM per CUDA; vuoto usa la CPU richiesta dal Job. Esempio: 4 per un Raspberry Pi 5."
     },
     "opt_level": {
       "ui:title@en": "Optimization Level",
@@ -188,9 +182,9 @@
     },
     "tuning_workers": {
       "ui:title@en": "Max Workers",
-      "ui:description@en": "Parallel compiler workers; empty uses requested Job cores. Example: 2 with a 2-core Job.",
+      "ui:description@en": "Parallel compiler workers; default is the requested Job cores for CPU and 1 for CUDA. CUDA measurements remain sequential.",
       "ui:title@it": "Worker massimi",
-      "ui:description@it": "Worker di compilazione paralleli; vuoto usa i core richiesti dal Job. Esempio: 2 con un Job da 2 core."
+      "ui:description@it": "Worker di compilazione paralleli; il default è il numero di core richiesti dal Job per CPU e 1 per CUDA. Le misurazioni CUDA restano sequenziali."
     },
     "tuning_seed": {
       "ui:title@en": "Random Seed",
