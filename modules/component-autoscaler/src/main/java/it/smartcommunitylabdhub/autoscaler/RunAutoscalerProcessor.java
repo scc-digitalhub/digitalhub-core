@@ -49,7 +49,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-@EffectType(stages = { "onRunning" }, type = Run.class)
+@EffectType(stages = { "onRunning", "onError" }, type = Run.class)
 @Component
 @Slf4j
 public class RunAutoscalerProcessor implements Effect<Run> {
@@ -95,45 +95,11 @@ public class RunAutoscalerProcessor implements Effect<Run> {
             if (!specs.isEmpty()) {
                 log.debug("Processing run {} with {} extensions", run.getId(), specs.size());
 
-                OffsetDateTime now = OffsetDateTime.ofInstant(Instant.now(), ZoneOffset.UTC);
-
-                // evaluate auto shutdown from extensions, if any
-                // start date is fetched from transition time to running, if not available we use creation date
-                BaseMetadata metadata = BaseMetadata.from(run.getMetadata());
-                RunTransitionsSpec rts = RunTransitionsSpec.from(run.getStatus());
-                OffsetDateTime start =
-                    rts.getTransitions() != null
-                        ? rts
-                              .getTransitions()
-                              .stream()
-                              .filter(t -> "RUNNING".equals(t.getStatus()))
-                              .findFirst()
-                              .map(t -> t.getTime())
-                              .orElse(metadata.getCreated())
-                        : metadata.getCreated();
-
-                if (start != null) {
-                    for (RunAutoscalerSpec spec : specs) {
-                        Integer autoStop = spec.getAutoStop();
-                        if (autoStop != null && autoStop > 0) {
-                            OffsetDateTime stopTime = start.plusSeconds(autoStop);
-                            if (now.isAfter(stopTime)) {
-                                log.debug("Run {} has exceeded auto stop time, marking for deletion", run.getId());
-
-                                if (runOperations != null) {
-                                    //set stop and dispatch, will trigger transition to STOPPED
-                                    run.setStatus(
-                                        MapUtils.mergeMultipleMaps(
-                                            run.getStatus(),
-                                            Map.of("state", RunState.STOP.name())
-                                        )
-                                    );
-                                    runOperations.dispatch(new EntityOperation<Run>(run, EntityAction.UPDATE));
-                                }
-
-                                break;
-                            }
-                        }
+                switch (stage) {
+                    case "onRunning" -> onRunning(run, specs);
+                    case "onError" -> onError(run, specs);
+                    default -> {
+                        //ignore
                     }
                 }
             }
@@ -143,5 +109,77 @@ public class RunAutoscalerProcessor implements Effect<Run> {
 
         //no output, let the chain continue
         return null;
+    }
+
+    private void onRunning(Run run, List<RunAutoscalerSpec> specs) {
+        OffsetDateTime now = OffsetDateTime.ofInstant(Instant.now(), ZoneOffset.UTC);
+
+        // evaluate auto shutdown from extensions, if any
+        // start date is fetched from transition time to running, if not available we use creation date
+        BaseMetadata metadata = BaseMetadata.from(run.getMetadata());
+        RunTransitionsSpec rts = RunTransitionsSpec.from(run.getStatus());
+        OffsetDateTime start =
+            rts.getTransitions() != null
+                ? rts
+                      .getTransitions()
+                      .stream()
+                      .filter(t -> "RUNNING".equals(t.getStatus()))
+                      .findFirst()
+                      .map(t -> t.getTime())
+                      .orElse(metadata.getCreated())
+                : metadata.getCreated();
+
+        if (start != null) {
+            for (RunAutoscalerSpec spec : specs) {
+                Integer autoStop = spec.getAutoStop();
+                if (autoStop != null && autoStop > 0) {
+                    OffsetDateTime stopTime = start.plusSeconds(autoStop);
+                    if (now.isAfter(stopTime)) {
+                        log.debug("Run {} has exceeded auto stop time, marking for deletion", run.getId());
+
+                        if (runOperations != null) {
+                            //set stop and dispatch, will trigger transition to STOPPED
+                            run.setStatus(
+                                MapUtils.mergeMultipleMaps(run.getStatus(), Map.of("state", RunState.STOP.name()))
+                            );
+                            runOperations.dispatch(new EntityOperation<Run>(run, EntityAction.UPDATE));
+                        }
+
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    private void onError(Run run, List<RunAutoscalerSpec> specs) {
+        OffsetDateTime now = OffsetDateTime.ofInstant(Instant.now(), ZoneOffset.UTC);
+        //TODO implement exponential backoff for auto restart
+
+        for (RunAutoscalerSpec spec : specs) {
+            Boolean autoRestart = spec.getAutoRestart();
+            if (autoRestart != null && autoRestart) {
+                log.debug("Run {} is in error state and auto restart is enabled", run.getId());
+                if (runOperations != null) {
+                    //fully clone the run
+                    Run clonedRun = Run.builder()
+                        .id(null)
+                        .kind(run.getKind())
+                        .name(null)
+                        .project(run.getProject())
+                        .user(run.getUser())
+                        .metadata(run.getMetadata())
+                        .spec(run.getSpec())
+                        .status(run.getStatus())
+                        .extensions(run.getExtensions())
+                        .build();
+
+                    //reset state to READY to trigger a new run
+                    clonedRun.setStatus(Map.of("state", RunState.READY.name()));
+                    runOperations.dispatch(new EntityOperation<Run>(clonedRun, EntityAction.CREATE));
+                }
+                break;
+            }
+        }
     }
 }

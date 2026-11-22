@@ -132,12 +132,25 @@ public class SchedulerActuator implements Actuator<SchedulerTriggerSpec, Trigger
                 //TODO validate minimum interval
                 //for now we check sub-seconds
                 String[] split = schedule.split(" ");
-                if (split.length < 6) {
+                if (split.length < 5) {
                     log.warn("invalid schedule for {}", trigger.getKey());
                     throw new IllegalArgumentException("invalid schedule");
-                }
-                if ("*".equals(split[0])) {
-                    //we don't support sub-seconds
+                } else if (split.length == 5) {
+                    //quartz requires day-of-week and day-of-month fields, so we need to ensure one of them is set
+                    if ("*".equals(split[4])) {
+                        split[4] = "?";
+                    }
+
+                    //cron style without seconds, prepend 0 for seconds
+                    schedule = "0 " + String.join(" ", split);
+                } else if (split.length == 6) {
+                    //cron style with seconds
+                    if ("*".equals(split[0])) {
+                        //we don't support sub-seconds
+                        log.warn("invalid schedule for {}", trigger.getKey());
+                        throw new IllegalArgumentException("invalid schedule");
+                    }
+                } else if (split.length > 6) {
                     log.warn("invalid schedule for {}", trigger.getKey());
                     throw new IllegalArgumentException("invalid schedule");
                 }

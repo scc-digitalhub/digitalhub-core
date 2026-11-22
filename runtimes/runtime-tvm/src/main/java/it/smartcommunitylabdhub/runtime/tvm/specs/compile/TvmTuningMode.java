@@ -8,7 +8,6 @@ package it.smartcommunitylabdhub.runtime.tvm.specs.compile;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 
-/** Standard Apache TVM MetaSchedule lifecycle used by tvm+compile. */
 public enum TvmTuningMode {
     off,
     tune,

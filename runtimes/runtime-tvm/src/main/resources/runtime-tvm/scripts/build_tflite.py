@@ -3,15 +3,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""tvm+build for TFLite models: converts the model into Relax IR and publishes it as a
-Model of kind tvm-ir.
+"""Convert TFLite to Relax IR and publish a tvm-ir Model.
 
-1. load the TFLite flatbuffer;
-2. convert it into Relax IR (the weights stay inside as constants);
-3. write model.relax.json and metadata.json, with the quantization of the boundary tensors;
-4. publish the folder as a tvm-ir Model.
-
-The ONNX conversion options do not apply to TFLite and are ignored.
+ONNX conversion options are ignored.
 """
 
 from __future__ import annotations
@@ -24,7 +18,7 @@ from common import INPUT_DIR, OUTPUT_DIR, option, print_signature, save_relax_ir
 STEPS = 4
 
 
-def parse_args(argv=None) -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="TFLite -> Relax IR (Model tvm-ir)")
     option(parser, "--input", "TVM_INPUT_FILE", default="model.tflite", help="TFLite file, a path or a name in the input folder")
     option(parser, "--output", "TVM_OUTPUT_DIR", default=str(OUTPUT_DIR), help="folder that receives the IR")
@@ -41,11 +35,7 @@ def dtype_name(code: int) -> str:
 
 
 def tensor_spec(tensor) -> dict:
-    """name, shape, dtype and, for a quantized tensor, its scale and zero point.
-
-    real = (q - zero_point) * scale: without these values a client receiving int8 cannot
-    read the numbers, so they travel with the model and the serve images expose them.
-    """
+    """Include quantization so clients can decode real = (q - zero_point) * scale."""
     spec = {
         "name": tensor.Name().decode("utf-8") if tensor.Name() else "unknown",
         # TFLite marks dynamic dims as -1; the served model needs a concrete shape.
@@ -61,22 +51,21 @@ def tensor_spec(tensor) -> dict:
     return spec
 
 
-def signature(model) -> tuple[list, list]:
-    """Inputs and outputs of the main subgraph."""
+def signature(model) -> tuple[list[dict], list[dict]]:
     graph = model.Subgraphs(0)
     inputs = [tensor_spec(graph.Tensors(graph.Inputs(i))) for i in range(graph.InputsLength())]
     outputs = [tensor_spec(graph.Tensors(graph.Outputs(i))) for i in range(graph.OutputsLength())]
     return inputs, outputs
 
 
-def main(argv=None) -> None:
+def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     import tflite
     import tvm
     from tvm import relax
     from tvm.relax.frontend.tflite import from_tflite
 
-    source = Path(args.input) if Path(args.input).is_file() else source_model_file(INPUT_DIR, args.input, ".tflite")
+    source = source_model_file(INPUT_DIR, args.input, ".tflite")
     out_dir = Path(args.output)
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -85,9 +74,7 @@ def main(argv=None) -> None:
 
     step(2, STEPS, "converting to Relax IR")
     mod = from_tflite(model)
-    # The weights are already constants in the graph, and the importer also attaches a copy
-    # as the "params" attribute: detaching drops that copy, so the IR does not store the
-    # weights twice. The copy is discarded on purpose: there is no params.bin for TFLite.
+    # Weights are already graph constants; discard the duplicate params attribute.
     try:
         mod, _ = relax.frontend.detach_params(mod)
     except Exception as error:  # noqa: BLE001

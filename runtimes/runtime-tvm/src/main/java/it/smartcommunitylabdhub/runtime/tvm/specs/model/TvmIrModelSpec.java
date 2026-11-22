@@ -24,12 +24,10 @@ public class TvmIrModelSpec extends TvmModelSpec {
     @Schema(title = "Source Format", description = "Format of the model the IR was converted from.")
     private TvmFormat sourceFormat;
 
-    // Whether ONNX initializers (weights) were kept as graph inputs instead of folded to constants.
     @JsonProperty("keep_params_in_input")
     @Schema(title = "Keep Params in Input", description = "Whether the weights are kept apart in params.bin.")
     private Boolean keepParamsInInput;
 
-    // Whether ONNX input names were rewritten to valid Relax identifiers.
     @JsonProperty("sanitize_input_names")
     @Schema(
         title = "Sanitize Input Names",

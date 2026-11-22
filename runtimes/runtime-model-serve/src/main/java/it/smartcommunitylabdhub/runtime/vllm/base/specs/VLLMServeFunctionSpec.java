@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.runtime.vllm.base.specs;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.models.function.FunctionBaseSpec;
-import it.smartcommunitylabdhub.runtime.vllm.base.models.VLLMAdapter;
+import it.smartcommunitylabdhub.runtime.modelserve.models.LoRAAdapter;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
@@ -58,7 +58,7 @@ public class VLLMServeFunctionSpec extends FunctionBaseSpec {
 
     @JsonProperty("adapters")
     @Schema(title = "fields.vllm.adapters.title", description = "fields.vllm.adapters.description")
-    private List<VLLMAdapter> adapters;
+    private List<LoRAAdapter> adapters;
 
     @JsonProperty("image")
     @Pattern(regexp = "^vllm\\/vllm-openai(:.*)?$")

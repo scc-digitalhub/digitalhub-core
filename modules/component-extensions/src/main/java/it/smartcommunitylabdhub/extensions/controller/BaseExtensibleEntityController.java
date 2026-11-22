@@ -43,6 +43,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
@@ -63,7 +64,7 @@ public abstract class BaseExtensibleEntityController<D extends BaseDTO> {
 
     @Operation(summary = "Get extensions for a given entity, if available")
     @GetMapping(path = "/{id}/extensions", produces = "application/json; charset=UTF-8")
-    public List<Extension> getDExtensionsById(
+    public List<Extension> getExtensionsById(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
     ) throws NoSuchEntityException, StoreException {
@@ -116,5 +117,30 @@ public abstract class BaseExtensibleEntityController<D extends BaseDTO> {
             }
         }
         return extensionManager.listExtensionsByParent(ExtensionBuilder.from(dto).getParent());
+    }
+
+    @Operation(summary = "Create extensions for a given entity, if available")
+    @PostMapping(path = "/{id}/extensions", produces = "application/json; charset=UTF-8")
+    public Extension createExtensionsById(
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
+        @RequestBody @Valid @NotNull Extension extension
+    ) throws NoSuchEntityException, IllegalArgumentException, SystemException, BindException, StoreException {
+        D dto = entityService.get(id);
+
+        //check for project and name match
+        if (!dto.getProject().equals(project)) {
+            throw new IllegalArgumentException("invalid project");
+        }
+
+        //enforce parent+project
+        String parent = ExtensionBuilder.from(dto).getParent();
+
+        //update or create as defined
+        extension.setParent(parent);
+        extension.setProject(dto.getProject());
+        extension.setEntity(EntityUtils.getEntityName(entityService.getType()));
+        Extension e = extensionManager.createOrUpdateExtension(extension);
+        return e;
     }
 }

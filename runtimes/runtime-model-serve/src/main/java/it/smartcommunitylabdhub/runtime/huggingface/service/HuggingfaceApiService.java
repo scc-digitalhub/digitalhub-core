@@ -47,34 +47,34 @@ public class HuggingfaceApiService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    LoadingCache<String, Map<String, Serializable>> metadataCache = CacheBuilder.newBuilder()
+    LoadingCache<String, Optional<Map<String, Serializable>>> metadataCache = CacheBuilder.newBuilder()
         .expireAfterWrite(CACHE_TIMEOUT, TimeUnit.SECONDS)
         .build(
-            new CacheLoader<String, Map<String, Serializable>>() {
+            new CacheLoader<String, Optional<Map<String, Serializable>>>() {
                 @Override
-                public Map<String, Serializable> load(@Nonnull String key) throws Exception {
-                    return fetchMetadata(key);
+                public Optional<Map<String, Serializable>> load(@Nonnull String key) throws Exception {
+                    return Optional.ofNullable(fetchMetadata(key));
                 }
             }
         );
 
-    LoadingCache<String, Map<String, Serializable>> configCache = CacheBuilder.newBuilder()
+    LoadingCache<String, Optional<Map<String, Serializable>>> configCache = CacheBuilder.newBuilder()
         .expireAfterWrite(CACHE_TIMEOUT, TimeUnit.SECONDS)
         .build(
-            new CacheLoader<String, Map<String, Serializable>>() {
+            new CacheLoader<String, Optional<Map<String, Serializable>>>() {
                 @Override
-                public Map<String, Serializable> load(@Nonnull String key) throws Exception {
-                    return fetchConfig(key);
+                public Optional<Map<String, Serializable>> load(@Nonnull String key) throws Exception {
+                    return Optional.ofNullable(fetchConfig(key));
                 }
             }
         );
-    LoadingCache<String, String> readmeCache = CacheBuilder.newBuilder()
+    LoadingCache<String, Optional<String>> readmeCache = CacheBuilder.newBuilder()
         .expireAfterWrite(CACHE_TIMEOUT, TimeUnit.SECONDS)
         .build(
-            new CacheLoader<String, String>() {
+            new CacheLoader<String, Optional<String>>() {
                 @Override
-                public String load(@Nonnull String key) throws Exception {
-                    return fetchReadme(key);
+                public Optional<String> load(@Nonnull String key) throws Exception {
+                    return Optional.ofNullable(fetchReadme(key));
                 }
             }
         );
@@ -96,7 +96,8 @@ public class HuggingfaceApiService {
     }
 
     public Map<String, Serializable> getMetadata(String key) {
-        return metadataCache.getUnchecked(key);
+        Optional<Map<String, Serializable>> entry = metadataCache.getUnchecked(key);
+        return entry.orElse(null);
     }
 
     private Map<String, Serializable> fetchMetadata(String key) {
@@ -135,7 +136,8 @@ public class HuggingfaceApiService {
     }
 
     public Map<String, Serializable> getConfig(String key) {
-        return configCache.getUnchecked(key);
+        Optional<Map<String, Serializable>> entry = configCache.getUnchecked(key);
+        return entry.orElse(null);
     }
 
     private Map<String, Serializable> fetchConfig(String key) {
@@ -172,7 +174,8 @@ public class HuggingfaceApiService {
     }
 
     public String getReadme(String key) {
-        return readmeCache.getUnchecked(key);
+        Optional<String> entry = readmeCache.getUnchecked(key);
+        return entry.orElse(null);
     }
 
     private String fetchReadme(String key) {

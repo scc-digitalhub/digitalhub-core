@@ -34,8 +34,12 @@ import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
+import it.smartcommunitylabdhub.extensions.ExtensionManager;
+import it.smartcommunitylabdhub.extensions.model.Extension;
+import it.smartcommunitylabdhub.extensions.persistence.ExtensionBuilder;
 import it.smartcommunitylabdhub.metrics.ResourceMetrics;
 import it.smartcommunitylabdhub.metrics.ResourceMetricsService;
 import it.smartcommunitylabdhub.projects.Project;
@@ -47,6 +51,7 @@ import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
@@ -83,13 +88,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProjectController {
 
     @Autowired
-    ProjectManager projectManager;
+    private ProjectManager projectManager;
 
     @Autowired
-    ShareableAwareEntityService<Project> shareService;
+    private ShareableAwareEntityService<Project> shareService;
 
     @Autowired
-    RelationshipsAwareEntityService<Project> relationshipsService;
+    private RelationshipsAwareEntityService<Project> relationshipsService;
 
     @Autowired
     private AuditorAware<String> auditor;
@@ -98,7 +103,10 @@ public class ProjectController {
     private ResourceMetricsService resourceMetricsService;
 
     @Autowired
-    SecurityProperties securityProperties;
+    private SecurityProperties securityProperties;
+
+    @Autowired
+    private ExtensionManager extensionManager;
 
     @Operation(summary = "List project", description = "Return a list of all projects")
     @GetMapping(path = "", produces = "application/json; charset=UTF-8")
@@ -314,5 +322,71 @@ public class ProjectController {
             throw new StoreException("metrics service not available");
         }
         return resourceMetricsService.getResourceMetricsByProject(id);
+    }
+
+    /*
+     * Extensions
+     */
+
+    @Operation(summary = "Get extensions for a given entity, if available")
+    @GetMapping(path = "/{id}/extensions", produces = "application/json; charset=UTF-8")
+    public List<Extension> getExtensionsById(
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
+    ) throws NoSuchEntityException {
+        Project project = projectManager.getProject(id);
+        return extensionManager.listExtensionsByParent(ExtensionBuilder.from(project).getParent());
+    }
+
+    @Operation(summary = "Store extensions for a given entity, if available")
+    @PutMapping(path = "/{id}/extensions", produces = "application/json; charset=UTF-8")
+    public List<Extension> storeExtensionsById(
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
+        @RequestBody List<Extension> extensions
+    ) throws NoSuchEntityException, IllegalArgumentException, SystemException, BindException {
+        Project project = projectManager.getProject(id);
+
+        if (extensions != null) {
+            //enforce parent+project
+            String parent = ExtensionBuilder.from(project).getParent();
+            List<Extension> previous = extensionManager.listExtensionsByParent(parent);
+            List<Extension> updated = new ArrayList<>();
+
+            //update or create as defined
+            for (Extension ext : extensions) {
+                ext.setParent(parent);
+                ext.setProject(project.getId());
+                ext.setEntity(EntityUtils.getEntityName(Project.class));
+                Extension e = extensionManager.createOrUpdateExtension(ext);
+                updated.add(e);
+            }
+
+            //delete removed
+            List<Extension> toDelete = previous
+                .stream()
+                .filter(e -> updated.stream().noneMatch(u -> u.getId().equals(e.getId())))
+                .toList();
+            for (Extension ext : toDelete) {
+                extensionManager.deleteExtension(ext.getId());
+            }
+        }
+        return extensionManager.listExtensionsByParent(ExtensionBuilder.from(project).getParent());
+    }
+
+    @Operation(summary = "Create extensions for a given entity, if available")
+    @PostMapping(path = "/{id}/extensions", produces = "application/json; charset=UTF-8")
+    public Extension createExtensionsById(
+        @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
+        @RequestBody @Valid @NotNull Extension extension
+    ) throws NoSuchEntityException, IllegalArgumentException, SystemException, BindException {
+        Project project = projectManager.getProject(id);
+
+        //enforce parent+project
+        String parent = ExtensionBuilder.from(project).getParent();
+
+        //update or create as defined
+        extension.setParent(parent);
+        extension.setProject(project.getId());
+        extension.setEntity(EntityUtils.getEntityName(Project.class));
+        return extensionManager.createOrUpdateExtension(extension);
     }
 }

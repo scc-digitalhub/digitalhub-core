@@ -177,4 +177,4 @@ def compose_args(spec):
     except Exception as e:
         print(f"Failed to convert cfg to container. Exception: {e.__class__}. Error: {e.args}")
         args["cfg_passthrough"] = {}
-    return args 
+    return args

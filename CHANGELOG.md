@@ -1,3 +1,119 @@
+# [0.16.0](https://github.com/scc-digitalhub/digitalhub-core/compare/0.15.1...0.16.0) (2026-11-09)
+
+## Release highlights
+
+Version 0.16.0 is a major release of the DigitalHub platform. It expands extensions support with file uploads and project-level scope, overhauls the user console, and introduces a new admin console for platform administration.
+
+Orchestration capabilities also take a significant step forward, with autoscaling and improved run observability. New runtimes broaden support for model training, optimization, and deployment, including Ray, Hydra, and TVM.
+
+Check the documentation at https://scc-digitalhub.github.io/docs/0.16/ for details.
+
+## What's Changed
+* feat(buildkit): add configurable insecure registry output flag by @ffais in https://github.com/scc-digitalhub/digitalhub-core/pull/233
+* Hydra runtime by @kazhamiakin in https://github.com/scc-digitalhub/digitalhub-core/pull/226
+* feat: Ray Framework and Runtime by @kazhamiakin in https://github.com/scc-digitalhub/digitalhub-core/pull/221
+* Runtime tvm by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/228
+* feat:support for Project extensions and extensionType to restrict usage scope by @kazhamiakin in https://github.com/scc-digitalhub/digitalhub-core/pull/231
+* feat: align naming rules for entities to posix-like semantics by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/236
+* feat: S3 sts for web identity flow by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/237
+* Runtime tvm by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/241
+* fix(runtime-tvm): correct results on 32-bit ARM (armv7l) by @trubbio in https://github.com/scc-digitalhub/digitalhub-core/pull/242
+* Update BaseExtensibleEntityController.java by @kazhamiakin in https://github.com/scc-digitalhub/digitalhub-core/pull/247
+* chore: update method on python handlers replace save(update=True) by @EvangMM in https://github.com/scc-digitalhub/digitalhub-core/pull/249
+* fix: align TVM runtime specs and execution by @trubbio in https://github.com/scc-digitalhub/digitalhub-core/pull/250
+* refactor: revert back save update handlers by @EvangMM in https://github.com/scc-digitalhub/digitalhub-core/pull/253
+* Runtime tvm fix properties reader by @matteo-s in https://github.com/scc-digitalhub/digitalhub-core/pull/255
+
+
+### Features
+
+* db migration scripts ([417b8fd](https://github.com/scc-digitalhub/digitalhub-core/commit/417b8fddc4582504f77a6b4b138e6ed8a6afc893))
+* container images processor for exposing tag or digest as version name ([0901ae9](https://github.com/scc-digitalhub/digitalhub-core/commit/0901ae9bb50482cc0e55fb4fb08334b11ad07be4))
+* k8s template processor to enable administators in overriding run specs ([fbacfae](https://github.com/scc-digitalhub/digitalhub-core/commit/fbacfae181cd414473340cea17972295309f020a))
+* run spec can hold task reference or kind + auto-create tasks on build ([627ea39](https://github.com/scc-digitalhub/digitalhub-core/commit/627ea39bc5bea89720e5a70a8e562b57f7b73281))
+* autoscaler exposes autoRestart for unrs ([80b4b3d](https://github.com/scc-digitalhub/digitalhub-core/commit/80b4b3d10c33ead0aee119758ed809d59e0cad8a))
+* run created can go to ready to support pre-built runs ([a2d9b90](https://github.com/scc-digitalhub/digitalhub-core/commit/a2d9b901cf5378bc6fe5ebcdc3471af2beb97ff2))
+* always add python requirements to build and split from build context to better leverage caching ([95ea0b1](https://github.com/scc-digitalhub/digitalhub-core/commit/95ea0b1ed666c0aa1e940d491b107f8082575b32))
+* container images extensible + files support ([aa778a0](https://github.com/scc-digitalhub/digitalhub-core/commit/aa778a0603cf2af2897698d53ca683346d0b6d1b))
+* container images registry support for delete ([0d09cc9](https://github.com/scc-digitalhub/digitalhub-core/commit/0d09cc9488226e892197bbd81609206d4895715a))
+* project extensions api ([ebbf429](https://github.com/scc-digitalhub/digitalhub-core/commit/ebbf429cadb6bb7c7454b5e20d70af7c77a9c77b))
+* project filter supports pseudo search with :shared as proxy for shared with me ([ae689ab](https://github.com/scc-digitalhub/digitalhub-core/commit/ae689ab2f8fd0333cae4d8ce5dd4a6e87f2059fc))
+* search criteria support queries with IN operator ([8419d69](https://github.com/scc-digitalhub/digitalhub-core/commit/8419d6939ce212460b3a04610309e85b59d60cf9))
+* unbind fsm states from events + transient run states can not be invoked via perform ([14bba01](https://github.com/scc-digitalhub/digitalhub-core/commit/14bba01a097b0ed4e63b788d72dd882de7ed82f2))
+* vllm lets users specify any stored model as source ([8326fd0](https://github.com/scc-digitalhub/digitalhub-core/commit/8326fd035516e7c6f7e2e2b763a7918970abd534))
+* huggingface api with processor for fetching metadata ([049ed1d](https://github.com/scc-digitalhub/digitalhub-core/commit/049ed1d59c78a72953c20e831ff4000a760714eb))
+* collect last logs on errors for k8s pods ([6530833](https://github.com/scc-digitalhub/digitalhub-core/commit/6530833cc4502c14c8c211231e001ff728de702a))
+* entity extensions finalizer and cleanup with cascade ([91365cf](https://github.com/scc-digitalhub/digitalhub-core/commit/91365cf30a6ca660d4bfe3b5d1ba47b0cb55d97b))
+* extensions support files in path as entityFiles ([6951e4e](https://github.com/scc-digitalhub/digitalhub-core/commit/6951e4e74cdadf3531c058b09239f7a0a0c47225))
+* mount k8s secret as volume by default ([ba98046](https://github.com/scc-digitalhub/digitalhub-core/commit/ba9804627f0dfe4578460d18c2c8c782e6e2920a))
+* extend json schema to account for profile defined resources ([c1c7037](https://github.com/scc-digitalhub/digitalhub-core/commit/c1c7037a5652135928a699f6f6120289be5e75e6))
+* loki provider fetches configurable limit backward to collect most recent lines ([b5bc6ef](https://github.com/scc-digitalhub/digitalhub-core/commit/b5bc6eff96f529036c78db5d6010c82ae651fca3))
+* prometheus provider aggregates by pod and container by default ([df8291c](https://github.com/scc-digitalhub/digitalhub-core/commit/df8291cdf499c3095c1230e539c47a9a1c2c8530))
+* **runtime-tvm:** English and Italian labels for the TVM forms ([fa69505](https://github.com/scc-digitalhub/digitalhub-core/commit/fa695050237321bbb97971d4d522dd30b87ca295))
+* **runtime-tvm:** faster tuned models and a readable compiler ([db8a794](https://github.com/scc-digitalhub/digitalhub-core/commit/db8a794fbe726352e6d33b50ffe3da9c21fef45a))
+* **runtime-tvm:** MetaSchedule tuning for tvm+compile ([bae5b98](https://github.com/scc-digitalhub/digitalhub-core/commit/bae5b986cce4ccef4025a99e3e41915d992ff8f2))
+* **runtime-tvm:** onnx and tflite model kinds, simpler runners ([8403127](https://github.com/scc-digitalhub/digitalhub-core/commit/84031272a6ab7174d4ef0d4c83097e8eaf954b0e))
+* **runtime-tvm:** run models on nodes of the right architecture ([03ba87e](https://github.com/scc-digitalhub/digitalhub-core/commit/03ba87e17b53cb2435eac361750bed0f13f044a1))
+* **runtime-tvm:** test scripts for served models ([6f20151](https://github.com/scc-digitalhub/digitalhub-core/commit/6f201516b8dfce77a05af20f146064c9622aaaaa))
+* s3 sts with core token for AssumeRoleWithWebIdentity ([beccd7e](https://github.com/scc-digitalhub/digitalhub-core/commit/beccd7e92b483a1b10e787ef711fb846dc13b008))
+* k8s service supports explicit appProtocol details to inform clients ([50a87aa](https://github.com/scc-digitalhub/digitalhub-core/commit/50a87aa222c7b70863f6d73089a84cf87fa517fc))
+* k8s profiles controller w/metrics ([7aee452](https://github.com/scc-digitalhub/digitalhub-core/commit/7aee45203df9c18134bbe22b4692e21a5e8410dc))
+* admin can set logger levels at runtime via api ([9e4e4f3](https://github.com/scc-digitalhub/digitalhub-core/commit/9e4e4f3673721f9b1e7e7da31c3374586f089f77))
+* admin controller ([5898303](https://github.com/scc-digitalhub/digitalhub-core/commit/58983039681e629520420b7859990846f9f667bc))
+* in memory log appender ([1283ab8](https://github.com/scc-digitalhub/digitalhub-core/commit/1283ab8547c2ef05ffe20fbef9fa638ef114de37))
+* collect container termination message for errors ([1976412](https://github.com/scc-digitalhub/digitalhub-core/commit/1976412cbb57b5fc8a406b82bbb4554d5ecb0145))
+* console extensions as external modules ([67236dd](https://github.com/scc-digitalhub/digitalhub-core/commit/67236dd07c6b35fe454d5727c38eb4416330c40c))
+* handle job suspended after start as errors ([a051d2e](https://github.com/scc-digitalhub/digitalhub-core/commit/a051d2e4a50be358d0cf14a36312935877198606))
+* python 3.14 for runtime python ([3fcfc54](https://github.com/scc-digitalhub/digitalhub-core/commit/3fcfc54c00ba1c9b3822b48cb7a82d2a4a182c97))
+* run autoscaler extension ([7a1f508](https://github.com/scc-digitalhub/digitalhub-core/commit/7a1f5085c4c2e01aa144c051a0fe6815574ee84f))
+* support folders with yaml/json for templates ([0f8c390](https://github.com/scc-digitalhub/digitalhub-core/commit/0f8c3908329164d48684f6b4b1e9240f91e1a5d9))
+* **buildkit:** add configurable insecure registry output flag ([f61f9df](https://github.com/scc-digitalhub/digitalhub-core/commit/f61f9df866195d41db8d6f96f5845695f8d964c2))
+* enforce appliesTo/appliesNotTo for extensions ([a9e218a](https://github.com/scc-digitalhub/digitalhub-core/commit/a9e218a49d2da44cf6197e97c3be26fa6413fd3c))
+* runtime-tvm (tvm+build / tvm+compile / tvm+serve) ([a41373b](https://github.com/scc-digitalhub/digitalhub-core/commit/a41373b54d836db9153f7c675b1dec7326260403))
+* **runtime-tvm:** armv7l (32-bit ARM hard-float) compile target; trim comments ([c8abec9](https://github.com/scc-digitalhub/digitalhub-core/commit/c8abec9310ceef7b30b08af304b0aecd42085b01))
+* **runtime-tvm:** ONNX-only pipeline on TVM 0.25 — cpu/x86/arm64 targets, multi-worker serve, native dtypes, xinet pose test ([8f6e2d9](https://github.com/scc-digitalhub/digitalhub-core/commit/8f6e2d983c244a2cd4ece967bb82b4d390125e08))
+* **runtime-tvm:** TFLite source format, quantized models, Go serve by default ([869b9da](https://github.com/scc-digitalhub/digitalhub-core/commit/869b9da8cfd1bd2241be8c921131e6ae2f6d9882))
+* support uiSchema for all spec types, plus showIn for extensions ([352dd8a](https://github.com/scc-digitalhub/digitalhub-core/commit/352dd8a5b1a78fc6b8ff45ebe00a38342736b9eb))
+* upgrade spring version ([0f07b9a](https://github.com/scc-digitalhub/digitalhub-core/commit/0f07b9a7d13a77a56e46b412655ca053833f07af))
+
+
+### Bug Fixes
+
+* align TVM runtime specs and execution ([af52ccb](https://github.com/scc-digitalhub/digitalhub-core/commit/af52ccb6de768672b5e1a3042b4d9add91ea3adc))
+* align TVM schemas and images ([6a5ce85](https://github.com/scc-digitalhub/digitalhub-core/commit/6a5ce85ed08d601605f9e6e55a2f20106ec037e0))
+* argo workflow propagates labels to pod via podMetadata ([7b2ba7c](https://github.com/scc-digitalhub/digitalhub-core/commit/7b2ba7c26439f2a43de53033ecfea4c6ce63b7e6))
+* preserve TVM service URLs ([94b610d](https://github.com/scc-digitalhub/digitalhub-core/commit/94b610d65e74326d79ac669ea8410104e13d0cab))
+* run search filter handles full or partial key matches ([785c2e1](https://github.com/scc-digitalhub/digitalhub-core/commit/785c2e1519e21a0dc3fe2986e0df271300e63734))
+* TVM configuration and model publishing ([6310f27](https://github.com/scc-digitalhub/digitalhub-core/commit/6310f27dbe2364de77e3e644c313eeb5f45f24f1))
+* always use k8s secret helper to derive secret names ([fbc8b3d](https://github.com/scc-digitalhub/digitalhub-core/commit/fbc8b3d74af4557f94fd1da595f9891cba88427f))
+* kubeai serve runner secret name generation ([6a6ad99](https://github.com/scc-digitalhub/digitalhub-core/commit/6a6ad998b4c0b6485926f4539afddc22ced9d54f))
+* errors on kind change for new versions of entities ([ce29bfe](https://github.com/scc-digitalhub/digitalhub-core/commit/ce29bfeba5855d86b69dc8d6ddbf2defb257de9c))
+* huggingface api returns optional to account for errors in accessing private/limited access resources ([ac1a2cf](https://github.com/scc-digitalhub/digitalhub-core/commit/ac1a2cf2e8ed09a9a2833d7b94ce819d3d933681))
+* vllm adapter path is taken from model path ([089d125](https://github.com/scc-digitalhub/digitalhub-core/commit/089d12562bf67b7517f2cf83e0f41018cdfea85a))
+* vllm path handling ([1d05a74](https://github.com/scc-digitalhub/digitalhub-core/commit/1d05a744f24083f8518552bb71c8321442220211))
+* extension manager should keep id and properly update + add controller ([ed92e91](https://github.com/scc-digitalhub/digitalhub-core/commit/ed92e917a7d8c95b0e18856f719f63e0b769748b))
+* k8s service info deserde ([a1773db](https://github.com/scc-digitalhub/digitalhub-core/commit/a1773dbc8a18e218b22b5c21d5c8a778456c2d80))
+* ray service exposes urls with ports ([d2fa827](https://github.com/scc-digitalhub/digitalhub-core/commit/d2fa8275d8b5c53eae01630f2a0ce54a66881396))
+* remove versionableService deleteAll to avoid bypassing entityService and lifecycle ([34c95e0](https://github.com/scc-digitalhub/digitalhub-core/commit/34c95e0aba02db641f6a3b2f4e8317cdc7be72e1))
+* **runtime-tvm:** correct results on 32-bit ARM (armv7l) ([4fc22c7](https://github.com/scc-digitalhub/digitalhub-core/commit/4fc22c7afd52a20df2dcb8b3debb1a9ab108bc9e))
+* kubeAi tasks are not k8s runnable tasks ([a296284](https://github.com/scc-digitalhub/digitalhub-core/commit/a2962849652786ea1b84903750d517083a1692ef))
+* cleanup junit/mockito dependencies to solve for Java 21+ agent restrictions ([991d358](https://github.com/scc-digitalhub/digitalhub-core/commit/991d3586e0f113dfc440348384753ae7fcab8711))
+* runtime tvm junit dependencies ([33fbbc2](https://github.com/scc-digitalhub/digitalhub-core/commit/33fbbc2bd6765f70ff356d48840d95db213e1fd4))
+* **runtime-tvm:** build YOLOv8 again with TVM 0.26 ([6e6398d](https://github.com/scc-digitalhub/digitalhub-core/commit/6e6398dc6a646ef42af7d5306914d40cbf2ea64c))
+* metrics entity should enforce unique for name index ([beeca4f](https://github.com/scc-digitalhub/digitalhub-core/commit/beeca4fbfaca4eedd260870b8f23ec103d43a01f))
+* id generation should always happen before key generation ([1a1f696](https://github.com/scc-digitalhub/digitalhub-core/commit/1a1f69671a217fa0ec84dc1c8c11eaa7d2b344b9))
+* key pattern on dto should account for full or partial keys ([d7f3ca2](https://github.com/scc-digitalhub/digitalhub-core/commit/d7f3ca2939c65a747760922155ad5aed86ae565d))
+* model serve runners check for valid model uris before executing ([74aa8fa](https://github.com/scc-digitalhub/digitalhub-core/commit/74aa8fab4dc45d968f9344bbf88f9742e22f9890))
+* build framework fails when no context files/sources are passed because of empty config map ([1a48329](https://github.com/scc-digitalhub/digitalhub-core/commit/1a483295d338c2a6cc1de82ee566f7623a585951))
+* handle npe for model in ml runners as exception with text ([8b0ef14](https://github.com/scc-digitalhub/digitalhub-core/commit/8b0ef1463e11e3d90928a7f08dc4fe29093c6fe1))
+* python based runtimes always build internal dependencies, install flag disables only user provided ([95424a2](https://github.com/scc-digitalhub/digitalhub-core/commit/95424a289fc26b02edb4ba7a4a8318f6fff41741))
+* run function filter always treats input as fully qualified to avoid substring matches ([d22cfa2](https://github.com/scc-digitalhub/digitalhub-core/commit/d22cfa2d789797d4f7028fc44b22a997a90996b6))
+* trino db provider should handle nullable credentials without npe ([22cd911](https://github.com/scc-digitalhub/digitalhub-core/commit/22cd9115f01c21ca3c5807ea297fd62b0d5265b3))
+* invalid template/profiles trigger exception ([bf2519b](https://github.com/scc-digitalhub/digitalhub-core/commit/bf2519bb82feea676e3e5a3c87e653b5dad521d5))
+
+
+**Full Changelog**: https://github.com/scc-digitalhub/digitalhub-core/compare/0.15.1...0.16.0
+
 # [0.15.1](https://github.com/scc-digitalhub/digitalhub-core/compare/0.15.0...0.15.1) (2026-08-03)
 
 Minor release for v15 introducing container images details, metrics and logs external providers (Loki and Prometheus).
@@ -1591,6 +1707,4 @@ With no active runs the `runnables` table should eventually be empty: flushing t
 
 
 ## 0.0.2-snapshot (2023-07-11)
-
-
 

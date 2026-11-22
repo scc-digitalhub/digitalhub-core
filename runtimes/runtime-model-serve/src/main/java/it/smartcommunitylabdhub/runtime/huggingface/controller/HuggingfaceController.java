@@ -66,7 +66,7 @@ public class HuggingfaceController {
     private EntityService<Model> modelService;
 
     @Operation(summary = "Retrieve a specific containerImage version given the containerImage id")
-    @GetMapping(path = "/{id}/modelcard", produces = "application/json; charset=UTF-8")
+    @GetMapping(path = "/{id}/modelcard/" + HuggingfaceModelSpec.KIND, produces = "application/json; charset=UTF-8")
     public ModelCard getModelCard(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id
@@ -99,8 +99,8 @@ public class HuggingfaceController {
             revision = parts[1];
         }
 
-        return new ModelCard(apiService.getReadme(modelId));
+        return new ModelCard(apiService.getReadme(modelId), "text/markdown");
     }
 
-    private record ModelCard(String content) {}
+    private record ModelCard(String content, String format) {}
 }

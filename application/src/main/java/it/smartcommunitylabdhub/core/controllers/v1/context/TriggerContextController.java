@@ -26,6 +26,7 @@ package it.smartcommunitylabdhub.core.controllers.v1.context;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.smartcommunitylabdhub.commons.Keys;
+import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
@@ -39,6 +40,7 @@ import it.smartcommunitylabdhub.triggers.Trigger;
 import it.smartcommunitylabdhub.triggers.TriggerManager;
 import it.smartcommunitylabdhub.triggers.filters.TriggerEntityFilter;
 import it.smartcommunitylabdhub.triggers.lifecycle.TriggerEvent;
+import it.smartcommunitylabdhub.triggers.lifecycle.TriggerState;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -102,8 +104,13 @@ public class TriggerContextController {
         //create as new, will check for duplicated
         Trigger trigger = triggerManager.createTrigger(dto);
 
-        //run
-        lifecycleManager.perform(trigger, TriggerEvent.RUN.name());
+        if (
+            trigger != null &&
+            TriggerState.CREATED.name().equals(StatusFieldAccessor.with(trigger.getStatus()).getState())
+        ) {
+            //run
+            lifecycleManager.perform(trigger, TriggerEvent.RUN.name());
+        }
 
         return trigger;
     }
@@ -177,7 +184,11 @@ public class TriggerContextController {
         }
 
         //TODO via manager to avoid race condition between cleanup and delete
-        lifecycleManager.perform(trigger, TriggerEvent.STOP.name());
+        try {
+            lifecycleManager.perform(trigger, TriggerEvent.STOP.name());
+        } catch (Exception e) {
+            log.debug("Error stopping trigger: {}", e.getMessage());
+        }
         triggerManager.deleteTrigger(id, cascade != null && cascade);
     }
 

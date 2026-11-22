@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.runtime.vllm.base.specs;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
-import it.smartcommunitylabdhub.runtime.vllm.base.models.VLLMAdapter;
+import it.smartcommunitylabdhub.runtime.modelserve.models.LoRAAdapter;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.List;
@@ -54,7 +54,7 @@ public class VLLMServeRunSpec extends RunBaseSpec {
 
     @JsonProperty("adapters")
     @Schema(title = "fields.vllm.adapters.title", description = "fields.vllm.adapters.description")
-    private List<VLLMAdapter> adapters;
+    private List<LoRAAdapter> adapters;
 
     @Schema(title = "fields.vllm.args.title", description = "fields.vllm.args.description")
     private List<String> args;

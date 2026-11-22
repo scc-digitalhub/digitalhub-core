@@ -32,24 +32,16 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.util.StringUtils;
-import org.springframework.web.util.UriComponents;
-import org.springframework.web.util.UriComponentsBuilder;
 
-// Stateless helpers shared by the TVM runners: pod scripts, model references, names, CPU
-// quantities and node architectures.
 public final class TvmRunnerHelper {
 
-    // Folder of the pod scripts on the classpath.
     public static final String SCRIPTS_CLASSPATH = "classpath:/runtime-tvm/scripts/";
     public static final String ENTRYPOINT_NAME = "entrypoint.sh";
-    // Modules imported by the task scripts: options and IR helpers, Model publishing,
-    // MetaSchedule tuning and the benchmark.
-    public static final List<String> SHARED_SCRIPTS = List.of("common.py", "publish.py", "tuning.py", "benchmark.py");
+    public static final List<String> SHARED_SCRIPTS = List.of("common.py", "publish.py", "tuning.py", "benchmark.py", "toolchain.py");
 
-    // Label that every Kubernetes node carries with its CPU architecture (amd64, arm64, arm).
     public static final String NODE_ARCH_LABEL = "kubernetes.io/arch";
 
-    // mtriple and mcpu in a TVM target, written as JSON ("mtriple":"...") or as flags (-mtriple=...).
+    // Accept both JSON targets and LLVM target flags.
     private static final Pattern TARGET_TRIPLE = Pattern.compile("mtriple\"?\\s*[:=]\\s*\"?([\\w.-]+)");
     private static final Pattern TARGET_X86_CPU = Pattern.compile("mcpu\"?\\s*[:=]\\s*\"?x86-64");
 
@@ -58,8 +50,6 @@ public final class TvmRunnerHelper {
 
     private TvmRunnerHelper() {}
 
-    // Files mounted in every TVM Job pod: the entrypoint, the task script under its own name
-    // (the entrypoint runs the one named in TVM_TASK_SCRIPT) and the shared modules it imports.
     public static List<ContextSource> createContextSources(
         @NotNull String entrypoint,
         @NotNull String taskScriptName,
@@ -75,12 +65,10 @@ public final class TvmRunnerHelper {
         return sources;
     }
 
-    // File name of a script location, e.g. build_onnx.py for classpath:/runtime-tvm/scripts/build_onnx.py.
     public static String scriptName(String location) {
         return location.substring(location.lastIndexOf('/') + 1);
     }
 
-    // Text content of a classpath resource, e.g. one of the pod scripts.
     public static String loadClasspath(String location) {
         try {
             return new String(RESOURCE_LOADER.getResource(location).getContentAsByteArray(), StandardCharsets.UTF_8);
@@ -97,14 +85,16 @@ public final class TvmRunnerHelper {
             .build();
     }
 
-    // Tells the init container to download an S3/HTTP source into the pod; null when there
-    // is no source.
     public static ContextRef inputContextRef(String s3OrHttpUri, String destination) {
         if (!StringUtils.hasText(s3OrHttpUri)) {
             return null;
         }
-        UriComponents uri = UriComponentsBuilder.fromUriString(s3OrHttpUri).build();
-        return ContextRef.builder().source(s3OrHttpUri).protocol(uri.getScheme()).destination(destination).build();
+        ContextRef ref = ContextRef.from(s3OrHttpUri);
+        if (ref == null) {
+            throw new IllegalArgumentException("invalid model source URI");
+        }
+        ref.setDestination(destination);
+        return ref;
     }
 
     // The Model entity behind a store:// key; the latest version when the key has no id.
@@ -128,8 +118,6 @@ public final class TvmRunnerHelper {
         return model;
     }
 
-    // Storage path of a model reference: a store:// key becomes the Model's spec.path,
-    // while s3:// and https:// paths are returned as they are.
     public static String resolveModelPath(String reference, ModelManager modelManager) {
         if (!StringUtils.hasText(reference)) {
             throw new IllegalArgumentException("model path is missing or invalid");
@@ -137,7 +125,10 @@ public final class TvmRunnerHelper {
         if (!reference.startsWith(Keys.STORE_PREFIX)) {
             return reference;
         }
-        Model model = resolveModel(reference, modelManager);
+        return modelPath(resolveModel(reference, modelManager), reference);
+    }
+
+    public static String modelPath(Model model, String reference) {
         Object path = model.getSpec() != null ? model.getSpec().get("path") : null;
         if (!(path instanceof String text)) {
             throw new CoreRuntimeException("model spec.path is missing for: " + reference);
@@ -145,16 +136,15 @@ public final class TvmRunnerHelper {
         return text;
     }
 
-    // Like resolveModelPath, with a trailing slash so the init container downloads the whole
-    // folder (model.so or model.relax.json together with metadata.json). Zip archives are
-    // left as they are.
     public static String resolveModelDir(String modelKey, ModelManager modelManager) {
-        String path = resolveModelPath(modelKey, modelManager);
+        return modelDir(resolveModelPath(modelKey, modelManager));
+    }
+
+    // A trailing slash downloads the entire model folder; ZIP paths must remain unchanged.
+    public static String modelDir(String path) {
         return path.endsWith("/") || path.endsWith(".zip") ? path : path + "/";
     }
 
-    // Model kind named in a store:// key (store://<project>/model/<kind>/<name>); null for
-    // plain paths.
     public static String modelKindOf(String reference) {
         if (reference == null || !reference.startsWith(Keys.STORE_PREFIX)) {
             return null;
@@ -162,24 +152,12 @@ public final class TvmRunnerHelper {
         return KeyAccessor.with(reference).getKind();
     }
 
-    // Last path segment of a URI, ignoring a trailing slash.
     public static String extractFileName(String uri) {
         if (!StringUtils.hasText(uri)) {
             return "";
         }
         String trimmed = uri.endsWith("/") ? uri.substring(0, uri.length() - 1) : uri;
         return trimmed.substring(trimmed.lastIndexOf('/') + 1);
-    }
-
-    // Function name without the "function/tvm/" prefix and the ":id" suffix; used for the
-    // served model name and the Service names.
-    public static String cleanName(String name) {
-        if (name == null) {
-            return null;
-        }
-        String clean = name.substring(name.lastIndexOf('/') + 1);
-        int colon = clean.indexOf(':');
-        return colon >= 0 ? clean.substring(0, colon) : clean;
     }
 
     // Whole CPU cores in a Kubernetes quantity, rounded up: "500m" -> 1, "1.5" -> 2.
@@ -200,9 +178,7 @@ public final class TvmRunnerHelper {
         }
     }
 
-    // Node architecture that can run a compiled Model, read from its spec: the target_triple
-    // that tvm+compile writes in the manifest, else the mtriple or x86 mcpu of the target
-    // (Models compiled before target_triple existed). Null when the spec does not tell it.
+    // Fall back to the target for models published before target_triple was recorded.
     public static String modelArchitecture(Map<String, Serializable> spec) {
         if (spec == null) {
             return null;
@@ -212,13 +188,16 @@ public final class TvmRunnerHelper {
             manifest.get("target_triple") instanceof String triple &&
             StringUtils.hasText(triple)
         ) {
-            return tripleArchitecture(triple);
+            String architecture = tripleArchitecture(triple);
+            if (architecture == null) {
+                throw new IllegalArgumentException("No serve node architecture mapping for model target_triple: " + triple);
+            }
+            return architecture;
         }
         return spec.get("target") instanceof String target ? targetArchitecture(target) : null;
     }
 
-    // Node architecture for a TVM target: from its mtriple, or amd64 for an x86-64 mcpu.
-    // Null when the target builds for the machine running the compile (e.g. plain llvm).
+    // Host-dependent targets such as plain "llvm" have no fixed architecture.
     public static String targetArchitecture(String target) {
         if (!StringUtils.hasText(target)) {
             return null;
@@ -230,8 +209,6 @@ public final class TvmRunnerHelper {
         return TARGET_X86_CPU.matcher(target).find() ? "amd64" : null;
     }
 
-    // Kubernetes name of the architecture in an LLVM triple: x86_64-linux-gnu -> amd64,
-    // aarch64-linux-gnu -> arm64, armv7l-unknown-linux-gnueabihf -> arm. Null for the others.
     public static String tripleArchitecture(String triple) {
         String arch = triple.split("-", 2)[0].toLowerCase(Locale.ROOT);
         if (arch.equals("x86_64") || arch.equals("amd64")) {
@@ -240,6 +217,12 @@ public final class TvmRunnerHelper {
         if (arch.equals("aarch64") || arch.equals("arm64")) {
             return "arm64";
         }
-        return arch.startsWith("arm") ? "arm" : null;
+        if (arch.equals("arm") || arch.startsWith("armv") || arch.startsWith("thumb")) return "arm";
+        return switch (arch) {
+            case "riscv64", "s390x" -> arch;
+            case "powerpc64le", "ppc64le" -> "ppc64le";
+            case "i386", "i486", "i586", "i686" -> "386";
+            default -> null;
+        };
     }
 }

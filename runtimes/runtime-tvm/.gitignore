@@ -1,3 +1,7 @@
 # Python bytecode caches (generati eseguendo gli script handler/builder in locale)
 __pycache__/
 *.pyc
+
+# Keep unit and inference tests local, outside version control.
+/src/test/
+/test_infer/

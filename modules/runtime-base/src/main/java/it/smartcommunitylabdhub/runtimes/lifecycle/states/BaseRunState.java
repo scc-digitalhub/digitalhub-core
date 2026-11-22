@@ -66,8 +66,9 @@ public class BaseRunState<
     //TODO evaluate splitting to factory classes
     protected Transition.Builder<String, String, Run> toError() {
         //(ERROR)->ERROR
+        //NOTE: this is a callback, no event should lead to error
         return new Transition.Builder<String, String, Run>()
-            .event(RunEvent.ERROR.name())
+            // .event(RunEvent.ERROR.name())
             .nextState(RunState.ERROR.name())
             .<R, R>withInternalLogic((currentState, nextState, event, run, runnable) -> {
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
@@ -108,8 +109,9 @@ public class BaseRunState<
 
     protected Transition.Builder<String, String, Run> toDelete() {
         //(DELETE)->DELETED
+        //NOTE: this is a final state transition, no event triggers it
         return new Transition.Builder<String, String, Run>()
-            .event(RunEvent.DELETE.name())
+            // .event(RunEvent.DELETE.name())
             .nextState(RunState.DELETED.name())
             .<R, R>withInternalLogic((currentState, nextState, event, run, runnable) -> {
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
@@ -151,8 +153,9 @@ public class BaseRunState<
 
     protected Transition.Builder<String, String, Run> toPending() {
         //(EXECUTE)->RUNNING
+        // NOTE: this is a callback, no event triggers it
         return new Transition.Builder<String, String, Run>()
-            .event(RunEvent.SCHEDULE.name())
+            // .event(RunEvent.SCHEDULE.name())
             .nextState(RunState.PENDING.name())
             .<R, R>withInternalLogic((currentState, nextState, event, run, runnable) -> {
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
@@ -169,8 +172,9 @@ public class BaseRunState<
 
     protected Transition.Builder<String, String, Run> toRunning() {
         //(EXECUTE)->RUNNING
+        // NOTE: this is a callback, no event triggers it
         return new Transition.Builder<String, String, Run>()
-            .event(RunEvent.EXECUTE.name())
+            // .event(RunEvent.EXECUTE.name())
             .nextState(RunState.RUNNING.name())
             .<R, R>withInternalLogic((currentState, nextState, event, run, runnable) -> {
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
@@ -189,8 +193,9 @@ public class BaseRunState<
 
     protected Transition.Builder<String, String, Run> loopRunning() {
         //(LOOP)->RUNNING
+        // NOTE: this is a callback, no event trigger
         return new Transition.Builder<String, String, Run>()
-            .event(RunEvent.LOOP.name())
+            // .event(RunEvent.LOOP.name())
             .nextState(RunState.RUNNING.name())
             .<R, R>withInternalLogic((currentState, nextState, event, run, runnable) -> {
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
@@ -209,8 +214,9 @@ public class BaseRunState<
 
     protected Transition.Builder<String, String, Run> toCompleted() {
         //(COMPLETE)->COMPLETED
+        //NOTE: this is a final state, no event should trigger it
         return new Transition.Builder<String, String, Run>()
-            .event(RunEvent.COMPLETE.name())
+            // .event(RunEvent.COMPLETE.name())
             .nextState(RunState.COMPLETED.name())
             .<R, R>withInternalLogic((currentState, nextState, event, run, runnable) -> {
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
@@ -250,8 +256,9 @@ public class BaseRunState<
 
     protected Transition.Builder<String, String, Run> toStopped() {
         //(STOP)->STOPPED
+        //NOTE: this is a callback, no event should trigger it
         return new Transition.Builder<String, String, Run>()
-            .event(RunEvent.STOP.name())
+            // .event(RunEvent.STOP.name())
             .nextState(RunState.STOPPED.name())
             .<R, R>withInternalLogic((currentState, nextState, event, run, runnable) -> {
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());

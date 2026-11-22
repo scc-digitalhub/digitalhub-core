@@ -4,18 +4,18 @@
     "FileRef" : {
       "type" : "object",
       "properties" : {
-        "destination" : {
-          "type" : "string",
-          "title" : "fields.destination.title",
-          "description" : "fields.destination.description",
-          "pattern" : "^(/|/?[\\w.-]+(/[\\w.-]+)*)$"
-        },
         "source" : {
           "type" : "string",
           "title" : "fields.source.title",
           "description" : "fields.source.description",
           "minLength" : 1,
           "pattern" : "^[a-zA-Z][a-zA-Z0-9+.-]*:(//([a-zA-Z0-9._~!$&'()*+,;=:%-]*@)?[a-zA-Z0-9._~!$&'()*+,;=:%-]*(:[0-9]*)?)?(/[a-zA-Z0-9._~!$&'()*+,;=:@%-]*)*(\\?[a-zA-Z0-9._~!$&'()*+,;=:@/?%-]*)?(#[a-zA-Z0-9._~!$&'()*+,;=:@/?%-]*)?$"
+        },
+        "destination" : {
+          "type" : "string",
+          "title" : "fields.destination.title",
+          "description" : "fields.destination.description",
+          "pattern" : "^(/|/?[\\w.-]+(/[\\w.-]+)*)$"
         }
       },
       "required" : [ "source" ]
@@ -24,8 +24,8 @@
   "type" : "object",
   "properties" : {
     "files" : {
-      "title" : "fields.files.title",
-      "description" : "fields.files.description",
+      "title" : "Files",
+      "description" : "List of files to be initialized for the run",
       "type" : "array",
       "items" : {
         "$ref" : "#/$defs/FileRef",

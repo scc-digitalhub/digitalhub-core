@@ -28,12 +28,10 @@ import it.smartcommunitylabdhub.runs.Run;
 
 public enum RunEvent implements LifecycleEvents<Run> {
     BUILD,
-    COMPLETE,
+    // COMPLETE,
     DELETE,
-    ERROR,
-    SCHEDULE,
-    EXECUTE,
-    LOOP,
+    // ERROR,
+    // LOOP,
     RESUME,
     RUN,
     STOP,

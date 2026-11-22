@@ -44,7 +44,6 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- Spring Boot Test for testing Spring components -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

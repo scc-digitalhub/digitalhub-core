@@ -74,5 +74,18 @@
     "ui:description@en": "Rewrites the input names so they are valid Relax identifiers.",
     "ui:title@it": "Normalizza nomi di input",
     "ui:description@it": "Riscrive i nomi degli input perché siano identificatori Relax validi."
-  }
+  },
+  "ui:order": [
+    "task",
+    "inputs",
+    "image",
+    "simplify",
+    "target_opset",
+    "opset_override",
+    "strict_shape_inference",
+    "data_prop",
+    "keep_params_in_input",
+    "sanitize_input_names",
+    "*"
+  ]
 }

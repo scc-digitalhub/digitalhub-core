@@ -34,9 +34,9 @@ import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.models.task.TaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runs.Run;
+import it.smartcommunitylabdhub.runtime.modelserve.models.LoRAAdapter;
 import it.smartcommunitylabdhub.runtime.vllm.base.VLLMServeRunner;
 import it.smartcommunitylabdhub.runtime.vllm.base.VLLMServeRuntime;
-import it.smartcommunitylabdhub.runtime.vllm.base.models.VLLMAdapter;
 import it.smartcommunitylabdhub.runtime.vllm.text.specs.VLLMServeTextFunctionSpec;
 import it.smartcommunitylabdhub.runtime.vllm.text.specs.VLLMServeTextRunSpec;
 import it.smartcommunitylabdhub.runtime.vllm.text.specs.VLLMServeTextServeTaskSpec;
@@ -124,7 +124,7 @@ public class VLLMServeTextRuntime extends VLLMServeRuntime<VLLMServeTextFunction
         runSpec.setModelName(modelName);
 
         //adapters are defined in function spec but overridable in run spec
-        List<VLLMAdapter> adapters = funSpec.getAdapters();
+        List<LoRAAdapter> adapters = funSpec.getAdapters();
         if (runSpec.getAdapters() != null && !runSpec.getAdapters().isEmpty()) {
             adapters = runSpec.getAdapters();
         }

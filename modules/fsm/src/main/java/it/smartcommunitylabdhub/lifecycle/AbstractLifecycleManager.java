@@ -32,6 +32,7 @@ import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.events.EntityAction;
 import it.smartcommunitylabdhub.events.EntityOperation;
+import it.smartcommunitylabdhub.fsm.exceptions.InvalidTransitionException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
@@ -137,6 +138,9 @@ public abstract class AbstractLifecycleManager<D extends BaseDTO & SpecDTO & Sta
                     log.trace("Updated dto: {}", dto);
                 }
                 return dto;
+            } catch (InvalidTransitionException e) {
+                log.debug("Invalid transition {} -> {}", e.getFromState(), e.getToState());
+                throw e;
             } catch (StoreException e) {
                 log.error("store error: {}", e.getMessage());
                 throw new SystemException(e.getMessage());

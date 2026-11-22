@@ -50,7 +50,22 @@ public interface EntityService<D extends BaseDTO> {
     D update(@NotNull String id, @NotNull D dto, boolean forceUpdate)
         throws BindException, IllegalArgumentException, NoSuchEntityException, StoreException;
 
-    void delete(@NotNull String id, @Nullable Boolean cascade) throws StoreException;
+    /**
+     * Updates an entity, optionally treating non-null embedded maps as object-root JSON Merge Patches.
+     * A null embedded map is not patched. Spec changes remain subject to {@code forceUpdate}.
+     * Implementations that do not support merging reject it explicitly.
+     */
+    default D update(@NotNull String id, @NotNull D dto, boolean forceUpdate, boolean merge)
+        throws BindException, IllegalArgumentException, NoSuchEntityException, StoreException {
+        if (merge) {
+            throw new UnsupportedOperationException("merge update is not supported");
+        }
+        return update(id, dto, forceUpdate);
+    }
+
+    @Nullable
+    D delete(@NotNull String id, @Nullable Boolean cascade) throws StoreException;
+
     void deleteAll(@Nullable Boolean cascade) throws StoreException;
     void deleteByUser(@NotNull String user, @Nullable Boolean cascade) throws StoreException;
     void deleteByProject(@NotNull String project, @Nullable Boolean cascade) throws StoreException;

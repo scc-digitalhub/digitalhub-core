@@ -33,30 +33,22 @@ import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.commons.models.schemas.Schema;
-import it.smartcommunitylabdhub.commons.services.SchemaService;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.search.service.IndexableEntityService;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.SortDefault;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.BindException;
 import org.springframework.validation.annotation.Validated;
@@ -85,9 +77,6 @@ public class ArtifactController {
 
     @Autowired
     IndexableEntityService<Artifact> indexService;
-
-    @Autowired
-    SchemaService<Artifact> schemaService;
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Operation(summary = "Create artifact", description = "Create an artifact and return")
@@ -164,32 +153,5 @@ public class ArtifactController {
     public void reindexArtifacts() {
         //via async
         indexService.reindexAll();
-    }
-
-    /*
-     * schemas
-     */
-    @Operation(
-        summary = "List entity schemas",
-        description = "Return a list of all the spec schemas available for the given entity"
-    )
-    @GetMapping(path = "/schemas")
-    public ResponseEntity<Page<Schema>> listArtifactSchemas(
-        @RequestParam(required = false) Optional<String> runtime,
-        Pageable pageable
-    ) {
-        Collection<Schema> schemas = runtime.isPresent()
-            ? schemaService.listSchemas(runtime.get())
-            : schemaService.listSchemas();
-        PageImpl<Schema> page = new PageImpl<>(new ArrayList<>(schemas), pageable, schemas.size());
-
-        return ResponseEntity.ok(page);
-    }
-
-    @GetMapping(path = "/schemas/{kind}", produces = "application/json; charset=UTF-8")
-    public ResponseEntity<Schema> getArtifactSchema(@PathVariable @NotBlank String kind) {
-        Schema schema = schemaService.getSchema(kind);
-
-        return ResponseEntity.ok(schema);
     }
 }

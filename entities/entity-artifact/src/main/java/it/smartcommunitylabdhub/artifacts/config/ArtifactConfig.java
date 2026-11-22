@@ -22,6 +22,7 @@ import it.smartcommunitylabdhub.artifacts.lifecycle.ArtifactFsmFactoryBuilder;
 import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
 import it.smartcommunitylabdhub.fsm.Fsm;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
+import it.smartcommunitylabdhub.templates.service.TemplateServiceImpl;
 import java.util.Optional;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,6 +38,11 @@ public class ArtifactConfig {
     @Bean
     SpecRegistryImpl<Artifact> artifactSpecRegistry() {
         return new SpecRegistryImpl<>(Artifact.class);
+    }
+
+    @Bean
+    TemplateServiceImpl<Artifact> artifactTemplateService() {
+        return new TemplateServiceImpl<>(Artifact.class) {};
     }
 
     // build indexer only if a provider is available

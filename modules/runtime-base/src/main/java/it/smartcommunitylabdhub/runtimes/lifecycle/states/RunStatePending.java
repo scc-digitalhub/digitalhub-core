@@ -27,7 +27,6 @@ import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.fsm.Transition;
 import it.smartcommunitylabdhub.runs.Run;
-import it.smartcommunitylabdhub.runs.lifecycle.RunEvent;
 import it.smartcommunitylabdhub.runs.lifecycle.RunState;
 import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
@@ -62,8 +61,9 @@ public class RunStatePending<
 
     protected Transition.Builder<String, String, Run> loopPending() {
         //(EXECUTE)->RUNNING
+        //NOTE: this is a callback, no event trigger
         return new Transition.Builder<String, String, Run>()
-            .event(RunEvent.LOOP.name())
+            // .event(RunEvent.LOOP.name())
             .nextState(RunState.PENDING.name())
             .<R, R>withInternalLogic((currentState, nextState, event, run, runnable) -> {
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());

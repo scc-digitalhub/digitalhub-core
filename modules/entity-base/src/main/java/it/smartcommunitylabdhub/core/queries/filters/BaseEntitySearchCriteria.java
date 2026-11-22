@@ -32,6 +32,7 @@ import jakarta.persistence.criteria.Root;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.Date;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -110,6 +111,12 @@ public class BaseEntitySearchCriteria<T> implements SearchCriteria<T> {
                 if (root.get(field).getJavaType() == Long.class && value instanceof Long) {
                     return builder.lessThanOrEqualTo(root.get(field), (Long) value);
                 }
+                break;
+            case Operation.in:
+                if (value instanceof Collection<?>) {
+                    return root.get(field).in((Collection<?>) value);
+                }
+                break;
             default:
                 return null;
         }

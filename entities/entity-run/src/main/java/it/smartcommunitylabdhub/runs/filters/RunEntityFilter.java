@@ -24,6 +24,7 @@
 package it.smartcommunitylabdhub.runs.filters;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import it.smartcommunitylabdhub.commons.Fields;
 import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.models.queries.SearchCriteria;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
@@ -66,10 +67,10 @@ public class RunEntityFilter extends AbstractEntityFilter<Run> {
 
     protected List<SearchCriteria<Run>> processQFields(String q) {
         return List.of(
-            new BaseEntitySearchCriteria<>("id", q, SearchCriteria.Operation.like),
-            new BaseEntitySearchCriteria<>("name", q, SearchCriteria.Operation.like),
-            new BaseEntitySearchCriteria<>("function", q, SearchCriteria.Operation.like),
-            new BaseEntitySearchCriteria<>("workflow", q, SearchCriteria.Operation.like)
+            new BaseEntitySearchCriteria<>(Fields.ID, q, SearchCriteria.Operation.like),
+            new BaseEntitySearchCriteria<>(Fields.NAME, q, SearchCriteria.Operation.like),
+            new BaseEntitySearchCriteria<>(Fields.FUNCTION, q, SearchCriteria.Operation.like),
+            new BaseEntitySearchCriteria<>(Fields.WORKFLOW, q, SearchCriteria.Operation.like)
         );
     }
 
@@ -85,11 +86,11 @@ public class RunEntityFilter extends AbstractEntityFilter<Run> {
 
         //task exact match
         Optional.ofNullable(task).ifPresentOrElse(
-            value -> criteria.add(new BaseEntitySearchCriteria<>("task", value, SearchCriteria.Operation.equal)),
+            value -> criteria.add(new BaseEntitySearchCriteria<>(Fields.TASK, value, SearchCriteria.Operation.equal)),
             () -> {
                 //if no task, check action
                 Optional.ofNullable(action).ifPresent(a ->
-                    criteria.add(new BaseEntitySearchCriteria<>("task", a, SearchCriteria.Operation.like))
+                    criteria.add(new BaseEntitySearchCriteria<>(Fields.TASK, a, SearchCriteria.Operation.like))
                 );
             }
         );
@@ -97,32 +98,32 @@ public class RunEntityFilter extends AbstractEntityFilter<Run> {
         //function match
         Optional.ofNullable(function).ifPresent(value -> {
             Matcher matcher = java.util.regex.Pattern.compile(Keys.FUNCTION_PATTERN).matcher(value);
-            if (matcher.matches()) {
-                //exact match
-                criteria.add(new BaseEntitySearchCriteria<>("function", value, SearchCriteria.Operation.equal));
+            if (matcher.matches() && matcher.groupCount() > 3 && matcher.group(4) != null) {
+                //exact match with id
+                criteria.add(new BaseEntitySearchCriteria<>(Fields.FUNCTION, value, SearchCriteria.Operation.equal));
             } else {
                 //like match
                 //NOTE: explicitly append separator to avoid partial (substring) name clashes
                 if (!value.endsWith(":")) {
                     value = value + ":";
                 }
-                criteria.add(new BaseEntitySearchCriteria<>("function", value, SearchCriteria.Operation.like));
+                criteria.add(new BaseEntitySearchCriteria<>(Fields.FUNCTION, value, SearchCriteria.Operation.like));
             }
         });
 
         //workflow exact match
         Optional.ofNullable(workflow).ifPresent(value -> {
             Matcher matcher = java.util.regex.Pattern.compile(Keys.WORKFLOW_PATTERN).matcher(value);
-            if (matcher.matches()) {
-                //exact match
-                criteria.add(new BaseEntitySearchCriteria<>("workflow", value, SearchCriteria.Operation.equal));
+            if (matcher.matches() && matcher.groupCount() > 3 && matcher.group(4) != null) {
+                //exact match with id
+                criteria.add(new BaseEntitySearchCriteria<>(Fields.WORKFLOW, value, SearchCriteria.Operation.equal));
             } else {
                 //like match
                 //NOTE: explicitly append separator to avoid partial (substring) name clashes
                 if (!value.endsWith(":")) {
                     value = value + ":";
                 }
-                criteria.add(new BaseEntitySearchCriteria<>("workflow", value, SearchCriteria.Operation.like));
+                criteria.add(new BaseEntitySearchCriteria<>(Fields.WORKFLOW, value, SearchCriteria.Operation.like));
             }
         });
 

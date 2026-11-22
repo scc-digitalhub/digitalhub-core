@@ -44,7 +44,7 @@ public interface EmbeddedFieldAccessor extends Accessor<Serializable> {
         return get("ref");
     }
 
-    static EmbeddedFieldAccessor with(Map<String, Serializable> map) {
-        return () -> map;
+    static EmbeddedFieldAccessor with(@Nullable Map<String, Serializable> map) {
+        return () -> map != null ? map : Map.of();
     }
 }

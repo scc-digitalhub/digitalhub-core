@@ -29,7 +29,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "containerimages", ignoreUnknownFields = true)
 public class ContainerImagesProperties {
 
-    private String username;
-    private String password;
-    private String registry;
+    private Credentials user;
+    private Credentials admin;
+
+    public record Credentials(String username, String password, String registry) {}
 }

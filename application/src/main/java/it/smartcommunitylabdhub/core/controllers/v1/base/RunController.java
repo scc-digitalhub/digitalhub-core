@@ -26,12 +26,12 @@ package it.smartcommunitylabdhub.core.controllers.v1.base;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.smartcommunitylabdhub.commons.Keys;
+import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.ApplicationKeys;
 import it.smartcommunitylabdhub.core.annotations.ApiVersion;
 import it.smartcommunitylabdhub.core.runs.lifecycle.KindAwareRunLifecycleManager;
@@ -47,7 +47,6 @@ import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -99,15 +98,17 @@ public class RunController {
         //create as new, will check for duplicated
         Run run = runManager.createRun(dto);
 
-        //if !local then also build+run
-        RunBaseSpec runBaseSpec = new RunBaseSpec();
-        runBaseSpec.configure(run.getSpec());
+        if (run != null && RunState.CREATED.name().equals(StatusFieldAccessor.with(run.getStatus()).getState())) {
+            //if !local then also build+run
+            RunBaseSpec runBaseSpec = new RunBaseSpec();
+            runBaseSpec.configure(run.getSpec());
 
-        if (Boolean.FALSE.equals(runBaseSpec.getLocalExecution())) {
-            run = lifecycleManager.perform(run, RunEvent.BUILD.name());
-            run = lifecycleManager.perform(run, RunEvent.RUN.name());
+            if (Boolean.FALSE.equals(runBaseSpec.getLocalExecution())) {
+                run = lifecycleManager.perform(run, RunEvent.BUILD.name());
+                run = lifecycleManager.perform(run, RunEvent.RUN.name());
+            }
         }
-
+        
         return run;
     }
 
@@ -153,11 +154,7 @@ public class RunController {
         Run run = runManager.getRun(id);
 
         //delete via manager
-        runManager.deleteRun(id, true);
-
-        //mock status to DELETING for response, as manager will delete the entity asynchronously
-        run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), Map.of("state", RunState.DELETING.name())));
-        return run;
+        return runManager.deleteRun(run.getId(), true);
     }
 
     @Operation(summary = "Perform action on a specific run")

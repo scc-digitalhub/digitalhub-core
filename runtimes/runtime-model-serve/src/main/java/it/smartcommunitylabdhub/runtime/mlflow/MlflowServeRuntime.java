@@ -51,7 +51,7 @@ import it.smartcommunitylabdhub.runtime.mlflow.specs.MlflowRunSpec;
 import it.smartcommunitylabdhub.runtime.mlflow.specs.MlflowServeFunctionSpec;
 import it.smartcommunitylabdhub.runtime.mlflow.specs.MlflowServeRunSpec;
 import it.smartcommunitylabdhub.runtime.mlflow.specs.MlflowServeTaskSpec;
-import it.smartcommunitylabdhub.runtime.modelserve.specs.InferenceV2Service;
+import it.smartcommunitylabdhub.runtime.modelserve.models.InferenceV2Service;
 import it.smartcommunitylabdhub.runtime.modelserve.specs.ModelServeRunStatus;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;

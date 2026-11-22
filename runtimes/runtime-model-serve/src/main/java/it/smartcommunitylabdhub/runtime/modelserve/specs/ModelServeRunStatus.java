@@ -27,6 +27,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
+import it.smartcommunitylabdhub.runtime.modelserve.models.InferenceV2Service;
+import it.smartcommunitylabdhub.runtime.modelserve.models.OpenAIService;
 import java.io.Serializable;
 import java.util.Map;
 import lombok.AllArgsConstructor;
@@ -48,6 +50,8 @@ public class ModelServeRunStatus extends RunBaseStatus {
     @JsonProperty("inference_v2")
     private InferenceV2Service inferenceV2;
 
+    private OpenAIService openai;
+
     @Override
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
@@ -55,6 +59,7 @@ public class ModelServeRunStatus extends RunBaseStatus {
         ModelServeRunStatus spec = mapper.convertValue(data, ModelServeRunStatus.class);
         this.service = spec.getService();
         this.inferenceV2 = spec.getInferenceV2();
+        this.openai = spec.getOpenai();
     }
 
     public static ModelServeRunStatus with(Map<String, Serializable> data) {

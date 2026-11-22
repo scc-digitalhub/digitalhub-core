@@ -165,7 +165,7 @@ public class KubeAIServeRunner {
         }
 
         List<KubeAiEnvFrom> envFrom = null;
-        String secretName = k8sSecretHelper.getSecretName(runtime, runtime + "+serve", run.getId());
+        String secretName = k8sSecretHelper.getSecretName(run.getId());
         if (secretName != null) {
             //TODO evaluate if we will get the secret, for now we assume it is always there
 

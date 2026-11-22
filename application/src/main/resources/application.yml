@@ -18,19 +18,24 @@ server:
 spring:
   sql:
     init:
-      schema-locations: classpath:db/schema-${spring.sql.init.platform}.sql
-      mode: always
+      # schema-locations: classpath:db/schema-${spring.sql.init.platform}.sql
+      mode: never
       platform: ${JDBC_PLATFORM:h2}
   autoconfigure:
     exclude: org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
   batch:
     jdbc:
       initialize-schema: always
+  flyway:
+    enabled: true
+    locations: classpath:db/${spring.sql.init.platform}
+    baseline-on-migrate: true
+    baseline-version: ${DB_BASELINE:15}
   jpa:
     open-in-view: false
     generate-ddl: true
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     # database-platform: ${JDBC_DIALECT:org.hibernate.dialect.H2Dialect}
   datasource:
     driverClassName: ${JDBC_DRIVER:org.h2.Driver}

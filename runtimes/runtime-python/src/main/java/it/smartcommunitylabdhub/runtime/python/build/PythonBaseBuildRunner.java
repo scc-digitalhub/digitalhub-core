@@ -123,8 +123,11 @@ public abstract class PythonBaseBuildRunner extends PythonBaseRunner {
             );
         }
 
-        // Copy /shared folder (as workdir)
-        dockerfileGenerator.copy(".", homeDir);
+        // Copy requirements only
+        dockerfileGenerator.copy(
+            "./requirements.txt",
+            homeDir.endsWith("/") ? homeDir + "requirements.txt" : homeDir + "/requirements.txt"
+        );
 
         //set workdir from now on
         dockerfileGenerator.workdir(homeDir);
@@ -136,12 +139,12 @@ public abstract class PythonBaseBuildRunner extends PythonBaseRunner {
             instructions.forEach(dockerfileGenerator::run);
         }
 
-        // If requirements.txt are defined add to build
+        // always install requirements, even if empty
         // we do it after user instructions as they might install prerequisites
-        if (requirements != null && !requirements.isEmpty()) {
-            // install all requirements
-            dockerfileGenerator.run("/opt/nuclio/uv/uv pip install --system -r " + homeDir + "/requirements.txt");
-        }
+        dockerfileGenerator.run("/opt/nuclio/uv/uv pip install --system -r " + homeDir + "/requirements.txt");
+
+        // Copy /shared folder (as workdir)
+        dockerfileGenerator.copy(".", homeDir);
 
         //switch to final user
         dockerfileGenerator.user(String.valueOf(this.userId));

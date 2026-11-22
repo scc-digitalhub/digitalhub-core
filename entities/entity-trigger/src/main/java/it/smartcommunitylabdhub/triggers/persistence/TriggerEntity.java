@@ -50,10 +50,16 @@ import org.hibernate.annotations.JdbcTypeCode;
 public class TriggerEntity extends AbstractEntity implements MetadataEntity, SpecEntity, StatusEntity {
 
     @Column(nullable = false)
-    private String task;
+    private String name;
 
     @Column(nullable = false)
-    private String name;
+    private String task;
+
+    @Column(nullable = true)
+    private String function;
+
+    @Column(nullable = true)
+    private String workflow;
 
     @JdbcTypeCode(Types.LONGVARBINARY)
     @ToString.Exclude

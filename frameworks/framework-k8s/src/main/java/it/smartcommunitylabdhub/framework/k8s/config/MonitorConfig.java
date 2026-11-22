@@ -52,10 +52,10 @@ public class MonitorConfig implements InitializingBean {
     private List<K8sBaseMonitor<?>> k8sJobMonitors;
 
     @Value("${monitors.delay}")
-    private int delay;
+    private Integer delay;
 
     @Value("${monitors.min-delay}")
-    private int minDelay;
+    private Integer minDelay;
 
     //TODO refactor with proper scan of annotation
     public void afterPropertiesSet() {

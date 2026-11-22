@@ -10,10 +10,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/-/{project}/functions")
-@PreAuthorize(
-    "hasAuthority('ROLE_ADMIN') or (hasAuthority(#project+':ROLE_USER') or hasAuthority(#project+':ROLE_ADMIN'))"
-)
+@RequestMapping("/api/v1/functions")
+@PreAuthorize("hasAuthority('ROLE_USER')")
 @Validated
 @Slf4j
 @Tag(name = "Function extensible context API", description = "Endpoints related to functions management in project")

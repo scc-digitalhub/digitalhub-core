@@ -312,12 +312,16 @@ public abstract class BaseFilesService<
                 //extract path from spec
                 PathAccessor accessor = PathAccessor.with(dto.getSpec());
                 String specPath = accessor.getPath();
-                if (!StringUtils.hasText(specPath)) {
-                    throw new NoSuchEntityException("file");
-                }
+                // if (!StringUtils.hasText(specPath)) {
+                //     throw new NoSuchEntityException("file");
+                // }
+                // //use as basePath
 
-                //use as basePath
-                path = specPath;
+                // path = specPath;
+                if (StringUtils.hasText(specPath)) {
+                    //use as basePath
+                    path = specPath;
+                }
             }
 
             String basePath = resolveUploadBasePath(path);
