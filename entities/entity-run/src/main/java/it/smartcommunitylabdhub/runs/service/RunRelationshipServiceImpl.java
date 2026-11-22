@@ -61,7 +61,7 @@ public class RunRelationshipServiceImpl extends BaseRelationshipsAwareEntityServ
                 // Read spec and retrieve executables
                 TaskSpecAccessor accessor = TaskSpecAccessor.with(run.getSpec());
 
-                if (accessor.isValid()) {
+                if (accessor.isComplete()) {
                     //rebuild key and check
                     String fk =
                         accessor.getWorkflowId() != null

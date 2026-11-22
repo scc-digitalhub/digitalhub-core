@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.springframework.lang.Nullable;
 import org.springframework.util.StringUtils;
 
 public interface TaskSpecAccessor extends Accessor<String> {
@@ -42,37 +43,44 @@ public interface TaskSpecAccessor extends Accessor<String> {
         return get(Fields.PROJECT);
     }
 
+    /**
+     * Function
+     */
     //get function *name*
     default String getFunction() {
         return get(Fields.FUNCTION);
     }
+
+    //get function *id*
+    default String getFunctionId() {
+        return get(Fields.FUNCTION + "Id");
+    }
+
+    //get function *key*
+    default String getFunctionKey() {
+        return get(Fields.FUNCTION + "Key");
+    }
+
+    /*
+     * Workflow
+     */
 
     //get workflow *name*
     default String getWorkflow() {
         return get(Fields.WORKFLOW);
     }
 
-    //get function *id*
-    default String getFunctionId() {
-        return get("functionId");
-    }
-
     //get workflow *id*
     default String getWorkflowId() {
-        return get("workflowId");
-    }
-
-    //get function *key*
-    default String getFunctionKey() {
-        return get("functionKey");
+        return get(Fields.WORKFLOW + "Id");
     }
 
     //get workflow *key*
     default String getWorkflowKey() {
-        return get("workflowKey");
+        return get(Fields.WORKFLOW + "Key");
     }
 
-    default boolean isValid() {
+    default boolean isComplete() {
         return (
             getProject() != null &&
             getRuntime() != null &&
@@ -83,10 +91,13 @@ public interface TaskSpecAccessor extends Accessor<String> {
     /**
      * Build an accessor over a task spec map.
      * We expect to find either a function or a workflow ref to parse
-     * @param map
+     * @param map the source spec, or null for an empty accessor
      * @return
      */
-    static TaskSpecAccessor with(Map<String, Serializable> map) {
+    static TaskSpecAccessor with(@Nullable Map<String, Serializable> map) {
+        if (map == null) {
+            throw new IllegalArgumentException("Cannot create accessor for the given function/workflow string.");
+        }
         Serializable fn = map.getOrDefault(Fields.FUNCTION, "");
         Serializable wk = map.getOrDefault(Fields.WORKFLOW, "");
 
@@ -103,14 +114,14 @@ public interface TaskSpecAccessor extends Accessor<String> {
                 m.put(Fields.RUNTIME, matcher.group(1));
                 m.put(Fields.PROJECT, matcher.group(2));
                 m.put(Fields.FUNCTION, matcher.group(3));
-                m.put("functionId", matcher.group(4));
-                m.put("functionKey", function);
+                m.put(Fields.FUNCTION + "Id", matcher.group(4));
+                m.put(Fields.FUNCTION + "Key", function);
 
                 return () -> m;
             } else {
                 //keep as is
                 Map<String, String> m = new HashMap<>();
-                m.put("functionKey", function);
+                m.put(Fields.FUNCTION + "Key", function);
                 return () -> m;
             }
         }
@@ -124,17 +135,18 @@ public interface TaskSpecAccessor extends Accessor<String> {
                 m.put(Fields.RUNTIME, matcher.group(1));
                 m.put(Fields.PROJECT, matcher.group(2));
                 m.put(Fields.WORKFLOW, matcher.group(3));
-                m.put("workflowId", matcher.group(4));
-                m.put("workflowKey", (workflow));
+                m.put(Fields.WORKFLOW + "Id", matcher.group(4));
+                m.put(Fields.WORKFLOW + "Key", (workflow));
 
                 return () -> m;
             } else {
                 //keep as is
                 Map<String, String> m = new HashMap<>();
-                m.put("workflowKey", (workflow));
+                m.put(Fields.WORKFLOW + "Key", (workflow));
                 return () -> m;
             }
         }
+
         throw new IllegalArgumentException("Cannot create accessor for the given task string.");
     }
 

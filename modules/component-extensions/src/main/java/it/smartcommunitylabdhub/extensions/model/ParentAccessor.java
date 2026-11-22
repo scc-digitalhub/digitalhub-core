@@ -55,8 +55,8 @@ public interface ParentAccessor extends Accessor<String> {
         return get(Fields.ID);
     }
 
-    static ParentAccessor with(Map<String, String> map) {
-        return () -> map;
+    static ParentAccessor with(@Nullable Map<String, String> map) {
+        return () -> map != null ? map : Map.of();
     }
 
     static ParentAccessor with(String key) {

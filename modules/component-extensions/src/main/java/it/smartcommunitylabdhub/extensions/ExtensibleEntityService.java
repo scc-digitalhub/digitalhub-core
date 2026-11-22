@@ -162,10 +162,16 @@ public class ExtensibleEntityService<D extends ExtensibleDTO & BaseDTO> implemen
     @Override
     public D update(@NotNull String id, @NotNull D dto, boolean forceUpdate)
         throws BindException, IllegalArgumentException, NoSuchEntityException, StoreException {
+        return update(id, dto, forceUpdate, false);
+    }
+
+    @Override
+    public D update(@NotNull String id, @NotNull D dto, boolean forceUpdate, boolean merge)
+        throws BindException, IllegalArgumentException, NoSuchEntityException, StoreException {
         //keep extensions aside
         List<Map<String, Serializable>> extensions = dto.getExtensions();
 
-        D res = delegate.update(id, dto, forceUpdate);
+        D res = delegate.update(id, dto, forceUpdate, merge);
 
         //extract and create extensions
         //NOTE: we keep definition from source dto

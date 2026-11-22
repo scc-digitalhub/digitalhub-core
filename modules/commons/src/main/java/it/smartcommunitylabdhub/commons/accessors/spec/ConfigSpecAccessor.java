@@ -27,13 +27,14 @@ import it.smartcommunitylabdhub.commons.Fields;
 import it.smartcommunitylabdhub.commons.accessors.Accessor;
 import java.io.Serializable;
 import java.util.Map;
+import org.springframework.lang.Nullable;
 
 public interface ConfigSpecAccessor extends Accessor<Serializable> {
     default Map<String, Serializable> getConfig() {
         return get(Fields.CONFIG);
     }
 
-    static ConfigSpecAccessor with(Map<String, Serializable> map) {
-        return () -> map;
+    static ConfigSpecAccessor with(@Nullable Map<String, Serializable> map) {
+        return () -> map != null ? map : Map.of();
     }
 }

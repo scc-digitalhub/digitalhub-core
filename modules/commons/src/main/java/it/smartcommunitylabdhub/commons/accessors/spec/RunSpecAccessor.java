@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.springframework.lang.Nullable;
 
 public interface RunSpecAccessor extends Accessor<Serializable> {
     /*
@@ -101,10 +102,13 @@ public interface RunSpecAccessor extends Accessor<Serializable> {
     /**
      * Build an accessor over a run spec map.
      * We expect to find a task ref to parse, and optionally a function or workflow ref
-     * @param map
+     * @param map the source spec, or null for an empty accessor
      * @return
      */
-    static RunSpecAccessor with(Map<String, Serializable> map) {
+    static RunSpecAccessor with(@Nullable Map<String, Serializable> map) {
+        if (map == null) {
+            throw new IllegalArgumentException("Cannot create accessor for an empty map.");
+        }
         Serializable tsk = map.getOrDefault(Fields.TASK, "");
 
         if (!(tsk instanceof String)) {

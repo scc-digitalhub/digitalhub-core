@@ -23,6 +23,7 @@
 
 package it.smartcommunitylabdhub.commons.utils;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -76,6 +77,68 @@ public class MapUtils {
         );
 
         return mergedMap;
+    }
+
+    /**
+     * Applies an object-root JSON Merge Patch (RFC 7396) to a map.
+     * Null patch values remove keys; object values are merged recursively and other values replace.
+     * Maps in the result are detached from the inputs, while non-map values remain shared.
+     *
+     * @param target the existing map
+     * @param patch the non-null patch
+     * @return the patched map
+     */
+    public static Map<String, Serializable> applyMergePatch(
+        Map<String, Serializable> target,
+        Map<String, Serializable> patch
+    ) {
+        Objects.requireNonNull(target, "target cannot be null");
+        Objects.requireNonNull(patch, "patch cannot be null");
+        return applyMergePatchInternal(target, patch);
+    }
+
+    private static HashMap<String, Serializable> applyMergePatchInternal(Map<?, ?> target, Map<?, ?> patch) {
+        HashMap<String, Serializable> result = new HashMap<>();
+        target.forEach((key, value) -> {
+            if (!(key instanceof String)) {
+                throw new IllegalArgumentException("map keys must be strings");
+            }
+            if (!patch.containsKey(key)) {
+                result.put((String) key, copyValue(value));
+            }
+        });
+        patch.forEach((key, value) -> {
+            if (!(key instanceof String)) {
+                throw new IllegalArgumentException("map keys must be strings");
+            }
+            String name = (String) key;
+            if (value == null) {
+                result.remove(name);
+            } else if (value instanceof Map<?, ?>) {
+                Object existing = target.get(name);
+                Map<?, ?> existingMap = existing instanceof Map<?, ?> ? (Map<?, ?>) existing : Map.of();
+                result.put(name, applyMergePatchInternal(existingMap, (Map<?, ?>) value));
+            } else {
+                result.put(name, (Serializable) value);
+            }
+        });
+        return result;
+    }
+
+    private static HashMap<String, Serializable> copyMap(Map<?, ?> source) {
+        HashMap<String, Serializable> result = new HashMap<>();
+        source.forEach((key, value) -> {
+            if (!(key instanceof String)) {
+                throw new IllegalArgumentException("map keys must be strings");
+            }
+            result.put((String) key, copyValue(value));
+        });
+        return result;
+    }
+
+    private static Serializable copyValue(Object value) {
+        // A future leaf copier could detach mutable non-map values.
+        return value instanceof Map<?, ?> ? copyMap((Map<?, ?>) value) : (Serializable) value;
     }
 
     /**
