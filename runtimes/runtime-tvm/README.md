@@ -390,7 +390,6 @@ Build from the repository root with **JDK 21**:
 mvn -pl runtimes/runtime-tvm -am install -DskipTests
 ```
 
-Local tests under `src/test/` and `test_infer/` are not distributed in this repository.
 SDK validation reads the exported TVM schemas in `schemas/specs/` from CORE's `main`
 branch. Keep those exports aligned with the specs and merge CORE before dependent
 SDK changes.
