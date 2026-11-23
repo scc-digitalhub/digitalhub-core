@@ -165,7 +165,7 @@
       "title" : "fields.localExecution.title",
       "description" : "fields.localExecution.description"
     },
-    "model_path" : {
+    "ir_model_path" : {
       "type" : "string",
       "title" : "IR Model",
       "description" : "Explicit IR override. Empty uses function.ir_model. Example: store://my-project/model/tvm-ir/xinet-ir:version."

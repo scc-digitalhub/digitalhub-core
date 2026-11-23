@@ -21,7 +21,7 @@
     "ui:title@it": "Modello Relax IR",
     "ui:description@it": "Chiave del Model tvm-ir scritto da tvm+build e compilato da tvm+compile. Lascialo vuoto."
   },
-  "model_path": {
+  "ir_model_path": {
     "ui:title@en": "IR Model",
     "ui:description@en": "Explicit IR override for this run. Empty uses function.ir_model. Example: store://my-project/model/tvm-ir/xinet-ir:version.",
     "ui:title@it": "Modello IR",
@@ -268,7 +268,7 @@
   "ui:order": [
     "task",
     "inputs",
-    "model_path",
+    "ir_model_path",
     "target_architecture",
     "target",
     "tag",

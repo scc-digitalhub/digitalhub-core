@@ -21,7 +21,7 @@
     "ui:title@it": "Modello Relax IR",
     "ui:description@it": "Chiave del Model tvm-ir scritto da tvm+build e compilato da tvm+compile. Lascialo vuoto."
   },
-  "model_path": {
+  "so_model_path": {
     "ui:title@en": "Compiled Model",
     "ui:description@en": "Required versioned tvm-so Model key: use status.outputs.compiled_so from the selected Compile Run. The selected reference is saved in this run.",
     "ui:title@it": "Modello compilato",
@@ -66,7 +66,7 @@
   "ui:order": [
     "task",
     "inputs",
-    "model_path",
+    "so_model_path",
     "served_name",
     "image",
     "replicas",

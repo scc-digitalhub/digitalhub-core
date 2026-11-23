@@ -118,7 +118,7 @@
       "title" : "fields.localExecution.title",
       "description" : "fields.localExecution.description"
     },
-    "model_path" : {
+    "so_model_path" : {
       "type" : "string",
       "title" : "Compiled Model",
       "description" : "Required versioned tvm-so Model key: use status.outputs.compiled_so from the selected tvm+compile Run.",
@@ -161,7 +161,7 @@
       "minimum" : 1
     }
   },
-  "required" : [ "model_path", "task" ],
+  "required" : [ "so_model_path", "task" ],
   "title" : "specs.tvm+serve:run.title",
   "description" : "specs.tvm+serve:run.description",
   "allOf" : [ {
