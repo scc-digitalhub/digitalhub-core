@@ -48,11 +48,11 @@ public final class TvmServeRunSpec extends TvmRunSpec {
     // Pin a specific compiled model version, independent of other compilations.
     public static final String COMPILED_PATH_REGEX = "^store://[^/]+/model/tvm-so/[^/:]+:[^/]+$";
 
-    @JsonProperty("model_path")
+    @JsonProperty("so_model_path")
     @NotBlank
     @Pattern(regexp = COMPILED_PATH_REGEX)
     @Schema(title = "Compiled Model", description = "Required versioned tvm-so Model key: use status.outputs.compiled_so from the selected tvm+compile Run.")
-    private String modelPath;
+    private String soModelPath;
 
     // Restrict characters because the name is used in URLs and generated YAML.
     @JsonProperty("served_name")
@@ -84,11 +84,12 @@ public final class TvmServeRunSpec extends TvmRunSpec {
 
     @Override
     public void configure(Map<String, Serializable> data) {
-        super.configure(data);
-        TvmServeRunSpec spec = mapper.convertValue(data, TvmServeRunSpec.class);
+        Map<String, Serializable> normalized = normalizeModelPath(data, "so_model_path");
+        super.configure(normalized);
+        TvmServeRunSpec spec = mapper.convertValue(normalized, TvmServeRunSpec.class);
         this.functionSpec = spec.getFunctionSpec();
         this.taskServeSpec = spec.getTaskServeSpec();
-        this.modelPath = spec.getModelPath();
+        this.soModelPath = spec.getSoModelPath();
         this.servedName = spec.getServedName();
         this.image = spec.getImage();
         this.replicas = spec.getReplicas();

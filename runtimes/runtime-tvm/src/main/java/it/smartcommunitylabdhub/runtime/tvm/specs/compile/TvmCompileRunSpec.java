@@ -53,12 +53,12 @@ public final class TvmCompileRunSpec extends TvmRunSpec {
     @JsonUnwrapped
     private TvmCompileTaskSpec taskCompileSpec;
 
-    @JsonProperty("model_path")
+    @JsonProperty("ir_model_path")
     @Schema(
         title = "IR Model",
         description = "Explicit IR override. Empty uses function.ir_model. Example: store://my-project/model/tvm-ir/xinet-ir:version."
     )
-    private String modelPath;
+    private String irModelPath;
 
     @JsonProperty("target_architecture")
     @Schema(
@@ -98,14 +98,14 @@ public final class TvmCompileRunSpec extends TvmRunSpec {
 
     @Override
     public void configure(Map<String, Serializable> data) {
-        var options = TvmCompileOptions.select(data);
+        var options = TvmCompileOptions.select(normalizeModelPath(data, "ir_model_path"));
         Map<String, Serializable> active = TvmCompileOptions.grouped(options.active());
         this.inactiveTuning = options.inactive();
         super.configure(active);
         TvmCompileRunSpec spec = mapper.convertValue(active, TvmCompileRunSpec.class);
         this.functionSpec = spec.getFunctionSpec();
         this.taskCompileSpec = spec.getTaskCompileSpec();
-        this.modelPath = spec.getModelPath();
+        this.irModelPath = spec.getIrModelPath();
         this.targetArchitecture = spec.getTargetArchitecture();
         this.target = spec.getTarget();
         // Preserve CUDA host option lists while keeping existing LLVM serialization unchanged.

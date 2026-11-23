@@ -78,12 +78,12 @@ public class TvmCompileRunner extends TvmBaseRunner {
         }
         String target = explicitTarget || cuda ? targetDefinition.toString() : profile.target();
 
-        String irModelKey = StringUtils.hasText(runSpec.getModelPath())
-            ? runSpec.getModelPath()
+        String irModelKey = StringUtils.hasText(runSpec.getIrModelPath())
+            ? runSpec.getIrModelPath()
             : (functionSpec != null ? functionSpec.getIrModel() : null);
         if (!StringUtils.hasText(irModelKey)) {
             throw new IllegalArgumentException(
-                "tvm+compile needs an IR model: set run.model_path or run tvm+build first " +
+                "tvm+compile needs an IR model: set run.ir_model_path or run tvm+build first " +
                     "(function.spec.ir_model is empty)"
             );
         }

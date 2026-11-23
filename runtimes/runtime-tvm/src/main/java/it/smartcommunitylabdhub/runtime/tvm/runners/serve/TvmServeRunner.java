@@ -62,7 +62,7 @@ public class TvmServeRunner extends TvmBaseRunner {
 
         String servedName = resolveServedName(runSpec.getServedName(), funcName);
 
-        String modelKey = resolveModelKey(runSpec.getModelPath());
+        String modelKey = resolveModelKey(runSpec.getSoModelPath());
         Model model = resolveCompiledModel(modelKey);
         String modelFolder = TvmRunnerHelper.modelDir(TvmRunnerHelper.modelPath(model, modelKey));
         String modelDir = homeDir + "/model";
@@ -136,21 +136,21 @@ public class TvmServeRunner extends TvmBaseRunner {
                 !Objects.equals(key.getKind(), model.getKind()) ||
                 !Objects.equals(key.getName(), model.getName()) ||
                 !Objects.equals(key.getId(), model.getId())) {
-            throw new IllegalArgumentException("model_path does not match the resolved tvm-so Model: " + modelKey);
+            throw new IllegalArgumentException("so_model_path does not match the resolved tvm-so Model: " + modelKey);
         }
         return model;
     }
 
-    public static String resolveModelKey(String modelPath) {
-        if (!StringUtils.hasText(modelPath)) {
+    public static String resolveModelKey(String soModelPath) {
+        if (!StringUtils.hasText(soModelPath)) {
             throw new IllegalArgumentException(
-                    "tvm+serve requires run.model_path: use status.outputs.compiled_so from the selected tvm+compile Run");
+                    "tvm+serve requires run.so_model_path: use status.outputs.compiled_so from the selected tvm+compile Run");
         }
-        if (!modelPath.matches(TvmServeRunSpec.COMPILED_PATH_REGEX)) {
+        if (!soModelPath.matches(TvmServeRunSpec.COMPILED_PATH_REGEX)) {
             throw new IllegalArgumentException(
-                    "tvm+serve model_path must be a versioned tvm-so Model key from status.outputs.compiled_so");
+                    "tvm+serve so_model_path must be a versioned tvm-so Model key from status.outputs.compiled_so");
         }
-        return modelPath;
+        return soModelPath;
     }
 
     private String modelArchitecture(String modelKey, Model model) {

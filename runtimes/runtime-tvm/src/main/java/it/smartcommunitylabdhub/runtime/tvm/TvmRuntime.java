@@ -153,8 +153,7 @@ public class TvmRuntime
         runSpec.configure(map);
         if (runSpec instanceof TvmServeRunSpec serveSpec) {
             // Pin the model in this run, not in the reusable task.
-            String model = TvmServeRunner.resolveModelKey(serveSpec.getModelPath());
-            serveSpec.setModelPath(model);
+            TvmServeRunner.resolveModelKey(serveSpec.getSoModelPath());
         }
         return runSpec;
     }

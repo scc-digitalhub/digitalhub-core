@@ -391,12 +391,11 @@ Payload minimi:
          "local_execution":false,"resources":{"cpu":"4","mem":"8Gi"}}}
 ```
 
-Per `tvm+compile` aggiungi `"target_architecture":"cpu"` (o `x86`, `arm64`, `armv7l`) e
-`"opt_level":3`. Per `tvm+serve` non serve indicare il modello: viene da
-`function.spec.so_model`, scritto automaticamente dal compile.
-
-Il concatenamento è automatico: build scrive `function.spec.ir_model`, compile legge
-quello e scrive `so_model`, serve legge quello.
+La Build registra l’IR in `function.spec.ir_model`. La Compile usa questo IR,
+oppure quello indicato in `ir_model_path`. Per scegliere la destinazione imposta
+`target_architecture`, ad esempio `amd64` o `arm64`. Ogni Compile registra la
+chiave versionata del proprio modello in `status.outputs.compiled_so`.
+Copia quella chiave in `so_model_path` della Run Serve.
 
 > ### ⚠️ Risorse
 >
@@ -502,7 +501,7 @@ Normale. Mentre il cluster è giù CORE non raggiunge l'apiserver
 (`NoRouteToHostException`) e marca i run come falliti. Al riavvio il pod torna su da solo
 (passa da `Unknown` a `1/1 Running`) ma il run resta ERROR e i client non lo trovano più.
 
-**Rilancia solo il `tvm+serve`**, non build e compile: `so_model` è ancora valido.
+**Rilancia la Serve** con la stessa chiave versionata in `so_model_path`.
 Elimina prima il deployment orfano:
 
 ```bash

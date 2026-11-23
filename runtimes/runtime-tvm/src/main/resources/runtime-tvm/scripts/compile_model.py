@@ -80,7 +80,7 @@ def load_ir(ir_dir: Path) -> tvm.IRModule:
         fail(
             f"model.relax.json not found in {ir_dir}. Source: {source}. "
             "Check that its storage folder contains the tvm+build output. "
-            "An explicit run.model_path overrides function.ir_model; "
+            "An explicit run.ir_model_path overrides function.ir_model; "
             "clear it to use the function's current IR."
         )
     return tvm.ir.load_json(path.read_text())

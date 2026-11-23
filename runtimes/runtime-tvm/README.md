@@ -22,8 +22,8 @@ shows Python usage.
 | Function (`tvm`) | Required source `model`; optional `format` (`auto`, `onnx`, `tflite`); generated `ir_model` reference |
 | Task (`tvm+build`, `tvm+compile`, `tvm+serve`) | Function reference and common Kubernetes settings: `profile`, `resources`, `envs`, `secrets`, `volumes` |
 | Build Run (`tvm+build:run`) | `image` and ONNX conversion options |
-| Compile Run (`tvm+compile:run`) | `model_path`, `target_architecture` or `target`, `tag`, `image`, `optimization`, `tuning` |
-| Serve Run (`tvm+serve:run`) | Required versioned `model_path` from the selected Compile; `served_name`, `image`, `replicas`, `workers`, `service_type`, `service_name` |
+| Compile Run (`tvm+compile:run`) | `ir_model_path`, `target_architecture` or `target`, `tag`, `image`, `optimization`, `tuning` |
+| Serve Run (`tvm+serve:run`) | Required versioned `so_model_path` from the selected Compile; `served_name`, `image`, `replicas`, `workers`, `service_type`, `service_name` |
 
 Runs can override common Task settings. TVM options belong to the Run and are not
 inherited from old Tasks or previous Runs. Triggers put them in `spec.template`.
@@ -84,13 +84,13 @@ spec:
 ```
 
 Copy `status.outputs.compiled_so` from the completed Compile into the Serve
-Run's `model_path`. Start the Run and wait for `RUNNING`.
+Run's `so_model_path`. Start the Run and wait for `RUNNING`.
 
 ```yaml
 kind: tvm+serve:run
 spec:
   task: tvm+serve://my-project/<serve-task-id>
-  model_path: store://my-project/model/tvm-so/<compiled-model-name>:<compiled-model-id>
+  so_model_path: store://my-project/model/tvm-so/<compiled-model-name>:<compiled-model-id>
   served_name: yolo
   workers: 1
   resources: {cpu: "4", mem: 2Gi}
@@ -123,17 +123,20 @@ with `tuning_runner: rpc`; that mode ignores the local runner timeout.
 
 ## Model references and files
 
-Compile uses Run `model_path`, otherwise the Function's `ir_model`. Build updates
+Compile uses Run `ir_model_path`, otherwise the Function's `ir_model`. Build updates
 only `ir_model` on the exact Function version. Each Compile publishes its own
 `tvm-so` Model and records its key in `status.outputs.compiled_so`, without changing
 the Function.
 
-Serve requires a versioned `model_path` containing the selected Compile's
+Serve requires a versioned `so_model_path` containing the selected Compile's
 `status.outputs.compiled_so`. Compiles for AMD64, ARM64 or other targets can therefore
 share one IR without replacing each other's serving reference. CORE does not select
 the latest Compile or use a legacy Function `so_model`. Existing services keep their
-selected Model; changing the served build requires an explicit new `model_path`.
+selected Model; changing the served build requires an explicit new `so_model_path`.
 Existing stored `so_model` fields are ignored, not migrated or deleted.
+
+For older Runs, `model_path` is read as `ir_model_path` on Compile and
+as `so_model_path` on Serve. New requests should use the phase-specific name.
 
 | Model | Files |
 | --- | --- |
@@ -245,7 +248,7 @@ parallel, while GPU measurements remain sequential. CPU cache flushing is reject
 for active CUDA tuning. `target_num_cores` only configures the LLVM host.
 
 To serve a CUDA artifact, copy `status.outputs.compiled_so` from the selected CUDA
-Compile into the Serve Run's `model_path`. Choose a CUDA-enabled Go or Rust image
+Compile into the Serve Run's `so_model_path`. Choose a CUDA-enabled Go or Rust image
 and use `profile` and `resources.gpu` to schedule the service on a GPU node. The runtime
 uses visible CUDA device 0 and refuses a missing CUDA backend/device without CPU
 fallback. A CPU artifact can still run on a compatible Jetson ARM64 CPU.
