@@ -1,9 +1,6 @@
 name: dh-security-bandit
 description: "Static security analysis of Python sources with Bandit"
 script: dh-security-bandit.py
-filter:
-  spec_fields: [source]
-  kinds: [python, hydra, guardrail, openinference, ray, flower]
 function:
   kind: python
   spec:
@@ -14,10 +11,3 @@ function:
     source:
       lang: python
       handler: main
-task:
-  kind: python+job
-  spec: {}
-run:
-  kind: python+job:run
-  spec: {}
-parameters_field: parameters

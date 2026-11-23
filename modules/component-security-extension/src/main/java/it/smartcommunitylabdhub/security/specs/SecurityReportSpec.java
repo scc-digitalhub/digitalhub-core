@@ -20,6 +20,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.base.BaseSpec;
 import it.smartcommunitylabdhub.commons.models.function.Function;
+import it.smartcommunitylabdhub.containerimage.ContainerImage;
 import it.smartcommunitylabdhub.extensions.annotations.ExtensionType;
 import it.smartcommunitylabdhub.extensions.model.Extension;
 import it.smartcommunitylabdhub.security.model.SecurityAssessment;
@@ -37,7 +38,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @SpecType(kind = SecurityReportSpec.KIND, entity = Extension.class)
-@ExtensionType(appliesTo = { Function.class })
+@ExtensionType(appliesTo = { Function.class, ContainerImage.class })
 public class SecurityReportSpec extends BaseSpec {
 
     public static final String KIND = "security-report";
@@ -64,6 +65,9 @@ public class SecurityReportSpec extends BaseSpec {
     @Schema(title = "Path", description = "Path to the report files")
     private String path;
 
+    @Schema(title = "format", description = "Format of the report file")
+    private String format;
+
     @Override
     public void configure(Map<String, Serializable> data) {
         SecurityReportSpec spec = mapper.convertValue(data, SecurityReportSpec.class);
@@ -74,6 +78,7 @@ public class SecurityReportSpec extends BaseSpec {
         this.assessment = spec.getAssessment();
         this.findings = spec.getFindings();
         this.path = spec.getPath();
+        this.format = spec.getFormat();
     }
 
     public static SecurityReportSpec with(Map<String, Serializable> data) {

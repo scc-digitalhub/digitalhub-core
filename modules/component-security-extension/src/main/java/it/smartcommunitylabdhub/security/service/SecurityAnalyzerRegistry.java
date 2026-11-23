@@ -96,14 +96,8 @@ public class SecurityAnalyzerRegistry implements InitializingBean {
         if (analyzer.getFunction() == null || !StringUtils.hasText(analyzer.getFunction().getKind())) {
             throw new IllegalArgumentException("invalid or missing function kind");
         }
-        if (analyzer.getTask() == null || !StringUtils.hasText(analyzer.getTask().getKind())) {
-            throw new IllegalArgumentException("invalid or missing task kind");
-        }
-        if (analyzer.getRun() == null) {
-            analyzer.setRun(new SecurityAnalyzer.EntityTemplate());
-        }
-        if (!StringUtils.hasText(analyzer.getRun().getKind())) {
-            analyzer.getRun().setKind(analyzer.getTask().getKind() + ":run");
+        if (analyzer.getTrigger() != null && !StringUtils.hasText(analyzer.getTrigger().getKind())) {
+            throw new IllegalArgumentException("invalid trigger kind");
         }
 
         if (StringUtils.hasText(analyzer.getScript())) {

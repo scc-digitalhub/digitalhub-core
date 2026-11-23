@@ -1,0 +1,19 @@
+name: dh-security-trivy-sbom
+description: "Container image SBOM analysis with Trivy"
+script: dh-security-trivy-sbom.sh
+function:
+  kind: container
+  spec:
+    image: aquasec/trivy:latest
+    command: /shared/trivy.sh
+    source:
+      lang: sh
+      source: trivy.sh
+trigger:
+  kind: lifecycle
+  spec:
+    key: "store://${project}/containerimage/container-image"
+    states: [READY]
+    task: container+job
+    template:
+      args: ["{{input.id}}"]
