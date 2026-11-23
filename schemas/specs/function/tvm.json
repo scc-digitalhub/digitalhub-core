@@ -23,11 +23,6 @@
       "type" : "string",
       "title" : "Source Model",
       "description" : "The ONNX or TFLite model to convert: the store:// key of a Model, or an s3:// or https:// path."
-    },
-    "so_model" : {
-      "type" : "string",
-      "title" : "Compiled Model",
-      "description" : "Key of the tvm-so Model written by tvm+compile and deployed by tvm+serve. Leave it empty."
     }
   },
   "required" : [ "model" ],

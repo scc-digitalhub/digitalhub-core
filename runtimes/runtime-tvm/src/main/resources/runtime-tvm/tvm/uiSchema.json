@@ -20,11 +20,5 @@
     "ui:description@en": "Key of the tvm-ir Model written by tvm+build and compiled by tvm+compile. Leave it empty.",
     "ui:title@it": "Modello Relax IR",
     "ui:description@it": "Chiave del Model tvm-ir scritto da tvm+build e compilato da tvm+compile. Lascialo vuoto."
-  },
-  "so_model": {
-    "ui:title@en": "Compiled Model",
-    "ui:description@en": "Key of the tvm-so Model written by tvm+compile and deployed by tvm+serve. Leave it empty.",
-    "ui:title@it": "Modello compilato",
-    "ui:description@it": "Chiave del Model tvm-so scritto da tvm+compile e servito da tvm+serve. Lascialo vuoto."
   }
 }
