@@ -223,7 +223,7 @@ spec:
   target_architecture: jetson_orin_cuda
   tag: orin-cuda
   profile: amd64-compiler # Replace with the configured profile for an AMD64 node.
-  image: local/tvm-toolkit:0.26.0-cuda13.2.1-amd64
+  image: ghcr.io/scc-digitalhub/tvm-toolkit:0.16.1-tvm0.26.0-cuda13.2.1
   envs:
     - name: LD_LIBRARY_PATH
       value: /opt/tvm/cuda-driver-stubs:/opt/tvm/lib:/usr/local/cuda/lib64
@@ -353,17 +353,18 @@ family still needs its LLVM backend, linker/sysroot, runtime build and tests.
 | CORE environment variable | Default |
 | --- | --- |
 | `SPRING_CONFIG_ADDITIONAL_LOCATION` | No additional TVM file; bundled YAML supplies the catalogue |
-| `RUNTIME_TVM_BUILDER_ONNX`, `RUNTIME_TVM_BUILDER_TFLITE`, `RUNTIME_TVM_COMPILER` | `ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0-r2` |
-| `RUNTIME_TVM_SERVE` | `ghcr.io/scc-digitalhub/tvm-runtime-go:0.26.0-r3` |
+| `RUNTIME_TVM_BUILDER_ONNX`, `RUNTIME_TVM_BUILDER_TFLITE`, `RUNTIME_TVM_COMPILER` | `ghcr.io/scc-digitalhub/tvm-toolkit:0.16.1-tvm0.26.0` |
+| `RUNTIME_TVM_SERVE` | `ghcr.io/scc-digitalhub/tvm-runtime-go:0.16.1-dev.d029e960cab3-tvm0.26.0` |
 | `RUNTIME_TVM_HOME_DIR` | `/shared` |
 | `RUNTIME_TVM_VOLUME_SIZE` | `4Gi` |
 | `RUNTIME_TVM_USER_ID`, `RUNTIME_TVM_GROUP_ID` | Platform Kubernetes user/group |
 
 Each Run can override its image. Set `RUNTIME_TVM_SERVE` to
-`ghcr.io/scc-digitalhub/tvm-runtime-rust:0.26.0-r2` to use Rust globally.
-These image revisions bundle Apache TVM 0.26.0; the `-rN` suffix identifies the
-DigitalHub image revision. Storage uses the platform's default store; there is
-no TVM bucket setting.
+`ghcr.io/scc-digitalhub/tvm-runtime-rust:0.16.1-tvm0.26.0` to use Rust globally.
+These images bundle Apache TVM 0.26.0. Tags include the codebase version and
+the TVM version; CUDA images also include the CUDA version. The Go development
+tag identifies source commit `d029e960cab3` after release `0.16.1`.
+Storage uses the platform's default store; there is no TVM bucket setting.
 
 ## Code map and development
 
