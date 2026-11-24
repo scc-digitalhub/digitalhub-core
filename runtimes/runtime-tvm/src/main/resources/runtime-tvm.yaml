@@ -6,13 +6,13 @@ runtime:
     volume-size: ${RUNTIME_TVM_VOLUME_SIZE:4Gi}
 
     builders:
-      onnx: ${RUNTIME_TVM_BUILDER_ONNX:ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0-r2}
-      tflite: ${RUNTIME_TVM_BUILDER_TFLITE:ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0-r2}
+      onnx: ${RUNTIME_TVM_BUILDER_ONNX:ghcr.io/scc-digitalhub/tvm-toolkit:0.16.1-tvm0.26.0}
+      tflite: ${RUNTIME_TVM_BUILDER_TFLITE:ghcr.io/scc-digitalhub/tvm-toolkit:0.16.1-tvm0.26.0}
 
-    compiler: ${RUNTIME_TVM_COMPILER:ghcr.io/scc-digitalhub/tvm-toolkit:0.26.0-r2}
+    compiler: ${RUNTIME_TVM_COMPILER:ghcr.io/scc-digitalhub/tvm-toolkit:0.16.1-tvm0.26.0}
 
     # Override with the Rust image here or in run.image.
-    serve: ${RUNTIME_TVM_SERVE:ghcr.io/scc-digitalhub/tvm-runtime-go:0.26.0-r3}
+    serve: ${RUNTIME_TVM_SERVE:ghcr.io/scc-digitalhub/tvm-runtime-go:0.16.1-dev.d029e960cab3-tvm0.26.0}
 
     entrypoint: classpath:/runtime-tvm/scripts/entrypoint.sh
     builder-scripts:
@@ -60,3 +60,9 @@ runtime:
         linker:
           command: arm-linux-gnueabihf-g++
         aliases: [armv7l]
+      jetson_orin_cuda:
+        label: NVIDIA Jetson Orin - CUDA (sm_87), ARM64 host
+        target: >-
+          {"kind":"cuda","arch":"sm_87","host":{"kind":"llvm","mtriple":"aarch64-linux-gnu"}}
+        linker:
+          command: aarch64-linux-gnu-g++

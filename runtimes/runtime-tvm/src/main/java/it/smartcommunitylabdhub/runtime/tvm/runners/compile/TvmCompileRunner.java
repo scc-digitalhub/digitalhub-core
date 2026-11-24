@@ -23,6 +23,7 @@ import it.smartcommunitylabdhub.runtime.tvm.runners.TvmRunnerHelper;
 import it.smartcommunitylabdhub.runtime.tvm.specs.TvmFunctionSpec;
 import it.smartcommunitylabdhub.runtime.tvm.specs.compile.TvmCompileRunSpec;
 import it.smartcommunitylabdhub.runtime.tvm.specs.compile.TvmCompileTaskSpec;
+import it.smartcommunitylabdhub.runtime.tvm.specs.compile.TvmTargetValidator;
 import it.smartcommunitylabdhub.runtime.tvm.specs.compile.TvmTuningMode;
 import it.smartcommunitylabdhub.runtime.tvm.specs.compile.TvmTuningRunner;
 import java.util.ArrayList;
@@ -62,19 +63,27 @@ public class TvmCompileRunner extends TvmBaseRunner {
                 "Use target or target_architecture, not both; leave the profile at auto"
             );
         }
-        if (explicitTarget && !"llvm".equals(runSpec.getTarget().get("kind"))) {
-            throw new IllegalArgumentException("target.kind must be llvm; only Linux CPU compilation is supported");
+        var targetDefinition = explicitTarget
+            ? ("cuda".equals(runSpec.getTarget().get("kind"))
+                ? JacksonMapper.OBJECT_MAPPER : JacksonMapper.CUSTOM_OBJECT_MAPPER).valueToTree(runSpec.getTarget())
+            : TvmTargetValidator.parse(profile.target());
+        TvmTargetValidator.validate(targetDefinition);
+        boolean cuda = "cuda".equals(targetDefinition.path("kind").asText());
+        if (cuda && tuning.getTuningMode() == TvmTuningMode.tune) {
+            for (String limit : TvmTargetValidator.CUDA_TUNING_LIMITS) {
+                if (!targetDefinition.has(limit)) {
+                    throw new IllegalArgumentException("CUDA tuning requires target." + limit + " from the real device");
+                }
+            }
         }
-        String target = explicitTarget
-            ? JacksonMapper.CUSTOM_OBJECT_MAPPER.valueToTree(runSpec.getTarget()).toString()
-            : profile.target();
+        String target = explicitTarget || cuda ? targetDefinition.toString() : profile.target();
 
-        String irModelKey = StringUtils.hasText(runSpec.getModelPath())
-            ? runSpec.getModelPath()
+        String irModelKey = StringUtils.hasText(runSpec.getIrModelPath())
+            ? runSpec.getIrModelPath()
             : (functionSpec != null ? functionSpec.getIrModel() : null);
         if (!StringUtils.hasText(irModelKey)) {
             throw new IllegalArgumentException(
-                "tvm+compile needs an IR model: set run.model_path or run tvm+build first " +
+                "tvm+compile needs an IR model: set run.ir_model_path or run tvm+build first " +
                     "(function.spec.ir_model is empty)"
             );
         }
@@ -89,7 +98,7 @@ public class TvmCompileRunner extends TvmBaseRunner {
             optimization.getCrossCcOptions() != null
                 ? optimization.getCrossCcOptions()
                 : (explicitTarget ? List.of() : profile.linker().options());
-        validateTuning(runSpec, targetNumCores, cpuCores);
+        validateTuning(runSpec, targetNumCores, cpuCores, cuda);
 
         List<CoreEnv> envs = createEnvList(run, taskSpec);
         envs.add(new CoreEnv("TVM_TASK_KIND", TvmCompileTaskSpec.KIND));
@@ -109,7 +118,7 @@ public class TvmCompileRunner extends TvmBaseRunner {
         addEnv(envs, "TVM_PARAMS_FILE", optimization.getParamsPath());
         addEnv(envs, "TVM_TAG", runSpec.getTag());
         addEnv(envs, "TVM_BENCHMARK_RUNS", optimization.getBenchmarkRuns());
-        addTuningEnvironment(envs, runSpec, cpuCores);
+        addTuningEnvironment(envs, runSpec, cpuCores, cuda);
         // Only store:// references can participate in entity lineage.
         if (irModelKey.startsWith(Keys.STORE_PREFIX)) {
             envs.add(new CoreEnv("TVM_SOURCE_IR_KEY", irModelKey));
@@ -159,6 +168,15 @@ public class TvmCompileRunner extends TvmBaseRunner {
     }
 
     static void validateTuning(TvmCompileRunSpec runSpec, Integer targetNumCores, Integer resourceCpuCores) {
+        validateTuning(runSpec, targetNumCores, resourceCpuCores, false);
+    }
+
+    static void validateTuning(
+        TvmCompileRunSpec runSpec,
+        Integer targetNumCores,
+        Integer resourceCpuCores,
+        boolean cuda
+    ) {
         var tuning = runSpec.getTuning();
         TvmTuningMode mode = Objects.requireNonNullElse(tuning.getTuningMode(), TvmTuningMode.off);
         if (mode == TvmTuningMode.off) return;
@@ -170,6 +188,9 @@ public class TvmCompileRunner extends TvmBaseRunner {
         }
         if (tuning.getTuningTrials() == null) {
             throw new IllegalArgumentException("tuning_mode=tune requires tuning_trials");
+        }
+        if (cuda && Boolean.TRUE.equals(tuning.getTuningEnableCpuCacheFlush())) {
+            throw new IllegalArgumentException("tuning_enable_cpu_cache_flush is not supported for CUDA tuning");
         }
         TvmTuningRunner runner = Objects.requireNonNullElse(tuning.getTuningRunner(), TvmTuningRunner.local);
         if (
@@ -183,7 +204,7 @@ public class TvmCompileRunner extends TvmBaseRunner {
             );
         }
         if (
-            runner == TvmTuningRunner.local &&
+            !cuda && runner == TvmTuningRunner.local &&
             targetNumCores != null &&
             resourceCpuCores != null &&
             targetNumCores > resourceCpuCores
@@ -202,6 +223,15 @@ public class TvmCompileRunner extends TvmBaseRunner {
     }
 
     static void addTuningEnvironment(List<CoreEnv> envs, TvmCompileRunSpec runSpec, Integer resourceCpuCores) {
+        addTuningEnvironment(envs, runSpec, resourceCpuCores, false);
+    }
+
+    static void addTuningEnvironment(
+        List<CoreEnv> envs,
+        TvmCompileRunSpec runSpec,
+        Integer resourceCpuCores,
+        boolean cuda
+    ) {
         var tuning = runSpec.getTuning();
         TvmTuningMode mode = Objects.requireNonNullElse(tuning.getTuningMode(), TvmTuningMode.off);
         addEnv(envs, "TVM_TUNING_MODE", mode);
@@ -218,7 +248,7 @@ public class TvmCompileRunner extends TvmBaseRunner {
         addEnv(
             envs,
             "TVM_TUNING_WORKERS",
-            tuning.getTuningWorkers() != null ? tuning.getTuningWorkers() : resourceCpuCores
+            tuning.getTuningWorkers() != null ? tuning.getTuningWorkers() : (cuda ? null : resourceCpuCores)
         );
         addEnv(envs, "TVM_TUNING_SEED", tuning.getTuningSeed());
         addEnv(envs, "TVM_TUNING_NUMBER", tuning.getTuningNumber());

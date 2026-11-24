@@ -24,12 +24,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@SpecType(
-    runtime = TvmRuntime.RUNTIME,
-    kind = TvmBuildRunSpec.KIND,
-    entity = Run.class,
-    uiSchema = "runtime-tvm/tvm-build-run/uiSchema.json"
-)
+@SpecType(runtime = TvmRuntime.RUNTIME, kind = TvmBuildRunSpec.KIND, entity = Run.class, uiSchema = "runtime-tvm/tvm-build-run/uiSchema.json")
 public final class TvmBuildRunSpec extends TvmRunSpec {
 
     public static final String KIND = TvmBuildTaskSpec.KIND + ":run";
@@ -41,61 +36,44 @@ public final class TvmBuildRunSpec extends TvmRunSpec {
     @JsonUnwrapped
     private TvmBuildTaskSpec taskBuildSpec;
 
-
     @JsonProperty("image")
-    @Schema(
-        title = "Container Image",
-        description = "Image of the build Job; empty uses the TVM toolkit image configured on the platform."
-    )
+    @Schema(title = "Container Image", description = "Image of the build Job; empty uses the TVM toolkit image configured on the platform.")
     private String image;
 
     @JsonProperty("simplify")
-    @Schema(
-        title = "Simplify ONNX Model",
-        description = "Runs ONNX Simplifier to pre-compute constant operations and remove redundant nodes before the conversion. When off, it still runs by itself if the converted model has outputs without a shape, which TVM cannot compile."
-    )
+    @Schema(title = "Simplify ONNX Model", description = "Runs ONNX Simplifier to pre-compute constant operations and remove redundant nodes before the conversion. When off, it still runs by itself if the converted model has outputs without a shape, which TVM cannot compile.")
     private Boolean simplify;
 
-    @JsonProperty("target_opset")
+    @JsonProperty("sort_onnx")
     @Schema(
-        title = "Target Opset Version",
-        description = "Converts the ONNX model to this opset version first; leave empty to keep the original."
+        title = "Sort ONNX Graph",
+        description = "Topologically sorts the ONNX graph before conversion. Defaults to false. Model validation remains enabled when false.",
+        defaultValue = "false"
     )
+    private Boolean sortOnnx;
+
+    @JsonProperty("target_opset")
+    @Schema(title = "Target Opset Version", description = "Converts the ONNX model to this opset version first; leave empty to keep the original.")
     private Integer targetOpset;
 
     @JsonProperty("opset_override")
-    @Schema(
-        title = "Opset Override",
-        description = "Makes the TVM importer use this opset instead of the one declared by the model, without changing the model."
-    )
+    @Schema(title = "Opset Override", description = "Makes the TVM importer use this opset instead of the one declared by the model, without changing the model.")
     private Integer opsetOverride;
 
     @JsonProperty("strict_shape_inference")
-    @Schema(
-        title = "Strict Shape Inference",
-        description = "Runs the ONNX shape inference in strict mode: an error skips the whole inference instead of single nodes."
-    )
+    @Schema(title = "Strict Shape Inference", description = "Runs the ONNX shape inference in strict mode: an error skips the whole inference instead of single nodes.")
     private Boolean strictShapeInference;
 
     @JsonProperty("data_prop")
-    @Schema(
-        title = "Data Propagation",
-        description = "Lets the shape inference compute values for a limited set of operators, to work out more tensor shapes."
-    )
+    @Schema(title = "Data Propagation", description = "Lets the shape inference compute values for a limited set of operators, to work out more tensor shapes.")
     private Boolean dataProp;
 
     @JsonProperty("keep_params_in_input")
-    @Schema(
-        title = "Keep Params in Input",
-        description = "Treats the weights as input variables saved in params.bin instead of folding them into the graph; tvm+compile embeds them again."
-    )
+    @Schema(title = "Keep Params in Input", description = "Treats the weights as input variables saved in params.bin instead of folding them into the graph; tvm+compile embeds them again.")
     private Boolean keepParamsInInput;
 
     @JsonProperty("sanitize_input_names")
-    @Schema(
-        title = "Sanitize Input Names",
-        description = "Rewrites the input names so they are valid Relax identifiers."
-    )
+    @Schema(title = "Sanitize Input Names", description = "Rewrites the input names so they are valid Relax identifiers.")
     private Boolean sanitizeInputNames;
 
     @Override
@@ -106,6 +84,7 @@ public final class TvmBuildRunSpec extends TvmRunSpec {
         this.taskBuildSpec = spec.getTaskBuildSpec();
         this.image = spec.getImage();
         this.simplify = spec.getSimplify();
+        this.sortOnnx = spec.getSortOnnx();
         this.targetOpset = spec.getTargetOpset();
         this.opsetOverride = spec.getOpsetOverride();
         this.strictShapeInference = spec.getStrictShapeInference();

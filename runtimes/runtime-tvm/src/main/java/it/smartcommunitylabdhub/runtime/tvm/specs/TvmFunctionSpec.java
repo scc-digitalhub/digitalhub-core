@@ -54,13 +54,6 @@ public class TvmFunctionSpec extends FunctionBaseSpec {
     )
     private String irModel;
 
-    @JsonProperty("so_model")
-    @Schema(
-        title = "Compiled Model",
-        description = "Key of the tvm-so Model written by tvm+compile and deployed by tvm+serve. Leave it empty."
-    )
-    private String soModel;
-
     @Override
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
@@ -69,7 +62,6 @@ public class TvmFunctionSpec extends FunctionBaseSpec {
         this.model = spec.getModel();
         this.format = spec.getFormat();
         this.irModel = spec.getIrModel();
-        this.soModel = spec.getSoModel();
     }
 
     public static TvmFunctionSpec with(Map<String, Serializable> data) {

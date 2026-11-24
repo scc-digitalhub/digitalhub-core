@@ -26,10 +26,6 @@ import lombok.Setter;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class TvmRunStatus extends RunBaseStatus {
 
-    // Key of the Model produced by build (tvm-ir) or compile (tvm-so).
-    @JsonProperty("model_key")
-    private String modelKey;
-
     // Populated by tvm+serve only.
     private K8sServiceInfo service;
 
@@ -40,7 +36,6 @@ public class TvmRunStatus extends RunBaseStatus {
     public void configure(Map<String, Serializable> data) {
         super.configure(data);
         TvmRunStatus s = mapper.convertValue(data, TvmRunStatus.class);
-        this.modelKey = s.getModelKey();
         this.service = s.getService();
         this.inferenceV2 = s.getInferenceV2();
     }

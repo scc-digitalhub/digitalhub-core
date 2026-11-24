@@ -78,11 +78,17 @@ def sha256_of(path: Path) -> str:
         return hashlib.file_digest(source, "sha256").hexdigest()
 
 
+def host_target(target):
+    """Return the CPU target that supplies host code for the artifact."""
+    return target if target.kind.name == "llvm" else target.host
+
+
 def target_triple(target) -> str | None:
-    """Return the effective LLVM triple, or None for non-LLVM targets."""
+    """Return the effective LLVM host triple, including CUDA's nested host."""
     import tvm
 
-    if target.kind.name != "llvm":
+    target = host_target(target)
+    if target is None or target.kind.name != "llvm":
         return None
     return str(target.attrs.get("mtriple") or tvm.target.codegen.llvm_get_system_triple())
 

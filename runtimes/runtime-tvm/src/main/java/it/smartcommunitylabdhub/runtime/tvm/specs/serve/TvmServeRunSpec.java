@@ -17,6 +17,7 @@ import it.smartcommunitylabdhub.runtime.tvm.TvmRuntime;
 import it.smartcommunitylabdhub.runtime.tvm.specs.TvmFunctionSpec;
 import it.smartcommunitylabdhub.runtime.tvm.specs.TvmRunSpec;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.Map;
@@ -44,13 +45,14 @@ public final class TvmServeRunSpec extends TvmRunSpec {
     @JsonUnwrapped
     private TvmServeTaskSpec taskServeSpec;
 
-    // Empty or store://<project>/model/<kind>/<name>[:<id>].
-    public static final String COMPILED_PATH_REGEX = "^(store://[^/]+/model/[^/]+/[^:]+(:.+)?)?$";
+    // Pin a specific compiled model version, independent of other compilations.
+    public static final String COMPILED_PATH_REGEX = "^store://[^/]+/model/tvm-so/[^/:]+:[^/]+$";
 
-    @JsonProperty("model_path")
+    @JsonProperty("so_model_path")
+    @NotBlank
     @Pattern(regexp = COMPILED_PATH_REGEX)
-    @Schema(title = "Compiled Model", description = "The tvm-so Model to serve; empty uses the one written by tvm+compile in the function.")
-    private String modelPath;
+    @Schema(title = "Compiled Model", description = "Required versioned tvm-so Model key: use status.outputs.compiled_so from the selected tvm+compile Run.")
+    private String soModelPath;
 
     // Restrict characters because the name is used in URLs and generated YAML.
     @JsonProperty("served_name")
@@ -82,11 +84,12 @@ public final class TvmServeRunSpec extends TvmRunSpec {
 
     @Override
     public void configure(Map<String, Serializable> data) {
-        super.configure(data);
-        TvmServeRunSpec spec = mapper.convertValue(data, TvmServeRunSpec.class);
+        Map<String, Serializable> normalized = normalizeModelPath(data, "so_model_path");
+        super.configure(normalized);
+        TvmServeRunSpec spec = mapper.convertValue(normalized, TvmServeRunSpec.class);
         this.functionSpec = spec.getFunctionSpec();
         this.taskServeSpec = spec.getTaskServeSpec();
-        this.modelPath = spec.getModelPath();
+        this.soModelPath = spec.getSoModelPath();
         this.servedName = spec.getServedName();
         this.image = spec.getImage();
         this.replicas = spec.getReplicas();

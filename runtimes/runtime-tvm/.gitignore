@@ -5,3 +5,4 @@ __pycache__/
 # Keep unit and inference tests local, outside version control.
 /src/test/
 /test_infer/
+/RUNBOOK.md
