@@ -23,13 +23,13 @@
 
 package it.smartcommunitylabdhub.functions.filters;
 
-import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.queries.SearchCriteria;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter.Condition;
 import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilter;
 import it.smartcommunitylabdhub.core.queries.filters.BaseEntityFilter;
 import it.smartcommunitylabdhub.core.queries.filters.BaseEntitySearchCriteria;
+import it.smartcommunitylabdhub.functions.Function;
 import jakarta.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;

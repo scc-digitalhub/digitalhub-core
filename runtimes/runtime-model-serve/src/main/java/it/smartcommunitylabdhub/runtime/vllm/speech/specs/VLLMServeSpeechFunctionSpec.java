@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.runtime.vllm.speech.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.function.Function;
+import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeFunctionSpec;
 import it.smartcommunitylabdhub.runtime.vllm.speech.VLLMServeSpeechRuntime;
 import java.io.Serializable;

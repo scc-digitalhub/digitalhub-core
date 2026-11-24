@@ -25,7 +25,7 @@ package it.smartcommunitylabdhub.runtime.vllm.base.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
-import it.smartcommunitylabdhub.commons.models.function.FunctionBaseSpec;
+import it.smartcommunitylabdhub.functions.specs.FunctionBaseSpec;
 import it.smartcommunitylabdhub.runtime.modelserve.models.LoRAAdapter;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;

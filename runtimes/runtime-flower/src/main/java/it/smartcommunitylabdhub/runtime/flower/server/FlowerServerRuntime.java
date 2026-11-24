@@ -28,17 +28,18 @@ import it.smartcommunitylabdhub.authorization.services.CredentialsService;
 import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
+import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.models.function.Function;
-import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
+import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.flower.server.specs.FlowerServerBuildRunSpec;
@@ -48,6 +49,7 @@ import it.smartcommunitylabdhub.runtime.flower.server.specs.FlowerServerDeployTa
 import it.smartcommunitylabdhub.runtime.flower.server.specs.FlowerServerFunctionSpec;
 import it.smartcommunitylabdhub.runtime.flower.server.specs.FlowerServerRunSpec;
 import it.smartcommunitylabdhub.runtime.flower.specs.FlowerRunStatus;
+import it.smartcommunitylabdhub.tasks.Task;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
@@ -60,6 +62,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
+import org.springframework.validation.BindException;
 
 @Slf4j
 @RuntimeComponent(runtime = FlowerServerRuntime.RUNTIME)
@@ -227,18 +230,22 @@ public class FlowerServerRuntime
 
         //update image name after build
         if (runnable instanceof K8sContainerBuilderRunnable) {
-            String image = ((K8sContainerBuilderRunnable) runnable).getImage();
+            try {
+                String image = ((K8sContainerBuilderRunnable) runnable).getImage();
 
-            String functionId = runAccessor.getFunctionId();
-            Function function = functionService.getFunction(functionId);
+                String functionId = runAccessor.getFunctionId();
+                Function function = functionService.get(functionId);
 
-            log.debug("update function {} spec to use built image: {}", functionId, image);
+                log.debug("update function {} spec to use built image: {}", functionId, image);
 
-            FlowerServerFunctionSpec funSpec = new FlowerServerFunctionSpec(function.getSpec());
-            if (!image.equals(funSpec.getImage())) {
-                funSpec.setImage(image);
-                function.setSpec(funSpec.toMap());
-                functionService.updateFunction(functionId, function, true);
+                FlowerServerFunctionSpec funSpec = new FlowerServerFunctionSpec(function.getSpec());
+                if (!image.equals(funSpec.getImage())) {
+                    funSpec.setImage(image);
+                    function.setSpec(funSpec.toMap());
+                    functionService.update(functionId, function, true);
+                }
+            } catch (StoreException | IllegalArgumentException | NoSuchEntityException | BindException ex) {
+                log.error("Error updating workflow: {}", ex.getMessage());
             }
         }
 

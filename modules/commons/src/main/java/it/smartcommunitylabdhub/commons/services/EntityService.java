@@ -40,7 +40,7 @@ import org.springframework.validation.BindException;
  * If tools available, specs are parsed and validated.
  * Supports search via filters.
  */
-public interface EntityService<D extends BaseDTO> {
+public interface EntityService<D extends BaseDTO> extends EntityAwareService<D> {
     Class<D> getType();
 
     D create(@NotNull D dto) throws BindException, IllegalArgumentException, DuplicatedEntityException, StoreException;

@@ -23,8 +23,8 @@
 
 package it.smartcommunitylabdhub.workflows.service;
 
-import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.core.services.BaseVersionableEntityServiceImpl;
+import it.smartcommunitylabdhub.workflows.Workflow;
 import it.smartcommunitylabdhub.workflows.persistence.WorkflowEntity;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;

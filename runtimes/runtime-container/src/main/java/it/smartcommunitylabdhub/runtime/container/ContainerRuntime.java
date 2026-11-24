@@ -28,17 +28,19 @@ import it.smartcommunitylabdhub.authorization.services.CredentialsService;
 import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
+import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
+import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.models.function.Function;
-import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
+import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.container.build.ContainerBuildRunSpec;
@@ -56,6 +58,7 @@ import it.smartcommunitylabdhub.runtime.container.serve.ContainerServeTaskSpec;
 import it.smartcommunitylabdhub.runtime.container.specs.ContainerFunctionSpec;
 import it.smartcommunitylabdhub.runtime.container.specs.ContainerRunSpec;
 import it.smartcommunitylabdhub.runtime.container.specs.ContainerRunStatus;
+import it.smartcommunitylabdhub.tasks.Task;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Arrays;
@@ -64,12 +67,12 @@ import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.BindException;
 
 @Slf4j
 @RuntimeComponent(runtime = ContainerRuntime.RUNTIME)
 public class ContainerRuntime
-    extends K8sFunctionBaseRuntime<ContainerFunctionSpec, ContainerRunSpec, ContainerRunStatus, K8sRunnable>
-{
+    extends K8sFunctionBaseRuntime<ContainerFunctionSpec, ContainerRunSpec, ContainerRunStatus, K8sRunnable> {
 
     public static final String RUNTIME = "container";
     public static final String[] KINDS = {
@@ -160,49 +163,53 @@ public class ContainerRuntime
         if (k8sBuilderHelper == null) {
             throw new IllegalArgumentException("No k8s available");
         }
+        try {
+            //read base task spec to extract secrets
+            K8sFunctionTaskBaseSpec taskSpec = new K8sFunctionTaskBaseSpec();
+            taskSpec.configure(run.getSpec());
+            Map<String, String> secrets = secretService.getSecretData(run.getProject(), taskSpec.getSecrets());
 
-        //read base task spec to extract secrets
-        K8sFunctionTaskBaseSpec taskSpec = new K8sFunctionTaskBaseSpec();
-        taskSpec.configure(run.getSpec());
-        Map<String, String> secrets = secretService.getSecretData(run.getProject(), taskSpec.getSecrets());
+            // Create string run accessor from task
+            RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
 
-        // Create string run accessor from task
-        RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
+            K8sRunnable runnable = switch (runAccessor.getTask()) {
+                case ContainerDeployTaskSpec.KIND -> new ContainerDeployRunner(
+                    k8sBuilderHelper,
+                    k8sLabelHelper
+                ).produce(run, secrets);
+                case ContainerJobTaskSpec.KIND -> new ContainerJobRunner(k8sBuilderHelper, k8sLabelHelper).produce(
+                    run,
+                    secrets
+                );
+                case ContainerServeTaskSpec.KIND -> new ContainerServeRunner(
+                    k8sBuilderHelper,
+                    k8sLabelHelper,
+                    functionService
+                ).produce(run, secrets);
+                case ContainerBuildTaskSpec.KIND -> new ContainerBuildRunner(k8sBuilderHelper, k8sLabelHelper).produce(
+                    run,
+                    secrets
+                );
+                default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
+            };
 
-        K8sRunnable runnable = switch (runAccessor.getTask()) {
-            case ContainerDeployTaskSpec.KIND -> new ContainerDeployRunner(k8sBuilderHelper, k8sLabelHelper).produce(
-                run,
-                secrets
-            );
-            case ContainerJobTaskSpec.KIND -> new ContainerJobRunner(k8sBuilderHelper, k8sLabelHelper).produce(
-                run,
-                secrets
-            );
-            case ContainerServeTaskSpec.KIND -> new ContainerServeRunner(
-                k8sBuilderHelper,
-                k8sLabelHelper,
-                functionService
-            ).produce(run, secrets);
-            case ContainerBuildTaskSpec.KIND -> new ContainerBuildRunner(k8sBuilderHelper, k8sLabelHelper).produce(
-                run,
-                secrets
-            );
-            default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
-        };
+            //extract auth from security context to inflate secured credentials
+            UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
+            if (auth != null) {
+                //get credentials from providers
+                List<Credentials> credentials = credentialsService.getCredentials((UserAuthentication<?>) auth);
+                runnable.setCredentials(credentials);
+            }
 
-        //extract auth from security context to inflate secured credentials
-        UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-        if (auth != null) {
-            //get credentials from providers
-            List<Credentials> credentials = credentialsService.getCredentials((UserAuthentication<?>) auth);
-            runnable.setCredentials(credentials);
+            //inject configuration
+            List<Configuration> configurations = configurationService.getConfigurations();
+            runnable.setConfigurations(configurations);
+
+            return runnable;
+        } catch (StoreException ex) {
+            log.error("Error with store: {}", ex.getMessage());
+            throw new SystemException("Error with store: " + ex.getMessage());
         }
-
-        //inject configuration
-        List<Configuration> configurations = configurationService.getConfigurations();
-        runnable.setConfigurations(configurations);
-
-        return runnable;
     }
 
     @Override
@@ -211,18 +218,22 @@ public class ContainerRuntime
 
         //update image name after build
         if (runnable instanceof K8sContainerBuilderRunnable) {
-            String image = ((K8sContainerBuilderRunnable) runnable).getImage();
+            try {
+                String image = ((K8sContainerBuilderRunnable) runnable).getImage();
 
-            String functionId = runAccessor.getFunctionId();
-            Function function = functionService.getFunction(functionId);
+                String functionId = runAccessor.getFunctionId();
+                Function function = functionService.get(functionId);
 
-            log.debug("update function {} spec to use built image: {}", functionId, image);
+                log.debug("update function {} spec to use built image: {}", functionId, image);
 
-            ContainerFunctionSpec funSpec = new ContainerFunctionSpec(function.getSpec());
-            if (!image.equals(funSpec.getImage())) {
-                funSpec.setImage(image);
-                function.setSpec(funSpec.toMap());
-                functionService.updateFunction(functionId, function, true);
+                ContainerFunctionSpec funSpec = new ContainerFunctionSpec(function.getSpec());
+                if (!image.equals(funSpec.getImage())) {
+                    funSpec.setImage(image);
+                    function.setSpec(funSpec.toMap());
+                    functionService.update(functionId, function, true);
+                }
+            } catch (StoreException | IllegalArgumentException | NoSuchEntityException | BindException ex) {
+                log.error("Error updating workflow: {}", ex.getMessage());
             }
         }
         return null;

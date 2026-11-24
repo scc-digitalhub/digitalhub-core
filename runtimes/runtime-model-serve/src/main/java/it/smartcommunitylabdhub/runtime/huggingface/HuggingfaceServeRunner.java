@@ -27,8 +27,9 @@ import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.accessors.fields.KeyAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
+import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.enums.State;
-import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
@@ -41,6 +42,7 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreResource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
+import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.models.Model;
 import it.smartcommunitylabdhub.models.ModelManager;
@@ -59,10 +61,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
+@Slf4j
 public class HuggingfaceServeRunner {
 
     private static final int HTTP_PORT = 8080;
@@ -157,8 +161,8 @@ public class HuggingfaceServeRunner {
             try {
                 Model model =
                     keyAccessor.getId() != null
-                        ? modelService.findModel(keyAccessor.getId())
-                        : modelService.getLatestModelByKey(keyAccessor.getProject(), path);
+                        ? modelService.get(keyAccessor.getId())
+                        : modelService.getLatestByKey(keyAccessor.getProject(), path);
                 if (model == null) {
                     throw new CoreRuntimeException("invalid entity reference, HuggingFace model not found");
                 }
@@ -175,7 +179,7 @@ public class HuggingfaceServeRunner {
                 HuggingfaceModelSpec modelSpec = new HuggingfaceModelSpec();
                 modelSpec.configure(model.getSpec());
                 path = modelSpec.getPath();
-            } catch (NoSuchElementException e) {
+            } catch (NoSuchElementException | NoSuchEntityException | StoreException e) {
                 throw new CoreRuntimeException("invalid entity reference, HuggingFace model not found", e);
             }
         }
@@ -334,11 +338,15 @@ public class HuggingfaceServeRunner {
         }
 
         if (functionService != null) {
-            //check if latest
-            Function latest = functionService.getLatestFunctionByName(run.getProject(), taskAccessor.getFunction());
-            if (taskAccessor.getFunctionId().equals(latest.getId())) {
-                //prepend with function name
-                serviceNames.add(taskAccessor.getFunction() + "-latest");
+            try {
+                //check if latest
+                Function latest = functionService.getLatestByName(run.getProject(), taskAccessor.getFunction());
+                if (taskAccessor.getFunctionId().equals(latest.getId())) {
+                    //prepend with function name
+                    serviceNames.add(taskAccessor.getFunction() + "-latest");
+                }
+            } catch (StoreException | NoSuchEntityException e) {
+                log.warn("skip '-latest' alias for {}: {}", taskAccessor.getFunction(), e.getMessage());
             }
         }
 

@@ -24,9 +24,10 @@
 package it.smartcommunitylabdhub.runtime.mlflow.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.runtime.mlflow.MlflowServeRuntime;
+import it.smartcommunitylabdhub.tasks.Task;
+
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;

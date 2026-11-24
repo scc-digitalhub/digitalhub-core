@@ -23,10 +23,11 @@
 
 package it.smartcommunitylabdhub.framework.k8s.base;
 
-import it.smartcommunitylabdhub.commons.models.workflow.WorkflowTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreResource;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreVolume;
+import it.smartcommunitylabdhub.workflows.specs.WorkflowTaskBaseSpec;
+
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;

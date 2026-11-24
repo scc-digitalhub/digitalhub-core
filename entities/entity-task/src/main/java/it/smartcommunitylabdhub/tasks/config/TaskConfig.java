@@ -17,10 +17,10 @@
 
 package it.smartcommunitylabdhub.tasks.config;
 
-import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
+import it.smartcommunitylabdhub.tasks.Task;
 import it.smartcommunitylabdhub.tasks.persistence.TaskEntity;
 import it.smartcommunitylabdhub.tasks.persistence.TaskRepository;
 import org.springframework.context.annotation.Bean;

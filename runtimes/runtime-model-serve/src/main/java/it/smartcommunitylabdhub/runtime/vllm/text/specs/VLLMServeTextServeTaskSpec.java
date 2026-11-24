@@ -24,9 +24,10 @@
 package it.smartcommunitylabdhub.runtime.vllm.text.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.runtime.vllm.base.specs.VLLMServeTaskSpec;
 import it.smartcommunitylabdhub.runtime.vllm.text.VLLMServeTextRuntime;
+import it.smartcommunitylabdhub.tasks.Task;
+
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;

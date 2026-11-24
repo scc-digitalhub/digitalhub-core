@@ -23,7 +23,6 @@
 
 package it.smartcommunitylabdhub.functions.persistence;
 
-import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.metadata.EmbeddableMetadata;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.commons.utils.KeyUtils;
@@ -31,6 +30,7 @@ import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.metadata.AuditMetadataBuilder;
 import it.smartcommunitylabdhub.core.metadata.BaseMetadataBuilder;
 import it.smartcommunitylabdhub.core.metadata.VersioningMetadataBuilder;
+import it.smartcommunitylabdhub.functions.Function;
 import jakarta.persistence.AttributeConverter;
 import java.io.Serializable;
 import java.util.HashMap;
