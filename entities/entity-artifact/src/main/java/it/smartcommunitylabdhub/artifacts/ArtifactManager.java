@@ -23,222 +23,108 @@
 
 package it.smartcommunitylabdhub.artifacts;
 
-import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
-import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
-import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import jakarta.validation.constraints.NotNull;
-import java.util.List;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.lang.Nullable;
-import org.springframework.validation.BindException;
+import it.smartcommunitylabdhub.commons.services.EntityAwareService;
+import it.smartcommunitylabdhub.commons.services.EntityService;
+import it.smartcommunitylabdhub.commons.services.SchemaService;
+import it.smartcommunitylabdhub.commons.services.SpecRegistry;
+import it.smartcommunitylabdhub.core.events.EntityOperationsListener;
+import it.smartcommunitylabdhub.core.services.EntityFinalizer;
+import it.smartcommunitylabdhub.core.services.VersionableEntityService;
+import it.smartcommunitylabdhub.files.service.EntityFilesService;
+import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
+import it.smartcommunitylabdhub.relationships.RelationshipsAwareEntityService;
+import it.smartcommunitylabdhub.search.service.IndexableEntityService;
+import lombok.experimental.Delegate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 /*
- * Service for managing artifacts
+ * Exposed manager for artifact-related operations via services
  */
-public interface ArtifactManager {
-    /**
-     * List all artifacts
-     * @param pageable
-     * @return
-     */
-    Page<Artifact> listArtifacts(Pageable pageable) throws SystemException;
+@Component
+public class ArtifactManager {
 
-    /**
-     * List the latest version of every artifact
-     * @return
-     */
-    List<Artifact> listLatestArtifacts() throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private EntityService<Artifact> artifactEntityService;
 
-    /**
-     * List the latest version of every artifact
-     * @param pageable
-     * @return
-     */
-    Page<Artifact> listLatestArtifacts(Pageable pageable) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private VersionableEntityService<Artifact> artifactVersionableEntityService;
 
-    /**
-     * List all versions of every artifact for a user
-     * @param user
-     * @return
-     */
-    List<Artifact> listArtifactsByUser(@NotNull String user) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private EntityFilesService<Artifact> artifactFilesService;
 
-    /**
-     * List all versions of every artifact for a project
-     * @param project
-     * @return
-     */
-    List<Artifact> listArtifactsByProject(@NotNull String project) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private IndexableEntityService<Artifact> artifactIndexableEntityService;
 
-    /**
-     * List all versions of every artifact for a project
-     * @param project
-     * @param pageable
-     * @return
-     */
-    Page<Artifact> listArtifactsByProject(@NotNull String project, Pageable pageable) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private LifecycleManager<Artifact> artifactLifecycleManager;
 
-    /**
-     * List the latest version of every artifact for a project
-     * @param project
-     * @return
-     */
-    List<Artifact> listLatestArtifactsByProject(@NotNull String project) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private RelationshipsAwareEntityService<Artifact> artifactRelationshipsAwareEntityService;
 
-    /**
-     * List the latest version of every artifact for a project
-     * @param project
-     * @param pageable
-     * @return
-     */
-    Page<Artifact> listLatestArtifactsByProject(@NotNull String project, Pageable pageable) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private EntityFinalizer<Artifact> artifactEntityFinalizer;
 
-    /**
-     * List all artifacts, with optional filters
-     * @param pageable
-     * @param filter
-     * @return
-     */
-    Page<Artifact> searchArtifacts(Pageable pageable, @Nullable SearchFilter<Artifact> filter) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private EntityOperationsListener<Artifact> artifactOperationsListener;
 
-    /**
-     * List the latest version of every artifact, with optional filters
-     * @param pageable
-     * @param filter
-     * @return
-     */
-    Page<Artifact> searchLatestArtifacts(Pageable pageable, @Nullable SearchFilter<Artifact> filter)
-        throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private SpecRegistry<Artifact> artifactSpecRegistry;
 
-    /**
-     * List all versions of every artifact, with optional filters
-     * @param project
-     * @param pageable
-     * @param filter
-     * @return
-     */
-    Page<Artifact> searchArtifactsByProject(
-        @NotNull String project,
-        Pageable pageable,
-        @Nullable SearchFilter<Artifact> filter
-    ) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private SchemaService<Artifact> artifactSchemaService;
 
-    /**
-     * List the latest version of every artifact, with optional filters
-     * @param project
-     * @param pageable
-     * @param filter
-     * @return
-     */
-    Page<Artifact> searchLatestArtifactsByProject(
-        @NotNull String project,
-        Pageable pageable,
-        @Nullable SearchFilter<Artifact> filter
-    ) throws SystemException;
+    @Autowired
+    public void setArtifactEntityService(EntityService<Artifact> artifactEntityService) {
+        this.artifactEntityService = artifactEntityService;
+    }
 
-    /**
-     * Find all versions of a given artifact
-     * @param project
-     * @param name
-     * @return
-     */
-    List<Artifact> findArtifacts(@NotNull String project, @NotNull String name) throws SystemException;
+    @Autowired
+    public void setArtifactVersionableEntityService(
+        VersionableEntityService<Artifact> artifactVersionableEntityService
+    ) {
+        this.artifactVersionableEntityService = artifactVersionableEntityService;
+    }
 
-    /**
-     * Find all versions of a given artifact
-     * @param project
-     * @param name
-     * @param pageable
-     * @return
-     */
-    Page<Artifact> findArtifacts(@NotNull String project, @NotNull String name, Pageable pageable)
-        throws SystemException;
+    @Autowired
+    public void setArtifactFilesService(EntityFilesService<Artifact> artifactFilesService) {
+        this.artifactFilesService = artifactFilesService;
+    }
 
-    /**
-     * Find a specific artifact (version) via unique ID. Returns null if not found
-     * @param id
-     * @return
-     */
-    @Nullable
-    Artifact findArtifact(@NotNull String id) throws SystemException;
+    @Autowired
+    public void setArtifactIndexableEntityService(IndexableEntityService<Artifact> artifactIndexableEntityService) {
+        this.artifactIndexableEntityService = artifactIndexableEntityService;
+    }
 
-    /**
-     * Get a specific artifact (version) via unique ID. Throws exception if not found
-     * @param id
-     * @return
-     * @throws NoSuchEntityException
-     */
-    Artifact getArtifact(@NotNull String id) throws NoSuchEntityException, SystemException;
+    @Autowired
+    public void setArtifactLifecycleManager(LifecycleManager<Artifact> artifactLifecycleManager) {
+        this.artifactLifecycleManager = artifactLifecycleManager;
+    }
 
-    /**
-     * Get the latest version of a given artifact
-     * @param project
-     * @param name
-     * @return
-     * @throws NoSuchEntityException
-     */
-    Artifact getLatestArtifactByName(@NotNull String project, @NotNull String name)
-        throws NoSuchEntityException, SystemException;
+    @Autowired
+    public void setArtifactRelationshipsAwareEntityService(
+        RelationshipsAwareEntityService<Artifact> artifactRelationshipsAwareEntityService
+    ) {
+        this.artifactRelationshipsAwareEntityService = artifactRelationshipsAwareEntityService;
+    }
 
-    /**
-     * Get the latest version of a given artifact by its key
-     * @param project
-     * @param key
-     * @return
-     * @throws NoSuchEntityException
-     */
-    Artifact getLatestArtifactByKey(@NotNull String project, @NotNull String key)
-        throws NoSuchEntityException, SystemException;
-    /**
-     * Create a new artifact and store it
-     * @param artifactDTO
-     * @return
-     * @throws DuplicatedEntityException
-     * @throws IllegalArgumentException
-     * @throws BindException
-     */
-    Artifact createArtifact(@NotNull Artifact artifactDTO)
-        throws DuplicatedEntityException, BindException, IllegalArgumentException, SystemException;
+    @Autowired
+    public void setArtifactEntityFinalizer(EntityFinalizer<Artifact> artifactEntityFinalizer) {
+        this.artifactEntityFinalizer = artifactEntityFinalizer;
+    }
 
-    /**
-     * Update a specific artifact version
-     * @param id
-     * @param artifactDTO
-     * @return
-     * @throws NoSuchEntityException
-     */
-    Artifact updateArtifact(@NotNull String id, @NotNull Artifact artifactDTO)
-        throws NoSuchEntityException, BindException, IllegalArgumentException, SystemException;
+    @Autowired
+    public void setArtifactOperationsListener(EntityOperationsListener<Artifact> artifactOperationsListener) {
+        this.artifactOperationsListener = artifactOperationsListener;
+    }
 
-    /**
-     * Update a specific artifact version
-     * @param id
-     * @param artifactDTO
-     * @return
-     * @throws NoSuchEntityException
-     */
-    Artifact updateArtifact(@NotNull String id, @NotNull Artifact artifactDTO, boolean force)
-        throws NoSuchEntityException, BindException, IllegalArgumentException, SystemException;
+    @Autowired
+    public void setArtifactSpecRegistry(SpecRegistry<Artifact> artifactSpecRegistry) {
+        this.artifactSpecRegistry = artifactSpecRegistry;
+    }
 
-    /**
-     * Delete a specific artifact (version) via unique ID
-     * @param id
-     */
-    void deleteArtifact(@NotNull String id, @Nullable Boolean cascade) throws SystemException;
-
-    /**
-     * Delete all versions of a given artifact
-     * @param project
-     * @param name
-     */
-    void deleteArtifacts(@NotNull String project, @NotNull String name, @Nullable Boolean cascade)
-        throws SystemException;
-
-    /**
-     * Delete all artifacts for a given project, with cascade.
-     * @param project
-     */
-    void deleteArtifactsByProject(@NotNull String project, @Nullable Boolean cascade) throws SystemException;
+    @Autowired
+    public void setArtifactSchemaService(SchemaService<Artifact> artifactSchemaService) {
+        this.artifactSchemaService = artifactSchemaService;
+    }
 }

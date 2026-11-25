@@ -23,8 +23,8 @@
 
 package it.smartcommunitylabdhub.workflows.relationships;
 
-import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.relationships.BaseEntityRelationshipsManager;
+import it.smartcommunitylabdhub.workflows.Workflow;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

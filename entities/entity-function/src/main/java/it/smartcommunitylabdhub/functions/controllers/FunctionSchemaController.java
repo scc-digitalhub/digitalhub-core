@@ -1,8 +1,8 @@
 package it.smartcommunitylabdhub.functions.controllers;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
-import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.core.controllers.BaseSchemaAwareEntityController;
+import it.smartcommunitylabdhub.functions.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;

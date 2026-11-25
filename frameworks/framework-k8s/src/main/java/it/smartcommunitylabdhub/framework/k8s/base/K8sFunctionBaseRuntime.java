@@ -24,10 +24,10 @@
 package it.smartcommunitylabdhub.framework.k8s.base;
 
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.models.function.FunctionBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
+import it.smartcommunitylabdhub.functions.specs.FunctionBaseSpec;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;

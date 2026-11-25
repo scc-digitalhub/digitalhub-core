@@ -23,9 +23,9 @@
 
 package it.smartcommunitylabdhub.tasks.persistence;
 
-import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.commons.utils.KeyUtils;
+import it.smartcommunitylabdhub.tasks.Task;
 import jakarta.persistence.AttributeConverter;
 import java.io.Serializable;
 import java.util.Map;

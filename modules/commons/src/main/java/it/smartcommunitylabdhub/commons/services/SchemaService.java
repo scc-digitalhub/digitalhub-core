@@ -24,12 +24,11 @@
 package it.smartcommunitylabdhub.commons.services;
 
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
-import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.schemas.Schema;
 import jakarta.validation.constraints.NotNull;
 import java.util.Collection;
 
-public interface SchemaService<D> {
+public interface SchemaService<D> extends EntityAwareService<D> {
     Class<D> getType();
 
     Schema getSchema(@NotNull String kind);

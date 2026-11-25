@@ -24,9 +24,10 @@
 package it.smartcommunitylabdhub.runtime.python.guardrail.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.runtime.python.build.PythonBuildTaskSpec;
 import it.smartcommunitylabdhub.runtime.python.guardrail.GuardrailRuntime;
+import it.smartcommunitylabdhub.tasks.Task;
+
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;

@@ -24,9 +24,10 @@
 package it.smartcommunitylabdhub.runtime.sglang.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.runtime.modelserve.specs.ModelServeServeTaskSpec;
 import it.smartcommunitylabdhub.runtime.sglang.SGLangServeRuntime;
+import it.smartcommunitylabdhub.tasks.Task;
+
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;

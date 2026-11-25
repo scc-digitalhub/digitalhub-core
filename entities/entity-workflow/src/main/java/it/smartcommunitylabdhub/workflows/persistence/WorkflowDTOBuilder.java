@@ -24,13 +24,13 @@
 package it.smartcommunitylabdhub.workflows.persistence;
 
 import it.smartcommunitylabdhub.commons.models.metadata.EmbeddableMetadata;
-import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.metadata.AuditMetadataBuilder;
 import it.smartcommunitylabdhub.core.metadata.BaseMetadataBuilder;
 import it.smartcommunitylabdhub.core.metadata.VersioningMetadataBuilder;
+import it.smartcommunitylabdhub.workflows.Workflow;
 import jakarta.persistence.AttributeConverter;
 import java.io.Serializable;
 import java.util.HashMap;

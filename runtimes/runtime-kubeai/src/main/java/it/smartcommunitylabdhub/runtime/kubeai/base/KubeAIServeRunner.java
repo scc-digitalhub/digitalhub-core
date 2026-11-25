@@ -27,6 +27,8 @@ import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.accessors.fields.KeyAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
+import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
@@ -119,8 +121,8 @@ public class KubeAIServeRunner {
             try {
                 Model model =
                     keyAccessor.getId() != null
-                        ? modelService.findModel(keyAccessor.getId())
-                        : modelService.getLatestModelByKey(keyAccessor.getProject(), url);
+                        ? modelService.get(keyAccessor.getId())
+                        : modelService.getLatestByKey(keyAccessor.getProject(), url);
                 if (model == null) {
                     throw new CoreRuntimeException("invalid entity reference, Huggingface model not found");
                 }
@@ -139,7 +141,7 @@ public class KubeAIServeRunner {
                 if (!url.endsWith("/")) {
                     url += "/";
                 }
-            } catch (NoSuchElementException e) {
+            } catch (NoSuchElementException | NoSuchEntityException | StoreException e) {
                 throw new CoreRuntimeException("invalid entity reference, Huggingface model not found", e);
             }
         }

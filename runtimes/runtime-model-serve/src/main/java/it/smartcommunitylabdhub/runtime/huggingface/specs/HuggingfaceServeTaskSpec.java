@@ -26,12 +26,13 @@ package it.smartcommunitylabdhub.runtime.huggingface.specs;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.runtime.huggingface.HuggingfaceServeRuntime;
 import it.smartcommunitylabdhub.runtime.huggingface.models.HuggingfaceBackend;
 import it.smartcommunitylabdhub.runtime.huggingface.models.HuggingfaceDType;
 import it.smartcommunitylabdhub.runtime.huggingface.models.HuggingfaceTask;
 import it.smartcommunitylabdhub.runtime.modelserve.specs.ModelServeServeTaskSpec;
+import it.smartcommunitylabdhub.tasks.Task;
+
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;

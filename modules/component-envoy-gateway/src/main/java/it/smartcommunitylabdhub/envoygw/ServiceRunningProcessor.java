@@ -66,7 +66,7 @@ public class ServiceRunningProcessor implements Processor<Run, RunBaseStatus> {
             // check run has service info and has not been populated, otherwise ignore
             if (status != null && status.get("service") != null && status.get("gatewayInfo") == null) {
                 // Use service to retrieve the full run and check if state is changed
-                run = runService.getRun(id);
+                run = runService.get(id);
                 // - check if extensions has envoygw, otherwise ignore
                 Optional<Map<String, Serializable>> extension = run
                     .getExtensions()
@@ -182,7 +182,8 @@ public class ServiceRunningProcessor implements Processor<Run, RunBaseStatus> {
                         }
 
                         // TODO enable when payload logger is supported again
-                        boolean enablePayloadLogging = false; //Boolean.TRUE.equals(gatewayExtensionSpec.getEnabledPayloadLogging());
+                        boolean enablePayloadLogging = false;
+                        //Boolean.TRUE.equals(gatewayExtensionSpec.getEnabledPayloadLogging());
                         runnables.addAll(
                             gatewayCRManager.createExtensionPolicies(
                                 taskAccessor.getRuntime(),

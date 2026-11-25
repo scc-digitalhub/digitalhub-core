@@ -23,11 +23,10 @@
 
 package it.smartcommunitylabdhub.tasks.persistence;
 
-import it.smartcommunitylabdhub.commons.models.function.FunctionTaskBaseSpec;
-import it.smartcommunitylabdhub.commons.models.task.Task;
-import it.smartcommunitylabdhub.commons.models.workflow.WorkflowTaskBaseSpec;
+import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.commons.utils.KeyUtils;
+import it.smartcommunitylabdhub.tasks.Task;
 import jakarta.persistence.AttributeConverter;
 import java.io.Serializable;
 import java.util.Map;
@@ -55,6 +54,8 @@ public class TaskEntityBuilder implements Converter<Task, TaskEntity> {
             dto.getId()
         );
 
+        TaskSpecAccessor accessor = TaskSpecAccessor.with(dto.getSpec());
+
         return TaskEntity.builder()
             .id(dto.getId())
             .kind(dto.getKind())
@@ -62,8 +63,8 @@ public class TaskEntityBuilder implements Converter<Task, TaskEntity> {
             .key(key)
             .spec(converter.convertToDatabaseColumn(dto.getSpec()))
             //extract refs from specs
-            .function(FunctionTaskBaseSpec.from(dto.getSpec()).getFunction())
-            .workflow(WorkflowTaskBaseSpec.from(dto.getSpec()).getWorkflow())
+            .function(accessor.getFunctionKey())
+            .workflow(accessor.getWorkflowKey())
             .build();
     }
 }

@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.runtime.python.openinference.specs;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.function.Function;
+import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.runtime.python.openinference.OpeninferenceRuntime;
 import it.smartcommunitylabdhub.runtime.python.openinference.model.TensorModel;
 import it.smartcommunitylabdhub.runtime.python.specs.PythonFunctionSpec;

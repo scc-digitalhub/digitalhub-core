@@ -34,6 +34,7 @@ import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.services.SpecValidator;
 import it.smartcommunitylabdhub.templates.TemplateService;
 import it.smartcommunitylabdhub.templates.filter.TemplateFilter;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
@@ -284,5 +285,50 @@ public abstract class TemplateServiceImpl<D> implements TemplateService<D>, Init
         return Optional.ofNullable(templates.get(id)).orElseThrow(() ->
             new NoSuchEntityException("template not found: " + id)
         );
+    }
+
+    @Override
+    public Template createTemplate(@Valid Template template) throws SystemException {
+        String key = type.getSimpleName().toLowerCase();
+        template.setType(key);
+
+        //generate id if missing
+        if (!StringUtils.hasText(template.getId())) {
+            template.setId(keyGenerator.generateKey());
+        }
+        //sanitize content
+        sanitize(template);
+        //discard invalid
+        validate(template);
+
+        templates.put(template.getId(), template);
+        return template;
+    }
+
+    @Override
+    public Template updateTemplate(@NotNull String id, @Valid Template template) throws NoSuchEntityException, SystemException {
+        if (!templates.containsKey(id)) {
+            throw new NoSuchEntityException("template not found: " + id);
+        }
+        template.setId(id);
+
+        String key = type.getSimpleName().toLowerCase();
+        template.setType(key);
+
+        //sanitize content
+        sanitize(template);
+        //discard invalid
+        validate(template);
+
+        templates.put(id, template);
+        return template;
+    }
+
+    @Override
+    public void deleteTemplate(@NotNull String id) throws NoSuchEntityException, SystemException {
+        if (!templates.containsKey(id)) {
+            throw new NoSuchEntityException("template not found: " + id);
+        }
+        templates.remove(id);
     }
 }

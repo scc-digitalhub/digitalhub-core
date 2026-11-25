@@ -23,86 +23,13 @@
 
 package it.smartcommunitylabdhub.models.services;
 
-import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
-import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.models.metrics.Metrics;
-import it.smartcommunitylabdhub.commons.models.metrics.NumberOrNumberArray;
-import it.smartcommunitylabdhub.commons.services.EntityService;
-import it.smartcommunitylabdhub.commons.utils.EntityUtils;
-import it.smartcommunitylabdhub.commons.utils.MapUtils;
-import it.smartcommunitylabdhub.metrics.MetricsManager;
-import it.smartcommunitylabdhub.metrics.service.MetricsService;
+import it.smartcommunitylabdhub.metrics.service.BaseEntityMetricsServiceImpl;
 import it.smartcommunitylabdhub.models.Model;
 import jakarta.transaction.Transactional;
-import jakarta.validation.constraints.NotNull;
-import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 @Transactional
 @Slf4j
-public class ModelMetricsServiceImpl implements MetricsService<Model> {
-
-    @Autowired
-    private EntityService<Model> entityService;
-
-    @Autowired
-    private MetricsManager metricsManager;
-
-    @Override
-    public Map<String, NumberOrNumberArray> getMetrics(@NotNull String entityId)
-        throws StoreException, SystemException {
-        log.debug("fetch all metrics for model {}", entityId);
-        Model entity = entityService.get(entityId);
-
-        //embedded metrics
-        StatusFieldAccessor statusFieldAccessor = StatusFieldAccessor.with(entity.getStatus());
-        Map<String, NumberOrNumberArray> embedded = statusFieldAccessor.getMetrics();
-
-        //stored metrics
-        Map<String, NumberOrNumberArray> stored = metricsManager.getMetrics(
-            EntityUtils.getEntityName(Model.class),
-            entityId
-        );
-
-        //merge stored and embedded
-        Map<String, NumberOrNumberArray> metrics = MapUtils.mergeMultipleMaps(stored, embedded);
-
-        if (log.isTraceEnabled()) {
-            log.trace("metrics: {}", metrics);
-        }
-
-        return stored;
-    }
-
-    @Override
-    public NumberOrNumberArray getMetrics(@NotNull String entityId, @NotNull String name)
-        throws StoreException, SystemException {
-        log.debug("fetch metric {} for model {}", name, entityId);
-        Model entity = entityService.get(entityId);
-
-        //embedded metrics
-        StatusFieldAccessor statusFieldAccessor = StatusFieldAccessor.with(entity.getStatus());
-        Map<String, NumberOrNumberArray> embedded = statusFieldAccessor.getMetrics();
-        if ((embedded != null) && embedded.containsKey(name)) {
-            return embedded.get(name);
-        } else {
-            //stored metrics
-            return metricsManager.getMetrics(EntityUtils.getEntityName(Model.class), entityId, name);
-        }
-    }
-
-    @Override
-    public Metrics saveMetrics(@NotNull String entityId, @NotNull String name, NumberOrNumberArray data)
-        throws StoreException, SystemException {
-        log.debug("save metric {} for model {}", name, entityId);
-        if (log.isTraceEnabled()) {
-            log.trace("data: {}", data);
-        }
-
-        return metricsManager.saveMetrics(EntityUtils.getEntityName(Model.class), entityId, name, data);
-    }
-}
+public class ModelMetricsServiceImpl extends BaseEntityMetricsServiceImpl<Model> {}

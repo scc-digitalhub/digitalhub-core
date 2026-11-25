@@ -25,9 +25,9 @@ package it.smartcommunitylabdhub.runtime.container.job;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.runtime.container.ContainerRuntime;
+import it.smartcommunitylabdhub.tasks.Task;
 import jakarta.validation.constraints.Min;
 import java.io.Serializable;
 import java.util.Map;

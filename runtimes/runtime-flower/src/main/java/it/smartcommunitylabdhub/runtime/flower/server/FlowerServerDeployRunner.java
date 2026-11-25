@@ -25,8 +25,9 @@ package it.smartcommunitylabdhub.runtime.flower.server;
 
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
+import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.enums.State;
-import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
@@ -38,6 +39,7 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreServiceType;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
+import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runtime.flower.model.FABModel;
@@ -52,10 +54,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;
 
+@Slf4j
 public class FlowerServerDeployRunner {
 
     private static final int UID = 49999;
@@ -230,11 +234,15 @@ public class FlowerServerDeployRunner {
         List<String> serviceNames = new ArrayList<>();
 
         if (functionService != null) {
-            //check if latest
-            Function latest = functionService.getLatestFunctionByName(run.getProject(), taskAccessor.getFunction());
-            if (taskAccessor.getFunctionId().equals(latest.getId())) {
-                //prepend with function name
-                serviceNames.add(taskAccessor.getFunction() + "-latest");
+            try {
+                //check if latest
+                Function latest = functionService.getLatestByName(run.getProject(), taskAccessor.getFunction());
+                if (taskAccessor.getFunctionId().equals(latest.getId())) {
+                    //prepend with function name
+                    serviceNames.add(taskAccessor.getFunction() + "-latest");
+                }
+            } catch (StoreException | NoSuchEntityException e) {
+                log.warn("skip '-latest' alias for {}: {}", taskAccessor.getFunction(), e.getMessage());
             }
         }
 

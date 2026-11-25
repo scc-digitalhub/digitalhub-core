@@ -13,17 +13,17 @@ import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
-import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
+import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.models.ModelManager;
 import it.smartcommunitylabdhub.relationships.RelationshipDetail;
@@ -45,6 +45,7 @@ import it.smartcommunitylabdhub.runtime.tvm.specs.serve.TvmServeRunSpec;
 import it.smartcommunitylabdhub.runtime.tvm.specs.serve.TvmServeTaskSpec;
 import it.smartcommunitylabdhub.runtime.tvm.status.InferenceV2Service;
 import it.smartcommunitylabdhub.runtime.tvm.status.TvmRunStatus;
+import it.smartcommunitylabdhub.tasks.Task;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -61,12 +62,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+import org.springframework.validation.BindException;
 
 @Slf4j
 @RuntimeComponent(runtime = TvmRuntime.RUNTIME)
 public class TvmRuntime
-        extends K8sFunctionBaseRuntime<TvmFunctionSpec, TvmRunSpec, TvmRunStatus, K8sRunnable>
-        implements InitializingBean {
+    extends K8sFunctionBaseRuntime<TvmFunctionSpec, TvmRunSpec, TvmRunStatus, K8sRunnable>
+    implements InitializingBean
+{
 
     public static final String RUNTIME = "tvm";
     public static final String[] KINDS = { TvmBuildRunSpec.KIND, TvmCompileRunSpec.KIND, TvmServeRunSpec.KIND };
@@ -109,11 +112,12 @@ public class TvmRuntime
         this.buildRunner = new TvmBuildRunner(properties, k8sBuilderHelper, k8sLabelHelper, modelManager);
         this.compileRunner = new TvmCompileRunner(properties, k8sBuilderHelper, k8sLabelHelper, modelManager);
         this.serveRunner = new TvmServeRunner(
-                properties,
-                k8sBuilderHelper,
-                k8sLabelHelper,
-                modelManager,
-                functionService);
+            properties,
+            k8sBuilderHelper,
+            k8sLabelHelper,
+            modelManager,
+            functionService
+        );
     }
 
     @Override
@@ -153,9 +157,7 @@ public class TvmRuntime
         runSpec.configure(map);
         if (runSpec instanceof TvmServeRunSpec serveSpec) {
             // Pin the model in this run, not in the reusable task.
-            String model = TvmServeRunner.resolveModelKey(
-                    serveSpec.getModelPath(),
-                    funSpec.getSoModel());
+            String model = TvmServeRunner.resolveModelKey(serveSpec.getModelPath(), funSpec.getSoModel());
             serveSpec.setModelPath(model);
         }
         return runSpec;
@@ -166,22 +168,21 @@ public class TvmRuntime
         TvmRunSpec runSpec = new TvmRunSpec(run.getSpec());
         if (runSpec.getInputs() != null && !runSpec.getInputs().isEmpty()) {
             RelationshipsMetadata lineage = RelationshipsMetadata.from(run.getMetadata());
-            List<RelationshipDetail> rels = lineage.getRelationships() != null
-                    ? new ArrayList<>(lineage.getRelationships())
-                    : new ArrayList<>();
+            List<RelationshipDetail> rels =
+                lineage.getRelationships() != null ? new ArrayList<>(lineage.getRelationships()) : new ArrayList<>();
 
             runSpec
-                    .getInputs()
-                    .forEach((name, input) -> {
-                        if (rels
-                                .stream()
-                                .noneMatch(
-                                        r -> r.getType() == RelationshipName.CONSUMES && r.getDest().equals(input))) {
-                            RelationshipDetail dr = new RelationshipDetail(RelationshipName.CONSUMES, run.getKey(),
-                                    input);
-                            rels.add(dr);
-                        }
-                    });
+                .getInputs()
+                .forEach((name, input) -> {
+                    if (
+                        rels
+                            .stream()
+                            .noneMatch(r -> r.getType() == RelationshipName.CONSUMES && r.getDest().equals(input))
+                    ) {
+                        RelationshipDetail dr = new RelationshipDetail(RelationshipName.CONSUMES, run.getKey(), input);
+                        rels.add(dr);
+                    }
+                });
 
             lineage.setRelationships(rels);
 
@@ -235,7 +236,8 @@ public class TvmRuntime
         String baseUrl = status.getService().getUrl();
         TvmServeRunSpec spec = TvmServeRunSpec.with(run.getSpec());
         String model = TvmServeRunner.resolveServedName(
-            spec.getServedName(), RunSpecAccessor.with(run.getSpec()).getFunction()
+            spec.getServedName(),
+            RunSpecAccessor.with(run.getSpec()).getFunction()
         );
         if (!StringUtils.hasText(baseUrl) || !StringUtils.hasText(model)) {
             return status;
@@ -260,16 +262,19 @@ public class TvmRuntime
         String modelKey = readOutput(run, outputKey);
         if (!StringUtils.hasText(modelKey)) {
             throw new CoreRuntimeException(
-                    "TVM run %s has no status.outputs.%s; function.spec.%s was not updated".formatted(
-                            run.getId(),
-                            outputKey,
-                            specField));
+                "TVM run %s has no status.outputs.%s; function.spec.%s was not updated".formatted(
+                    run.getId(),
+                    outputKey,
+                    specField
+                )
+            );
         }
         String failureMessage = "TVM run %s produced model %s but could not update function %s spec.%s".formatted(
-                run.getId(),
-                modelKey,
-                functionId,
-                specField);
+            run.getId(),
+            modelKey,
+            functionId,
+            specField
+        );
         if (functionService == null || !StringUtils.hasText(functionId)) {
             throw new CoreRuntimeException(failureMessage + ": function service or exact version is missing");
         }
@@ -284,16 +289,19 @@ public class TvmRuntime
                         saveModelReference(run, functionId, specField, modelKey);
                         break;
                     } catch (RuntimeException e) {
-                        if (e instanceof NoSuchEntityException ||
-                                e instanceof IllegalArgumentException ||
-                                attempt == MODEL_UPDATE_ATTEMPTS) {
+                        if (
+                            e instanceof NoSuchEntityException ||
+                            e instanceof IllegalArgumentException ||
+                            attempt == MODEL_UPDATE_ATTEMPTS
+                        ) {
                             throw e;
                         }
                         log.warn(
-                                "retry TVM function update for run {} (attempt {} failed): {}",
-                                run.getId(),
-                                attempt,
-                                e.getMessage());
+                            "retry TVM function update for run {} (attempt {} failed): {}",
+                            run.getId(),
+                            attempt,
+                            e.getMessage()
+                        );
                         Thread.sleep(200L * attempt);
                     }
                 }
@@ -311,23 +319,28 @@ public class TvmRuntime
     }
 
     private void saveModelReference(Run run, String functionId, String field, String modelKey) {
-        // Re-read the exact version on every attempt, never the run's old snapshot.
-        Function current = functionService.getFunction(functionId);
-        if (current == null ||
+        try {
+            // Re-read the exact version on every attempt, never the run's old snapshot.
+            Function current = functionService.get(functionId);
+            if (
+                current == null ||
                 !functionId.equals(current.getId()) ||
                 !RUNTIME.equals(current.getKind()) ||
                 !Objects.equals(run.getProject(), current.getProject()) ||
-                !Objects.equals(RunSpecAccessor.with(run.getSpec()).getFunction(), current.getName())) {
-            throw new IllegalArgumentException("the function does not match the run reference");
-        }
-        if (modelKey.equals(current.getSpec().get(field)))
-            return;
+                !Objects.equals(RunSpecAccessor.with(run.getSpec()).getFunction(), current.getName())
+            ) {
+                throw new IllegalArgumentException("the function does not match the run reference");
+            }
+            if (modelKey.equals(current.getSpec().get(field))) return;
 
-        Function saved = functionService.updateFunction(functionId, withModelReference(current, field, modelKey), true);
-        if (saved == null || saved.getSpec() == null || !modelKey.equals(saved.getSpec().get(field))) {
-            throw new IllegalStateException("the saved function did not confirm the model reference");
+            Function saved = functionService.update(functionId, withModelReference(current, field, modelKey), true);
+            if (saved == null || saved.getSpec() == null || !modelKey.equals(saved.getSpec().get(field))) {
+                throw new IllegalStateException("the saved function did not confirm the model reference");
+            }
+            log.info("function {} spec updated: {}={}", current.getKey(), field, modelKey);
+        } catch (StoreException | IllegalArgumentException | NoSuchEntityException | BindException e) {
+            throw new CoreRuntimeException("failed to save model reference", e);
         }
-        log.info("function {} spec updated: {}={}", current.getKey(), field, modelKey);
     }
 
     private static Function withModelReference(Function function, String field, String modelKey) {
@@ -335,21 +348,20 @@ public class TvmRuntime
         Map<String, Serializable> spec = new LinkedHashMap<>(function.getSpec());
         spec.put(field, modelKey);
         return Function.builder()
-                .id(function.getId())
-                .kind(function.getKind())
-                .name(function.getName())
-                .project(function.getProject())
-                .key(function.getKey())
-                .user(function.getUser())
-                .metadata(function.getMetadata())
-                .status(function.getStatus())
-                .spec(spec)
-                .build();
+            .id(function.getId())
+            .kind(function.getKind())
+            .name(function.getName())
+            .project(function.getProject())
+            .key(function.getKey())
+            .user(function.getUser())
+            .metadata(function.getMetadata())
+            .status(function.getStatus())
+            .spec(spec)
+            .build();
     }
 
     private static String readOutput(Run run, String key) {
-        if (run.getStatus() == null || !(run.getStatus().get("outputs") instanceof Map<?, ?> outputs))
-            return null;
+        if (run.getStatus() == null || !(run.getStatus().get("outputs") instanceof Map<?, ?> outputs)) return null;
         return outputs.get(key) instanceof String value ? value : null;
     }
 

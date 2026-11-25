@@ -26,6 +26,7 @@ package it.smartcommunitylabdhub.files.service;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
+import it.smartcommunitylabdhub.commons.services.EntityAwareService;
 import it.smartcommunitylabdhub.files.models.DownloadInfo;
 import it.smartcommunitylabdhub.files.models.FileInfo;
 import it.smartcommunitylabdhub.files.models.UploadInfo;
@@ -35,7 +36,7 @@ import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 
-public interface EntityFilesService<T extends BaseDTO> {
+public interface EntityFilesService<T extends BaseDTO> extends EntityAwareService<T> {
     public Slice<FileInfo> getFileInfo(@NotNull String id, @Nullable Pageable pageable)
         throws NoSuchEntityException, SystemException;
     Class<T> getType();

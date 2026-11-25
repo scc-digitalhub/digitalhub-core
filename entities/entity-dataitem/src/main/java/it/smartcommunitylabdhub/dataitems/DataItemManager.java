@@ -23,221 +23,108 @@
 
 package it.smartcommunitylabdhub.dataitems;
 
-import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
-import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
-import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import jakarta.validation.constraints.NotNull;
-import java.util.List;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.lang.Nullable;
-import org.springframework.validation.BindException;
+import it.smartcommunitylabdhub.commons.services.EntityAwareService;
+import it.smartcommunitylabdhub.commons.services.EntityService;
+import it.smartcommunitylabdhub.commons.services.SchemaService;
+import it.smartcommunitylabdhub.commons.services.SpecRegistry;
+import it.smartcommunitylabdhub.core.events.EntityOperationsListener;
+import it.smartcommunitylabdhub.core.services.EntityFinalizer;
+import it.smartcommunitylabdhub.core.services.VersionableEntityService;
+import it.smartcommunitylabdhub.files.service.EntityFilesService;
+import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
+import it.smartcommunitylabdhub.relationships.RelationshipsAwareEntityService;
+import it.smartcommunitylabdhub.search.service.IndexableEntityService;
+import lombok.experimental.Delegate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 /*
- * Service for managing data items
+ * Exposed manager for dataitem-related operations via services
  */
-public interface DataItemManager {
-    /**
-     * List all dataItems
-     * @param pageable
-     * @return
-     */
-    Page<DataItem> listDataItems(Pageable pageable) throws SystemException;
+@Component
+public class DataItemManager {
 
-    /**
-     * List the latest version of every dataItem
-     * @return
-     */
-    List<DataItem> listLatestDataItems() throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private EntityService<DataItem> dataitemEntityService;
 
-    /**
-     * List the latest version of every dataItem
-     * @param pageable
-     * @return
-     */
-    Page<DataItem> listLatestDataItems(Pageable pageable) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private VersionableEntityService<DataItem> dataitemVersionableEntityService;
 
-    /**
-     * List all versions of every dataItem for a user
-     * @param user
-     * @return
-     */
-    List<DataItem> listDataItemsByUser(@NotNull String user) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private EntityFilesService<DataItem> dataitemFilesService;
 
-    /**
-     * List all versions of every dataItem for a project
-     * @param project
-     * @return
-     */
-    List<DataItem> listDataItemsByProject(@NotNull String project) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private IndexableEntityService<DataItem> dataitemIndexableEntityService;
 
-    /**
-     * List all versions of every dataItem for a project
-     * @param project
-     * @param pageable
-     * @return
-     */
-    Page<DataItem> listDataItemsByProject(@NotNull String project, Pageable pageable) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private LifecycleManager<DataItem> dataitemLifecycleManager;
 
-    /**
-     * List the latest version of every dataItem for a project
-     * @param project
-     * @return
-     */
-    List<DataItem> listLatestDataItemsByProject(@NotNull String project) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private RelationshipsAwareEntityService<DataItem> dataitemRelationshipsAwareEntityService;
 
-    /**
-     * List the latest version of every dataItem for a project
-     * @param project
-     * @param pageable
-     * @return
-     */
-    Page<DataItem> listLatestDataItemsByProject(@NotNull String project, Pageable pageable) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private EntityFinalizer<DataItem> dataitemEntityFinalizer;
 
-    /**
-     * List all dataItems, with optional filters
-     * @param pageable
-     * @param filter
-     * @return
-     */
-    Page<DataItem> searchDataItems(Pageable pageable, @Nullable SearchFilter<DataItem> filter) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private EntityOperationsListener<DataItem> dataitemOperationsListener;
 
-    /**
-     * List the latest version of every dataItem, with optional filters
-     * @param pageable
-     * @param filter
-     * @return
-     */
-    Page<DataItem> searchLatestDataItems(Pageable pageable, @Nullable SearchFilter<DataItem> filter)
-        throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private SpecRegistry<DataItem> dataitemSpecRegistry;
 
-    /**
-     * List all versions of every dataItem, with optional filters
-     * @param project
-     * @param pageable
-     * @param filter
-     * @return
-     */
-    Page<DataItem> searchDataItemsByProject(
-        @NotNull String project,
-        Pageable pageable,
-        @Nullable SearchFilter<DataItem> filter
-    ) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private SchemaService<DataItem> dataitemSchemaService;
 
-    /**
-     * List the latest version of every dataItem, with optional filters
-     * @param project
-     * @param pageable
-     * @param filter
-     * @return
-     */
-    Page<DataItem> searchLatestDataItemsByProject(
-        @NotNull String project,
-        Pageable pageable,
-        @Nullable SearchFilter<DataItem> filter
-    ) throws SystemException;
+    @Autowired
+    public void setDataItemEntityService(EntityService<DataItem> dataitemEntityService) {
+        this.dataitemEntityService = dataitemEntityService;
+    }
 
-    /**
-     * Find all versions of a given dataItem
-     * @param project
-     * @param name
-     * @return
-     */
-    List<DataItem> findDataItems(@NotNull String project, @NotNull String name) throws SystemException;
+    @Autowired
+    public void setDataItemVersionableEntityService(
+        VersionableEntityService<DataItem> dataitemVersionableEntityService
+    ) {
+        this.dataitemVersionableEntityService = dataitemVersionableEntityService;
+    }
 
-    /**
-     * Find all versions of a given dataItem
-     * @param project
-     * @param name
-     * @param pageable
-     * @return
-     */
-    Page<DataItem> findDataItems(@NotNull String project, @NotNull String name, Pageable pageable)
-        throws SystemException;
+    @Autowired
+    public void setDataItemFilesService(EntityFilesService<DataItem> dataitemFilesService) {
+        this.dataitemFilesService = dataitemFilesService;
+    }
 
-    /**
-     * Find a specific dataItem (version) via unique ID. Returns null if not found
-     * @param id
-     * @return
-     */
-    @Nullable
-    DataItem findDataItem(@NotNull String id) throws SystemException;
+    @Autowired
+    public void setDataItemIndexableEntityService(IndexableEntityService<DataItem> dataitemIndexableEntityService) {
+        this.dataitemIndexableEntityService = dataitemIndexableEntityService;
+    }
 
-    /**
-     * Get a specific dataItem (version) via unique ID. Throws exception if not found
-     * @param id
-     * @return
-     * @throws NoSuchEntityException
-     */
-    DataItem getDataItem(@NotNull String id) throws NoSuchEntityException, SystemException;
+    @Autowired
+    public void setDataItemLifecycleManager(LifecycleManager<DataItem> dataitemLifecycleManager) {
+        this.dataitemLifecycleManager = dataitemLifecycleManager;
+    }
 
-    /**
-     * Get the latest version of a given dataItem
-     * @param project
-     * @param name
-     * @return
-     * @throws NoSuchEntityException
-     */
-    DataItem getLatestDataItemByName(@NotNull String project, @NotNull String name)
-        throws NoSuchEntityException, SystemException;
+    @Autowired
+    public void setDataItemRelationshipsAwareEntityService(
+        RelationshipsAwareEntityService<DataItem> dataitemRelationshipsAwareEntityService
+    ) {
+        this.dataitemRelationshipsAwareEntityService = dataitemRelationshipsAwareEntityService;
+    }
 
-    /**
-     * Get the latest version of a given dataItem by key
-     * @param project
-     * @param key
-     * @return
-     * @throws NoSuchEntityException
-     */
-    DataItem getLatestDataItemByKey(@NotNull String project, @NotNull String key)
-        throws NoSuchEntityException, SystemException;
+    @Autowired
+    public void setDataItemEntityFinalizer(EntityFinalizer<DataItem> dataitemEntityFinalizer) {
+        this.dataitemEntityFinalizer = dataitemEntityFinalizer;
+    }
 
-    /**
-     * Create a new dataItem and store it
-     * @param dataItemDTO
-     * @return
-     * @throws DuplicatedEntityException
-     */
-    DataItem createDataItem(@NotNull DataItem dataItemDTO)
-        throws DuplicatedEntityException, BindException, IllegalArgumentException, SystemException;
+    @Autowired
+    public void setDataItemOperationsListener(EntityOperationsListener<DataItem> dataitemOperationsListener) {
+        this.dataitemOperationsListener = dataitemOperationsListener;
+    }
 
-    /**
-     * Update a specific dataItem version
-     * @param id
-     * @param dataItemDTO
-     * @return
-     * @throws NoSuchEntityException
-     */
-    DataItem updateDataItem(@NotNull String id, @NotNull DataItem dataItemDTO)
-        throws NoSuchEntityException, BindException, IllegalArgumentException, SystemException;
+    @Autowired
+    public void setDataItemSpecRegistry(SpecRegistry<DataItem> dataitemSpecRegistry) {
+        this.dataitemSpecRegistry = dataitemSpecRegistry;
+    }
 
-    /**
-     * Update a specific dataItem version
-     * @param id
-     * @param dataItemDTO
-     * @return
-     * @throws NoSuchEntityException
-     */
-    DataItem updateDataItem(@NotNull String id, @NotNull DataItem dataItemDTO, boolean force)
-        throws NoSuchEntityException, BindException, IllegalArgumentException, SystemException;
-
-    /**
-     * Delete a specific dataItem (version) via unique ID
-     * @param id
-     */
-    void deleteDataItem(@NotNull String id, @Nullable Boolean cascade) throws SystemException;
-
-    /**
-     * Delete all versions of a given dataItem
-     * @param project
-     * @param name
-     */
-    void deleteDataItems(@NotNull String project, @NotNull String name, @Nullable Boolean cascade)
-        throws SystemException;
-
-    /**
-     * Delete all dataItems for a given project, with cascade.
-     * @param project
-     */
-    void deleteDataItemsByProject(@NotNull String project, @Nullable Boolean cascade) throws SystemException;
+    @Autowired
+    public void setDataItemSchemaService(SchemaService<DataItem> dataitemSchemaService) {
+        this.dataitemSchemaService = dataitemSchemaService;
+    }
 }

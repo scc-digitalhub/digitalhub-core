@@ -7,9 +7,10 @@
 package it.smartcommunitylabdhub.runtime.tvm.specs.serve;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.runtime.tvm.TvmRuntime;
+import it.smartcommunitylabdhub.tasks.Task;
+
 import java.io.Serializable;
 import java.util.Map;
 
