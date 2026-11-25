@@ -11,6 +11,7 @@ import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.accessors.fields.KeyAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
@@ -27,6 +28,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -37,7 +39,13 @@ public final class TvmRunnerHelper {
 
     public static final String SCRIPTS_CLASSPATH = "classpath:/runtime-tvm/scripts/";
     public static final String ENTRYPOINT_NAME = "entrypoint.sh";
-    public static final List<String> SHARED_SCRIPTS = List.of("common.py", "publish.py", "tuning.py", "benchmark.py", "toolchain.py");
+    public static final List<String> SHARED_SCRIPTS = List.of(
+        "common.py",
+        "publish.py",
+        "tuning.py",
+        "benchmark.py",
+        "toolchain.py"
+    );
 
     public static final String NODE_ARCH_LABEL = "kubernetes.io/arch";
 
@@ -107,9 +115,9 @@ public final class TvmRunnerHelper {
         try {
             model =
                 accessor.getId() != null
-                    ? modelManager.findModel(accessor.getId())
-                    : modelManager.getLatestModelByKey(accessor.getProject(), key);
-        } catch (NoSuchEntityException e) {
+                    ? modelManager.get(accessor.getId())
+                    : modelManager.getLatestByKey(accessor.getProject(), key);
+        } catch (NoSuchElementException | NoSuchEntityException | StoreException e) {
             model = null;
         }
         if (model == null) {
@@ -190,7 +198,9 @@ public final class TvmRunnerHelper {
         ) {
             String architecture = tripleArchitecture(triple);
             if (architecture == null) {
-                throw new IllegalArgumentException("No serve node architecture mapping for model target_triple: " + triple);
+                throw new IllegalArgumentException(
+                    "No serve node architecture mapping for model target_triple: " + triple
+                );
             }
             return architecture;
         }

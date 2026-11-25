@@ -27,9 +27,9 @@ import it.smartcommunitylabdhub.commons.Fields;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.enums.State;
-import it.smartcommunitylabdhub.commons.services.TaskService;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.lifecycle.BaseLifecycleManager;
 import it.smartcommunitylabdhub.fsm.exceptions.InvalidTransitionException;
@@ -41,6 +41,7 @@ import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.RunManager;
 import it.smartcommunitylabdhub.runs.lifecycle.RunEvent;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
+import it.smartcommunitylabdhub.tasks.TaskService;
 import it.smartcommunitylabdhub.templates.TemplateProcessor;
 import it.smartcommunitylabdhub.triggers.Trigger;
 import it.smartcommunitylabdhub.triggers.infrastructure.Actuator;
@@ -191,7 +192,7 @@ public class TriggerLifecycleManager<
 
                 try {
                     //create run via service as CREATED
-                    taskRun = runService.createRun(taskRun);
+                    taskRun = runService.create(taskRun);
 
                     //build now
                     taskRun = runManager.perform(taskRun, RunEvent.BUILD.name());
@@ -204,7 +205,9 @@ public class TriggerLifecycleManager<
                     | SystemException
                     | DuplicatedEntityException
                     | BindException
-                    | InvalidTransitionException e
+                    | InvalidTransitionException
+                    | IllegalArgumentException
+                    | StoreException e
                 ) {
                     log.error("Error creating run for trigger {} FIRE: {} ", tr.getId(), e.getMessage());
                 }

@@ -32,16 +32,15 @@ import it.smartcommunitylabdhub.authorization.services.CredentialsService;
 import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
+import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.jackson.YamlMapperFactory;
 import it.smartcommunitylabdhub.commons.models.objects.SourceCode;
-import it.smartcommunitylabdhub.commons.models.task.Task;
-import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
-import it.smartcommunitylabdhub.commons.services.WorkflowManager;
 import it.smartcommunitylabdhub.framework.argo.objects.K8sWorkflowObject;
 import it.smartcommunitylabdhub.framework.argo.runnables.K8sArgoWorkflowRunnable;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
@@ -61,6 +60,9 @@ import it.smartcommunitylabdhub.runtime.hera.specs.HeraRunSpec;
 import it.smartcommunitylabdhub.runtime.hera.specs.HeraRunStatus;
 import it.smartcommunitylabdhub.runtime.hera.specs.HeraWorkflowSpec;
 import it.smartcommunitylabdhub.runtime.hera.specs.HeraWorkflowSpec.HeraWorkflowCodeLanguages;
+import it.smartcommunitylabdhub.tasks.Task;
+import it.smartcommunitylabdhub.workflows.Workflow;
+import it.smartcommunitylabdhub.workflows.WorkflowManager;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
@@ -72,6 +74,7 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.validation.BindException;
 
 @RuntimeComponent(runtime = HeraRuntime.RUNTIME)
 @Slf4j
@@ -224,37 +227,42 @@ public class HeraRuntime extends K8sWorkflowBaseRuntime<HeraWorkflowSpec, HeraRu
 
         if (HeraBuildTaskSpec.KIND.equals(runAccessor.getTask())) {
             if (run.getStatus() != null && run.getStatus().containsKey("results")) {
-                @SuppressWarnings({ "rawtypes" })
-                String raw = (String) ((Map) run.getStatus().get("results")).get("workflow");
-
-                //result is base64 encoded
-                String workflow = new String(Base64.getDecoder().decode(raw), StandardCharsets.UTF_8);
-
-                // extract workflow spec part and convert to String again
                 try {
-                    IoArgoprojWorkflowV1alpha1Workflow argoWorkflow = YamlMapperFactory.yamlObjectMapper().readValue(
-                        workflow,
-                        IoArgoprojWorkflowV1alpha1Workflow.class
-                    );
-                    workflow = YamlMapperFactory.yamlObjectMapper().writeValueAsString(argoWorkflow.getSpec());
-                } catch (JsonProcessingException e) {
-                    log.error("Error storing Workflow specification", e);
-                    return null;
+                    @SuppressWarnings({ "rawtypes" })
+                    String raw = (String) ((Map) run.getStatus().get("results")).get("workflow");
+
+                    //result is base64 encoded
+                    String workflow = new String(Base64.getDecoder().decode(raw), StandardCharsets.UTF_8);
+
+                    // extract workflow spec part and convert to String again
+                    try {
+                        IoArgoprojWorkflowV1alpha1Workflow argoWorkflow =
+                            YamlMapperFactory.yamlObjectMapper().readValue(
+                                workflow,
+                                IoArgoprojWorkflowV1alpha1Workflow.class
+                            );
+                        workflow = YamlMapperFactory.yamlObjectMapper().writeValueAsString(argoWorkflow.getSpec());
+                    } catch (JsonProcessingException e) {
+                        log.error("Error storing Workflow specification", e);
+                        return null;
+                    }
+
+                    String wId = runAccessor.getWorkflowId();
+                    Workflow wf = workflowService.get(wId);
+
+                    log.debug("update workflow {} spec to use built workflow", wId);
+
+                    SourceCode<HeraWorkflowCodeLanguages> build = new SourceCode<>();
+                    build.setBase64(Base64.getEncoder().encodeToString(workflow.getBytes(StandardCharsets.UTF_8)));
+                    build.setLang(HeraWorkflowCodeLanguages.yaml);
+
+                    HeraWorkflowSpec wfSpec = new HeraWorkflowSpec(wf.getSpec());
+                    wfSpec.setBuild(build);
+                    wf.setSpec(wfSpec.toMap());
+                    workflowService.update(wId, wf, true);
+                } catch (StoreException | IllegalArgumentException | NoSuchEntityException | BindException ex) {
+                    log.error("Error updating workflow: {}", ex.getMessage());
                 }
-
-                String wId = runAccessor.getWorkflowId();
-                Workflow wf = workflowService.getWorkflow(wId);
-
-                log.debug("update workflow {} spec to use built workflow", wId);
-
-                SourceCode<HeraWorkflowCodeLanguages> build = new SourceCode<>();
-                build.setBase64(Base64.getEncoder().encodeToString(workflow.getBytes(StandardCharsets.UTF_8)));
-                build.setLang(HeraWorkflowCodeLanguages.yaml);
-
-                HeraWorkflowSpec wfSpec = new HeraWorkflowSpec(wf.getSpec());
-                wfSpec.setBuild(build);
-                wf.setSpec(wfSpec.toMap());
-                workflowService.updateWorkflow(wId, wf, true);
             }
         }
 

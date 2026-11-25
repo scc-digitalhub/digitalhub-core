@@ -28,11 +28,11 @@ import it.smartcommunitylabdhub.authorization.services.CredentialsService;
 import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
+import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.models.function.Function;
-import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
@@ -42,6 +42,7 @@ import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceInfo;
 import it.smartcommunitylabdhub.framework.k8s.objects.AppProtocol;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
+import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.models.ModelManager;
 import it.smartcommunitylabdhub.runs.Run;
@@ -53,6 +54,7 @@ import it.smartcommunitylabdhub.runtime.mlflow.specs.MlflowServeRunSpec;
 import it.smartcommunitylabdhub.runtime.mlflow.specs.MlflowServeTaskSpec;
 import it.smartcommunitylabdhub.runtime.modelserve.models.InferenceV2Service;
 import it.smartcommunitylabdhub.runtime.modelserve.specs.ModelServeRunStatus;
+import it.smartcommunitylabdhub.tasks.Task;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Arrays;
@@ -67,6 +69,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+import org.springframework.validation.BindException;
 
 @Slf4j
 @RuntimeComponent(runtime = MlflowServeRuntime.RUNTIME)
@@ -269,18 +272,22 @@ public class MlflowServeRuntime
 
         //update image name after build
         if (runnable instanceof K8sContainerBuilderRunnable) {
-            String image = ((K8sContainerBuilderRunnable) runnable).getImage();
+            try {
+                String image = ((K8sContainerBuilderRunnable) runnable).getImage();
 
-            String functionId = runAccessor.getFunctionId();
-            Function function = functionService.getFunction(functionId);
+                String functionId = runAccessor.getFunctionId();
+                Function function = functionService.get(functionId);
 
-            log.debug("update function {} spec to use built image: {}", functionId, image);
+                log.debug("update function {} spec to use built image: {}", functionId, image);
 
-            MlflowServeFunctionSpec funSpec = MlflowServeFunctionSpec.with(function.getSpec());
-            if (!image.equals(funSpec.getImage())) {
-                funSpec.setImage(image);
-                function.setSpec(funSpec.toMap());
-                functionService.updateFunction(functionId, function, true);
+                MlflowServeFunctionSpec funSpec = MlflowServeFunctionSpec.with(function.getSpec());
+                if (!image.equals(funSpec.getImage())) {
+                    funSpec.setImage(image);
+                    function.setSpec(funSpec.toMap());
+                    functionService.update(functionId, function, true);
+                }
+            } catch (StoreException | IllegalArgumentException | NoSuchEntityException | BindException e) {
+                log.error("error updating function spec with built image", e);
             }
         }
 

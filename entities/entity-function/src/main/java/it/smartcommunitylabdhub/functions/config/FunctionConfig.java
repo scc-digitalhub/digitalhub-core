@@ -17,10 +17,10 @@
 
 package it.smartcommunitylabdhub.functions.config;
 
-import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
+import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.functions.persistence.FunctionEntity;
 import it.smartcommunitylabdhub.functions.persistence.FunctionRepository;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;

@@ -32,15 +32,15 @@ import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.models.task.Task;
-import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
-import it.smartcommunitylabdhub.commons.models.workflow.WorkflowBaseSpec;
-import it.smartcommunitylabdhub.commons.services.TaskService;
-import it.smartcommunitylabdhub.commons.services.WorkflowManager;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
+import it.smartcommunitylabdhub.tasks.Task;
+import it.smartcommunitylabdhub.tasks.TaskService;
+import it.smartcommunitylabdhub.workflows.Workflow;
+import it.smartcommunitylabdhub.workflows.WorkflowManager;
+import it.smartcommunitylabdhub.workflows.specs.WorkflowBaseSpec;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Map;
@@ -100,7 +100,7 @@ public abstract class AbstractWorkflowBaseRuntime<
                     throw new IllegalArgumentException("Workflow ID mismatch between task and run spec");
                 }
 
-                Workflow workflow = workflowManager.getWorkflow(taskSpecAccessor.getWorkflowId());
+                Workflow workflow = workflowManager.get(taskSpecAccessor.getWorkflowId());
                 if (log.isTraceEnabled()) {
                     log.trace("build for workflow {}", workflow);
                     log.trace("build for task {}", task);
@@ -116,8 +116,8 @@ public abstract class AbstractWorkflowBaseRuntime<
                 //dereference task
                 Workflow workflow =
                     specAccessor.getWorkflowId() != null
-                        ? workflowManager.getWorkflow(specAccessor.getWorkflowId())
-                        : workflowManager.getLatestWorkflowByName(run.getProject(), specAccessor.getWorkflow());
+                        ? workflowManager.get(specAccessor.getWorkflowId())
+                        : workflowManager.getLatestByName(run.getProject(), specAccessor.getWorkflow());
                 List<Task> tasks = workflowManager.getTasksByWorkflowId(workflow.getId());
                 Task task = tasks
                     .stream()

@@ -17,6 +17,8 @@
 package it.smartcommunitylabdhub.components.proxy;
 
 import it.smartcommunitylabdhub.commons.Keys;
+import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.framework.k8s.model.K8sServiceStatus;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.RunManager;
@@ -75,8 +77,8 @@ public class ProxyController {
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String id,
         HttpServletRequest request
-    ) throws IOException {
-        Run entity = runManager.getRun(id);
+    ) throws IOException, NoSuchEntityException, StoreException {
+        Run entity = runManager.get(id);
 
         //check for project and name match
         if (!entity.getProject().equals(project)) {

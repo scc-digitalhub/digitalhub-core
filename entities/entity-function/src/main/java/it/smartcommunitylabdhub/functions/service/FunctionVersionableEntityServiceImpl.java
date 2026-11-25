@@ -23,8 +23,8 @@
 
 package it.smartcommunitylabdhub.functions.service;
 
-import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.core.services.BaseVersionableEntityServiceImpl;
+import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.functions.persistence.FunctionEntity;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;

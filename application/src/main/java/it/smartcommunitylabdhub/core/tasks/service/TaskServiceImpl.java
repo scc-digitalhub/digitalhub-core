@@ -29,24 +29,24 @@ import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.projects.Project;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
-import it.smartcommunitylabdhub.commons.models.task.Task;
-import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.services.SpecValidator;
-import it.smartcommunitylabdhub.commons.services.TaskService;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.events.EntityAction;
 import it.smartcommunitylabdhub.events.EntityOperation;
+import it.smartcommunitylabdhub.functions.Function;
+import it.smartcommunitylabdhub.projects.Project;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.persistence.RunEntity;
+import it.smartcommunitylabdhub.tasks.Task;
+import it.smartcommunitylabdhub.tasks.TaskService;
 import it.smartcommunitylabdhub.tasks.filters.TaskFilterConverter;
 import it.smartcommunitylabdhub.tasks.persistence.TaskEntity;
+import it.smartcommunitylabdhub.workflows.Workflow;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
@@ -130,12 +130,23 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
+    public List<Task> searchTasks(@NotNull SearchFilter<Task> filter) {
+        log.debug("list tasks filter {}", String.valueOf(filter));
+        try {
+            Specification<TaskEntity> specification = filterConverter.convert(filter).toSpecification();
+            return entityRepository.searchAll(specification);
+        } catch (StoreException e) {
+            log.error("store error: {}", e.getMessage());
+            throw new SystemException(e.getMessage());
+        }
+    }
+
+    @Override
     public Page<Task> searchTasks(Pageable pageable, @Nullable SearchFilter<Task> filter) {
         log.debug("list tasks page {}, filter {}", pageable, String.valueOf(filter));
         try {
-            Specification<TaskEntity> specification = filter != null
-                ? filterConverter.convert(filter).toSpecification()
-                : null;
+            Specification<TaskEntity> specification =
+                filter != null ? filterConverter.convert(filter).toSpecification() : null;
             if (specification != null) {
                 return entityRepository.search(specification, pageable);
             } else {
@@ -160,15 +171,31 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
+    public List<Task> searchTasksByProject(@NotNull String project, @NotNull SearchFilter<Task> filter) {
+        log.debug("list tasks for project {} with {}", project, String.valueOf(filter));
+        Specification<TaskEntity> filterSpecification =
+            filter != null ? filterConverter.convert(filter).toSpecification() : null;
+        Specification<TaskEntity> specification = Specification.allOf(
+            CommonSpecification.projectEquals(project),
+            filterSpecification
+        );
+        try {
+            return entityRepository.searchAll(specification);
+        } catch (StoreException e) {
+            log.error("store error: {}", e.getMessage());
+            throw new SystemException(e.getMessage());
+        }
+    }
+
+    @Override
     public Page<Task> searchTasksByProject(
         @NotNull String project,
         Pageable pageable,
         @Nullable SearchFilter<Task> filter
     ) {
         log.debug("list tasks for project {} with {} page {}", project, String.valueOf(filter), pageable);
-        Specification<TaskEntity> filterSpecification = filter != null
-            ? filterConverter.convert(filter).toSpecification()
-            : null;
+        Specification<TaskEntity> filterSpecification =
+            filter != null ? filterConverter.convert(filter).toSpecification() : null;
         Specification<TaskEntity> specification = Specification.allOf(
             CommonSpecification.projectEquals(project),
             filterSpecification

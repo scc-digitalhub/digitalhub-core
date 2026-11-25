@@ -28,6 +28,8 @@ import it.smartcommunitylabdhub.commons.accessors.fields.KeyAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
+import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
@@ -130,8 +132,8 @@ public class MlflowBuildRunner {
             try {
                 Model model =
                     keyAccessor.getId() != null
-                        ? modelService.findModel(keyAccessor.getId())
-                        : modelService.getLatestModelByKey(keyAccessor.getProject(), path);
+                        ? modelService.get(keyAccessor.getId())
+                        : modelService.getLatestByKey(keyAccessor.getProject(), path);
                 if (model == null) {
                     throw new CoreRuntimeException("invalid entity reference, MLFlow model not found");
                 }
@@ -145,7 +147,7 @@ public class MlflowBuildRunner {
                         path += "/";
                     }
                 }
-            } catch (NoSuchElementException e) {
+            } catch (NoSuchElementException | NoSuchEntityException | StoreException e) {
                 throw new CoreRuntimeException("invalid entity reference, MLFlow model not found", e);
             }
         }

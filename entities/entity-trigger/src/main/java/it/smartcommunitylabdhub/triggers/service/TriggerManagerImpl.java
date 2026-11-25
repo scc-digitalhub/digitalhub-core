@@ -24,7 +24,6 @@
 package it.smartcommunitylabdhub.triggers.service;
 
 import it.smartcommunitylabdhub.commons.Fields;
-import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
@@ -37,7 +36,6 @@ import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.triggers.Trigger;
 import it.smartcommunitylabdhub.triggers.TriggerManager;
 import it.smartcommunitylabdhub.triggers.persistence.TriggerEntity;
-import it.smartcommunitylabdhub.triggers.specs.TriggerBaseSpec;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
@@ -48,7 +46,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.springframework.validation.BindException;
 
 @Service
@@ -192,30 +189,6 @@ public class TriggerManagerImpl implements TriggerManager {
         throws DuplicatedEntityException, BindException, IllegalArgumentException {
         log.debug("create trigger");
         try {
-            //validate project
-            String projectId = dto.getProject();
-            if (!StringUtils.hasText(projectId)) {
-                throw new IllegalArgumentException("invalid or missing project");
-            }
-
-            //check task is valid
-            TriggerBaseSpec baseSpec = TriggerBaseSpec.from(dto.getSpec());
-            if (!StringUtils.hasText(baseSpec.getTask())) {
-                throw new IllegalArgumentException("spec: missing task");
-            }
-            if (!StringUtils.hasText(baseSpec.getFunction()) && !StringUtils.hasText(baseSpec.getWorkflow())) {
-                throw new IllegalArgumentException("spec: missing function or workflow");
-            }
-
-            //access task details from ref, same as run
-            RunSpecAccessor specAccessor = RunSpecAccessor.with(dto.getSpec());
-
-            //check project match
-            if (dto.getProject() != null && !dto.getProject().equals(specAccessor.getProject())) {
-                throw new IllegalArgumentException("project mismatch");
-            }
-
-            //create as new
             return entityService.create(dto);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());

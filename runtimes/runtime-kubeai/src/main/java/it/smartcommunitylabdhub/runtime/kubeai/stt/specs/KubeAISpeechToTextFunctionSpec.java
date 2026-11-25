@@ -24,7 +24,7 @@
 package it.smartcommunitylabdhub.runtime.kubeai.stt.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.function.Function;
+import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.runtime.kubeai.base.KubeAIServeFunctionSpec;
 import it.smartcommunitylabdhub.runtime.kubeai.stt.KubeAISpeechToTextRuntime;
 import java.io.Serializable;
