@@ -19,7 +19,7 @@ package it.smartcommunitylabdhub.security.service;
 import it.smartcommunitylabdhub.commons.Fields;
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
-import it.smartcommunitylabdhub.commons.models.function.Function;
+import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
 import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
@@ -73,7 +73,7 @@ public class SecurityProjectProvisioner {
             metadata.setDescription(analyzer.getDescription());
             metadata.setLabels(Set.of("security-analyzer"));
 
-            Function function = functionManager.createFunction(
+            Function function = functionManager.create(
                 Function.builder()
                     .project(project)
                     .name(analyzer.getName())

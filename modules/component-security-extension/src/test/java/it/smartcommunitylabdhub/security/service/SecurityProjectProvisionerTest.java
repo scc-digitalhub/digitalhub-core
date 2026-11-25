@@ -9,7 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import it.smartcommunitylabdhub.commons.models.function.Function;
+import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.core.events.EntityEvent;
 import it.smartcommunitylabdhub.events.EntityAction;
 import it.smartcommunitylabdhub.functions.FunctionManager;
@@ -46,7 +46,7 @@ class SecurityProjectProvisionerTest {
     @Test
     void disabledExtensionDoesNotProvision() throws Exception {
         provisioner.provision("project", "user");
-        verify(functionManager, never()).createFunction(any());
+        verify(functionManager, never()).create(any());
         verify(triggerManager, never()).createTrigger(any());
     }
 
@@ -67,7 +67,7 @@ class SecurityProjectProvisionerTest {
         SecurityAnalyzer triggered = analyzer("scanner", true);
         SecurityAnalyzer manual = analyzer("manual", false);
         when(registry.list()).thenReturn(List.of(triggered, manual));
-        when(functionManager.createFunction(any())).thenAnswer(invocation -> {
+        when(functionManager.create(any())).thenAnswer(invocation -> {
             Function function = invocation.getArgument(0);
             function.setId(function.getName() + "-id");
             return function;
@@ -82,7 +82,7 @@ class SecurityProjectProvisionerTest {
         provisioner.provision("project", "user");
 
         ArgumentCaptor<Function> functions = ArgumentCaptor.forClass(Function.class);
-        verify(functionManager, org.mockito.Mockito.times(2)).createFunction(functions.capture());
+        verify(functionManager, org.mockito.Mockito.times(2)).create(functions.capture());
         assertEquals(List.of("scanner", "manual"), functions.getAllValues().stream().map(Function::getName).toList());
         ArgumentCaptor<Trigger> trigger = ArgumentCaptor.forClass(Trigger.class);
         verify(triggerManager).createTrigger(trigger.capture());
@@ -96,7 +96,7 @@ class SecurityProjectProvisionerTest {
     void failedTriggerActivationIsReported() throws Exception {
         properties.setEnabled(true);
         when(registry.list()).thenReturn(List.of(analyzer("scanner", true)));
-        when(functionManager.createFunction(any())).thenAnswer(invocation -> {
+        when(functionManager.create(any())).thenAnswer(invocation -> {
             Function function = invocation.getArgument(0);
             function.setId("id");
             return function;

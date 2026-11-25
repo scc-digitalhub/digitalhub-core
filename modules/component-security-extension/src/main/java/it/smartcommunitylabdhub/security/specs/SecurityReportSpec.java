@@ -19,7 +19,7 @@ package it.smartcommunitylabdhub.security.specs;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
 import it.smartcommunitylabdhub.commons.models.base.BaseSpec;
-import it.smartcommunitylabdhub.commons.models.function.Function;
+import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.containerimage.ContainerImage;
 import it.smartcommunitylabdhub.extensions.annotations.ExtensionType;
 import it.smartcommunitylabdhub.extensions.model.Extension;
