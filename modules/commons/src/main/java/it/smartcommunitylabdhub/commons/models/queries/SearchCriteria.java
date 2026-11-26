@@ -40,6 +40,6 @@ public interface SearchCriteria<T> extends Specification<T> {
         gte,
         lte,
         like,
-        in
+        in,
     }
 }

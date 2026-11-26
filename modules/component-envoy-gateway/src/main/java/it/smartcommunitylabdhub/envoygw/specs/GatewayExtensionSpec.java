@@ -15,7 +15,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @SpecType(kind = GatewayExtensionSpec.KIND, entity = Extension.class)
-@ExtensionType(appliesTo = { Run.class }, showIn="default")
+@ExtensionType(appliesTo = { Run.class }, showIn = "default")
 public class GatewayExtensionSpec extends BaseSpec {
 
     public static final String KIND = "envoygw";

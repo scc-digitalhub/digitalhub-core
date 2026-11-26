@@ -54,12 +54,12 @@ import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilterConvert
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.core.security.OwnerContextManager;
-import it.smartcommunitylabdhub.lifecycle.locks.EntityLockManager;
-import it.smartcommunitylabdhub.lifecycle.locks.EntityLockManager.EntityLock;
-import it.smartcommunitylabdhub.lifecycle.locks.LocalEntityLockManager;
 import it.smartcommunitylabdhub.events.EntityAction;
 import it.smartcommunitylabdhub.events.EntityOperation;
 import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
+import it.smartcommunitylabdhub.lifecycle.locks.EntityLockManager;
+import it.smartcommunitylabdhub.lifecycle.locks.EntityLockManager.EntityLock;
+import it.smartcommunitylabdhub.lifecycle.locks.LocalEntityLockManager;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.lang.reflect.ParameterizedType;
@@ -899,10 +899,10 @@ public abstract class BaseEntityServiceImpl<
                             cb.equal(root.get(AbstractEntity_.PROJECT), accessor.getProject()),
                             cb.equal(root.get(AbstractEntity_.KIND), accessor.getKind()),
                             cb.like(
-                            root.get(AbstractEntity_.KEY),
-                            CommonSpecification.escapeLike(key) + ":%",
-                            CommonSpecification.LIKE_ESCAPE
-                        )
+                                root.get(AbstractEntity_.KEY),
+                                CommonSpecification.escapeLike(key) + ":%",
+                                CommonSpecification.LIKE_ESCAPE
+                            )
                         );
                     },
                     pageable

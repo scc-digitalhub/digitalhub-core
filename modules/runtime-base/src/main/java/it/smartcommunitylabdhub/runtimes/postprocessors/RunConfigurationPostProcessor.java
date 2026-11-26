@@ -25,8 +25,8 @@ package it.smartcommunitylabdhub.runtimes.postprocessors;
 
 import it.smartcommunitylabdhub.commons.annotations.common.PostProcessorType;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
-import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.ConfigurableRunnable;
+import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.PostProcessor;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.runs.Run;

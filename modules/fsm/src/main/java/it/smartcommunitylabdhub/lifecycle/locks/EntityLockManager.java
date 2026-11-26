@@ -20,6 +20,7 @@
  * limitations under the License.
  *
  */
+
 package it.smartcommunitylabdhub.lifecycle.locks;
 
 import jakarta.validation.constraints.NotNull;

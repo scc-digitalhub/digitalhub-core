@@ -320,17 +320,14 @@ public abstract class BaseEntityRepositoryImpl<
         }
 
         try {
-            return c.get(
-                id,
-                () -> {
-                    E e = loadFromStore(id);
-                    if (e == null) {
-                        //do not cache misses
-                        throw new MissingEntityException();
-                    }
-                    return e;
+            return c.get(id, () -> {
+                E e = loadFromStore(id);
+                if (e == null) {
+                    //do not cache misses
+                    throw new MissingEntityException();
                 }
-            );
+                return e;
+            });
         } catch (Cache.ValueRetrievalException e) {
             if (e.getCause() instanceof MissingEntityException) {
                 return null;
@@ -683,8 +680,8 @@ public abstract class BaseEntityRepositoryImpl<
         if (repository instanceof JpaSpecificationExecutor) {
             return unwrapInvalidSearch(() ->
                 ((JpaSpecificationExecutor<E>) repository).findBy(Specification.allOf(specification), query ->
-                        query.as(projection).all()
-                    )
+                    query.as(projection).all()
+                )
             );
         }
 

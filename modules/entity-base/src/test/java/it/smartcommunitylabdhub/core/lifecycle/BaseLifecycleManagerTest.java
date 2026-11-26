@@ -128,9 +128,7 @@ class BaseLifecycleManagerTest {
         TestDTO dto = create("e1", "CREATED");
         List<String> effects = new ArrayList<>();
 
-        TestDTO res = manager.handle(dto, "RUNNING", null, (d, r) ->
-            effects.add((String) d.getStatus().get("state"))
-        );
+        TestDTO res = manager.handle(dto, "RUNNING", null, (d, r) -> effects.add((String) d.getStatus().get("state")));
 
         assertThat(fsm.calls()).containsExactly("CREATED>BUILT", "BUILT>READY", "READY>RUNNING");
         assertThat(res.getStatus()).containsEntry("state", "RUNNING");
@@ -182,7 +180,9 @@ class BaseLifecycleManagerTest {
                 new Processor<TestDTO, Spec>() {
                     @Override
                     public <I extends Serializable> Spec process(String stage, TestDTO d, I input) {
-                        seen.add(d.getName() + "/" + d.getUser() + "/" + d.getProject() + "/" + d.getSpec().get("built"));
+                        seen.add(
+                            d.getName() + "/" + d.getUser() + "/" + d.getProject() + "/" + d.getSpec().get("built")
+                        );
                         return null;
                     }
                 }
@@ -318,7 +318,9 @@ class BaseLifecycleManagerTest {
                         TestDTO d,
                         I input
                     ) {
-                        seen.add("status sees meta=" + d.getMetadata().get("meta") + " spec=" + d.getSpec().get("specOut"));
+                        seen.add(
+                            "status sees meta=" + d.getMetadata().get("meta") + " spec=" + d.getSpec().get("specOut")
+                        );
                         return null;
                     }
                 }
@@ -337,15 +339,15 @@ class BaseLifecycleManagerTest {
         manager.setEffectRegistry(stage ->
             "onBuilt".equals(stage)
                 ? List.<Effect<TestDTO>>of(
-                    (st, dto, out) -> ran.add("first"),
-                    (st, dto, out) -> {
-                        throw new UnsupportedOperationException("unexpected");
-                    },
-                    (st, dto, out) -> {
-                        ran.add("third");
-                        done.countDown();
-                    }
-                )
+                      (st, dto, out) -> ran.add("first"),
+                      (st, dto, out) -> {
+                          throw new UnsupportedOperationException("unexpected");
+                      },
+                      (st, dto, out) -> {
+                          ran.add("third");
+                          done.countDown();
+                      }
+                  )
                 : List.of()
         );
 
@@ -530,25 +532,25 @@ class BaseLifecycleManagerTest {
         manager.setSpecProcessorRegistry(stage ->
             "onBuilt".equals(stage)
                 ? List.of(
-                    new Processor<TestDTO, Spec>() {
-                        @Override
-                        public <I extends Serializable> Spec process(String stage, TestDTO dto, I input) {
-                            //processors work on copies
-                            dto.getSpec().put("leak", true);
-                            return spec(Map.of("processed", true));
-                        }
-                    },
-                    new Processor<TestDTO, Spec>() {
-                        @Override
-                        public <I extends Serializable> Spec process(String stage, TestDTO dto, I input) {
-                            if ("core".equals(mode.get(0))) {
-                                throw new CoreRuntimeException("explicit");
-                            }
-                            //any other failure is ignored
-                            throw new IllegalArgumentException("ignored");
-                        }
-                    }
-                )
+                      new Processor<TestDTO, Spec>() {
+                          @Override
+                          public <I extends Serializable> Spec process(String stage, TestDTO dto, I input) {
+                              //processors work on copies
+                              dto.getSpec().put("leak", true);
+                              return spec(Map.of("processed", true));
+                          }
+                      },
+                      new Processor<TestDTO, Spec>() {
+                          @Override
+                          public <I extends Serializable> Spec process(String stage, TestDTO dto, I input) {
+                              if ("core".equals(mode.get(0))) {
+                                  throw new CoreRuntimeException("explicit");
+                              }
+                              //any other failure is ignored
+                              throw new IllegalArgumentException("ignored");
+                          }
+                      }
+                  )
                 : List.of()
         );
 
@@ -614,15 +616,15 @@ class BaseLifecycleManagerTest {
         manager.setEffectRegistry(stage ->
             "onBuilt".equals(stage)
                 ? List.<Effect<TestDTO>>of((st, dto, out) -> {
-                    try {
-                        seen.add(Thread.currentThread().getName().equals(testThread) ? "same-thread" : "async");
-                        seen.add(storedState(dto.getId()));
-                    } catch (Exception e) {
-                        seen.add("error");
-                    } finally {
-                        done.countDown();
-                    }
-                })
+                      try {
+                          seen.add(Thread.currentThread().getName().equals(testThread) ? "same-thread" : "async");
+                          seen.add(storedState(dto.getId()));
+                      } catch (Exception e) {
+                          seen.add("error");
+                      } finally {
+                          done.countDown();
+                      }
+                  })
                 : List.of()
         );
 

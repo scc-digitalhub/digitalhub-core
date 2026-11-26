@@ -23,7 +23,6 @@ import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.files.base.BaseFilesService;
 import it.smartcommunitylabdhub.projects.Project;
 import it.smartcommunitylabdhub.workflows.Workflow;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

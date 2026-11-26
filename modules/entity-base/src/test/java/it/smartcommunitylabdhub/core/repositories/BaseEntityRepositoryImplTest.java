@@ -149,8 +149,9 @@ class BaseEntityRepositoryImplTest {
 
         assertThat(repository.get("e1").getSpec()).containsEntry("a", 2);
         //store matches
-        assertThat(new TestConverters().dtoBuilder().convert(jpaRepository.findById("e1").orElseThrow()).getSpec())
-            .containsEntry("a", 2);
+        assertThat(
+            new TestConverters().dtoBuilder().convert(jpaRepository.findById("e1").orElseThrow()).getSpec()
+        ).containsEntry("a", 2);
     }
 
     @Test
@@ -224,11 +225,9 @@ class BaseEntityRepositoryImplTest {
         repository.delete("e1");
 
         List<EntityEvent<TestEntity>> received = events.getEvents();
-        assertThat(received).extracting(EntityEvent::getAction).containsExactly(
-            EntityAction.CREATE,
-            EntityAction.UPDATE,
-            EntityAction.DELETE
-        );
+        assertThat(received)
+            .extracting(EntityEvent::getAction)
+            .containsExactly(EntityAction.CREATE, EntityAction.UPDATE, EntityAction.DELETE);
 
         EntityEvent<TestEntity> update = received.get(1);
         assertThat(update.getPrev()).isNotNull();

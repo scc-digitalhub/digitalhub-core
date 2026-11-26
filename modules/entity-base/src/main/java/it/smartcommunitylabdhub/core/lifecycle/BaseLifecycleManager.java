@@ -287,10 +287,8 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         Assert.hasText(event, "event can not be null or empty");
         log.debug("perform {} for {} with id {}", event, typeClass.getSimpleName().toLowerCase(), dto.getId());
 
-        return operate(
-            dto,
-            effect,
-            current -> List.of(new Step<Fsm<String, String, D>, R>(event, input, fsm -> fsm.<I, R>perform(event, input)))
+        return operate(dto, effect, current ->
+            List.of(new Step<Fsm<String, String, D>, R>(event, input, fsm -> fsm.<I, R>perform(event, input)))
         );
     }
 
@@ -315,23 +313,21 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         Assert.hasText(nextState, "state can not be null or empty");
         log.debug("handle {} for {} with id {}", nextState, typeClass.getSimpleName().toLowerCase(), dto.getId());
 
-        return operate(
-            dto,
-            effect,
-            current -> {
-                //plan BEFORE starting: no path means nothing is done
-                String from = state(current);
-                List<String> path = fsm(current)
-                    .pathTo(nextState)
-                    .orElseThrow(() -> new InvalidTransitionException(from, nextState));
+        return operate(dto, effect, current -> {
+            //plan BEFORE starting: no path means nothing is done
+            String from = state(current);
+            List<String> path = fsm(current)
+                .pathTo(nextState)
+                .orElseThrow(() -> new InvalidTransitionException(from, nextState));
 
-                log.debug("planned path {} -> {} for {}: {}", from, nextState, current.getId(), path);
-                return path
-                    .stream()
-                    .map(state -> new Step<Fsm<String, String, D>, R>(null, input, fsm -> fsm.<I, R>goToState(state, input)))
-                    .toList();
-            }
-        );
+            log.debug("planned path {} -> {} for {}: {}", from, nextState, current.getId(), path);
+            return path
+                .stream()
+                .map(state ->
+                    new Step<Fsm<String, String, D>, R>(null, input, fsm -> fsm.<I, R>goToState(state, input))
+                )
+                .toList();
+        });
     }
 
     /*
@@ -418,43 +414,40 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         AtomicReference<R> holder = new AtomicReference<>();
 
         //write back via exec: logic is applied within the (re-entrant) turn, then persisted
-        D saved = exec(
-            new EntityOperation<>(current, EntityAction.UPDATE),
-            dto -> {
-                //1. fsm logic on a copy, time bound
-                FsmOutcome<D, R> outcome = runFsm(dto, logic);
-                String state = outcome.state();
-                R output = outcome.output();
+        D saved = exec(new EntityOperation<>(current, EntityAction.UPDATE), dto -> {
+            //1. fsm logic on a copy, time bound
+            FsmOutcome<D, R> outcome = runFsm(dto, logic);
+            String state = outcome.state();
+            R output = outcome.output();
 
-                //merge back ONLY metadata, spec and status from the fsm context:
-                //every other field is effectively final
-                D d = merge(dto, outcome.context());
+            //merge back ONLY metadata, spec and status from the fsm context:
+            //every other field is effectively final
+            D d = merge(dto, outcome.context());
 
-                //enforce state from the fsm
-                Map<String, Serializable> baseStatus = Map.of("state", state);
-                d.setStatus(MapUtils.mergeMultipleMaps(d.getStatus(), baseStatus));
+            //enforce state from the fsm
+            Map<String, Serializable> baseStatus = Map.of("state", state);
+            d.setStatus(MapUtils.mergeMultipleMaps(d.getStatus(), baseStatus));
 
-                //2. processors
-                if (metadataProcessorRegistry != null) {
-                    Map<String, Serializable> psm = postProcess(d, state, input, metadataProcessorRegistry);
-                    d.setMetadata(MapUtils.mergeMultipleMaps(d.getMetadata(), psm));
-                }
-                if (specProcessorRegistry != null) {
-                    Map<String, Serializable> psm = postProcess(d, state, input, specProcessorRegistry);
-                    d.setSpec(MapUtils.mergeMultipleMaps(d.getSpec(), psm));
-                }
-                if (statusProcessorRegistry != null) {
-                    Map<String, Serializable> psm = postProcess(d, state, input, statusProcessorRegistry);
-                    d.setStatus(MapUtils.mergeMultipleMaps(d.getStatus(), psm, baseStatus));
-                }
-
-                //3. post processors on the output
-                holder.set(postProcessOutput(d, state, output));
-
-                //4. persisted by exec
-                return d;
+            //2. processors
+            if (metadataProcessorRegistry != null) {
+                Map<String, Serializable> psm = postProcess(d, state, input, metadataProcessorRegistry);
+                d.setMetadata(MapUtils.mergeMultipleMaps(d.getMetadata(), psm));
             }
-        );
+            if (specProcessorRegistry != null) {
+                Map<String, Serializable> psm = postProcess(d, state, input, specProcessorRegistry);
+                d.setSpec(MapUtils.mergeMultipleMaps(d.getSpec(), psm));
+            }
+            if (statusProcessorRegistry != null) {
+                Map<String, Serializable> psm = postProcess(d, state, input, statusProcessorRegistry);
+                d.setStatus(MapUtils.mergeMultipleMaps(d.getStatus(), psm, baseStatus));
+            }
+
+            //3. post processors on the output
+            holder.set(postProcessOutput(d, state, output));
+
+            //4. persisted by exec
+            return d;
+        });
 
         String state = state(saved);
         R output = holder.get();
@@ -485,7 +478,9 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         }
 
         try {
-            StepResult<D, R> res = step(failed, event, input, fsm -> fsm.<Serializable, R>goToState(STATE_ERROR, input));
+            StepResult<D, R> res = step(failed, event, input, fsm ->
+                fsm.<Serializable, R>goToState(STATE_ERROR, input)
+            );
             return new StepResult<>(res.dto(), res.output(), true);
         } catch (StepFailure e) {
             //ERROR transition itself failed: propagate, nothing more is written

@@ -64,7 +64,7 @@ public class DataItemEntityBuilder implements Converter<DataItem, DataItemEntity
             dto.getName(),
             dto.getId()
         );
-        
+
         return DataItemEntity.builder()
             .id(dto.getId())
             .name(dto.getName())

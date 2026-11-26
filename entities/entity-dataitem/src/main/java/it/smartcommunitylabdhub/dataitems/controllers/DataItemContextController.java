@@ -25,8 +25,8 @@ package it.smartcommunitylabdhub.dataitems.controllers;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.smartcommunitylabdhub.core.controllers.BaseEntityController;
-import it.smartcommunitylabdhub.dataitems.filters.DataItemEntityFilter;
 import it.smartcommunitylabdhub.dataitems.DataItem;
+import it.smartcommunitylabdhub.dataitems.filters.DataItemEntityFilter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;

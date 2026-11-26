@@ -124,11 +124,11 @@ public class BaseEntitySearchCriteria<T> implements SearchCriteria<T> {
         //unsupported operation/type combination: fail instead of silently dropping the criteria
         throw new IllegalArgumentException(
             "unsupported search criteria: operation " +
-            operation +
-            " on field " +
-            field +
-            " with value of type " +
-            (value != null ? value.getClass().getSimpleName() : "null")
+                operation +
+                " on field " +
+                field +
+                " with value of type " +
+                (value != null ? value.getClass().getSimpleName() : "null")
         );
     }
 

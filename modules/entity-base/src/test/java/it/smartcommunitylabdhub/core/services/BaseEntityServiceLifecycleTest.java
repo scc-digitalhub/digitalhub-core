@@ -132,9 +132,7 @@ class BaseEntityServiceLifecycleTest {
     @Test
     void createWithoutPathFailsAfterPersistingCreated() throws Exception {
         //CREATED is persisted first by design, the walk is then planned and rejected
-        assertThatThrownBy(() -> service.create(dto("e1", "UNKNOWN"))).isInstanceOf(
-            InvalidTransitionException.class
-        );
+        assertThatThrownBy(() -> service.create(dto("e1", "UNKNOWN"))).isInstanceOf(InvalidTransitionException.class);
         assertThat(storedState("e1")).isEqualTo("CREATED");
     }
 
@@ -223,10 +221,9 @@ class BaseEntityServiceLifecycleTest {
         //no lifecycle, no finalizer: plain store deletes, one event each
         assertThat(fsm.calls()).isEmpty();
         assertThat(finalized).isEmpty();
-        assertThat(events.getEvents()).extracting(EntityEvent::getAction).containsExactly(
-            EntityAction.DELETE,
-            EntityAction.DELETE
-        );
+        assertThat(events.getEvents())
+            .extracting(EntityEvent::getAction)
+            .containsExactly(EntityAction.DELETE, EntityAction.DELETE);
     }
 
     @Test

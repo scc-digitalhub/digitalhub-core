@@ -53,13 +53,7 @@ public class TestFsm {
         builders.add(state("BUILT", tx("READY", "RUN"), tx("ERROR", null), tx("DELETED", "DELETE")));
         builders.add(state("READY", tx("RUNNING", null), tx("ERROR", null), tx("DELETED", "DELETE")));
         builders.add(
-            state(
-                "RUNNING",
-                tx("RUNNING", null),
-                tx("COMPLETED", null),
-                tx("ERROR", null),
-                tx("DELETED", "DELETE")
-            )
+            state("RUNNING", tx("RUNNING", null), tx("COMPLETED", null), tx("ERROR", null), tx("DELETED", "DELETE"))
         );
         builders.add(state("COMPLETED", tx("DELETED", "DELETE")));
         builders.add(state("ERROR", tx("DELETED", "DELETE")));

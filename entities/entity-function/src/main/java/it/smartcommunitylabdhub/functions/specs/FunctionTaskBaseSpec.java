@@ -23,11 +23,10 @@
 
 package it.smartcommunitylabdhub.functions.specs;
 
+import it.smartcommunitylabdhub.tasks.specs.TaskBaseSpec;
 import jakarta.validation.constraints.NotBlank;
 import java.io.Serializable;
 import java.util.Map;
-
-import it.smartcommunitylabdhub.tasks.specs.TaskBaseSpec;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;

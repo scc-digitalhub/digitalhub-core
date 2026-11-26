@@ -43,26 +43,26 @@ import org.springframework.validation.annotation.Validated;
 @Slf4j
 public class TriggerEntityServiceImpl extends BaseEntityServiceImpl<Trigger, TriggerEntity> {
 
-	@Override
-	public Trigger create(@NotNull Trigger dto)
-		throws IllegalArgumentException, BindException, DuplicatedEntityException, StoreException {
-		if (!StringUtils.hasText(dto.getProject())) {
-			throw new IllegalArgumentException("invalid or missing project");
-		}
+    @Override
+    public Trigger create(@NotNull Trigger dto)
+        throws IllegalArgumentException, BindException, DuplicatedEntityException, StoreException {
+        if (!StringUtils.hasText(dto.getProject())) {
+            throw new IllegalArgumentException("invalid or missing project");
+        }
 
-		TriggerBaseSpec baseSpec = TriggerBaseSpec.from(dto.getSpec());
-		if (!StringUtils.hasText(baseSpec.getTask())) {
-			throw new IllegalArgumentException("spec: missing task");
-		}
-		if (!StringUtils.hasText(baseSpec.getFunction()) && !StringUtils.hasText(baseSpec.getWorkflow())) {
-			throw new IllegalArgumentException("spec: missing function or workflow");
-		}
+        TriggerBaseSpec baseSpec = TriggerBaseSpec.from(dto.getSpec());
+        if (!StringUtils.hasText(baseSpec.getTask())) {
+            throw new IllegalArgumentException("spec: missing task");
+        }
+        if (!StringUtils.hasText(baseSpec.getFunction()) && !StringUtils.hasText(baseSpec.getWorkflow())) {
+            throw new IllegalArgumentException("spec: missing function or workflow");
+        }
 
-		RunSpecAccessor specAccessor = RunSpecAccessor.with(dto.getSpec());
-		if (!dto.getProject().equals(specAccessor.getProject())) {
-			throw new IllegalArgumentException("project mismatch");
-		}
+        RunSpecAccessor specAccessor = RunSpecAccessor.with(dto.getSpec());
+        if (!dto.getProject().equals(specAccessor.getProject())) {
+            throw new IllegalArgumentException("project mismatch");
+        }
 
-		return super.create(dto);
-	}
+        return super.create(dto);
+    }
 }

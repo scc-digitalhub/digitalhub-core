@@ -154,7 +154,6 @@ public abstract class BaseFilesService<
         return resolveBasePath(dto.getProject(), name, dto.getId(), null) + "/" + subpath + "/";
     }
 
-
     @Override
     public DownloadInfo downloadFileAsUrl(@NotNull String id) throws NoSuchEntityException, SystemException {
         log.debug("download url for dto with id {}", String.valueOf(id));
@@ -397,7 +396,6 @@ public abstract class BaseFilesService<
                     //use as basePath
                     path = specPath;
                 }
-
             }
 
             String fullPath = resolveUploadPath(path, filename);

@@ -23,10 +23,9 @@
 
 package it.smartcommunitylabdhub.fsm;
 
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Optional;
-
-import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
 /*

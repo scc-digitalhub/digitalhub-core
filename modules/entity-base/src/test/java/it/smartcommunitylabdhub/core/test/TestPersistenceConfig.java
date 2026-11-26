@@ -34,11 +34,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
  */
 @SpringBootConfiguration
 @ImportAutoConfiguration(
-    {
-        DataSourceAutoConfiguration.class,
-        HibernateJpaAutoConfiguration.class,
-        TransactionAutoConfiguration.class,
-    }
+    { DataSourceAutoConfiguration.class, HibernateJpaAutoConfiguration.class, TransactionAutoConfiguration.class }
 )
 @EntityScan(basePackageClasses = TestEntity.class)
 @EnableJpaRepositories(basePackageClasses = TestJpaRepository.class)
