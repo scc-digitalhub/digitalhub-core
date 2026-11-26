@@ -48,7 +48,4 @@ public interface TemplateService<D> {
     List<Template> listTemplates(@Valid TemplateFilter filter) throws SystemException;
     Page<Template> searchTemplates(@Valid TemplateFilter filter, Pageable pageable) throws SystemException;
 
-    Template createTemplate(@Valid Template template) throws SystemException;
-    Template updateTemplate(@NotNull String id, @Valid Template template) throws NoSuchEntityException, SystemException;
-    void deleteTemplate(@NotNull String id) throws NoSuchEntityException, SystemException;
 }

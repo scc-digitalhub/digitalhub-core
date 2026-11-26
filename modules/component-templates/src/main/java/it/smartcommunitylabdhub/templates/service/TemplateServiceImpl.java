@@ -32,9 +32,9 @@ import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.models.template.Template;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.services.SpecValidator;
+import it.smartcommunitylabdhub.templates.TemplateProvider;
 import it.smartcommunitylabdhub.templates.TemplateService;
 import it.smartcommunitylabdhub.templates.filter.TemplateFilter;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
@@ -79,6 +79,8 @@ public abstract class TemplateServiceImpl<D> implements TemplateService<D>, Init
     private SpecRegistry<D> specRegistry;
     private SpecValidator validator;
 
+    private List<TemplateProvider<D>> templateProviders;
+
     private Map<String, Template> templates = new LinkedHashMap<>();
 
     @SuppressWarnings("unchecked")
@@ -114,11 +116,29 @@ public abstract class TemplateServiceImpl<D> implements TemplateService<D>, Init
         this.keyGenerator = keyGenerator;
     }
 
+    @Autowired(required = false)
+    public void setTemplateProviders(List<TemplateProvider<D>> templateProviders) {
+        this.templateProviders = templateProviders;
+    }
+    
     @Override
     public void afterPropertiesSet() throws Exception {
         log.debug("Load templates for {}...", type);
         List<Template> list = readTemplates(templatesPath);
+        if (templateProviders != null) {
+            log.debug("Load templates from providers for {}...", type);
+            String key = type.getSimpleName().toLowerCase();
+            for (TemplateProvider<D> provider : templateProviders) {
+                List<Template> providerTemplates = provider.getTemplates();
+                if (providerTemplates != null) {
+                    providerTemplates.forEach(t -> t.setType(key));
+                    list.addAll(providerTemplates);
+                }
+            }
+        }
         this.templates = list.stream().collect(Collectors.toMap(Template::getId, t -> t));
+
+
         log.debug("Initialized {} templates for {}", list.size(), type);
     }
 
@@ -285,50 +305,5 @@ public abstract class TemplateServiceImpl<D> implements TemplateService<D>, Init
         return Optional.ofNullable(templates.get(id)).orElseThrow(() ->
             new NoSuchEntityException("template not found: " + id)
         );
-    }
-
-    @Override
-    public Template createTemplate(@Valid Template template) throws SystemException {
-        String key = type.getSimpleName().toLowerCase();
-        template.setType(key);
-
-        //generate id if missing
-        if (!StringUtils.hasText(template.getId())) {
-            template.setId(keyGenerator.generateKey());
-        }
-        //sanitize content
-        sanitize(template);
-        //discard invalid
-        validate(template);
-
-        templates.put(template.getId(), template);
-        return template;
-    }
-
-    @Override
-    public Template updateTemplate(@NotNull String id, @Valid Template template) throws NoSuchEntityException, SystemException {
-        if (!templates.containsKey(id)) {
-            throw new NoSuchEntityException("template not found: " + id);
-        }
-        template.setId(id);
-
-        String key = type.getSimpleName().toLowerCase();
-        template.setType(key);
-
-        //sanitize content
-        sanitize(template);
-        //discard invalid
-        validate(template);
-
-        templates.put(id, template);
-        return template;
-    }
-
-    @Override
-    public void deleteTemplate(@NotNull String id) throws NoSuchEntityException, SystemException {
-        if (!templates.containsKey(id)) {
-            throw new NoSuchEntityException("template not found: " + id);
-        }
-        templates.remove(id);
     }
 }
