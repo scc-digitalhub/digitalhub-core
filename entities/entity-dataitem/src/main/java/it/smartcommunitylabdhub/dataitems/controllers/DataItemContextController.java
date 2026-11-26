@@ -25,6 +25,7 @@ package it.smartcommunitylabdhub.dataitems.controllers;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.smartcommunitylabdhub.core.controllers.BaseEntityController;
+import it.smartcommunitylabdhub.dataitems.filters.DataItemEntityFilter;
 import it.smartcommunitylabdhub.dataitems.DataItem;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -40,4 +41,4 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 @Slf4j
 @Tag(name = "DataItem context API", description = "Endpoints related to dataitems management in project")
-public class DataItemContextController extends BaseEntityController<DataItem> {}
+public class DataItemContextController extends BaseEntityController<DataItem, DataItemEntityFilter> {}

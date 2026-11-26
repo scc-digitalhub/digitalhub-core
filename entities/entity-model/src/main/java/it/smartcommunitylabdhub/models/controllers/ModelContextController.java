@@ -25,6 +25,7 @@ package it.smartcommunitylabdhub.models.controllers;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.smartcommunitylabdhub.core.controllers.BaseEntityController;
+import it.smartcommunitylabdhub.models.filters.ModelEntityFilter;
 import it.smartcommunitylabdhub.models.Model;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -40,4 +41,4 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 @Slf4j
 @Tag(name = "Model context API", description = "Endpoints related to models management in project")
-public class ModelContextController extends BaseEntityController<Model> {}
+public class ModelContextController extends BaseEntityController<Model, ModelEntityFilter> {}

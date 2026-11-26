@@ -115,7 +115,7 @@ public class AbstractEntityFilterConverter<
         }
 
         //to be overriden by descendant for specific fields
-        throw new IllegalArgumentException();
+        throw new IllegalArgumentException("unsupported search field: " + source);
     }
 
     private Map<String, String> initialize(Class<D> type, Class<E> clazz) {

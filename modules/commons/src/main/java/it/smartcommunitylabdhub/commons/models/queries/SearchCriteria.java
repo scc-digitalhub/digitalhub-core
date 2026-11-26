@@ -37,8 +37,8 @@ public interface SearchCriteria<T> extends Specification<T> {
 
     public enum Operation {
         equal,
-        gt,
-        lt,
+        gte,
+        lte,
         like,
         in
     }

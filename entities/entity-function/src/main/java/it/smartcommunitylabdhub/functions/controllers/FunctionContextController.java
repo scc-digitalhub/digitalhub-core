@@ -29,6 +29,7 @@ import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.core.controllers.BaseEntityController;
+import it.smartcommunitylabdhub.functions.filters.FunctionEntityFilter;
 import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.tasks.Task;
@@ -53,7 +54,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 @Slf4j
 @Tag(name = "Function context API", description = "Endpoints related to functions management in project")
-public class FunctionContextController extends BaseEntityController<Function> {
+public class FunctionContextController extends BaseEntityController<Function, FunctionEntityFilter> {
 
     @Autowired
     private FunctionManager functionManager;

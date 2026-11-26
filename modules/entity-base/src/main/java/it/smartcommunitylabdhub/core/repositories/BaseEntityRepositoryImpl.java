@@ -43,6 +43,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
@@ -54,6 +55,7 @@ import org.springframework.core.ResolvableType;
 import org.springframework.core.ResolvableTypeProvider;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -549,7 +551,9 @@ public abstract class BaseEntityRepositoryImpl<
 
         if (repository instanceof JpaSpecificationExecutor) {
             @SuppressWarnings("unchecked")
-            Page<E> page = ((JpaSpecificationExecutor<E>) repository).findAll(specification, pageable);
+            Page<E> page = unwrapInvalidSearch(() ->
+                ((JpaSpecificationExecutor<E>) repository).findAll(specification, pageable)
+            );
             List<D> content = page
                 .stream()
                 .map(e -> dtoBuilder.convert(e))
@@ -586,7 +590,7 @@ public abstract class BaseEntityRepositoryImpl<
         log.debug("search all with spec {} ", specification);
 
         if (repository instanceof JpaSpecificationExecutor) {
-            return ((JpaSpecificationExecutor<E>) repository).findAll(specification)
+            return unwrapInvalidSearch(() -> ((JpaSpecificationExecutor<E>) repository).findAll(specification))
                 .stream()
                 .map(e -> dtoBuilder.convert(e))
                 .collect(Collectors.toList());
@@ -614,12 +618,30 @@ public abstract class BaseEntityRepositoryImpl<
         log.debug("search all with spec {} ", specification);
 
         if (repository instanceof JpaSpecificationExecutor) {
-            return ((JpaSpecificationExecutor<E>) repository).findBy(Specification.allOf(specification), query ->
-                query.as(projection).all()
+            return unwrapInvalidSearch(() ->
+                ((JpaSpecificationExecutor<E>) repository).findBy(Specification.allOf(specification), query ->
+                        query.as(projection).all()
+                    )
             );
         }
 
         throw new UnsupportedOperationException();
+    }
+
+    /*
+     * Invalid search criteria raise IllegalArgumentException while building predicates,
+     * which the repository proxy translates to InvalidDataAccessApiUsageException:
+     * unwrap to surface them as invalid arguments
+     */
+    private static <T> T unwrapInvalidSearch(Supplier<T> search) {
+        try {
+            return search.get();
+        } catch (InvalidDataAccessApiUsageException e) {
+            if (e.getCause() instanceof IllegalArgumentException iae) {
+                throw iae;
+            }
+            throw e;
+        }
     }
 
     @Override
