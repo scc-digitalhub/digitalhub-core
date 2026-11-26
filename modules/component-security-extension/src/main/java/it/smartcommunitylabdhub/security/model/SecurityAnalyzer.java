@@ -52,10 +52,8 @@ public class SecurityAnalyzer {
     public static class EntityTemplate {
 
         private String kind;
-        private HashMap<String, Serializable> spec = new HashMap<>();
+        private Map<String, Serializable> spec = new HashMap<>();
+        private Map<String, Serializable> metadata = new HashMap<>();
 
-        public Map<String, Serializable> getSpec() {
-            return spec != null ? spec : new HashMap<>();
-        }
     }
 }

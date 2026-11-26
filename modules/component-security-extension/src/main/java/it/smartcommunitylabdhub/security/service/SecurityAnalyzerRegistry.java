@@ -19,8 +19,12 @@ package it.smartcommunitylabdhub.security.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
+import it.smartcommunitylabdhub.commons.models.template.Template;
+import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.security.config.SecurityExtensionProperties;
 import it.smartcommunitylabdhub.security.model.SecurityAnalyzer;
+import it.smartcommunitylabdhub.templates.TemplateService;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
@@ -51,13 +55,17 @@ public class SecurityAnalyzerRegistry implements InitializingBean {
     private final SecurityExtensionProperties properties;
     private final ResourcePatternResolver resourceResolver;
 
+    private final TemplateService<Function> functionTemplateService;
+
     private Map<String, SecurityAnalyzer> analyzers = Collections.emptyMap();
 
-    public SecurityAnalyzerRegistry(SecurityExtensionProperties properties, ResourcePatternResolver resourceResolver) {
+    public SecurityAnalyzerRegistry(SecurityExtensionProperties properties, ResourcePatternResolver resourceResolver, TemplateService<Function> functionTemplateService) {
         Assert.notNull(properties, "properties are required");
         Assert.notNull(resourceResolver, "resource resolver is required");
+        Assert.notNull(functionTemplateService, "function template service is required");
         this.properties = properties;
         this.resourceResolver = resourceResolver;
+        this.functionTemplateService = functionTemplateService;
     }
 
     @Override
@@ -75,6 +83,15 @@ public class SecurityAnalyzerRegistry implements InitializingBean {
                 SecurityAnalyzer analyzer = read(resource);
                 log.debug("registered security analyzer {} from {}", analyzer.getName(), resource.getFilename());
                 map.put(analyzer.getName(), analyzer);
+
+                Template template = Template.builder()
+                    .name(analyzer.getName())
+                    .kind(analyzer.getFunction().getKind())
+                    .metadata(analyzer.getFunction().getMetadata())
+                    .spec(new HashMap<>(analyzer.getFunction().getSpec()))
+                    .build();
+                functionTemplateService.createTemplate(template);
+
             } catch (IOException | IllegalArgumentException e) {
                 log.error("error reading security analyzer from {}: {}", resource.getFilename(), e.getMessage());
             }

@@ -3,6 +3,11 @@ description: "Container image SBOM analysis with Trivy"
 script: dh-security-trivy-sbom.sh
 function:
   kind: container
+  metadata:
+    description: Trivy operation to generate SBOM for container image.  
+    labels:
+      - security
+      - container
   spec:
     image: aquasec/trivy:latest
     command: /shared/trivy.sh

@@ -23,7 +23,7 @@ fi
 
 if ! command -v dhcli >/dev/null 2>&1; then
     wget -O "$DEPS_DIR/install.sh" https://raw.githubusercontent.com/scc-digitalhub/digitalhub-cli/main/install.sh
-    sh "$DEPS_DIR/install.sh" 0.16.1-beta2
+    sh "$DEPS_DIR/install.sh"
 fi
 
 if ! command -v jq >/dev/null 2>&1; then
