@@ -34,12 +34,10 @@ import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.jackson.YamlMapperFactory;
 import it.smartcommunitylabdhub.commons.models.objects.SourceCode;
-import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.argo.objects.K8sWorkflowObject;
 import it.smartcommunitylabdhub.framework.argo.runnables.K8sArgoWorkflowRunnable;
@@ -98,8 +96,6 @@ public class HeraRuntime extends K8sWorkflowBaseRuntime<HeraWorkflowSpec, HeraRu
     @Autowired(required = false)
     private AccessCredentialsProvider accessCredentialsProvider;
 
-    @Autowired
-    private ConfigurationService configurationService;
 
     private NodeStatusMapper nodeStatusMapper = new NodeStatusMapper();
 
@@ -213,10 +209,6 @@ public class HeraRuntime extends K8sWorkflowBaseRuntime<HeraWorkflowSpec, HeraRu
                 runnable.setCredentials(credentials);
             }
         }
-
-        //inject configuration
-        List<Configuration> configurations = configurationService.getConfigurations();
-        runnable.setConfigurations(configurations);
 
         return runnable;
     }

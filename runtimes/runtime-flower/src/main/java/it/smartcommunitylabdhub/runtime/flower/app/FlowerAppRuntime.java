@@ -23,14 +23,8 @@
 
 package it.smartcommunitylabdhub.runtime.flower.app;
 
-import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
-import it.smartcommunitylabdhub.authorization.services.CredentialsService;
-import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
-import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
-import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
-import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
@@ -44,7 +38,6 @@ import it.smartcommunitylabdhub.tasks.Task;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,11 +55,7 @@ public class FlowerAppRuntime
     @Autowired
     private SecretService secretService;
 
-    @Autowired
-    private CredentialsService credentialsService;
 
-    @Autowired
-    private ConfigurationService configurationService;
 
     @Autowired
     @Qualifier("flowerImages")
@@ -143,18 +132,6 @@ public class FlowerAppRuntime
             );
             default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
         };
-
-        //extract auth from security context to inflate secured credentials
-        UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-        if (auth != null) {
-            //get credentials from providers
-            List<Credentials> credentials = credentialsService.getCredentials((UserAuthentication<?>) auth);
-            runnable.setCredentials(credentials);
-        }
-
-        //inject configuration
-        List<Configuration> configurations = configurationService.getConfigurations();
-        runnable.setConfigurations(configurations);
 
         return runnable;
     }

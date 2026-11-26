@@ -26,16 +26,19 @@ package it.smartcommunitylabdhub.autoscaler;
 import it.smartcommunitylabdhub.autoscaler.spec.RunAutoscalerSpec;
 import it.smartcommunitylabdhub.commons.annotations.common.EffectType;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
+import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
+import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.infrastructure.Effect;
 import it.smartcommunitylabdhub.commons.models.metadata.BaseMetadata;
-import it.smartcommunitylabdhub.commons.utils.MapUtils;
-import it.smartcommunitylabdhub.events.EntityAction;
-import it.smartcommunitylabdhub.events.EntityOperation;
 import it.smartcommunitylabdhub.extensions.ExtensionManager;
 import it.smartcommunitylabdhub.extensions.persistence.ExtensionBuilder;
+import it.smartcommunitylabdhub.fsm.exceptions.InvalidTransitionException;
 import it.smartcommunitylabdhub.runs.Run;
+import it.smartcommunitylabdhub.runs.RunManager;
+import it.smartcommunitylabdhub.runs.lifecycle.RunEvent;
 import it.smartcommunitylabdhub.runs.lifecycle.RunState;
-import it.smartcommunitylabdhub.runs.listeners.RunOperationsListener;
 import it.smartcommunitylabdhub.runs.specs.RunTransitionsSpec;
 import java.io.Serializable;
 import java.time.Instant;
@@ -47,6 +50,7 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.validation.BindException;
 
 @EffectType(stages = { "onRunning", "onError" }, type = Run.class)
 @Component
@@ -57,7 +61,7 @@ public class RunAutoscalerProcessor implements Effect<Run> {
     private ExtensionManager extManager;
 
     @Autowired(required = false)
-    private RunOperationsListener runOperations;
+    private RunManager runManager;
 
     @Override
     public void process(String stage, Run run, Serializable output) throws CoreRuntimeException {
@@ -133,14 +137,16 @@ public class RunAutoscalerProcessor implements Effect<Run> {
                 if (autoStop != null && autoStop > 0) {
                     OffsetDateTime stopTime = start.plusSeconds(autoStop);
                     if (now.isAfter(stopTime)) {
-                        log.debug("Run {} has exceeded auto stop time, marking for deletion", run.getId());
+                        log.debug("Run {} has exceeded auto stop time, stopping", run.getId());
 
-                        if (runOperations != null) {
-                            //set stop and dispatch, will trigger transition to STOPPED
-                            run.setStatus(
-                                MapUtils.mergeMultipleMaps(run.getStatus(), Map.of("state", RunState.STOP.name()))
-                            );
-                            runOperations.dispatch(new EntityOperation<Run>(run, EntityAction.UPDATE));
+                        if (runManager != null) {
+                            //request STOP via lifecycle: only the state changes, via FSM
+                            try {
+                                runManager.perform(run, RunEvent.STOP.name());
+                            } catch (InvalidTransitionException e) {
+                                //already stopping or no longer running
+                                log.debug("Run {} can not be stopped: {}", run.getId(), e.getMessage());
+                            }
                         }
 
                         break;
@@ -158,7 +164,7 @@ public class RunAutoscalerProcessor implements Effect<Run> {
             Boolean autoRestart = spec.getAutoRestart();
             if (autoRestart != null && autoRestart) {
                 log.debug("Run {} is in error state and auto restart is enabled", run.getId());
-                if (runOperations != null) {
+                if (runManager != null) {
                     //fully clone the run
                     Run clonedRun = Run.builder()
                         .id(null)
@@ -172,9 +178,22 @@ public class RunAutoscalerProcessor implements Effect<Run> {
                         .extensions(run.getExtensions())
                         .build();
 
-                    //reset state to READY to trigger a new run
-                    clonedRun.setStatus(Map.of("state", RunState.READY.name()));
-                    runOperations.dispatch(new EntityOperation<Run>(clonedRun, EntityAction.CREATE));
+                    //create as BUILT (the service walks the lifecycle CREATED -> BUILT), then run
+                    clonedRun.setStatus(Map.of("state", RunState.BUILT.name()));
+                    try {
+                        Run created = runManager.create(clonedRun);
+                        runManager.perform(created, RunEvent.RUN.name());
+                    } catch (
+                        NoSuchEntityException
+                        | SystemException
+                        | DuplicatedEntityException
+                        | BindException
+                        | InvalidTransitionException
+                        | IllegalArgumentException
+                        | StoreException e
+                    ) {
+                        log.error("Error restarting run {}: {}", run.getId(), e.getMessage());
+                    }
                 }
                 break;
             }

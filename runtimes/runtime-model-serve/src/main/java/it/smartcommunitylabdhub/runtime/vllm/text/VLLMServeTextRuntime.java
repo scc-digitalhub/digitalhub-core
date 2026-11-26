@@ -23,12 +23,8 @@
 
 package it.smartcommunitylabdhub.runtime.vllm.text;
 
-import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
-import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
-import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
-import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.runs.Run;
@@ -179,18 +175,6 @@ public class VLLMServeTextRuntime extends VLLMServeRuntime<VLLMServeTextFunction
             ).produce(run);
             default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
         };
-
-        //extract auth from security context to inflate secured credentials
-        UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-        if (auth != null) {
-            //get credentials from providers
-            List<Credentials> credentials = credentialsService.getCredentials(auth);
-            runnable.setCredentials(credentials);
-        }
-
-        //inject configuration
-        List<Configuration> configurations = configurationService.getConfigurations();
-        runnable.setConfigurations(configurations);
 
         return runnable;
     }

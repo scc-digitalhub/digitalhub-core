@@ -6,19 +6,13 @@
 
 package it.smartcommunitylabdhub.runtime.tvm;
 
-import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
-import it.smartcommunitylabdhub.authorization.services.CredentialsService;
-import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
-import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
-import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
@@ -90,11 +84,7 @@ public class TvmRuntime
     @Autowired
     private SecretService secretService;
 
-    @Autowired
-    private CredentialsService credentialsService;
 
-    @Autowired
-    private ConfigurationService configurationService;
 
     @Autowired
     private FunctionManager functionService;
@@ -210,14 +200,6 @@ public class TvmRuntime
             case TvmServeTaskSpec.KIND -> serveRunner.produce(run, secrets);
             default -> throw new IllegalArgumentException("Unknown task kind in run spec: " + runAccessor.getTask());
         };
-
-        UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-        if (auth != null) {
-            List<Credentials> credentials = credentialsService.getCredentials(auth);
-            runnable.setCredentials(credentials);
-        }
-        List<Configuration> configurations = configurationService.getConfigurations();
-        runnable.setConfigurations(configurations);
 
         return runnable;
     }

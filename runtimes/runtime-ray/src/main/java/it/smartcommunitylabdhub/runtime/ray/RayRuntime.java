@@ -6,18 +6,12 @@
 
 package it.smartcommunitylabdhub.runtime.ray;
 
-import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
-import it.smartcommunitylabdhub.authorization.services.CredentialsService;
-import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
-import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
-import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
@@ -92,11 +86,7 @@ public class RayRuntime
     @Autowired
     private FunctionManager functionService;
 
-    @Autowired
-    private CredentialsService credentialsService;
 
-    @Autowired
-    private ConfigurationService configurationService;
 
     public RayRuntime(@Qualifier("rayProperties") RayProperties properties) {
         Assert.notNull(properties, "properties are required");
@@ -187,17 +177,6 @@ public class RayRuntime
             case RayBuildTaskSpec.KIND -> buildRunner.produce(run, secrets);
             default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
         };
-
-        //inject credentials from authenticated user, if any
-        UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-        if (auth != null) {
-            List<Credentials> credentials = credentialsService.getCredentials(auth);
-            runnable.setCredentials(credentials);
-        }
-
-        //inject configuration providers
-        List<Configuration> configurations = configurationService.getConfigurations();
-        runnable.setConfigurations(configurations);
 
         return runnable;
     }

@@ -23,17 +23,11 @@
 
 package it.smartcommunitylabdhub.runtime.python.hydra;
 
-import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
-import it.smartcommunitylabdhub.authorization.services.CredentialsService;
-import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
-import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
@@ -97,11 +91,7 @@ public class HydraRuntime
     @Autowired
     private FunctionManager functionService;
 
-    @Autowired
-    private CredentialsService credentialsService;
 
-    @Autowired
-    private ConfigurationService configurationService;
 
     //TODO remove direct usage of repository, only managers are public api
     @Autowired
@@ -186,18 +176,6 @@ public class HydraRuntime
             case HydraSubtaskTaskSpec.KIND -> subtaskRunner.produce(run, secrets);
             default -> throw new IllegalArgumentException("Kind not recognized. Cannot retrieve the right Runner");
         };
-
-        //extract auth from security context to inflate secured credentials
-        UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-        if (auth != null) {
-            //get credentials from providers
-            List<Credentials> credentials = credentialsService.getCredentials(auth);
-            runnable.setCredentials(credentials);
-        }
-
-        //inject configuration
-        List<Configuration> configurations = configurationService.getConfigurations();
-        runnable.setConfigurations(configurations);
 
         return runnable;
     }

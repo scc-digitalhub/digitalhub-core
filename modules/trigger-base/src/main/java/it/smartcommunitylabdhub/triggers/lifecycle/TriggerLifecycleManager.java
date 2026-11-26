@@ -29,7 +29,6 @@ import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.models.enums.State;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.lifecycle.BaseLifecycleManager;
 import it.smartcommunitylabdhub.fsm.exceptions.InvalidTransitionException;
@@ -40,6 +39,7 @@ import it.smartcommunitylabdhub.relationships.RelationshipsMetadata;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.RunManager;
 import it.smartcommunitylabdhub.runs.lifecycle.RunEvent;
+import it.smartcommunitylabdhub.runs.lifecycle.RunState;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
 import it.smartcommunitylabdhub.tasks.TaskService;
 import it.smartcommunitylabdhub.templates.TemplateProcessor;
@@ -148,7 +148,8 @@ public class TriggerLifecycleManager<
                 RelationshipsMetadata relMetadata = RelationshipsMetadata.builder().relationships(rels).build();
 
                 //status
-                RunBaseStatus baseStatus = RunBaseStatus.baseBuilder().state(State.CREATED.name()).build();
+                //create as BUILT: the service walks the run lifecycle CREATED -> BUILT
+                RunBaseStatus baseStatus = RunBaseStatus.baseBuilder().state(RunState.BUILT.name()).build();
                 Map<String, Serializable> runStatus = MapUtils.mergeMultipleMaps(triggerRunStatus, baseStatus.toMap());
 
                 //build either function or workflow run
@@ -191,14 +192,10 @@ public class TriggerLifecycleManager<
                 }
 
                 try {
-                    //create run via service as CREATED
+                    //create run via service, built via lifecycle
                     taskRun = runService.create(taskRun);
 
-                    //build now
-                    taskRun = runManager.perform(taskRun, RunEvent.BUILD.name());
-
                     //dispatch for run
-                    //TODO evaluate detaching via async
                     taskRun = runManager.perform(taskRun, RunEvent.RUN.name());
                 } catch (
                     NoSuchEntityException
