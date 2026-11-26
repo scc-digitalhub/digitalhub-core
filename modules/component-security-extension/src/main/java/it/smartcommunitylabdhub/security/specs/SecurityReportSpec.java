@@ -28,6 +28,9 @@ import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -68,6 +71,10 @@ public class SecurityReportSpec extends BaseSpec {
     @Schema(title = "format", description = "Format of the report file")
     private String format;
 
+    @Schema(title = "Report Name", description = "Name of the report file")
+    @JsonProperty("report_name")
+    private String reportName;
+
     @Override
     public void configure(Map<String, Serializable> data) {
         SecurityReportSpec spec = mapper.convertValue(data, SecurityReportSpec.class);
@@ -79,6 +86,7 @@ public class SecurityReportSpec extends BaseSpec {
         this.findings = spec.getFindings();
         this.path = spec.getPath();
         this.format = spec.getFormat();
+        this.reportName = spec.getReportName();
     }
 
     public static SecurityReportSpec with(Map<String, Serializable> data) {

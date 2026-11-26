@@ -203,7 +203,8 @@ def main(project, run, function_key: str):
         "run": run if run is not None else os.environ.get("RUN_ID"),
         "findings": findings,
         "assessment": _assess(findings),
-        "format": "sarif"
+        "format": "sarif",
+        "report_name": os.path.basename(report_file)
     }
 
     _upload_report(project, report, function, report_file)

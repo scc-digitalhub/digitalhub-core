@@ -9,6 +9,7 @@ export interface SecurityReport {
         analyzer?: string | null;
         path?: string | null;
         format?: string | null;
+        report_name?: string | null;
     } | null;
     status?: any;
 }

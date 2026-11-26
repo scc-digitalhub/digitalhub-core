@@ -100,6 +100,7 @@ jq -nr --arg id "$EXTENSION_ID" --arg name "security-report-$ID" --arg image "$I
     "  format: SPDX",
     "  image: \($image | @json)",
     "  run: \($run | @json)",
+    "  report_name: report.json",
     if $summary | has("findings") then
         "  assessment: \($summary.assessment)",
         "  findings: \($summary.findings | tojson)"

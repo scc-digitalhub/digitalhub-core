@@ -92,7 +92,7 @@ export const SbomReport = ({
                 const downloadInfo = await download({
                     resource: 'extensions',
                     id: report.id!,
-                    sub: 'report.json',
+                    sub: report.spec?.report_name! || 'report.json',
                 });
                 if (!downloadInfo?.url) {
                     throw new ReportError('security.report.downloadError');
@@ -136,7 +136,7 @@ export const SbomReport = ({
                 <DownloadButton
                     resource="extensions"
                     id={report.id}
-                    sub="report.json"
+                    sub={report.spec?.report_name! || 'report.json'}
                 />
             </TopToolbar>
             {result?.error ? (

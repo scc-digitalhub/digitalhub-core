@@ -21,8 +21,8 @@ trigger:
   kind: lifecycle
   spec:
     key: "store://${project}/function/python"
-    states: [READY]
+    states: [CREATED]
     task: python+job
     template:
-      inputs: 
+      parameters:
         function_key: "{{input.key}}"

@@ -127,7 +127,7 @@ export const SarifReport = ({ report }: { report: SecurityReport }) => {
                 const downloadInfo = await download({
                     resource: 'extensions',
                     id: report.id!,
-                    sub: 'report.json',
+                    sub: report.spec?.report_name! || 'report.json',
                 });
                 if (!downloadInfo?.url) {
                     throw new ReportError('security.report.downloadError');
@@ -175,14 +175,12 @@ export const SarifReport = ({ report }: { report: SecurityReport }) => {
         );
     }
 
-    console.log(report.id);
-
     const downloadToolbar = (
         <TopToolbar>
             <DownloadButton
                 resource="extensions"
                 id={report.id}
-                sub={`report.json`}
+                sub={report.spec?.report_name! || 'report.json'}
             />
         </TopToolbar>
     );
