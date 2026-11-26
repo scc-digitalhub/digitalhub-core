@@ -548,7 +548,8 @@ public abstract class BaseEntityServiceImpl<
             //TODO diff check to avoid reparsing on same spec
             if (getSpecRegistry() != null) {
                 // Parse and export Spec
-                Spec spec = getSpecRegistry().createSpec(dto.getKind(), dto.getSpec());
+                // NOTE: kind is not modifiable, validate against the stored one
+                Spec spec = getSpecRegistry().createSpec(current.getKind(), dto.getSpec());
                 if (spec == null) {
                     throw new IllegalArgumentException("invalid kind");
                 }
