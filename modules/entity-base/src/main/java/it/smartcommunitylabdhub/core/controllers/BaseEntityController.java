@@ -31,7 +31,7 @@ import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.services.EntityService;
-import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilter;
+import it.smartcommunitylabdhub.core.queries.filters.EntityFilter;
 import it.smartcommunitylabdhub.core.services.VersionableEntityService;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
@@ -58,7 +58,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @Slf4j
-public abstract class BaseEntityController<D extends BaseDTO> {
+public abstract class BaseEntityController<D extends BaseDTO, F extends EntityFilter<D>> {
 
     public static final int DEFAULT_PAGE_SIZE = 25;
 
@@ -98,7 +98,7 @@ public abstract class BaseEntityController<D extends BaseDTO> {
     @GetMapping(path = "", produces = "application/json; charset=UTF-8")
     public Page<D> search(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project,
-        @ParameterObject @Valid @Nullable AbstractEntityFilter<D> filter,
+        @ParameterObject @Valid @Nullable F filter,
         @ParameterObject @RequestParam(required = false, defaultValue = "latest") String versions,
         @ParameterObject @PageableDefault(page = 0, size = DEFAULT_PAGE_SIZE) @SortDefault.SortDefaults(
             { @SortDefault(sort = "created", direction = Direction.DESC) }

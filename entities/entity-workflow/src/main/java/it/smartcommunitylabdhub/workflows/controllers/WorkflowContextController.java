@@ -29,6 +29,7 @@ import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.core.controllers.BaseEntityController;
+import it.smartcommunitylabdhub.workflows.filter.WorkflowEntityFilter;
 import it.smartcommunitylabdhub.tasks.Task;
 import it.smartcommunitylabdhub.workflows.Workflow;
 import it.smartcommunitylabdhub.workflows.WorkflowManager;
@@ -53,7 +54,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 @Slf4j
 @Tag(name = "Workflow context API", description = "Endpoints related to workflows management for project")
-public class WorkflowContextController extends BaseEntityController<Workflow> {
+public class WorkflowContextController extends BaseEntityController<Workflow, WorkflowEntityFilter> {
 
     @Autowired
     private WorkflowManager workflowManager;

@@ -30,6 +30,7 @@ import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.core.controllers.BaseEntityController;
+import it.smartcommunitylabdhub.triggers.filters.TriggerEntityFilter;
 import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
 import it.smartcommunitylabdhub.triggers.Trigger;
 import it.smartcommunitylabdhub.triggers.lifecycle.TriggerEvent;
@@ -50,7 +51,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 @Slf4j
 @Tag(name = "Trigger context API", description = "Endpoints related to triggers management in Context")
-public class TriggerContextController extends BaseEntityController<Trigger> {
+public class TriggerContextController extends BaseEntityController<Trigger, TriggerEntityFilter> {
 
     @Autowired
     private LifecycleManager<Trigger> lifecycleManager;

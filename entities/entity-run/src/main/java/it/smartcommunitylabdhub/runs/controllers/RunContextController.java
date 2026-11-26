@@ -29,6 +29,7 @@ import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.core.controllers.BaseEntityController;
+import it.smartcommunitylabdhub.runs.filters.RunEntityFilter;
 import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.lifecycle.RunEvent;
@@ -50,7 +51,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 @Slf4j
 @Tag(name = "Run context API", description = "Endpoints related to runs management for project")
-public class RunContextController extends BaseEntityController<Run> {
+public class RunContextController extends BaseEntityController<Run, RunEntityFilter> {
 
     @Autowired
     LifecycleManager<Run> lifecycleManager;

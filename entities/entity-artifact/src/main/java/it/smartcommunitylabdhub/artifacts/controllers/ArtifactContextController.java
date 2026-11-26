@@ -26,6 +26,7 @@ package it.smartcommunitylabdhub.artifacts.controllers;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.smartcommunitylabdhub.artifacts.Artifact;
 import it.smartcommunitylabdhub.core.controllers.BaseEntityController;
+import it.smartcommunitylabdhub.artifacts.filters.ArtifactEntityFilter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -40,4 +41,4 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 @Slf4j
 @Tag(name = "Artifact context API", description = "Endpoints related to artifacts management in project")
-public class ArtifactContextController extends BaseEntityController<Artifact> {}
+public class ArtifactContextController extends BaseEntityController<Artifact, ArtifactEntityFilter> {}

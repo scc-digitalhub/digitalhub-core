@@ -32,8 +32,7 @@ import it.smartcommunitylabdhub.commons.models.queries.SearchFilter.Condition;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -51,7 +50,7 @@ import org.springframework.util.StringUtils;
 @AllArgsConstructor
 @NoArgsConstructor
 @Valid
-public abstract class AbstractEntityFilter<T extends BaseDTO> {
+public abstract class AbstractEntityFilter<T extends BaseDTO> implements EntityFilter<T> {
 
     @Nullable
     protected String q;
@@ -133,25 +132,25 @@ public abstract class AbstractEntityFilter<T extends BaseDTO> {
             try {
                 //parse as comma-separated interval or single date
                 String[] dates = StringUtils.commaDelimitedListToStringArray(value);
-                LocalDateTime startDate = LocalDateTime.parse(dates[0], DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+                OffsetDateTime startDate = OffsetDateTime.parse(dates[0], DateTimeFormatter.ISO_OFFSET_DATE_TIME);
                 criteria.add(
                     new BaseEntitySearchCriteria<>(
                         "created",
-                        Date.from(startDate.atZone(ZoneId.systemDefault()).toInstant()),
-                        SearchCriteria.Operation.gt
+                        Date.from(startDate.toInstant()),
+                        SearchCriteria.Operation.gte
                     )
                 );
 
                 if (dates.length == 2) {
                     //interval start,end
 
-                    LocalDateTime endDate = LocalDateTime.parse(dates[1], DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+                    OffsetDateTime endDate = OffsetDateTime.parse(dates[1], DateTimeFormatter.ISO_OFFSET_DATE_TIME);
 
                     criteria.add(
                         new BaseEntitySearchCriteria<>(
                             "created",
-                            Date.from(endDate.atZone(ZoneId.systemDefault()).toInstant()),
-                            SearchCriteria.Operation.lt
+                            Date.from(endDate.toInstant()),
+                            SearchCriteria.Operation.lte
                         )
                     );
                 }
@@ -164,25 +163,25 @@ public abstract class AbstractEntityFilter<T extends BaseDTO> {
             try {
                 //parse as comma-separated interval or single date
                 String[] dates = StringUtils.commaDelimitedListToStringArray(value);
-                LocalDateTime startDate = LocalDateTime.parse(dates[0], DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+                OffsetDateTime startDate = OffsetDateTime.parse(dates[0], DateTimeFormatter.ISO_OFFSET_DATE_TIME);
                 criteria.add(
                     new BaseEntitySearchCriteria<>(
                         "updated",
-                        Date.from(startDate.atZone(ZoneId.systemDefault()).toInstant()),
-                        SearchCriteria.Operation.gt
+                        Date.from(startDate.toInstant()),
+                        SearchCriteria.Operation.gte
                     )
                 );
 
                 if (dates.length == 2) {
                     //interval start,end
 
-                    LocalDateTime endDate = LocalDateTime.parse(dates[1], DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+                    OffsetDateTime endDate = OffsetDateTime.parse(dates[1], DateTimeFormatter.ISO_OFFSET_DATE_TIME);
 
                     criteria.add(
                         new BaseEntitySearchCriteria<>(
                             "updated",
-                            Date.from(endDate.atZone(ZoneId.systemDefault()).toInstant()),
-                            SearchCriteria.Operation.lt
+                            Date.from(endDate.toInstant()),
+                            SearchCriteria.Operation.lte
                         )
                     );
                 }

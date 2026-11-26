@@ -84,7 +84,7 @@ public class BaseEntitySearchCriteria<T> implements SearchCriteria<T> {
                     return builder.like(root.<String>get(field), "%" + value + "%");
                 }
                 break;
-            case Operation.gt:
+            case Operation.gte:
                 if (root.get(field).getJavaType() == String.class) {
                     return builder.greaterThanOrEqualTo(root.get(field), value.toString());
                 }
@@ -98,7 +98,7 @@ public class BaseEntitySearchCriteria<T> implements SearchCriteria<T> {
                     return builder.greaterThanOrEqualTo(root.get(field), (Long) value);
                 }
                 break;
-            case Operation.lt:
+            case Operation.lte:
                 if (root.get(field).getJavaType() == String.class) {
                     return builder.lessThanOrEqualTo(root.get(field), value.toString());
                 }
@@ -118,10 +118,18 @@ public class BaseEntitySearchCriteria<T> implements SearchCriteria<T> {
                 }
                 break;
             default:
-                return null;
+                break;
         }
 
-        return null;
+        //unsupported operation/type combination: fail instead of silently dropping the criteria
+        throw new IllegalArgumentException(
+            "unsupported search criteria: operation " +
+            operation +
+            " on field " +
+            field +
+            " with value of type " +
+            (value != null ? value.getClass().getSimpleName() : "null")
+        );
     }
 
     @JsonIgnore
