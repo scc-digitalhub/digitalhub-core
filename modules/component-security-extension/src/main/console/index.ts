@@ -21,6 +21,15 @@ const hubModule: ConsoleExtensionModule = {
         },
       ],
     },
+    functions: {
+      show: [
+        {
+          showIn: "tab",
+          component: "securityReportsPage",
+          label: "Security",
+        },
+      ],
+    },
   },
   i18n: {
     en: en,
