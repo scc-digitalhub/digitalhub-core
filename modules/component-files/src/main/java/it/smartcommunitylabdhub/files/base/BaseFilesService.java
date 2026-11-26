@@ -148,6 +148,13 @@ public abstract class BaseFilesService<
         return type;
     }
 
+    protected String defaultPath(D dto) throws StoreException {
+        String name = dto.getName();
+        String subpath = (name != null ? name + "/" : "") + dto.getId();
+        return resolveBasePath(dto.getProject(), name, dto.getId(), null) + "/" + subpath + "/";
+    }
+
+
     @Override
     public DownloadInfo downloadFileAsUrl(@NotNull String id) throws NoSuchEntityException, SystemException {
         log.debug("download url for dto with id {}", String.valueOf(id));
@@ -160,7 +167,8 @@ public abstract class BaseFilesService<
             PathAccessor accessor = PathAccessor.with(dto.getSpec());
             String path = accessor.getPath();
             if (!StringUtils.hasText(path)) {
-                throw new NoSuchEntityException("file");
+                path = defaultPath(dto);
+                // throw new NoSuchEntityException("file");
             }
 
             //try to resolve credentials
@@ -193,13 +201,16 @@ public abstract class BaseFilesService<
             PathAccessor accessor = PathAccessor.with(dto.getSpec());
             String path = accessor.getPath();
             if (!StringUtils.hasText(path)) {
-                throw new NoSuchEntityException("file");
+                //always set a subpath to avoid collisions
+                path = defaultPath(dto);
+                // throw new NoSuchEntityException("file");
             }
 
+            String resolvedPath = path;
             String fullPath = Optional.ofNullable(sub)
                 .map(s -> {
                     //build sub path *only* if not matching spec path
-                    return path.endsWith(sub) ? path : path + sub;
+                    return resolvedPath.endsWith(sub) ? resolvedPath : resolvedPath + sub;
                 })
                 .orElse(path);
 
@@ -255,7 +266,8 @@ public abstract class BaseFilesService<
                 PathAccessor accessor = PathAccessor.with(dto.getSpec());
                 String path = accessor.getPath();
                 if (!StringUtils.hasText(path)) {
-                    throw new NoSuchEntityException("file");
+                    path = defaultPath(dto);
+                    // throw new NoSuchEntityException("file");
                 }
 
                 result = filesService.getFileInfo(path, credentials, pageable);
@@ -376,12 +388,16 @@ public abstract class BaseFilesService<
                 //extract path from spec
                 PathAccessor accessor = PathAccessor.with(dto.getSpec());
                 String specPath = accessor.getPath();
-                if (!StringUtils.hasText(specPath)) {
-                    throw new NoSuchEntityException("file");
+                // if (!StringUtils.hasText(specPath)) {
+                //     throw new NoSuchEntityException("file");
+                // }
+                //use as basePath
+                // path = specPath;
+                if (StringUtils.hasText(specPath)) {
+                    //use as basePath
+                    path = specPath;
                 }
 
-                //use as basePath
-                path = specPath;
             }
 
             String fullPath = resolveUploadPath(path, filename);
@@ -420,7 +436,8 @@ public abstract class BaseFilesService<
                 PathAccessor accessor = PathAccessor.with(dto.getSpec());
                 String specPath = accessor.getPath();
                 if (!StringUtils.hasText(specPath)) {
-                    throw new NoSuchEntityException("file");
+                    specPath = defaultPath(dto);
+                    // throw new NoSuchEntityException("file");
                 }
 
                 if (!isUploadPathAllowed(specPath, path)) {
@@ -462,7 +479,8 @@ public abstract class BaseFilesService<
                 PathAccessor accessor = PathAccessor.with(dto.getSpec());
                 String specPath = accessor.getPath();
                 if (!StringUtils.hasText(specPath)) {
-                    throw new NoSuchEntityException("file");
+                    specPath = defaultPath(dto);
+                    // throw new NoSuchEntityException("file");
                 }
 
                 if (!isUploadPathAllowed(specPath, path)) {
