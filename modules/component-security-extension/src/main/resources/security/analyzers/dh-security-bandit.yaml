@@ -9,7 +9,7 @@ function:
       - security
       - python
   spec:
-    python_version: PYTHON3_10
+    python_version: PYTHON3_12
     requirements:
       - bandit[sarif]
       - boto3

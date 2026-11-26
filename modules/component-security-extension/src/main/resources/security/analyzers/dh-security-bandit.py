@@ -1,13 +1,10 @@
 import base64
-import hashlib
 import io
 import json
 import os
-import platform
 import shutil
 import subprocess
 import sys
-import tarfile
 import tempfile
 import urllib.request
 import zipfile
@@ -107,115 +104,81 @@ def _assess(findings):
         return "WARNING"
     return "PASSED"
 
-DHCLI_REPOSITORY = "scc-digitalhub/digitalhub-cli"
+EXTENSION_KIND = "security-report"
 
 
-def _http_get(url):
-    request = urllib.request.Request(url, headers={"User-Agent": "dh-security-bandit"})
-    with urllib.request.urlopen(request, timeout=120) as response:
-        return response.read()
+def _execute(client, operation, target, payload=None):
+    from digitalhub.stores.client.common.enums import ApiType
+    from digitalhub.stores.client.compiler.operation import ClientOp
+
+    return client.execute(ClientOp(ApiType.CONTEXT, operation, target, payload=payload))
 
 
-def _install_dhcli(install_dir):
-    system = platform.system()
-    os_name = {"Linux": "linux", "Darwin": "darwin"}.get(system)
-    if not os_name:
-        raise RuntimeError(f"unsupported operating system for dhcli: {system}")
-    machine = platform.machine().lower()
-    arch = {"x86_64": "amd64", "amd64": "amd64", "aarch64": "arm64", "arm64": "arm64"}.get(machine)
-    if not arch:
-        raise RuntimeError(f"unsupported architecture for dhcli: {machine}")
-
-    tag = os.environ.get("DHCLI_VERSION")
-    if not tag:
-        release = json.loads(_http_get(f"https://api.github.com/repos/{DHCLI_REPOSITORY}/releases/latest"))
-        tag = release.get("tag_name")
-        if not tag:
-            raise RuntimeError("could not determine the latest dhcli release version")
-    release_url = f"https://github.com/{DHCLI_REPOSITORY}/releases/download/{tag}"
-    archive_name = f"dhcli-{os_name}-{arch}.tar.gz"
-
-    archive = _http_get(f"{release_url}/{archive_name}")
-    checksums = _http_get(f"{release_url}/dhcli_{tag}_checksums.txt").decode()
-    expected = next(
-        (parts[0] for parts in (line.split() for line in checksums.splitlines())
-         if len(parts) >= 2 and parts[1] == archive_name),
-        None,
-    )
-    if not expected:
-        raise RuntimeError(f"no checksum found for {archive_name}")
-    if hashlib.sha256(archive).hexdigest() != expected.lower():
-        raise RuntimeError(f"checksum verification failed for {archive_name}")
-
-    with tarfile.open(fileobj=io.BytesIO(archive), mode="r:gz") as tar:
-        member = tar.getmember("dhcli")
-        if not member.isfile():
-            raise RuntimeError("dhcli archive does not contain a regular dhcli file")
-        binary = tar.extractfile(member).read()
-
-    os.makedirs(install_dir, exist_ok=True)
-    target = os.path.join(install_dir, "dhcli")
-    fd, tmp_path = tempfile.mkstemp(dir=install_dir)
-    try:
-        with os.fdopen(fd, "wb") as output:
-            output.write(binary)
-        os.chmod(tmp_path, 0o755)
-        os.replace(tmp_path, target)
-    except Exception:
-        if os.path.exists(tmp_path):
-            os.unlink(tmp_path)
-        raise
-    print(f"Installed dhcli {tag} to {target}")
-
-
-def _ensure_dhcli():
-    install_dir = os.environ.get("DHCLI_INSTALL_DIR") or os.path.join(os.path.expanduser("~"), ".local", "bin")
-    os.environ["PATH"] = os.pathsep.join(filter(None, [os.environ.get("PATH"), install_dir]))
-    dhcli = shutil.which("dhcli")
-    if dhcli:
-        return dhcli
-    _install_dhcli(install_dir)
-    dhcli = shutil.which("dhcli")
-    if not dhcli:
-        raise RuntimeError(f"dhcli installation failed: not found in {install_dir}")
-    return dhcli
-
-
-def _write_extension(path, extension_id, function, report):
+def _build_extension(project, function, report, extension_id, path):
     run = report.get("run")
     run = getattr(run, "id", run)
-    lines = [
-        f"id: {json.dumps(extension_id)}",
-        "kind: security-report",
-        f"name: {json.dumps('security-report-' + function.name)}",
-        "spec:",
-        f"  analyzer: {json.dumps(report['analyzer'])}",
-        f"  format: {json.dumps(report['format'].upper())}",
-        f"  function: {json.dumps(report['target'])}",
-    ]
+    spec = {
+        "path": path,
+        "analyzer": report["analyzer"],
+        "format": report["format"].upper(),
+        "function": report["target"],
+        "assessment": report["assessment"],
+        "findings": report["findings"],
+    }
     if run is not None:
-        lines.append(f"  run: {json.dumps(str(run))}")
-    lines.append(f"  assessment: {json.dumps(report['assessment'])}")
-    lines.append(f"  findings: {json.dumps(report['findings'])}")
-    with open(path, "w") as output:
-        output.write("\n".join(lines) + "\n")
+        spec["run"] = str(run)
+    return {
+        "id": extension_id,
+        "kind": EXTENSION_KIND,
+        "name": f"{EXTENSION_KIND}-{function.name}",
+        "project": project.name,
+        # enforced server side from the function, but required by request validation
+        "parent": f"function://{project.name}/{function.name}:{function.id}",
+        "spec": spec,
+        "status": {"state": "CREATED"},
+    }
 
 
 def _upload_report(project, report, function, report_file):
-    output_dir = os.path.dirname(report_file)
-    extension_id = os.urandom(16).hex()
-    extension_file = os.path.join(output_dir, "security-report.yaml")
-    _write_extension(extension_file, extension_id, function, report)
+    from digitalhub.entities._commons.utils import build_log_path_as_partition
+    from digitalhub.entities._constructors.uuid import build_uuid
+    from digitalhub.stores.client import get_client
+    from digitalhub.stores.client.common.enums import BackendOp
+    from digitalhub.stores.client.compiler.targets import ContextCollectionTarget, ContextEntityTarget
+    from digitalhub.stores.data.api import get_store
 
-    dhcli = _ensure_dhcli()
-    subprocess.run(
-        [dhcli, "extension", "create", "-p", project.name, "-f", extension_file, "function", function.id],
-        check=True,
+    client = get_client()
+    extension_id = build_uuid()
+    name = f"{EXTENSION_KIND}-{function.name}"
+    path =f"{build_log_path_as_partition(project.name, "function", function.name, function.id)}extensions/{name}/{extension_id}/"
+
+    # 1. create the extension on the function: POST /-/{project}/functions/{id}/extensions
+    #    (no dedicated route in the SDK, the collection target renders "{entity_type}s")
+    extension = _execute(
+        client,
+        BackendOp.CREATE,
+        ContextCollectionTarget(project.name, f"functions/{function.id}/extension"),
+        _build_extension(project, function, report, extension_id, None),
     )
-    subprocess.run(
-        [dhcli, "upload", "-p", project.name, "-f", report_file, "extension", extension_id],
-        check=True,
-    )
+    target = ContextEntityTarget(project.name, "extension", extension["id"])
+
+    def update_status(**status):
+        extension["status"] = {**(extension.get("status") or {}), **status}
+        return _execute(client, BackendOp.UPDATE, target, extension)
+
+    # 2. upload the SARIF report with the SDK store, using the client's store credentials
+    update_status(state="UPLOADING")
+    try:
+        store = get_store(path)
+        paths = store.upload(report_file, path)
+        files = store.get_file_info(path, paths)
+    except Exception:
+        update_status(state="ERROR")
+        raise
+
+    # 3. mark the extension as ready with the uploaded files info
+    update_status(state="READY", files=files)
+
 
 def main(project, run, function_key: str):
     function = project.get_function(function_key)
