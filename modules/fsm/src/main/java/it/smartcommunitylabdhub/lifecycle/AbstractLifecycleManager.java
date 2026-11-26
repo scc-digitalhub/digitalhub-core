@@ -92,6 +92,24 @@ public abstract class AbstractLifecycleManager<D extends BaseDTO & SpecDTO & Sta
      * Operations
      */
 
+    /**
+     * Read the stored object. Reads never take the turn: callers needing a consistent view
+     * read within the turn they already hold.
+     */
+    protected D read(@NotNull String id) throws SystemException {
+        Assert.hasText(id, "id can not be null or empty");
+        try {
+            return entityRepository.get(id);
+        } catch (StoreException e) {
+            log.error("store error: {}", e.getMessage());
+            throw new SystemException(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Write back under the turn: apply the logic, then persist according to the action
+     */
+
     protected D exec(@NotNull @Valid EntityOperation<D> op, @NotNull Function<D, D> logic)
         throws SystemException, CoreRuntimeException {
         log.debug("handle op {} for id {}", op.getAction(), op.getDto().getId());

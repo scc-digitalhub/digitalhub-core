@@ -33,7 +33,6 @@ import it.smartcommunitylabdhub.events.EntityAction;
 import it.smartcommunitylabdhub.events.EntityOperation;
 import it.smartcommunitylabdhub.extensions.ExtensionManager;
 import it.smartcommunitylabdhub.extensions.persistence.ExtensionBuilder;
-import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.lifecycle.RunState;
 import it.smartcommunitylabdhub.runs.listeners.RunOperationsListener;
@@ -61,13 +60,13 @@ public class RunAutoscalerProcessor implements Effect<Run> {
     private RunOperationsListener runOperations;
 
     @Override
-    public K8sRunnable process(String stage, Run run, Serializable input) throws CoreRuntimeException {
+    public void process(String stage, Run run, Serializable output) throws CoreRuntimeException {
         if (run == null) {
-            return null;
+            return;
         }
 
         if ((run.getExtensions() == null || run.getExtensions().isEmpty()) && extManager == null) {
-            return null;
+            return;
         }
 
         try {
@@ -107,8 +106,7 @@ public class RunAutoscalerProcessor implements Effect<Run> {
             log.error("Error processing extensions for {}: {}", run.getId(), e.getMessage());
         }
 
-        //no output, let the chain continue
-        return null;
+        //side effect only, no output
     }
 
     private void onRunning(Run run, List<RunAutoscalerSpec> specs) {

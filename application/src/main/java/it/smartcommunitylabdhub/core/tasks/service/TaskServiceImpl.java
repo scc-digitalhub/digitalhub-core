@@ -32,6 +32,7 @@ import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
+import it.smartcommunitylabdhub.commons.services.EntityService;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.services.SpecValidator;
 import it.smartcommunitylabdhub.core.events.EntityOperationsPublisher;
@@ -55,6 +56,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.domain.Page;
@@ -83,6 +85,10 @@ public class TaskServiceImpl implements TaskService {
 
     @Autowired
     private SearchableEntityRepository<RunEntity, Run> runService;
+
+    //full run delete flow (lifecycle + finalizer), resolved lazily to avoid cycles
+    @Autowired
+    private ObjectProvider<EntityService<Run>> runEntityService;
 
     @Autowired
     private SpecRegistry<Task> specRegistry;
@@ -357,7 +363,13 @@ public class TaskServiceImpl implements TaskService {
                                 log.trace("event: {}", String.valueOf(event));
                             }
 
-                            operationsPublisher.publish(event);
+                            try {
+                                operationsPublisher.publish(event);
+                            } catch (IllegalStateException | UnsupportedOperationException e) {
+                                //bus unavailable or full: fallback to inline delete with cascade
+                                log.warn("unable to dispatch delete for run {}, run inline: {}", run.getId(), e.getMessage());
+                                deleteRunInline(run.getId());
+                            }
                         });
                 }
 
@@ -372,5 +384,19 @@ public class TaskServiceImpl implements TaskService {
 
     private Specification<RunEntity> createTaskSpecification(String task) {
         return (root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("task"), task);
+    }
+
+    private void deleteRunInline(String runId) {
+        EntityService<Run> service = runEntityService.getIfAvailable();
+        if (service == null) {
+            log.error("no run service available, unable to delete run {}", runId);
+            return;
+        }
+
+        try {
+            service.delete(runId, true);
+        } catch (StoreException e) {
+            log.error("error deleting run {}: {}", runId, e.getMessage());
+        }
     }
 }

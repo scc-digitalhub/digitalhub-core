@@ -24,8 +24,11 @@ package it.smartcommunitylabdhub.core.lifecycle;
 
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
+import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.infrastructure.Effect;
 import it.smartcommunitylabdhub.commons.infrastructure.EffectRegistry;
+import it.smartcommunitylabdhub.commons.infrastructure.PostProcessor;
+import it.smartcommunitylabdhub.commons.infrastructure.PostProcessorRegistry;
 import it.smartcommunitylabdhub.commons.infrastructure.Processor;
 import it.smartcommunitylabdhub.commons.infrastructure.ProcessorRegistry;
 import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
@@ -46,36 +49,91 @@ import it.smartcommunitylabdhub.fsm.Fsm;
 import it.smartcommunitylabdhub.fsm.exceptions.InvalidTransitionException;
 import it.smartcommunitylabdhub.lifecycle.AbstractLifecycleManager;
 import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
+import it.smartcommunitylabdhub.lifecycle.locks.EntityLockManager.EntityLock;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
+import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.util.Assert;
+import org.springframework.util.SerializationUtils;
 import org.springframework.util.StringUtils;
 
+/**
+ * Lifecycle manager: drives objects through their FSM.
+ *
+ * - {@code perform(event)}: execute the transition matching the event on the current state (1 step)
+ * - {@code handle(state)}: reconcile to an observed state, following the shortest path from the
+ *   current state (N steps). The path is planned BEFORE starting: no path means nothing is done.
+ *
+ * Every operation runs on behalf of the object OWNER, inside the per-object turn, starting from the
+ * STORED object (or from the dto provided by a caller already holding the turn).
+ *
+ * Each step:
+ * 1. FSM transition logic, on its executor, on a copy of the dto, time bound
+ * 2. processors (parallel, time bound each), results merged into metadata/spec/status
+ * 3. post processors (chained on the transition output, time bound each and as a chain)
+ * 4. write (the step is persisted, DELETED removes the object)
+ * 5. effects dispatched asynchronously (fire and forget)
+ * After the turn is fully released, the caller effect runs once per written step, in order, then a
+ * single LifecycleEvent is published for the whole operation (events publish outcomes, they are
+ * never used to perform work).
+ *
+ * Processors run in batches (metadata, spec, status): every processor gets its own copy of the dto,
+ * and each batch sees the results merged by the previous ones.
+ *
+ * Failures:
+ * - invalid transitions (or no path) throw back to the caller: nothing is written
+ * - rejected transition logic (executor full) throws back to the caller: nothing was executed
+ * - failures during a step move the object to ERROR, keeping the partially changed dto
+ *   (or the pre-step dto on timeout), since external actions can not be rolled back
+ */
 @Slf4j
 public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusDTO & MetadataDTO>
     extends AbstractLifecycleManager<D>
     implements LifecycleManager<D>
 {
 
-    private static final long PROCESSOR_TIMEOUT = 10L; // seconds
+    public static final String STATE_ERROR = "ERROR";
+    public static final String STATE_DELETED = "DELETED";
+
+    public static final long FSM_TIMEOUT = 10L; // seconds
+    public static final long PROCESSOR_TIMEOUT = 10L; // seconds
+    public static final long POST_PROCESSOR_TIMEOUT = 10L; // seconds
+    public static final long POST_PROCESSOR_CHAIN_TIMEOUT = 30L; // seconds
+
+    //shared fallback executor for unwired managers: daemon threads, never one pool per manager
+    private static final ExecutorService DEFAULT_EXECUTOR = Executors.newCachedThreadPool(r -> {
+        Thread t = new Thread(r);
+        t.setName("lifecycle-default-" + t.getId());
+        t.setDaemon(true);
+        return t;
+    });
 
     protected final Class<D> typeClass;
 
@@ -83,12 +141,17 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
     protected ProcessorRegistry<D, Spec> specProcessorRegistry;
     protected ProcessorRegistry<D, Status> statusProcessorRegistry;
 
+    protected PostProcessorRegistry<D> postProcessorRegistry;
     protected EffectRegistry<D> effectRegistry;
 
     protected Fsm.Factory<String, String, D> fsmFactory;
     protected EntityOperationsPublisher operationsPublisher;
 
-    private Executor processorExecutor = Executors.newSingleThreadExecutor();
+    private long fsmTimeoutMillis = TimeUnit.SECONDS.toMillis(FSM_TIMEOUT);
+
+    private Executor fsmExecutor = DEFAULT_EXECUTOR;
+    private Executor processorExecutor = DEFAULT_EXECUTOR;
+    private Executor effectExecutor = DEFAULT_EXECUTOR;
 
     protected OwnerContextManager ownerContextManager;
 
@@ -129,13 +192,43 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
     }
 
     @Autowired(required = false)
-    public void setProcessorExecutor(@Qualifier("processorExecutor") Executor processorExecutor) {
-        this.processorExecutor = processorExecutor;
+    public void setPostProcessorRegistry(PostProcessorRegistry<D> postProcessorRegistry) {
+        this.postProcessorRegistry = postProcessorRegistry;
     }
 
     @Autowired(required = false)
     public void setEffectRegistry(EffectRegistry<D> effectRegistry) {
         this.effectRegistry = effectRegistry;
+    }
+
+    /**
+     * Time bound for the FSM transition logic of a single step
+     */
+    public void setFsmTimeout(@NotNull Duration timeout) {
+        Assert.notNull(timeout, "timeout can not be null");
+        Assert.isTrue(!timeout.isNegative() && !timeout.isZero(), "timeout must be positive");
+        this.fsmTimeoutMillis = timeout.toMillis();
+    }
+
+    @Autowired(required = false)
+    public void setFsmExecutor(@Qualifier("fsmExecutor") Executor fsmExecutor) {
+        if (fsmExecutor != null) {
+            this.fsmExecutor = fsmExecutor;
+        }
+    }
+
+    @Autowired(required = false)
+    public void setProcessorExecutor(@Qualifier("processorExecutor") Executor processorExecutor) {
+        if (processorExecutor != null) {
+            this.processorExecutor = processorExecutor;
+        }
+    }
+
+    @Autowired(required = false)
+    public void setEffectExecutor(@Qualifier("effectExecutor") Executor effectExecutor) {
+        if (effectExecutor != null) {
+            this.effectExecutor = effectExecutor;
+        }
     }
 
     @Autowired(required = false)
@@ -164,53 +257,17 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         }
 
         //initial state is current state
-        String state = StatusFieldAccessor.with(dto.getStatus()).getState();
+        String state = state(dto);
         if (state == null) {
             throw new IllegalStateException("State not set");
         }
 
-        //get enum via enum..
-        // S initialState = Enum.valueOf(stateClass, state);
-
-        // create state machine via factory
-        // context is the dto itself
+        // create state machine via factory, context is the dto itself
         return fsmFactory.create(state, dto);
     }
 
     /*
-     * Listen for event callbacks
-     * DISABLED: we are producers of events not consumers!
-     */
-    // @Async
-    // @EventListener
-    // public void receive(LifecycleEvent<D> event) {
-    //     if (event.getEvent() == null) {
-    //         return;
-    //     }
-    //     try {
-    //         log.debug("receive event {} for {}", event.getEvent(), event.getId());
-    //         if (log.isTraceEnabled()) {
-    //             log.trace("event: {}", event);
-    //         }
-
-    //         String id = event.getId();
-
-    //         //load trigger from db
-    //         D dto = entityService.find(event.getId());
-    //         if (dto == null) {
-    //             log.error("Entity with id {} not found", id);
-    //             return;
-    //         }
-
-    //         //perform lifecycle operation as callback to event
-    //         perform(dto, event.getEvent(), event);
-    //     } catch (StoreException e) {
-    //         log.error("Error with store", e.getMessage());
-    //     }
-    // }
-
-    /*
-     * Perform lifecycle operation from events
+     * Perform: execute the transition matching the event (single step)
      */
     public D perform(@NotNull D dto, @NotNull String event) {
         return perform(dto, event, null, null);
@@ -226,74 +283,22 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         @Nullable I input,
         @Nullable BiConsumer<D, R> effect
     ) {
-        //perform on behalf of the owner
-        try (OwnerContextManager.Scope scope = asOwner(dto)) {
-            return doPerform(dto, event, input, effect);
-        }
-    }
+        Assert.notNull(dto, "dto can not be null");
+        Assert.hasText(event, "event can not be null or empty");
+        log.debug("perform {} for {} with id {}", event, typeClass.getSimpleName().toLowerCase(), dto.getId());
 
-    protected <I extends Serializable, R extends Serializable> D doPerform(
-        @NotNull D dto,
-        @NotNull String event,
-        @Nullable I input,
-        @Nullable BiConsumer<D, R> effect
-    ) {
-        log.debug("perform {} for {} with id {}", event, dto.getClass().getSimpleName().toLowerCase(), dto.getId());
-        if (log.isTraceEnabled()) {
-            log.trace("dto: {}", dto);
-        }
-
-        //handle event via FSM
-        // E lifecycleEvent = Enum.valueOf(eventsClass, event);
-        D res = dto;
-        try {
-            res = transition(dto, (fsm, i) -> fsm.perform(event, i), input, effect);
-        } catch (CoreRuntimeException e) {
-            //on ex try transitioning to ERROR
-            log.debug("entity {} transition to {} generated an exception, move to ERROR", dto.getId());
-            if (e.getMessage() != null) {
-                //merge message
-                dto.setStatus(MapUtils.mergeMultipleMaps(dto.getStatus(), Map.of("message", e.getMessage())));
-            }
-
-            //transition
-            res = transition(dto, (fsm, i) -> fsm.goToState("ERROR", i), input, effect);
-        }
-
-        StatusFieldAccessor status = StatusFieldAccessor.with(res.getStatus());
-        if ("DELETED".equals(status.getState())) {
-            //custom handle DELETED: we have already performed cleanup either via logic or side effects
-            //we can now remove the entity from the repository via op
-            log.debug("entity {} is in DELETED state, removing from repository", dto.getId());
-            res = exec(new EntityOperation<>(dto, EntityAction.DELETE), d1 -> d1);
-        }
-
-        //publish new event
-        LifecycleEvent<D> e = LifecycleEvent.<D>builder()
-            .id(res.getId())
-            .kind(res.getKind())
-            .user(res.getUser())
-            .project(res.getProject())
-            .event(event)
-            .state(status.getState())
-            //append object to event
-            .dto(res)
-            .build();
-
-        log.debug("publish event {} for {}", event, res.getId());
-        if (log.isTraceEnabled()) {
-            log.trace("event: {}", e);
-        }
-        this.eventPublisher.publishEvent(e);
-
-        return res;
+        return operate(
+            dto,
+            effect,
+            current -> List.of(new Step<Fsm<String, String, D>, R>(event, input, fsm -> fsm.<I, R>perform(event, input)))
+        );
     }
 
     /*
-     * Handle lifecycle events from state changes
+     * Handle: reconcile to the given state, following the shortest path (N steps)
      */
-    public D handle(@NotNull D dto, String nexState) {
-        return handle(dto, nexState, null, null);
+    public D handle(@NotNull D dto, String nextState) {
+        return handle(dto, nextState, null, null);
     }
 
     public <I extends Serializable> D handle(@NotNull D dto, String nextState, @Nullable I input) {
@@ -306,251 +311,516 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         @Nullable I input,
         @Nullable BiConsumer<D, R> effect
     ) {
-        //perform on behalf of the owner
-        try (OwnerContextManager.Scope scope = asOwner(dto)) {
-            return doHandle(dto, nextState, input, effect);
-        }
-    }
+        Assert.notNull(dto, "dto can not be null");
+        Assert.hasText(nextState, "state can not be null or empty");
+        log.debug("handle {} for {} with id {}", nextState, typeClass.getSimpleName().toLowerCase(), dto.getId());
 
-    protected <I extends Serializable, R extends Serializable> D doHandle(
-        @NotNull D dto,
-        String nextState,
-        @Nullable I input,
-        @Nullable BiConsumer<D, R> effect
-    ) {
-        log.debug("handle {} for {} with id {}", nextState, dto.getClass().getSimpleName().toLowerCase(), dto.getId());
-        if (log.isTraceEnabled()) {
-            log.trace("dto: {}", dto);
-        }
+        return operate(
+            dto,
+            effect,
+            current -> {
+                //plan BEFORE starting: no path means nothing is done
+                String from = state(current);
+                List<String> path = fsm(current)
+                    .pathTo(nextState)
+                    .orElseThrow(() -> new InvalidTransitionException(from, nextState));
 
-        //transition to next state via FSM
-        // S nextState = Enum.valueOf(stateClass, nextStateValue);
-        D res = dto;
-        try {
-            res = transition(dto, (fsm, i) -> fsm.goToState(nextState, i), input, effect);
-        } catch (CoreRuntimeException e) {
-            //on ex try transitioning to ERROR
-            log.debug("entity {} transition to {} generated an exception, move to ERROR", dto.getId());
-            if (e.getMessage() != null) {
-                //merge message
-                dto.setStatus(MapUtils.mergeMultipleMaps(dto.getStatus(), Map.of("message", e.getMessage())));
+                log.debug("planned path {} -> {} for {}: {}", from, nextState, current.getId(), path);
+                return path
+                    .stream()
+                    .map(state -> new Step<Fsm<String, String, D>, R>(null, input, fsm -> fsm.<I, R>goToState(state, input)))
+                    .toList();
             }
-            //transition
-            res = transition(dto, (fsm, i) -> fsm.goToState("ERROR", i), input, effect);
-        }
-        StatusFieldAccessor status = StatusFieldAccessor.with(res.getStatus());
-        if ("DELETED".equals(status.getState())) {
-            //custom handle DELETED: we have already performed cleanup either via logic or side effects
-            //we can now remove the entity from the repository via op
-            log.debug("entity {} is in DELETED state, removing from repository", dto.getId());
-            res = exec(new EntityOperation<>(dto, EntityAction.DELETE), d1 -> d1);
-        }
-
-        //publish new event
-        LifecycleEvent<D> e = LifecycleEvent.<D>builder()
-            .id(res.getId())
-            .kind(res.getKind())
-            .user(res.getUser())
-            .project(res.getProject())
-            .state(status.getState())
-            //append object to event
-            .dto(res)
-            .build();
-
-        log.debug("publish event on state {} for {}", status.getState(), res.getId());
-        if (log.isTraceEnabled()) {
-            log.trace("event: {}", e);
-        }
-        this.eventPublisher.publishEvent(e);
-
-        return res;
+        );
     }
 
-    private <I extends Serializable, R extends Serializable> D transition(
+    /*
+     * Operation: owner scope + turn + steps
+     */
+    private <R extends Serializable> D operate(
         @NotNull D dto,
-        @NotNull BiFunction<Fsm<String, String, D>, I, Optional<R>> logic,
-        @Nullable I input,
-        @Nullable BiConsumer<D, R> effect
+        @Nullable BiConsumer<D, R> effect,
+        @NotNull Function<D, List<Step<Fsm<String, String, D>, R>>> planner
     ) {
-        //execute update op with locking
-        return exec(new EntityOperation<>(dto, EntityAction.UPDATE), d -> {
-            try {
-                //build state machine on current context
-                //this will isolate the DTO from external modifications
-                Fsm<String, String, D> fsm = fsm(d);
+        String id = dto.getId();
+        Assert.hasText(id, "id can not be null or empty");
 
-                //perform via FSM
-                Optional<R> output = logic.apply(fsm, input);
-                String state = fsm.getCurrentState();
-                D context = fsm.getContext();
+        //a caller already holding the turn has read the object within it: trust the dto
+        boolean nested = lockManager.isHeldByCurrentThread(typeClass, id);
 
-                //update status from fsm output
+        //owner from the STORED object (immutable), never from the caller dto
+        D owned = nested ? dto : read(id);
+
+        //act on behalf of the owner, for the whole operation including the caller effect
+        try (OwnerContextManager.Scope scope = asOwner(owned)) {
+            try (EntityLock turn = lockManager.acquire(typeClass, id)) {
+                //read the current version within the turn
+                D current = nested ? dto : read(id);
+
+                List<Step<Fsm<String, String, D>, R>> steps = planner.apply(current);
+                D res = current;
+                for (Step<Fsm<String, String, D>, R> step : steps) {
+                    StepResult<D, R> result = execute(current, step.event(), step.input(), step.logic());
+                    res = result.dto();
+
+                    if (effect != null) {
+                        //caller effect runs after the turn is fully released, once per written step
+                        D written = copy(result.dto());
+                        R output = result.output();
+                        lockManager.runAfterRelease(typeClass, id, () -> effect.accept(written, output));
+                    }
+
+                    String state = state(res);
+                    if (result.failed() || STATE_ERROR.equals(state) || STATE_DELETED.equals(state)) {
+                        //terminal for this operation
+                        break;
+                    }
+
+                    current = res;
+                }
+
+                if (!steps.isEmpty()) {
+                    //one event per operation, published AFTER the caller effects:
+                    //events are for publishing the outcome, intermediate steps are not published
+                    D published = copy(res);
+                    String event = steps.get(0).event();
+                    lockManager.runAfterRelease(typeClass, id, () -> publish(published, event, state(published)));
+                }
+
+                return res;
+            }
+        }
+    }
+
+    private <R extends Serializable> StepResult<D, R> execute(
+        @NotNull D current,
+        @Nullable String event,
+        @Nullable Serializable input,
+        @NotNull Function<Fsm<String, String, D>, Optional<R>> logic
+    ) {
+        try {
+            return step(current, event, input, logic);
+        } catch (StepFailure f) {
+            @SuppressWarnings("unchecked")
+            D failed = (D) f.dto;
+            log.debug("step on {} failed, move to ERROR: {}", current.getId(), f.getMessage());
+            return error(failed, event, input, f.getMessage());
+        }
+    }
+
+    private <R extends Serializable> StepResult<D, R> step(
+        @NotNull D current,
+        @Nullable String event,
+        @Nullable Serializable input,
+        @NotNull Function<Fsm<String, String, D>, Optional<R>> logic
+    ) {
+        //transition output escapes the update logic via holder
+        AtomicReference<R> holder = new AtomicReference<>();
+
+        //write back via exec: logic is applied within the (re-entrant) turn, then persisted
+        D saved = exec(
+            new EntityOperation<>(current, EntityAction.UPDATE),
+            dto -> {
+                //1. fsm logic on a copy, time bound
+                FsmOutcome<D, R> outcome = runFsm(dto, logic);
+                String state = outcome.state();
+                R output = outcome.output();
+
+                //merge back ONLY metadata, spec and status from the fsm context:
+                //every other field is effectively final
+                D d = merge(dto, outcome.context());
+
+                //enforce state from the fsm
                 Map<String, Serializable> baseStatus = Map.of("state", state);
-                //merge action context into spec
-                //NOTE: we let transition fully modify metadata
-                d.setMetadata(context.getMetadata());
+                d.setStatus(MapUtils.mergeMultipleMaps(d.getStatus(), baseStatus));
 
-                //merge action context into spec
-                //NOTE: we let transition fully modify spec
-                //TODO evaluate enforcing spec compliance and merging with old values
-                d.setSpec(context.getSpec());
-
-                //merge action context into status
-                //NOTE: we let transition fully modify status
-                d.setStatus(MapUtils.mergeMultipleMaps(context.getStatus(), baseStatus));
-
-                //let processors parse the result
+                //2. processors
                 if (metadataProcessorRegistry != null) {
                     Map<String, Serializable> psm = postProcess(d, state, input, metadataProcessorRegistry);
-
-                    //merge metadata
-                    d.setMetadata(MapUtils.mergeMultipleMaps(context.getMetadata(), psm));
+                    d.setMetadata(MapUtils.mergeMultipleMaps(d.getMetadata(), psm));
                 }
                 if (specProcessorRegistry != null) {
                     Map<String, Serializable> psm = postProcess(d, state, input, specProcessorRegistry);
-
-                    //merge spec
-                    //TODO evaluate enforcing spec compliance and merging with old values
-                    d.setSpec(MapUtils.mergeMultipleMaps(context.getSpec(), psm));
+                    d.setSpec(MapUtils.mergeMultipleMaps(d.getSpec(), psm));
                 }
                 if (statusProcessorRegistry != null) {
                     Map<String, Serializable> psm = postProcess(d, state, input, statusProcessorRegistry);
-
-                    //merge and enforce correct status
-                    d.setStatus(MapUtils.mergeMultipleMaps(context.getStatus(), psm, baseStatus));
+                    d.setStatus(MapUtils.mergeMultipleMaps(d.getStatus(), psm, baseStatus));
                 }
 
-                //side effect consumes output if available
-                if (effectRegistry != null) {
-                    //provided effect as last element in chain
-                    output = Optional.ofNullable(effectSaga(d, state, output.orElse(null), effectRegistry));
-                }
+                //3. post processors on the output
+                holder.set(postProcessOutput(d, state, output));
 
-                if (effect != null) {
-                    //process  locally provided effect
-                    effect.accept(d, output.orElse(null));
-                }
-
+                //4. persisted by exec
                 return d;
-            } catch (InvalidTransitionException e) {
-                log.debug("Invalid transition {} -> {}", e.getFromState(), e.getToState());
-                throw e;
-            } catch (RuntimeException ex) {
-                log.debug("Error performing transition on {}: {}", d.getId(), ex.getMessage());
-                throw new CoreRuntimeException(ex.getMessage());
             }
-        });
+        );
+
+        String state = state(saved);
+        R output = holder.get();
+
+        if (STATE_DELETED.equals(state)) {
+            //cleanup already performed by the transition: remove the object via exec
+            log.debug("entity {} is in DELETED state, removing from repository", saved.getId());
+            exec(new EntityOperation<>(saved, EntityAction.DELETE), d -> d);
+        }
+
+        //5. effects, async
+        dispatchEffects(saved, state, output);
+
+        return new StepResult<>(saved, output, false);
     }
 
+    /**
+     * Move to ERROR from the given dto (partial or pre-step), with the operation input
+     */
+    private <R extends Serializable> StepResult<D, R> error(
+        D failed,
+        @Nullable String event,
+        @Nullable Serializable input,
+        String message
+    ) {
+        if (message != null) {
+            failed.setStatus(MapUtils.mergeMultipleMaps(failed.getStatus(), Map.of("message", message)));
+        }
+
+        try {
+            StepResult<D, R> res = step(failed, event, input, fsm -> fsm.<Serializable, R>goToState(STATE_ERROR, input));
+            return new StepResult<>(res.dto(), res.output(), true);
+        } catch (StepFailure e) {
+            //ERROR transition itself failed: propagate, nothing more is written
+            log.error("unable to move {} to ERROR: {}", failed.getId(), e.getMessage());
+            throw new SystemException("unable to move " + failed.getId() + " to ERROR: " + e.getMessage(), e);
+        }
+    }
+
+    private <R extends Serializable> FsmOutcome<D, R> runFsm(
+        @NotNull D current,
+        @NotNull Function<Fsm<String, String, D>, Optional<R>> logic
+    ) {
+        //work on a copy: the fsm and its logic never touch the caller object
+        D work = copy(current);
+        Fsm<String, String, D> fsm = fsm(work);
+
+        FutureTask<FsmOutcome<D, R>> task = new FutureTask<>(
+            withContext(() -> {
+                Optional<R> out = logic.apply(fsm);
+                return new FsmOutcome<>(fsm.getCurrentState(), fsm.getContext(), out.orElse(null));
+            })
+        );
+
+        try {
+            fsmExecutor.execute(task);
+        } catch (RejectedExecutionException e) {
+            //nothing was executed: back to the caller, no ERROR
+            log.warn("transition rejected for {}: executor is full", current.getId());
+            throw new SystemException("unable to schedule transition for " + current.getId() + ", retry later", e);
+        }
+
+        try {
+            return task.get(fsmTimeoutMillis, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            task.cancel(true);
+            log.warn("transition timed out for {}", current.getId());
+            //the logic may still be running: use the pre-step dto
+            throw new StepFailure(copy(current), "transition timeout", e);
+        } catch (InterruptedException e) {
+            task.cancel(true);
+            Thread.currentThread().interrupt();
+            throw new SystemException("interrupted during transition for " + current.getId(), e);
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof InvalidTransitionException ite) {
+                //invalid: back to the caller, nothing written
+                throw ite;
+            }
+
+            //logic completed with an error: the partial changes on the context are complete,
+            //merge back only metadata, spec and status
+            String message = cause != null && cause.getMessage() != null ? cause.getMessage() : "transition error";
+            log.debug("transition logic failed for {}: {}", current.getId(), message);
+            throw new StepFailure(merge(current, work), message, cause);
+        }
+    }
+
+    private void publish(D dto, @Nullable String event, String state) {
+        LifecycleEvent<D> e = LifecycleEvent.<D>builder()
+            .id(dto.getId())
+            .kind(dto.getKind())
+            .user(dto.getUser())
+            .project(dto.getProject())
+            .event(event)
+            .state(state)
+            .dto(copy(dto))
+            .build();
+
+        log.debug("publish event {} on state {} for {}", event, state, dto.getId());
+        if (log.isTraceEnabled()) {
+            log.trace("event: {}", e);
+        }
+
+        this.eventPublisher.publishEvent(e);
+    }
+
+    /*
+     * Processors: parallel, each time bound, results merged in registration order
+     */
     protected <I extends Serializable> Map<String, Serializable> postProcess(
         @NotNull D dto,
         @NotNull String state,
         @Nullable I input,
-        @Nullable @NotNull ProcessorRegistry<D, ? extends Spec> processorRegistry
+        @NotNull ProcessorRegistry<D, ? extends Spec> processorRegistry
     ) {
-        String stage = "on" + StringUtils.capitalize(state.toLowerCase());
+        String stage = stage(state);
+        List<? extends Processor<D, ? extends Spec>> processors = processorRegistry.getProcessors(stage);
+        if (processors == null || processors.isEmpty()) {
+            return new HashMap<>();
+        }
 
-        // scatter: submit all tasks upfront so a multi-thread executor can run them in parallel.
-        // Each future has its own independent PROCESSOR_TIMEOUT budget via orTimeout
-        // The calling thread is never the executor thread, so join() cannot deadlock.
-        List<CompletableFuture<Map<String, Serializable>>> futures = processorRegistry
-            .getProcessors(stage)
-            .stream()
-            .map(p ->
-                CompletableFuture.supplyAsync(() -> invokeProcessor(p, stage, dto, input), processorExecutor).orTimeout(
-                    PROCESSOR_TIMEOUT,
-                    TimeUnit.SECONDS
-                )
-            )
-            .toList();
-        List<Map<String, Serializable>> res = futures
-            .stream()
-            .map(f -> {
-                try {
-                    return f.join();
-                } catch (CompletionException e) {
-                    if (e.getCause() instanceof TimeoutException) {
-                        log.warn("Processor timed out for stage {} on {}, skipping", stage, dto.getId());
-                    } else {
-                        log.error(
-                            "Processor failed for stage {} on {}: {}",
-                            stage,
-                            dto.getId(),
-                            e.getCause().getMessage()
-                        );
-                    }
-                    return null;
-                }
-            })
-            .toList();
+        // scatter: submit all tasks upfront, each with its own time budget
+        List<FutureTask<Map<String, Serializable>>> tasks = new ArrayList<>();
+        for (Processor<D, ? extends Spec> p : processors) {
+            FutureTask<Map<String, Serializable>> task = new FutureTask<>(
+                withContext(() -> {
+                    //safeguard dto from side effects by deep cloning it for each processor
+                    Spec s = p.process(stage, copy(dto), input);
+                    return s != null ? s.toMap() : null;
+                })
+            );
+            try {
+                processorExecutor.execute(task);
+                tasks.add(task);
+            } catch (RejectedExecutionException e) {
+                log.error("Processor rejected for stage {} on {}, skipping", stage, dto.getId());
+            }
+        }
 
-        return res.stream().reduce(new HashMap<>(), MapUtils::mergeMultipleMaps);
+        // gather in order
+        Map<String, Serializable> res = new HashMap<>();
+        for (FutureTask<Map<String, Serializable>> task : tasks) {
+            Map<String, Serializable> map = await(task, TimeUnit.SECONDS.toMillis(PROCESSOR_TIMEOUT), stage, dto);
+            if (map != null) {
+                res = MapUtils.mergeMultipleMaps(res, map);
+            }
+        }
+
+        return res;
     }
 
-    private <I extends Serializable> Map<String, Serializable> invokeProcessor(
-        @NotNull Processor<D, ? extends Spec> processor,
-        @NotNull String stage,
-        @NotNull D dto,
-        @Nullable I input
+    /*
+     * Post processors: chained on the output, each time bound, the whole chain time bound
+     */
+    @SuppressWarnings("unchecked")
+    protected <R extends Serializable> R postProcessOutput(@NotNull D dto, @NotNull String state, @Nullable R output) {
+        if (postProcessorRegistry == null || output == null) {
+            return output;
+        }
+
+        String stage = stage(state);
+        List<PostProcessor<D>> postProcessors = postProcessorRegistry.getPostProcessors(stage);
+        if (postProcessors == null || postProcessors.isEmpty()) {
+            return output;
+        }
+
+        long deadline = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(POST_PROCESSOR_CHAIN_TIMEOUT);
+
+        if (output instanceof Collection<?> collection) {
+            //multiple outputs: each element goes through the chain
+            ArrayList<Serializable> list = new ArrayList<>();
+            for (Object o : collection) {
+                list.add(o instanceof Serializable so ? chain(dto, stage, so, postProcessors, deadline) : null);
+            }
+            return (R) list;
+        }
+
+        return (R) chain(dto, stage, output, postProcessors, deadline);
+    }
+
+    private Serializable chain(
+        D dto,
+        String stage,
+        Serializable output,
+        List<PostProcessor<D>> postProcessors,
+        long deadline
     ) {
+        Serializable current = output;
+        for (PostProcessor<D> pp : postProcessors) {
+            long remaining = deadline - System.currentTimeMillis();
+            if (remaining <= 0) {
+                log.warn("Post processors chain timed out for stage {} on {}, skipping remaining", stage, dto.getId());
+                break;
+            }
+
+            //each post processor works on its own copy of the output
+            final Serializable in = SerializationUtils.clone(current);
+            FutureTask<Serializable> task = new FutureTask<>(withContext(() -> pp.process(stage, copy(dto), in)));
+            try {
+                processorExecutor.execute(task);
+            } catch (RejectedExecutionException e) {
+                log.error("Post processor rejected for stage {} on {}, skipping", stage, dto.getId());
+                continue;
+            }
+
+            Serializable o = await(
+                task,
+                Math.min(TimeUnit.SECONDS.toMillis(POST_PROCESSOR_TIMEOUT), remaining),
+                stage,
+                dto
+            );
+            if (o != null) {
+                current = o;
+            }
+        }
+
+        return current;
+    }
+
+    /**
+     * Wait for a processing task: CoreRuntimeException fails the step, other failures are skipped
+     */
+    private <T> T await(FutureTask<T> task, long timeoutMs, String stage, D dto) {
         try {
-            //safeguard dto from side effects by deep cloning it for each processor
-            D cd = JacksonMapper.deepClone(dto, typeClass);
-            Spec s = processor.process(stage, cd, input);
-            return s != null ? s.toMap() : null;
-        } catch (IOException | CoreRuntimeException e) {
-            log.error("Error processing stage {} for {}", stage, dto.getId(), e);
+            return task.get(timeoutMs, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            task.cancel(true);
+            log.warn("Processing timed out for stage {} on {}, skipping", stage, dto.getId());
+            return null;
+        } catch (InterruptedException e) {
+            task.cancel(true);
+            Thread.currentThread().interrupt();
+            throw new SystemException("interrupted during processing for " + dto.getId(), e);
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof CoreRuntimeException cre) {
+                //explicit failure signaled by the processor: fail the step
+                throw new StepFailure(dto, cre.getMessage(), cre);
+            }
+
+            log.error(
+                "Processing failed for stage {} on {}: {}",
+                stage,
+                dto.getId(),
+                cause != null ? cause.getMessage() : e.getMessage()
+            );
             return null;
         }
     }
 
-    protected <I extends Serializable> I effectSaga(
-        @NotNull D dto,
-        @NotNull String state,
-        @Nullable I input,
-        @Nullable @NotNull EffectRegistry<D> effectRegistry
-    ) {
-        String stage = "on" + StringUtils.capitalize(state.toLowerCase());
+    /*
+     * Effects: async, fire and forget, after the write
+     */
+    private void dispatchEffects(D saved, String state, @Nullable Serializable output) {
+        if (effectRegistry == null) {
+            return;
+        }
 
-        // Iterate over all effects in order (sequential: each consumes the previous output).
-        // Each step is individually guarded by PROCESSOR_TIMEOUT via a dedicated future.
-        // null outputs are allowed and bypassed in the chain.
-        I output = input;
-        for (Effect<D> effect : effectRegistry.getEffects(stage)) {
-            final I currentOutput = output;
+        String stage = stage(state);
+        List<Effect<D>> effects = effectRegistry.getEffects(stage);
+        if (effects == null || effects.isEmpty()) {
+            return;
+        }
+
+        D dto = copy(saved);
+        Serializable out = output != null ? SerializationUtils.clone(output) : null;
+
+        try {
+            Callable<Void> task = withContext(() -> {
+                //ordered, each effect isolated from the others: failures are captured per effect
+                for (Effect<D> effect : effects) {
+                    FutureTask<Void> single = new FutureTask<>(() -> {
+                        effect.process(stage, copy(dto), out);
+                        return null;
+                    });
+                    single.run();
+
+                    try {
+                        single.get();
+                    } catch (ExecutionException e) {
+                        Throwable cause = e.getCause() != null ? e.getCause() : e;
+                        log.error("Effect failed for stage {} on {}: {}", stage, dto.getId(), cause.getMessage());
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return null;
+                    }
+                }
+                return null;
+            });
+            effectExecutor.execute(new FutureTask<>(task));
+        } catch (RejectedExecutionException e) {
+            log.error("Effects rejected for stage {} on {}, skipping", stage, saved.getId());
+        }
+    }
+
+    /*
+     * Helpers
+     */
+    protected static String stage(String state) {
+        return "on" + StringUtils.capitalize(state.toLowerCase());
+    }
+
+    protected static String state(BaseDTO dto) {
+        return dto instanceof StatusDTO s ? StatusFieldAccessor.with(s.getStatus()).getState() : null;
+    }
+
+    /**
+     * Build the result of a transition: a copy of the base object, with metadata, spec and status
+     * taken from the fsm context. Every other field is effectively final.
+     */
+    protected D merge(D base, D context) {
+        D d = copy(base);
+        d.setMetadata(context.getMetadata());
+        d.setSpec(context.getSpec());
+        d.setStatus(context.getStatus());
+        return d;
+    }
+
+    protected D copy(D dto) {
+        try {
+            return JacksonMapper.deepClone(dto, typeClass);
+        } catch (IOException e) {
+            throw new SystemException("unable to copy dto " + dto.getId() + ": " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Propagate the current security context (the owner) to the executing thread
+     */
+    private static <T> Callable<T> withContext(Callable<T> callable) {
+        SecurityContext context = SecurityContextHolder.getContext();
+        return () -> {
+            SecurityContext previous = SecurityContextHolder.getContext();
+            SecurityContextHolder.setContext(context);
             try {
-                //safeguard dto from side effects by deep cloning it for each effect
-                I o = CompletableFuture.supplyAsync(
-                    () -> {
-                        try {
-                            D cd = JacksonMapper.deepClone(dto, typeClass);
-                            return effect.process(stage, cd, currentOutput);
-                        } catch (IOException | CoreRuntimeException e) {
-                            throw new CompletionException(e);
-                        }
-                    },
-                    processorExecutor
-                )
-                    .orTimeout(PROCESSOR_TIMEOUT, TimeUnit.SECONDS)
-                    .join();
-                //keep only non null, as null means bypass and continue with next effect
-                if (o != null) {
-                    output = o;
-                }
-            } catch (CompletionException e) {
-                if (e.getCause() instanceof TimeoutException) {
-                    log.warn("Effect timed out for stage {} on {}, skipping", stage, dto.getId());
-                } else {
-                    log.error("Effect failed for stage {} on {}: {}", stage, dto.getId(), e.getCause().getMessage());
-                }
-                //bypass effect and continue with next
+                return callable.call();
+            } finally {
+                SecurityContextHolder.setContext(previous);
             }
-        }
+        };
+    }
 
-        if (log.isTraceEnabled()) {
-            log.trace("effect saga for stage {} on {} output {}", stage, dto.getId(), output);
-        }
+    /*
+     * Types
+     */
 
-        return output;
+    /**
+     * A single FSM step: an optional event name (for events) and the logic to apply on the FSM
+     */
+    protected record Step<F, R>(@Nullable String event, @Nullable Serializable input, Function<F, Optional<R>> logic) {}
+
+    private record StepResult<D, R>(D dto, @Nullable R output, boolean failed) {}
+
+    private record FsmOutcome<D, R>(String state, D context, @Nullable R output) {}
+
+    /**
+     * Failure during a step: carries the dto to move to ERROR
+     */
+    private static class StepFailure extends RuntimeException {
+
+        private final transient Object dto;
+
+        StepFailure(Object dto, String message, Throwable cause) {
+            super(message, cause, false, false);
+            this.dto = dto;
+        }
     }
 }

@@ -44,6 +44,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
@@ -70,6 +71,8 @@ public class KindAwareRunLifecycleManager extends KindAwareLifecycleManager<Run>
     protected ProcessorRegistry<Run, Metadata> metadataProcessorRegistry;
     protected ProcessorRegistry<Run, Spec> specProcessorRegistry;
     protected ProcessorRegistry<Run, Status> statusProcessorRegistry;
+
+    protected AutowireCapableBeanFactory beanFactory;
 
     @Autowired(required = false)
     public void setRuntimes(
@@ -98,6 +101,11 @@ public class KindAwareRunLifecycleManager extends KindAwareLifecycleManager<Run>
     @Autowired
     public void setEntityRepository(EntityRepository<Run> entityService) {
         this.entityRepository = entityService;
+    }
+
+    @Autowired(required = false)
+    public void setBeanFactory(AutowireCapableBeanFactory beanFactory) {
+        this.beanFactory = beanFactory;
     }
 
     @Autowired(required = false)
@@ -180,13 +188,19 @@ public class KindAwareRunLifecycleManager extends KindAwareLifecycleManager<Run>
 
                     Runtime<?, ?, ?> runtime = runtimes.get(type.runtime());
                     RunLifecycleManager<?, ?, ?> m = new RunLifecycleManager<>(runtime);
-                    //inject deps
-                    m.setEntityRepository(this.entityRepository);
-                    m.setEventPublisher(this.eventPublisher);
-                    m.setRunnablePublisher(runnablePublisher);
-                    m.setMetadataProcessorRegistry(metadataProcessorRegistry);
-                    m.setSpecProcessorRegistry(specProcessorRegistry);
-                    m.setStatusProcessorRegistry(statusProcessorRegistry);
+                    if (beanFactory != null) {
+                        //inject ALL deps as for managed beans (registries, executors, owner, turns...)
+                        beanFactory.autowireBean(m);
+                        beanFactory.initializeBean(m, "defaultRunLifecycleManager." + kind);
+                    } else {
+                        //inject deps
+                        m.setEntityRepository(this.entityRepository);
+                        m.setEventPublisher(this.eventPublisher);
+                        m.setRunnablePublisher(runnablePublisher);
+                        m.setMetadataProcessorRegistry(metadataProcessorRegistry);
+                        m.setSpecProcessorRegistry(specProcessorRegistry);
+                        m.setStatusProcessorRegistry(statusProcessorRegistry);
+                    }
 
                     managers.put(kind, m);
                 }

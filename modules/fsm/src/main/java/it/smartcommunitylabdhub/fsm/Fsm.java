@@ -21,7 +21,12 @@ package it.smartcommunitylabdhub.fsm;
 import it.smartcommunitylabdhub.fsm.exceptions.InvalidTransitionException;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
+import java.util.ArrayDeque;
 import java.util.Collections;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -160,6 +165,68 @@ public class Fsm<S, E, C> {
             }
             return Optional.empty();
         });
+    }
+
+    /**
+     * Find the shortest path (at least one step) from the current state to the target state.
+     *
+     * Breadth-first search over the transition graph, exploring transitions in declaration order:
+     * the result is deterministic for a given graph. FSM authors are responsible for avoiding
+     * ambiguous paths. When target equals the current state only an explicit cycle (ex. a self
+     * loop) is a valid path.
+     *
+     * @param targetState the state to reach
+     * @return the ordered list of states to traverse (the last one is the target), or empty when
+     *         no path exists
+     */
+    public Optional<List<S>> pathTo(@NotNull S targetState) {
+        Assert.notNull(targetState, "target state must not be null");
+
+        S start = currentState;
+        //parent of each discovered state, used to rebuild the path
+        Map<S, S> parents = new HashMap<>();
+        Deque<S> queue = new ArrayDeque<>();
+
+        //seed with direct neighbours: the path always has at least one step
+        for (S next : nextStates(start)) {
+            if (!parents.containsKey(next)) {
+                parents.put(next, start);
+                queue.add(next);
+            }
+        }
+
+        while (!queue.isEmpty()) {
+            S state = queue.poll();
+            if (state.equals(targetState)) {
+                //rebuild path backwards until the start
+                LinkedList<S> path = new LinkedList<>();
+                S cur = state;
+                do {
+                    path.addFirst(cur);
+                    cur = parents.get(cur);
+                } while (cur != null && !cur.equals(start));
+
+                return Optional.of(List.copyOf(path));
+            }
+
+            for (S next : nextStates(state)) {
+                if (!parents.containsKey(next)) {
+                    parents.put(next, state);
+                    queue.add(next);
+                }
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    private List<S> nextStates(S state) {
+        FsmState<S, E, C> definition = states.get(state);
+        if (definition == null || definition.getTransitions() == null) {
+            return List.of();
+        }
+
+        return definition.getTransitions().stream().map(Transition::getNextState).toList();
     }
 
     private <I, R> Optional<R> execute(@NotNull Transition<S, E, C> transition, @Nullable I input) {

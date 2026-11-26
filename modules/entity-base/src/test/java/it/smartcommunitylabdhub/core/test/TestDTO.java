@@ -7,6 +7,7 @@
 package it.smartcommunitylabdhub.core.test;
 
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
+import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import java.io.Serializable;
@@ -21,7 +22,7 @@ import lombok.NoArgsConstructor;
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
-public class TestDTO implements BaseDTO, SpecDTO, StatusDTO {
+public class TestDTO implements BaseDTO, SpecDTO, StatusDTO, MetadataDTO {
 
     private String id;
     private String name;
@@ -35,4 +36,8 @@ public class TestDTO implements BaseDTO, SpecDTO, StatusDTO {
 
     @Builder.Default
     private Map<String, Serializable> status = new HashMap<>();
+
+    //not persisted by the test converters
+    @Builder.Default
+    private Map<String, Serializable> metadata = new HashMap<>();
 }

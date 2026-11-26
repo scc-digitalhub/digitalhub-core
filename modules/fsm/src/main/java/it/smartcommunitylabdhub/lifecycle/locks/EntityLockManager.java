@@ -55,6 +55,14 @@ public interface EntityLockManager {
     boolean isHeldByCurrentThread(@NotNull Class<?> type, @NotNull String id);
 
     /**
+     * Run an action once the current thread FULLY releases the turn for the given object
+     * (outermost release, after re-entrant holds are closed). Actions run in registration order,
+     * on the releasing thread, outside the turn.
+     * When the current thread does not hold the turn the action runs immediately.
+     */
+    void runAfterRelease(@NotNull Class<?> type, @NotNull String id, @NotNull Runnable action);
+
+    /**
      * Handle for an acquired turn, release via close()
      */
     @FunctionalInterface

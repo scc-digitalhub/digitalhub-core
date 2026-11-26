@@ -216,4 +216,48 @@ class LocalEntityLockManagerTest {
         assertThat(results.get(0)).isInstanceOf(EntityLockException.class);
         assertThat(results.get(1)).isEqualTo(true);
     }
+
+    @Test
+    void deferredActionsRunAfterOutermostRelease() {
+        List<String> calls = new ArrayList<>();
+
+        try (EntityLock outer = manager.acquire(TypeA.class, "1")) {
+            try (EntityLock inner = manager.acquire(TypeA.class, "1")) {
+                manager.runAfterRelease(TypeA.class, "1", () -> {
+                    calls.add("first:" + manager.isHeldByCurrentThread(TypeA.class, "1"));
+                });
+            }
+            //inner release is not the outermost
+            assertThat(calls).isEmpty();
+
+            manager.runAfterRelease(TypeA.class, "1", () -> calls.add("second"));
+        }
+
+        //run in order, outside the turn
+        assertThat(calls).containsExactly("first:false", "second");
+        assertThat(manager.size()).isZero();
+    }
+
+    @Test
+    void deferredActionRunsImmediatelyWhenNotHeld() {
+        List<String> calls = new ArrayList<>();
+        manager.runAfterRelease(TypeA.class, "1", () -> calls.add("now"));
+        assertThat(calls).containsExactly("now");
+    }
+
+    @Test
+    void failingDeferredActionDoesNotBlockOthersOrRelease() {
+        List<String> calls = new ArrayList<>();
+
+        try (EntityLock lock = manager.acquire(TypeA.class, "1")) {
+            manager.runAfterRelease(TypeA.class, "1", () -> {
+                throw new IllegalStateException("boom");
+            });
+            manager.runAfterRelease(TypeA.class, "1", () -> calls.add("after"));
+        }
+
+        assertThat(calls).containsExactly("after");
+        assertThat(manager.isHeldByCurrentThread(TypeA.class, "1")).isFalse();
+        assertThat(manager.size()).isZero();
+    }
 }

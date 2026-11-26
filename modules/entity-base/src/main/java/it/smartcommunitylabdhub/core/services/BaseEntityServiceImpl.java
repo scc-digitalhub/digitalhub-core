@@ -54,6 +54,9 @@ import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilterConvert
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.core.security.OwnerContextManager;
+import it.smartcommunitylabdhub.lifecycle.locks.EntityLockManager;
+import it.smartcommunitylabdhub.lifecycle.locks.EntityLockManager.EntityLock;
+import it.smartcommunitylabdhub.lifecycle.locks.LocalEntityLockManager;
 import it.smartcommunitylabdhub.events.EntityAction;
 import it.smartcommunitylabdhub.events.EntityOperation;
 import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
@@ -116,6 +119,9 @@ public abstract class BaseEntityServiceImpl<
     protected EntityOperationsPublisher operationsPublisher;
 
     protected OwnerContextManager ownerContextManager;
+
+    //per-object turns, shared with lifecycle managers and repositories
+    protected EntityLockManager lockManager = LocalEntityLockManager.shared();
 
     @SuppressWarnings("unchecked")
     protected BaseEntityServiceImpl() {
@@ -184,6 +190,20 @@ public abstract class BaseEntityServiceImpl<
     @Autowired(required = false)
     public void setOwnerContextManager(OwnerContextManager ownerContextManager) {
         this.ownerContextManager = ownerContextManager;
+    }
+
+    @Autowired(required = false)
+    public void setLockManager(EntityLockManager lockManager) {
+        if (lockManager != null) {
+            this.lockManager = lockManager;
+        }
+    }
+
+    /**
+     * Acquire the turn for an object: operations on the same object run one at a time
+     */
+    protected EntityLock acquire(@NotNull String id) {
+        return lockManager.acquire(type, id);
     }
 
     /**
@@ -419,8 +439,11 @@ public abstract class BaseEntityServiceImpl<
         }
 
         if (getLifecycleManager() != null && !nextState.equals(curState)) {
-            //perform transition
-            res = getLifecycleManager().handle(res, nextState);
+            //walk to the requested state within the turn of the new object:
+            //the lifecycle trusts the dto we just persisted
+            try (EntityLock lock = acquire(res.getId())) {
+                res = getLifecycleManager().handle(res, nextState);
+            }
         }
 
         return res;
@@ -452,14 +475,16 @@ public abstract class BaseEntityServiceImpl<
             throw new IllegalArgumentException("id mismatch");
         }
 
-        //fetch current and merge
-        D current = repository.get(id);
-        if (current == null) {
+        //resolve owner (immutable)
+        D stored = repository.get(id);
+        if (stored == null) {
             throw new StoreException("Invalid or broken entity in store");
         }
 
-        //perform on behalf of the owner
-        try (OwnerContextManager.Scope scope = asOwner(current)) {
+        //perform on behalf of the owner, inside the turn: read -> compute -> write
+        try (OwnerContextManager.Scope scope = asOwner(stored); EntityLock lock = acquire(id)) {
+            //read the current version within the turn
+            D current = repository.get(id);
             return doUpdate(id, dto, current, forceUpdate, merge);
         }
     }
@@ -501,7 +526,8 @@ public abstract class BaseEntityServiceImpl<
         String curState = curStatus.getState() == null ? "CREATED" : curStatus.getState();
 
         StatusFieldAccessor nextStatus = StatusFieldAccessor.with(dto.getStatus());
-        String nextState = nextStatus.getState() == null ? "CREATED" : nextStatus.getState();
+        //missing state means keep the current one: only the FSM changes state
+        String nextState = nextStatus.getState() == null ? curState : nextStatus.getState();
 
         if (getLifecycleManager() == null) {
             //no lifecycle action, use next state
@@ -568,14 +594,21 @@ public abstract class BaseEntityServiceImpl<
     public D delete(@NotNull String id, @Nullable Boolean cascade) throws StoreException {
         log.debug("delete with id {}", id);
 
-        D e = repository.find(id);
-        if (e == null) {
+        //resolve owner (immutable)
+        D stored = repository.find(id);
+        if (stored == null) {
             return null;
         }
 
-        //perform on behalf of the owner
-        try (OwnerContextManager.Scope scope = asOwner(e)) {
-            return doDelete(id, e, cascade);
+        //perform on behalf of the owner, inside the turn
+        try (OwnerContextManager.Scope scope = asOwner(stored); EntityLock lock = acquire(id)) {
+            //read the current version within the turn
+            D current = repository.find(id);
+            if (current == null) {
+                return null;
+            }
+
+            return doDelete(id, current, cascade);
         }
     }
 
@@ -585,42 +618,59 @@ public abstract class BaseEntityServiceImpl<
         String curState = curStatus.getState() == null ? "CREATED" : curStatus.getState();
 
         if (getLifecycleManager() != null && !"DELETED".equals(curState)) {
-            //delegate to lifecycle manager, will perform cascade effect on success
+            //delegate to lifecycle manager: the effect runs after the turn is released,
+            //once per persisted step, with the persisted object
             log.debug("handle delete via lifecycle manager for {}", id);
             return lifecycleManager.perform(e, "DELETE", null, (dto, r) -> {
-                try {
-                    if (Boolean.TRUE.equals(cascade) && getFinalizer() != null) {
-                        if (operationsPublisher != null) {
-                            //dispatch finalize op to trigger gc via finalizer
-                            operationsPublisher.publish(new EntityOperation<>(dto, EntityAction.FINALIZE));
-                        } else {
-                            //perform gc
-                            getFinalizer().finalize(dto);
-                        }
-                    }
-                    //entity delete is delegated to lm
-                } catch (StoreException e1) {
-                    log.error("error deleting side effect: {}", e1.getMessage());
+                String state = StatusFieldAccessor.with(dto.getStatus()).getState();
+                if ("ERROR".equals(state)) {
+                    //delete failed: never garbage collect related objects
+                    log.debug("delete of {} ended in ERROR, skip finalize", id);
+                    return;
+                }
+
+                if (Boolean.TRUE.equals(cascade)) {
+                    finalize(dto);
                 }
             });
-        } else {
-            //no lifecycle manager or already completed, just delete
-            log.debug("no lifecycle manager, delete directly");
+        }
 
-            if (Boolean.TRUE.equals(cascade) && getFinalizer() != null) {
-                if (operationsPublisher != null) {
+        //no lifecycle manager or already completed, just delete
+        log.debug("no lifecycle manager, delete directly");
+        repository.delete(id);
+
+        if (Boolean.TRUE.equals(cascade)) {
+            //garbage collect outside the turn
+            lockManager.runAfterRelease(type, id, () -> finalize(e));
+        }
+
+        return null;
+    }
+
+    /**
+     * Garbage collect related objects via finalizer: dispatched via operations bus when available
+     */
+    protected void finalize(@NotNull D dto) {
+        if (getFinalizer() == null) {
+            return;
+        }
+
+        try {
+            if (operationsPublisher != null) {
+                try {
                     //dispatch finalize op to trigger gc via finalizer
-                    operationsPublisher.publish(new EntityOperation<>(e, EntityAction.FINALIZE));
-                } else {
-                    //perform gc
-                    getFinalizer().finalize(e);
+                    operationsPublisher.publish(new EntityOperation<>(dto, EntityAction.FINALIZE));
+                    return;
+                } catch (IllegalStateException | UnsupportedOperationException ex) {
+                    log.warn("unable to dispatch finalize for {}, run inline: {}", dto.getId(), ex.getMessage());
                 }
             }
 
-            //entity delete
-            repository.delete(id);
+            //perform gc
+            getFinalizer().finalize(dto);
+        } catch (StoreException e1) {
+            log.error("error finalizing {}: {}", dto.getId(), e1.getMessage());
         }
-        return null;
     }
 
     @Override
@@ -672,105 +722,68 @@ public abstract class BaseEntityServiceImpl<
     @Override
     public void deleteAll(@Nullable Boolean cascade) throws StoreException {
         log.debug("delete all");
-        if (Boolean.TRUE.equals(cascade)) {
-            //delete one by one with cascade
-            repository
-                .listAll()
-                .forEach(e -> {
-                    try {
-                        //dispatch op if operationsPublisher is available, otherwise delete directly
-                        if (operationsPublisher != null) {
-                            operationsPublisher.publish(new EntityOperation<>(e, EntityAction.DELETE));
-                        } else {
-                            delete(e.getId(), cascade);
-                        }
-                    } catch (StoreException ex) {
-                        log.error("Error deleting {}: {}", e.getId(), ex.getMessage());
-                    }
-                });
-        } else {
-            //bulk delete
-            long count = repository.deleteAll();
-            log.debug("deleted {} entities", count);
-        }
+        deleteMatching(null, cascade);
     }
 
     @Override
     public void deleteByUser(@NotNull String user, @Nullable Boolean cascade) throws StoreException {
         log.debug("delete all by user {}", user);
-        if (Boolean.TRUE.equals(cascade)) {
-            //delete one by one with cascade
-            repository
-                .searchAll(CommonSpecification.createdByEquals(user))
-                .forEach(e -> {
-                    try {
-                        //dispatch op if operationsPublisher is available, otherwise delete directly
-                        if (operationsPublisher != null) {
-                            operationsPublisher.publish(new EntityOperation<>(e, EntityAction.DELETE));
-                        } else {
-                            delete(e.getId(), cascade);
-                        }
-                    } catch (StoreException ex) {
-                        log.error("Error deleting {}: {}", e.getId(), ex.getMessage());
-                    }
-                });
-        } else {
-            //bulk delete
-            long count = repository.deleteAll(CommonSpecification.createdByEquals(user));
-            log.debug("deleted {} entities", count);
-        }
+        deleteMatching(CommonSpecification.createdByEquals(user), cascade);
     }
 
     @Override
     public void deleteByProject(@NotNull String project, @Nullable Boolean cascade) throws StoreException {
         log.debug("delete all by project {}", project);
-        if (Boolean.TRUE.equals(cascade)) {
-            //delete one by one with cascade
-            repository
-                .searchAll(CommonSpecification.projectEquals(project))
-                .forEach(e -> {
-                    try {
-                        //dispatch op if operationsPublisher is available, otherwise delete directly
-                        if (operationsPublisher != null) {
-                            operationsPublisher.publish(new EntityOperation<>(e, EntityAction.DELETE));
-                        } else {
-                            delete(e.getId(), cascade);
-                        }
-                    } catch (StoreException ex) {
-                        log.error("Error deleting {}: {}", e.getId(), ex.getMessage());
-                    }
-                });
-        } else {
-            //bulk delete
-            long count = repository.deleteAll(CommonSpecification.projectEquals(project));
-            log.debug("deleted {} entities", count);
-        }
+        deleteMatching(CommonSpecification.projectEquals(project), cascade);
     }
 
     @Override
     public void deleteByKind(@NotNull String kind, @Nullable Boolean cascade) throws StoreException {
         log.debug("delete all by kind {}", kind);
-        if (Boolean.TRUE.equals(cascade)) {
-            //delete one by one with cascade
-            repository
-                .searchAll(CommonSpecification.kindEquals(kind))
-                .forEach(e -> {
-                    try {
-                        //dispatch op if operationsPublisher is available, otherwise delete directly
-                        if (operationsPublisher != null) {
-                            operationsPublisher.publish(new EntityOperation<>(e, EntityAction.DELETE));
-                        } else {
-                            delete(e.getId(), cascade);
-                        }
-                    } catch (StoreException ex) {
-                        log.error("Error deleting {}: {}", e.getId(), ex.getMessage());
-                    }
-                });
-        } else {
-            //bulk delete
-            long count = repository.deleteAll(CommonSpecification.kindEquals(kind));
-            log.debug("deleted {} entities", count);
+        deleteMatching(CommonSpecification.kindEquals(kind), cascade);
+    }
+
+    /**
+     * Delete all matching objects ONE BY ONE, each one in its own turn and transaction.
+     *
+     * With cascade, every object goes through the full delete flow (lifecycle + finalizer), via
+     * the operations bus when available (possibly in parallel), sequentially otherwise.
+     * Without cascade, objects are removed directly from the store.
+     */
+    protected void deleteMatching(@Nullable Specification<E> spec, @Nullable Boolean cascade) throws StoreException {
+        List<D> list = spec != null ? repository.searchAll(spec) : repository.listAll();
+        log.debug("delete {} entities, cascade {}", list.size(), cascade);
+
+        long count = 0;
+        for (D e : list) {
+            try {
+                if (Boolean.TRUE.equals(cascade)) {
+                    deleteViaOperation(e);
+                } else {
+                    repository.delete(e.getId());
+                }
+                count++;
+            } catch (StoreException ex) {
+                log.error("Error deleting {}: {}", e.getId(), ex.getMessage());
+            }
         }
+
+        log.debug("deleted {} entities", count);
+    }
+
+    private void deleteViaOperation(D e) throws StoreException {
+        if (operationsPublisher != null) {
+            try {
+                //dispatch op, the listener performs the full delete
+                operationsPublisher.publish(new EntityOperation<>(e, EntityAction.DELETE));
+                return;
+            } catch (IllegalStateException | UnsupportedOperationException ex) {
+                //bus unavailable or full: fallback to sequential delete
+                log.warn("unable to dispatch delete for {}, run inline: {}", e.getId(), ex.getMessage());
+            }
+        }
+
+        delete(e.getId(), true);
     }
 
     @Override

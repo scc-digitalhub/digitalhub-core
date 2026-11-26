@@ -1,8 +1,8 @@
 package it.smartcommunitylabdhub.runinitializer;
 
-import it.smartcommunitylabdhub.commons.annotations.common.EffectType;
+import it.smartcommunitylabdhub.commons.annotations.common.PostProcessorType;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
-import it.smartcommunitylabdhub.commons.infrastructure.Effect;
+import it.smartcommunitylabdhub.commons.infrastructure.PostProcessor;
 import it.smartcommunitylabdhub.extensions.ExtensionManager;
 import it.smartcommunitylabdhub.extensions.persistence.ExtensionBuilder;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
@@ -20,10 +20,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-@EffectType(stages = { "onReady" }, type = Run.class)
+@PostProcessorType(stages = { "onReady" }, type = Run.class)
 @Component
 @Slf4j
-public class RunInitializerProcessor implements Effect<Run> {
+public class RunInitializerProcessor implements PostProcessor<Run> {
 
     @Autowired(required = false)
     private ExtensionManager extManager;

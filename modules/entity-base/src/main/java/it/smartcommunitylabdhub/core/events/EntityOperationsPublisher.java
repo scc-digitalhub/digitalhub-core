@@ -26,8 +26,11 @@ package it.smartcommunitylabdhub.core.events;
 import it.smartcommunitylabdhub.events.EntityOperation;
 
 public interface EntityOperationsPublisher {
-    /*
+    /**
      * Publishes an entity operation event to be handled asynchronously.
+     *
+     * @throws IllegalStateException when the operation can not be dispatched (ex. bus full)
+     * @throws UnsupportedOperationException when no bus is configured
      */
     public void publish(EntityOperation<?> operation);
 }

@@ -24,6 +24,8 @@ package it.smartcommunitylabdhub.lifecycle.locks;
 
 import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -105,12 +107,24 @@ public class LocalEntityLockManager implements EntityLockManager {
         AtomicBoolean closed = new AtomicBoolean(false);
         return () -> {
             if (closed.compareAndSet(false, true)) {
+                //collect deferred actions while still holding the turn (owner-only access)
+                List<Runnable> actions = entry.lock.getHoldCount() == 1 ? entry.drain() : List.of();
+
                 entry.lock.unlock();
                 release(key, entry);
 
                 if (log.isTraceEnabled()) {
                     log.trace("released turn on {}", key);
                 }
+
+                //run outside the turn
+                actions.forEach(action -> {
+                    try {
+                        action.run();
+                    } catch (RuntimeException e) {
+                        log.error("error running action after release of {}: {}", key, e.getMessage(), e);
+                    }
+                });
             }
         };
     }
@@ -119,6 +133,18 @@ public class LocalEntityLockManager implements EntityLockManager {
     public boolean isHeldByCurrentThread(@NotNull Class<?> type, @NotNull String id) {
         Entry entry = locks.get(key(type, id));
         return entry != null && entry.lock.isHeldByCurrentThread();
+    }
+
+    @Override
+    public void runAfterRelease(@NotNull Class<?> type, @NotNull String id, @NotNull Runnable action) {
+        Assert.notNull(action, "action can not be null");
+        Entry entry = locks.get(key(type, id));
+        if (entry != null && entry.lock.isHeldByCurrentThread()) {
+            //only the owner thread touches the list
+            entry.afterRelease.add(action);
+        } else {
+            action.run();
+        }
     }
 
     /**
@@ -151,6 +177,14 @@ public class LocalEntityLockManager implements EntityLockManager {
         private final OwnedLock lock = new OwnedLock();
         //number of acquisitions (held + waiting), guarded by map compute
         private int refs = 0;
+        //actions deferred to the outermost release, accessed only by the owner thread
+        private List<Runnable> afterRelease = new ArrayList<>();
+
+        private List<Runnable> drain() {
+            List<Runnable> actions = afterRelease;
+            afterRelease = new ArrayList<>();
+            return actions;
+        }
     }
 
     private static final class OwnedLock extends ReentrantLock {

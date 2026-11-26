@@ -30,13 +30,14 @@ import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import java.io.Serializable;
 import org.springframework.lang.Nullable;
 
-/*
- * An Effect is a functional interface that represents a processing operation that can be applied to a DTO.
- * The processor is invoked after a stage transition and can alter the result by returning a new input object.
- * Contract does not impose a type restriction: processors need to be aware of the type of the input and output
+/**
+ * Effects are SIDE EFFECTS of a lifecycle transition: they are dispatched asynchronously after the
+ * transition has been persisted, receive a copy of the persisted dto and the final output, and
+ * produce nothing. When and how they end never affects the transition.
+ *
+ * To alter the output of a transition use a {@link PostProcessor}.
  */
 @FunctionalInterface
 public interface Effect<D extends BaseDTO & SpecDTO & StatusDTO> {
-    @Nullable
-    <I extends Serializable> I process(String stage, D dto, @Nullable I input) throws CoreRuntimeException;
+    void process(String stage, D dto, @Nullable Serializable output) throws CoreRuntimeException;
 }

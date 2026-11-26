@@ -29,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.MessagingException;
 import org.springframework.stereotype.Component;
 
 /**
@@ -53,7 +54,12 @@ public class EntityOperationsPublisherImpl implements EntityOperationsPublisher 
     @Override
     public void publish(EntityOperation<?> operation) {
         if (entityOperationsChannel != null) {
-            entityOperationsChannel.send(MessageBuilder.withPayload(operation).build());
+            try {
+                entityOperationsChannel.send(MessageBuilder.withPayload(operation).build());
+            } catch (MessagingException e) {
+                //ex. executor queue full: let the caller decide how to fallback
+                throw new IllegalStateException("unable to dispatch entity operation: " + e.getMessage(), e);
+            }
         } else {
             throw new UnsupportedOperationException("Entity operations channel is not configured");
         }

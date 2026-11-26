@@ -24,7 +24,6 @@ package it.smartcommunitylabdhub.runtimes.lifecycle;
 
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.lifecycle.BaseLifecycleManager;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.lifecycle.RunEvent;
@@ -36,7 +35,6 @@ import it.smartcommunitylabdhub.runtimes.events.RunnableMessagePublisher;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Collection;
-import java.util.Map;
 import java.util.function.BiConsumer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -113,19 +111,20 @@ public class RunLifecycleManager<
                 } else if (runnable instanceof RunRunnable runRunnable) {
                     dispatch(run, runRunnable);
                 }
-            } else if (runnable == null && RunEvent.DELETE.name().equals(event)) {
-                StatusFieldAccessor status = StatusFieldAccessor.with(run.getStatus());
-                if (RunState.DELETING.name().equals(status.getState())) {
-                    //short circuit DELETING for no-ops to DELETED
-                    //this will let manager DELETE the entity
-                    Map<String, Serializable> baseStatus = Map.of("state", RunState.DELETED.name());
-                    run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), baseStatus));
-                }
             }
 
-            //if provided, execute the effect
+            //if provided, execute the effect (ex. finalizer on DELETING)
             if (effect != null) {
                 effect.accept(run, runnable);
+            }
+
+            if (runnable == null && RunEvent.DELETE.name().equals(event)) {
+                StatusFieldAccessor status = StatusFieldAccessor.with(run.getStatus());
+                if (RunState.DELETING.name().equals(status.getState())) {
+                    //nothing to delete on the runtime side: no callback will come,
+                    //complete the deletion via the FSM (DELETING -> DELETED removes the entity)
+                    handle(run, RunState.DELETED.name());
+                }
             }
         };
 

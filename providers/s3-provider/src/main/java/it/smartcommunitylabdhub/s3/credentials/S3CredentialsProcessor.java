@@ -1,8 +1,8 @@
 package it.smartcommunitylabdhub.s3.credentials;
 
-import it.smartcommunitylabdhub.commons.annotations.common.EffectType;
+import it.smartcommunitylabdhub.commons.annotations.common.PostProcessorType;
 import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
-import it.smartcommunitylabdhub.commons.infrastructure.Effect;
+import it.smartcommunitylabdhub.commons.infrastructure.PostProcessor;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextSource;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.runs.Run;
@@ -16,11 +16,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
 
-@EffectType(stages = { "onReady" }, type = Run.class)
+@PostProcessorType(stages = { "onReady" }, type = Run.class)
 // @Component
 @ConditionalOnBean(S3AssumeRoleProvider.class)
 @Slf4j
-public class S3CredentialsProcessor implements Effect<Run> {
+public class S3CredentialsProcessor implements PostProcessor<Run> {
 
     public static final String AWS_WEB_IDENTITY_TOKEN_FILE = "aws-web-identity-token-file";
 

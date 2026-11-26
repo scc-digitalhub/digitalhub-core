@@ -32,6 +32,7 @@ import it.smartcommunitylabdhub.framework.k8s.runnables.RunnableEventPublisher;
 import it.smartcommunitylabdhub.runtimes.events.RunnableMessagePublisher;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -53,6 +54,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.security.concurrent.DelegatingSecurityContextExecutor;
 import org.springframework.security.task.DelegatingSecurityContextAsyncTaskExecutor;
 
+@Slf4j
 @Configuration
 @Order(5)
 @EnableAsync
@@ -248,7 +250,7 @@ public class AsyncConfig implements AsyncConfigurer {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(2 * CORE_POOL_SIZE);
         executor.setMaxPoolSize(2 * CORE_POOL_SIZE);
-        // bounded queue: AbortPolicy rejects when full, completing the future exceptionally
+        // bounded queue: AbortPolicy rejects when full, raising RejectedExecutionException on submit
         // rather than falling back to the calling rex- thread via CallerRunsPolicy
         executor.setQueueCapacity(100 * CORE_POOL_SIZE);
         executor.setThreadNamePrefix("processor-");
@@ -257,6 +259,40 @@ public class AsyncConfig implements AsyncConfigurer {
 
         // propagate security context from calling thread to processor threads
         return new DelegatingSecurityContextExecutor(executor.getThreadPoolExecutor());
+    }
+
+    @Bean(name = "fsmExecutor")
+    Executor fsmExecutor() {
+        // runs FSM transition logic with a time bound, while the caller holds the turn
+        // AbortPolicy: when full the transition is rejected BEFORE running, and the caller gets an error
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2 * CORE_POOL_SIZE);
+        executor.setMaxPoolSize(2 * CORE_POOL_SIZE);
+        executor.setQueueCapacity(100 * CORE_POOL_SIZE);
+        executor.setThreadNamePrefix("fsm-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
+        executor.initialize();
+
+        // security context is propagated explicitly by the lifecycle manager
+        return executor.getThreadPoolExecutor();
+    }
+
+    @Bean(name = "effectExecutor")
+    Executor effectExecutor() {
+        // fire-and-forget side effects, dispatched after a transition is persisted
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(CORE_POOL_SIZE);
+        executor.setMaxPoolSize(CORE_POOL_SIZE);
+        executor.setQueueCapacity(QUEUE_CAPACITY);
+        executor.setThreadNamePrefix("effect-");
+        // side effects never affect the transition: when full, drop and log
+        executor.setRejectedExecutionHandler((r, e) ->
+            log.error("effect executor full, effect dropped")
+        );
+        executor.initialize();
+
+        // security context is propagated explicitly by the lifecycle manager
+        return executor.getThreadPoolExecutor();
     }
 
     @Bean(name = "taskScheduler")
