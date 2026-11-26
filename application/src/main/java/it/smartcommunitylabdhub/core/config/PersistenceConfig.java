@@ -25,6 +25,8 @@ package it.smartcommunitylabdhub.core.config;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import it.smartcommunitylabdhub.core.repositories.ResolvableTypeCacheResolver;
+import it.smartcommunitylabdhub.lifecycle.locks.EntityLockManager;
+import it.smartcommunitylabdhub.lifecycle.locks.LocalEntityLockManager;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.caffeine.CaffeineCacheManager;
@@ -40,6 +42,12 @@ public class PersistenceConfig {
 
     @Value("${spring.cache.caffeine.spec}")
     private String caffeineSpec;
+
+    @Bean
+    EntityLockManager entityLockManager() {
+        //single replica: share the local turns with any component not wired via spring
+        return LocalEntityLockManager.shared();
+    }
 
     @Bean(name = "resolvableTypeCacheResolver")
     CacheResolver resolvableTypeCacheResolver(CacheManager cacheManager) {

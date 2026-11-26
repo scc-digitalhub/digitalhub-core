@@ -34,6 +34,7 @@ import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.services.SpecValidator;
+import it.smartcommunitylabdhub.core.events.EntityOperationsPublisher;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.events.EntityAction;
@@ -55,7 +56,6 @@ import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -66,7 +66,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.validation.BindException;
 
 @Service
-@Transactional
 @Slf4j
 public class TaskServiceImpl implements TaskService {
 
@@ -92,7 +91,7 @@ public class TaskServiceImpl implements TaskService {
     private SpecValidator validator;
 
     @Autowired
-    private ApplicationEventPublisher eventPublisher;
+    private EntityOperationsPublisher operationsPublisher;
 
     private Converter<SearchFilter<Task>, SearchFilter<TaskEntity>> filterConverter = new TaskFilterConverter();
 
@@ -358,7 +357,7 @@ public class TaskServiceImpl implements TaskService {
                                 log.trace("event: {}", String.valueOf(event));
                             }
 
-                            eventPublisher.publishEvent(event);
+                            operationsPublisher.publish(event);
                         });
                 }
 

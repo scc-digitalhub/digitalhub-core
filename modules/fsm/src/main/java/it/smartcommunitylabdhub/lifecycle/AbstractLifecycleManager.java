@@ -33,27 +33,23 @@ import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.events.EntityAction;
 import it.smartcommunitylabdhub.events.EntityOperation;
 import it.smartcommunitylabdhub.fsm.exceptions.InvalidTransitionException;
+import it.smartcommunitylabdhub.lifecycle.locks.EntityLockManager;
+import it.smartcommunitylabdhub.lifecycle.locks.EntityLockManager.EntityLock;
+import it.smartcommunitylabdhub.lifecycle.locks.LocalEntityLockManager;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-import java.time.Instant;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.util.Pair;
 import org.springframework.util.Assert;
 
 @Slf4j
 public abstract class AbstractLifecycleManager<D extends BaseDTO & SpecDTO & StatusDTO> implements InitializingBean {
 
-    public static final int DEFAULT_TIMEOUT = 30;
-    private Map<String, Pair<ReentrantLock, Instant>> locks = new ConcurrentHashMap<>();
-    private int timeout = DEFAULT_TIMEOUT;
+    //per-object turns, shared with services and repositories
+    protected EntityLockManager lockManager = LocalEntityLockManager.shared();
 
     protected EntityRepository<D> entityRepository;
     protected ApplicationEventPublisher eventPublisher;
@@ -68,6 +64,13 @@ public abstract class AbstractLifecycleManager<D extends BaseDTO & SpecDTO & Sta
         this.entityRepository = entityService;
     }
 
+    @Autowired(required = false)
+    public void setLockManager(EntityLockManager lockManager) {
+        if (lockManager != null) {
+            this.lockManager = lockManager;
+        }
+    }
+
     @Override
     public void afterPropertiesSet() throws Exception {
         Assert.notNull(entityRepository, "entity service is required");
@@ -77,18 +80,12 @@ public abstract class AbstractLifecycleManager<D extends BaseDTO & SpecDTO & Sta
     /*
      * Locking
      */
-    public void setTimeout(int t) {
-        this.timeout = t;
-    }
 
-    protected synchronized ReentrantLock getLock(String id) {
-        //build lock
-        ReentrantLock l = locks.containsKey(id) ? locks.get(id).getFirst() : new ReentrantLock();
-
-        //update last used date
-        locks.put(id, Pair.of(l, Instant.now()));
-
-        return l;
+    /**
+     * Type used as key for the per-object turn: must match the DTO type used by services and repositories
+     */
+    protected Class<?> getLockType(D dto) {
+        return dto.getClass();
     }
 
     /*
@@ -105,51 +102,40 @@ public abstract class AbstractLifecycleManager<D extends BaseDTO & SpecDTO & Sta
         }
 
         String id = dto.getId();
+        Assert.hasText(id, "id can not be null or empty");
 
-        //lock and resolve op
-        try {
-            try {
-                //acquire write lock
-                if (!getLock(id).tryLock(timeout, TimeUnit.SECONDS)) {
-                    log.warn("Lock timeout for id {}, action {}", id, op.getAction());
-                    throw new SystemException("unable to acquire lock for " + id);
-                }
-                //perform logic
-                dto = logic.apply(dto);
+        //acquire the turn for this object (re-entrant if already held by the caller)
+        try (EntityLock lock = lockManager.acquire(getLockType(dto), id)) {
+            //perform logic
+            dto = logic.apply(dto);
 
-                //persist to store
-                EntityAction action = op.getAction();
-                log.debug("perform action {} on id {}", action, id);
-                switch (action) {
-                    case EntityAction.UPDATE:
-                        //direct update to repo to avoid lifecycle loops
-                        dto = entityRepository.update(id, dto);
-                        break;
-                    case EntityAction.DELETE:
-                        //direct delete to repo to avoid lifecycle loops
-                        entityRepository.delete(id);
-                        break;
-                    default:
-                        //no-op
-                        break;
-                }
-
-                if (log.isTraceEnabled()) {
-                    log.trace("Updated dto: {}", dto);
-                }
-                return dto;
-            } catch (InvalidTransitionException e) {
-                log.debug("Invalid transition {} -> {}", e.getFromState(), e.getToState());
-                throw e;
-            } catch (StoreException e) {
-                log.error("store error: {}", e.getMessage());
-                throw new SystemException(e.getMessage());
-            } finally {
-                getLock(id).unlock();
+            //persist to store
+            EntityAction action = op.getAction();
+            log.debug("perform action {} on id {}", action, id);
+            switch (action) {
+                case EntityAction.UPDATE:
+                    //direct update to repo to avoid lifecycle loops
+                    dto = entityRepository.update(id, dto);
+                    break;
+                case EntityAction.DELETE:
+                    //direct delete to repo to avoid lifecycle loops
+                    entityRepository.delete(id);
+                    break;
+                default:
+                    //no-op
+                    break;
             }
-        } catch (InterruptedException e) {
-            log.error("Thread interrupted waiting for lock on id {}", id);
-            throw new SystemException("unable to acquire lock: " + e.getMessage());
+
+            if (log.isTraceEnabled()) {
+                log.trace("Updated dto: {}", dto);
+            }
+            return dto;
+        } catch (InvalidTransitionException e) {
+            log.debug("Invalid transition {} -> {}", e.getFromState(), e.getToState());
+            throw e;
+        } catch (StoreException e) {
+            log.error("store error: {}", e.getMessage());
+            throw new SystemException(e.getMessage(), e);
         }
     }
 }

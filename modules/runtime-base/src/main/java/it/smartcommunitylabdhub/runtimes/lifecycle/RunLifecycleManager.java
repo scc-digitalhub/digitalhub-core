@@ -40,7 +40,6 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 @Slf4j
 public class RunLifecycleManager<
@@ -82,9 +81,9 @@ public class RunLifecycleManager<
                 ((Collection<?>) runnable).stream()
                     .filter(RunRunnable.class::isInstance)
                     .map(r -> (RunRunnable) r)
-                    .forEach(this::dispatch);
+                    .forEach(r -> dispatch(run, r));
             } else if (runnable instanceof RunRunnable runRunnable) {
-                dispatch(runRunnable);
+                dispatch(run, runRunnable);
             }
 
             //if provided, execute the effect
@@ -110,9 +109,9 @@ public class RunLifecycleManager<
                     ((Collection<?>) runnable).stream()
                         .filter(RunRunnable.class::isInstance)
                         .map(r -> (RunRunnable) r)
-                        .forEach(this::dispatch);
+                        .forEach(r -> dispatch(run, r));
                 } else if (runnable instanceof RunRunnable runRunnable) {
-                    dispatch(runRunnable);
+                    dispatch(run, runRunnable);
                 }
             } else if (runnable == null && RunEvent.DELETE.name().equals(event)) {
                 StatusFieldAccessor status = StatusFieldAccessor.with(run.getStatus());
@@ -133,11 +132,11 @@ public class RunLifecycleManager<
         return super.perform(dto, event, input, callback);
     }
 
-    private void dispatch(RunRunnable runnable) {
+    private void dispatch(Run run, RunRunnable runnable) {
         if (runnable != null) {
-            //patch user from context if available
-            if (SecurityContextHolder.getContext().getAuthentication() != null) {
-                runnable.setUser(SecurityContextHolder.getContext().getAuthentication().getName());
+            //runnables always act on behalf of the run OWNER: async callbacks restore this identity
+            if (run != null && run.getUser() != null) {
+                runnable.setUser(run.getUser());
             }
 
             //publish to dispatcher, we will receive a callback

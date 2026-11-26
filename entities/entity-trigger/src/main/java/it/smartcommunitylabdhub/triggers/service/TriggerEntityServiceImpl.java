@@ -39,7 +39,6 @@ import org.springframework.validation.BindException;
 import org.springframework.validation.annotation.Validated;
 
 @Service
-@Transactional
 @Validated
 @Slf4j
 public class TriggerEntityServiceImpl extends BaseEntityServiceImpl<Trigger, TriggerEntity> {

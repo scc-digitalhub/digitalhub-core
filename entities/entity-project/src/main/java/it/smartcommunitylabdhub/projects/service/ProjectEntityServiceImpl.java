@@ -39,7 +39,6 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 
 @Service
-@Transactional
 @Slf4j
 public class ProjectEntityServiceImpl extends BaseEntityServiceImpl<Project, ProjectEntity> {
 

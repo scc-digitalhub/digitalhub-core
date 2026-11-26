@@ -53,6 +53,7 @@ import it.smartcommunitylabdhub.core.persistence.StatusEntity;
 import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilterConverter;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
+import it.smartcommunitylabdhub.core.security.OwnerContextManager;
 import it.smartcommunitylabdhub.events.EntityAction;
 import it.smartcommunitylabdhub.events.EntityOperation;
 import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
@@ -82,7 +83,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.lang.Nullable;
 import org.springframework.security.crypto.keygen.StringKeyGenerator;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.BindException;
@@ -93,7 +93,6 @@ import org.springframework.validation.BindException;
  * Supports search via filters.
  */
 @Slf4j
-@Transactional
 public abstract class BaseEntityServiceImpl<
     D extends BaseDTO & SpecDTO & StatusDTO,
     E extends BaseEntity & SpecEntity & StatusEntity
@@ -115,6 +114,8 @@ public abstract class BaseEntityServiceImpl<
     protected StringKeyGenerator nameGenerator = () -> UUID.randomUUID().toString().replace("-", "");
 
     protected EntityOperationsPublisher operationsPublisher;
+
+    protected OwnerContextManager ownerContextManager;
 
     @SuppressWarnings("unchecked")
     protected BaseEntityServiceImpl() {
@@ -178,6 +179,20 @@ public abstract class BaseEntityServiceImpl<
     @Autowired(required = false)
     public void setOperationsPublisher(EntityOperationsPublisher operationsPublisher) {
         this.operationsPublisher = operationsPublisher;
+    }
+
+    @Autowired(required = false)
+    public void setOwnerContextManager(OwnerContextManager ownerContextManager) {
+        this.ownerContextManager = ownerContextManager;
+    }
+
+    /**
+     * Operations on existing objects are performed on behalf of their owner
+     */
+    protected OwnerContextManager.Scope asOwner(D dto) {
+        return ownerContextManager != null && dto != null
+            ? ownerContextManager.asOwner(dto.getUser())
+            : OwnerContextManager.Scope.noop();
     }
 
     @Override
@@ -443,6 +458,14 @@ public abstract class BaseEntityServiceImpl<
             throw new StoreException("Invalid or broken entity in store");
         }
 
+        //perform on behalf of the owner
+        try (OwnerContextManager.Scope scope = asOwner(current)) {
+            return doUpdate(id, dto, current, forceUpdate, merge);
+        }
+    }
+
+    protected D doUpdate(@NotNull String id, @NotNull D dto, @NotNull D current, boolean forceUpdate, boolean merge)
+        throws NoSuchEntityException, StoreException {
         boolean specProvided =
             dto.getSpec() != null && (!merge || !dto.getSpec().isEmpty() || current.getSpec() == null);
         if (merge) {
@@ -546,53 +569,61 @@ public abstract class BaseEntityServiceImpl<
         log.debug("delete with id {}", id);
 
         D e = repository.find(id);
-        if (e != null) {
-            //we assume that missing status means CREATED
-            StatusFieldAccessor curStatus = StatusFieldAccessor.with(e.getStatus());
-            String curState = curStatus.getState() == null ? "CREATED" : curStatus.getState();
+        if (e == null) {
+            return null;
+        }
 
-            if (getLifecycleManager() != null && !"DELETED".equals(curState)) {
-                //delegate to lifecycle manager, will perform cascade effect on success
-                log.debug("handle delete via lifecycle manager for {}", id);
-                return lifecycleManager.perform(e, "DELETE", null, (dto, r) -> {
-                    try {
-                        if (Boolean.TRUE.equals(cascade) && getFinalizer() != null) {
-                            if (operationsPublisher != null) {
-                                //dispatch finalize op to trigger gc via finalizer
-                                operationsPublisher.publish(new EntityOperation<>(dto, EntityAction.FINALIZE));
-                            } else {
-                                //perform gc
-                                getFinalizer().finalize(dto);
-                            }
+        //perform on behalf of the owner
+        try (OwnerContextManager.Scope scope = asOwner(e)) {
+            return doDelete(id, e, cascade);
+        }
+    }
+
+    protected D doDelete(@NotNull String id, @NotNull D e, @Nullable Boolean cascade) throws StoreException {
+        //we assume that missing status means CREATED
+        StatusFieldAccessor curStatus = StatusFieldAccessor.with(e.getStatus());
+        String curState = curStatus.getState() == null ? "CREATED" : curStatus.getState();
+
+        if (getLifecycleManager() != null && !"DELETED".equals(curState)) {
+            //delegate to lifecycle manager, will perform cascade effect on success
+            log.debug("handle delete via lifecycle manager for {}", id);
+            return lifecycleManager.perform(e, "DELETE", null, (dto, r) -> {
+                try {
+                    if (Boolean.TRUE.equals(cascade) && getFinalizer() != null) {
+                        if (operationsPublisher != null) {
+                            //dispatch finalize op to trigger gc via finalizer
+                            operationsPublisher.publish(new EntityOperation<>(dto, EntityAction.FINALIZE));
+                        } else {
+                            //perform gc
+                            getFinalizer().finalize(dto);
                         }
-                        //entity delete is delegated to lm
-                    } catch (StoreException e1) {
-                        log.error("error deleting side effect: {}", e1.getMessage());
                     }
-                });
-            } else {
-                //no lifecycle manager or already completed, just delete
-                log.debug("no lifecycle manager, delete directly");
-
-                if (Boolean.TRUE.equals(cascade) && getFinalizer() != null) {
-                    if (operationsPublisher != null) {
-                        //dispatch finalize op to trigger gc via finalizer
-                        operationsPublisher.publish(new EntityOperation<>(e, EntityAction.FINALIZE));
-                    } else {
-                        //perform gc
-                        getFinalizer().finalize(e);
-                    }
+                    //entity delete is delegated to lm
+                } catch (StoreException e1) {
+                    log.error("error deleting side effect: {}", e1.getMessage());
                 }
+            });
+        } else {
+            //no lifecycle manager or already completed, just delete
+            log.debug("no lifecycle manager, delete directly");
 
-                //entity delete
-                repository.delete(id);
+            if (Boolean.TRUE.equals(cascade) && getFinalizer() != null) {
+                if (operationsPublisher != null) {
+                    //dispatch finalize op to trigger gc via finalizer
+                    operationsPublisher.publish(new EntityOperation<>(e, EntityAction.FINALIZE));
+                } else {
+                    //perform gc
+                    getFinalizer().finalize(e);
+                }
             }
+
+            //entity delete
+            repository.delete(id);
         }
         return null;
     }
 
     @Override
-    @Transactional(readOnly = true)
     public D find(@NotNull String id) throws StoreException {
         log.debug("find with id {}", id);
 
@@ -609,7 +640,6 @@ public abstract class BaseEntityServiceImpl<
     }
 
     @Override
-    @Transactional(readOnly = true)
     public D get(@NotNull String id) throws NoSuchEntityException, StoreException {
         log.debug("get with id {}", id);
 
@@ -622,7 +652,6 @@ public abstract class BaseEntityServiceImpl<
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Page<D> list(Pageable pageable) throws StoreException {
         log.debug("list with page {}", pageable);
 

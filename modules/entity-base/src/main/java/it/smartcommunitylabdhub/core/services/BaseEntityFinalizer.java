@@ -24,6 +24,7 @@
 package it.smartcommunitylabdhub.core.services;
 
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
+import it.smartcommunitylabdhub.core.events.EntityOperationsPublisher;
 import it.smartcommunitylabdhub.events.EntityOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +39,12 @@ import org.springframework.context.ApplicationEventPublisher;
 public abstract class BaseEntityFinalizer<D extends BaseDTO> implements EntityFinalizer<D> {
 
     private ApplicationEventPublisher eventPublisher;
+    private EntityOperationsPublisher operationsPublisher;
+
+    @Autowired(required = false)
+    public void setOperationsPublisher(EntityOperationsPublisher operationsPublisher) {
+        this.operationsPublisher = operationsPublisher;
+    }
 
     @Autowired(required = false)
     public void setEventPublisher(ApplicationEventPublisher eventPublisher) {
@@ -52,11 +59,15 @@ public abstract class BaseEntityFinalizer<D extends BaseDTO> implements EntityFi
         Class<?> clazz = operation.getResolvableType().getGeneric(0).resolve();
         log.debug("dispatching operation {} for {}:{}", operation.getAction(), clazz, operation.getDto().getId());
 
-        if (eventPublisher != null) {
-            if (log.isTraceEnabled()) {
-                log.trace("dto: {}", String.valueOf(operation.getDto()));
-            }
+        if (log.isTraceEnabled()) {
+            log.trace("dto: {}", String.valueOf(operation.getDto()));
+        }
 
+        if (operationsPublisher != null) {
+            //dispatch via operations bus, no transaction required
+            operationsPublisher.publish(operation);
+        } else if (eventPublisher != null) {
+            //fallback to application events
             eventPublisher.publishEvent(operation);
         }
     }

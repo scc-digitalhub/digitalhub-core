@@ -46,7 +46,6 @@ import org.springframework.validation.BindException;
 import org.springframework.validation.annotation.Validated;
 
 @Service
-@Transactional
 @Validated
 @Slf4j
 public class RunEntityServiceImpl extends BaseEntityServiceImpl<Run, RunEntity> {

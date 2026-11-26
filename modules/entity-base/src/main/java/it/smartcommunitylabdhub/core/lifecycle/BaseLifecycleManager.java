@@ -39,6 +39,7 @@ import it.smartcommunitylabdhub.commons.models.status.Status;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.events.EntityOperationsPublisher;
+import it.smartcommunitylabdhub.core.security.OwnerContextManager;
 import it.smartcommunitylabdhub.events.EntityAction;
 import it.smartcommunitylabdhub.events.EntityOperation;
 import it.smartcommunitylabdhub.fsm.Fsm;
@@ -89,6 +90,8 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
 
     private Executor processorExecutor = Executors.newSingleThreadExecutor();
 
+    protected OwnerContextManager ownerContextManager;
+
     @SuppressWarnings("unchecked")
     protected BaseLifecycleManager() {
         // resolve generics type via subclass trick
@@ -133,6 +136,26 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
     @Autowired(required = false)
     public void setEffectRegistry(EffectRegistry<D> effectRegistry) {
         this.effectRegistry = effectRegistry;
+    }
+
+    @Autowired(required = false)
+    public void setOwnerContextManager(OwnerContextManager ownerContextManager) {
+        this.ownerContextManager = ownerContextManager;
+    }
+
+    /**
+     * Operations on existing objects are performed on behalf of their owner
+     */
+    protected OwnerContextManager.Scope asOwner(D dto) {
+        return ownerContextManager != null && dto != null
+            ? ownerContextManager.asOwner(dto.getUser())
+            : OwnerContextManager.Scope.noop();
+    }
+
+    @Override
+    protected Class<?> getLockType(D dto) {
+        //use the declared type, matching services and repositories
+        return typeClass;
     }
 
     protected Fsm<String, String, D> fsm(D dto) {
@@ -203,6 +226,18 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         @Nullable I input,
         @Nullable BiConsumer<D, R> effect
     ) {
+        //perform on behalf of the owner
+        try (OwnerContextManager.Scope scope = asOwner(dto)) {
+            return doPerform(dto, event, input, effect);
+        }
+    }
+
+    protected <I extends Serializable, R extends Serializable> D doPerform(
+        @NotNull D dto,
+        @NotNull String event,
+        @Nullable I input,
+        @Nullable BiConsumer<D, R> effect
+    ) {
         log.debug("perform {} for {} with id {}", event, dto.getClass().getSimpleName().toLowerCase(), dto.getId());
         if (log.isTraceEnabled()) {
             log.trace("dto: {}", dto);
@@ -266,6 +301,18 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
     }
 
     public <I extends Serializable, R extends Serializable> D handle(
+        @NotNull D dto,
+        String nextState,
+        @Nullable I input,
+        @Nullable BiConsumer<D, R> effect
+    ) {
+        //perform on behalf of the owner
+        try (OwnerContextManager.Scope scope = asOwner(dto)) {
+            return doHandle(dto, nextState, input, effect);
+        }
+    }
+
+    protected <I extends Serializable, R extends Serializable> D doHandle(
         @NotNull D dto,
         String nextState,
         @Nullable I input,

@@ -46,7 +46,8 @@ public class RunOperationsListener {
         this.entityOperationsChannel = entityOperationsChannel;
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    //forward after commit when published within a transaction, immediately otherwise
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void dispatch(EntityOperation<Run> event) {
         if (event.getDto() == null) {
             return;

@@ -42,6 +42,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.time.ZoneOffset;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.lang.NonNull;
@@ -69,16 +70,12 @@ public class BaseEntityBuilder<D extends BaseDTO, E extends BaseEntity> implemen
     @Override
     public E convert(@NonNull D dto) {
         //base entity should match dto, let's convert it via map
-        Map<String, Serializable> map = Map.of(
-            "id",
-            dto.getId(),
-            "name",
-            dto.getName(),
-            "kind",
-            dto.getKind(),
-            "project",
-            dto.getProject()
-        );
+        //NOTE: fields may be null (ex. partial dtos), Map.of does not allow nulls
+        Map<String, Serializable> map = new HashMap<>();
+        map.put("id", dto.getId());
+        map.put("name", dto.getName());
+        map.put("kind", dto.getKind());
+        map.put("project", dto.getProject());
 
         E entity = mapper.convertValue(map, clazz);
 

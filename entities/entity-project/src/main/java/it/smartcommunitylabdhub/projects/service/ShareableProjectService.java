@@ -40,7 +40,6 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 @Service
-@Transactional
 @Slf4j
 public class ShareableProjectService implements ShareableAwareEntityService<Project> {
 

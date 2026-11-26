@@ -31,6 +31,5 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 @Service
-@Transactional
 @Slf4j
 public class WorkflowEntityServiceImpl extends BaseEntityServiceImpl<Workflow, WorkflowEntity> {}

@@ -89,18 +89,13 @@ public class BaseDTOBuilder<E extends BaseEntity, D extends BaseDTO> implements 
     @Override
     public D convert(@NonNull E entity) {
         //base dto should match entity, let's convert it via map
-        Map<String, Serializable> map = Map.of(
-            "id",
-            entity.getId(),
-            "name",
-            entity.getName(),
-            "kind",
-            entity.getKind(),
-            "project",
-            entity.getProject(),
-            "user",
-            entity.getCreatedBy()
-        );
+        //NOTE: fields may be null (ex. missing auditor), Map.of does not allow nulls
+        Map<String, Serializable> map = new HashMap<>();
+        map.put("id", entity.getId());
+        map.put("name", entity.getName());
+        map.put("kind", entity.getKind());
+        map.put("project", entity.getProject());
+        map.put("user", entity.getCreatedBy());
 
         D dto = mapper.convertValue(map, clazz);
 

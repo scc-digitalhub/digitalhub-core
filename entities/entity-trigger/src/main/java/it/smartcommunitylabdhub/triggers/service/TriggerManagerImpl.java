@@ -49,7 +49,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.validation.BindException;
 
 @Service
-@Transactional
 @Slf4j
 public class TriggerManagerImpl implements TriggerManager {
 

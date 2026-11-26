@@ -47,7 +47,6 @@ import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -55,7 +54,6 @@ import org.springframework.util.StringUtils;
  * Entity service for VERSIONABLE DTOs, where versions are grouped by `project`+`name` and identified by `id`.
  */
 @Slf4j
-@Transactional
 public abstract class BaseVersionableEntityServiceImpl<
     D extends BaseDTO,
     E extends BaseEntity

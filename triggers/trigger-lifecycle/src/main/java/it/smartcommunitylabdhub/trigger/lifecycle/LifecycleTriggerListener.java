@@ -46,7 +46,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.Assert;
 import org.springframework.util.PathMatcher;
@@ -76,7 +75,6 @@ public class LifecycleTriggerListener {
 
     @Async
     @EventListener
-    @Transactional(readOnly = true)
     public void receive(LifecycleEvent<? extends BaseDTO> event) {
         if (event.getState() == null) {
             return;

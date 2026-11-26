@@ -70,7 +70,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.validation.BindException;
 
 @Service
-@Transactional
 @Slf4j
 public class ProjectManagerImpl implements ProjectManager, RelationshipsAwareEntityService<Project> {
 

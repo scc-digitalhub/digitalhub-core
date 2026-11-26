@@ -31,25 +31,26 @@ import it.smartcommunitylabdhub.core.events.EntityEvent;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.events.EntityAction;
+import it.smartcommunitylabdhub.lifecycle.locks.EntityLockException;
+import it.smartcommunitylabdhub.lifecycle.locks.EntityLockManager;
+import it.smartcommunitylabdhub.lifecycle.locks.EntityLockManager.EntityLock;
+import it.smartcommunitylabdhub.lifecycle.locks.LocalEntityLockManager;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.PersistenceException;
 import jakarta.validation.constraints.NotNull;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.ResolvableTypeProvider;
@@ -63,15 +64,25 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.data.util.Pair;
 import org.springframework.lang.NonNull;
 import org.springframework.security.crypto.keygen.StringKeyGenerator;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.Assert;
 
+/**
+ * Base repository for entities, backed by JPA.
+ *
+ * Contract:
+ * - every write (create/update/delete) is atomic and runs in its OWN transaction (REQUIRES_NEW),
+ *   inside the per-object turn, and publishes its event (delivered after commit)
+ * - reads never take the turn; single-object reads are served from an entity cache, and DTOs are
+ *   rebuilt on every read, so callers never share instances
+ * - after commit, still inside the turn, the cache is updated (write-through) or invalidated
+ */
 @Slf4j
 public abstract class BaseEntityRepositoryImpl<
     E extends BaseEntity,
@@ -79,7 +90,8 @@ public abstract class BaseEntityRepositoryImpl<
 > implements SearchableEntityRepository<E, D>, InitializingBean, ResolvableTypeProvider {
 
     public static final int PAGE_MAX_SIZE = 1000;
-    public static final int DEFAULT_TIMEOUT = 30;
+    public static final String CACHE_NAME = "repository.find";
+
     protected JpaRepository<E, String> repository;
 
     protected final Class<D> type;
@@ -90,13 +102,19 @@ public abstract class BaseEntityRepositoryImpl<
 
     private StringKeyGenerator keyGenerator = () -> UUID.randomUUID().toString().replace("-", "");
     private ApplicationEventPublisher eventPublisher;
+
+    //write transactions: always a new, independent transaction
     private TransactionTemplate transactionTemplate;
+    //single object reads on cache miss: new, read only transaction
+    private TransactionTemplate readTransactionTemplate;
+
+    private EntityLockManager lockManager = LocalEntityLockManager.shared();
+
+    private CacheManager cacheManager;
+    private volatile Cache cache;
 
     @PersistenceContext
     private EntityManager entityManager;
-
-    private Map<String, Pair<ReentrantLock, Instant>> locks = new ConcurrentHashMap<>();
-    private int timeout = DEFAULT_TIMEOUT;
 
     @SuppressWarnings("unchecked")
     protected BaseEntityRepositoryImpl() {
@@ -184,6 +202,27 @@ public abstract class BaseEntityRepositoryImpl<
 
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+
+        this.readTransactionTemplate = new TransactionTemplate(transactionManager);
+        this.readTransactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        this.readTransactionTemplate.setReadOnly(true);
+    }
+
+    @Autowired(required = false)
+    public void setLockManager(EntityLockManager lockManager) {
+        if (lockManager != null) {
+            this.lockManager = lockManager;
+        }
+    }
+
+    @Autowired(required = false)
+    public void setCacheManager(CacheManager cacheManager) {
+        this.cacheManager = cacheManager;
+        this.cache = null;
+    }
+
+    public void setEntityManager(EntityManager entityManager) {
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -191,6 +230,7 @@ public abstract class BaseEntityRepositoryImpl<
         Assert.notNull(repository, "repository can not be null");
         Assert.notNull(entityBuilder, "entity builder can not be null");
         Assert.notNull(dtoBuilder, "dto builder can not be null");
+        Assert.notNull(transactionTemplate, "transaction manager can not be null");
 
         log.debug("Initialized repository for {}", clazz.getSimpleName());
     }
@@ -206,20 +246,113 @@ public abstract class BaseEntityRepositoryImpl<
     }
 
     /*
-     * Locking w/cache
+     * Cache
      */
-    public void setTimeout(int t) {
-        this.timeout = t;
+    protected Cache getCache() {
+        if (cacheManager == null) {
+            return null;
+        }
+
+        if (cache == null) {
+            //one cache per entity type
+            cache = cacheManager.getCache(clazz.getSimpleName() + "." + CACHE_NAME);
+        }
+
+        return cache;
     }
 
-    private synchronized ReentrantLock getLock(String id) {
-        //build lock
-        ReentrantLock l = locks.containsKey(id) ? locks.get(id).getFirst() : new ReentrantLock();
+    private void cachePut(String id, E entity) {
+        Cache c = getCache();
+        if (c != null) {
+            if (entity != null) {
+                c.put(id, entity);
+            } else {
+                c.evict(id);
+            }
+        }
+    }
 
-        //update last used date
-        locks.put(id, Pair.of(l, Instant.now()));
+    private void cacheEvict(String id) {
+        Cache c = getCache();
+        if (c != null) {
+            c.evict(id);
+        }
+    }
 
-        return l;
+    private void cacheClear() {
+        Cache c = getCache();
+        if (c != null) {
+            c.clear();
+        }
+    }
+
+    /*
+     * Turns
+     */
+    private EntityLock acquire(String id) throws StoreException {
+        try {
+            return lockManager.acquire(type, id);
+        } catch (EntityLockException e) {
+            throw new StoreException(e.getMessage(), e);
+        }
+    }
+
+    private void checkNoOuterTransaction(String op) {
+        if (log.isDebugEnabled() && TransactionSynchronizationManager.isActualTransactionActive()) {
+            //writes are independent: an outer transaction is suspended and holds a second connection
+            log.debug("{} on {} invoked within an outer transaction", op, clazz.getSimpleName());
+        }
+    }
+
+    /*
+     * Reads
+     */
+
+    /**
+     * Load a detached entity, via cache when available.
+     * The loader is executed at most once per key, concurrent readers wait for it, and writers
+     * updating the same key wait for an in-flight load before overwriting it.
+     */
+    protected E load(@NotNull String id) {
+        Cache c = getCache();
+        if (c == null) {
+            return loadFromStore(id);
+        }
+
+        try {
+            return c.get(
+                id,
+                () -> {
+                    E e = loadFromStore(id);
+                    if (e == null) {
+                        //do not cache misses
+                        throw new MissingEntityException();
+                    }
+                    return e;
+                }
+            );
+        } catch (Cache.ValueRetrievalException e) {
+            if (e.getCause() instanceof MissingEntityException) {
+                return null;
+            }
+            if (e.getCause() instanceof RuntimeException re) {
+                throw re;
+            }
+            throw e;
+        }
+    }
+
+    private E loadFromStore(String id) {
+        return readTransactionTemplate.execute(status ->
+            repository
+                .findById(id)
+                .map(e -> {
+                    //detach to keep a stable snapshot, safe to share
+                    entityManager.detach(e);
+                    return e;
+                })
+                .orElse(null)
+        );
     }
 
     /*
@@ -232,23 +365,9 @@ public abstract class BaseEntityRepositoryImpl<
             log.trace("dto: {}", dto);
         }
 
-        //check for existing ids
-        if (dto.getId() != null && (repository.existsById(dto.getId()))) {
-            throw new DuplicatedEntityException(type, dto.getId());
-        }
-
         //generate id now if missing
         if (dto.getId() == null) {
-            if (dto instanceof BaseDTO bdto) {
-                String id = keyGenerator.generateKey();
-                bdto.setId(id);
-            } else {
-                //can not autogenerate, throw exception
-                if (log.isDebugEnabled()) {
-                    log.debug("id is null, can not autogenerate for dto {}", dto.getClass().getName());
-                }
-                throw new StoreException("id is null");
-            }
+            dto.setId(keyGenerator.generateKey());
         }
         String id = dto.getId();
 
@@ -258,87 +377,94 @@ public abstract class BaseEntityRepositoryImpl<
             throw new StoreException("failed to convert dto to entity");
         }
 
-        final E toSave = entity;
+        checkNoOuterTransaction("create");
 
-        try {
-            //acquire write lock BEFORE starting the transaction to avoid holding a connection while waiting
-            if (!getLock(id).tryLock(timeout, TimeUnit.SECONDS)) {
-                log.warn("Lock timeout on create for id {}", id);
-                throw new StoreException("unable to acquire lock for create " + id);
-            }
-
+        try (EntityLock lock = acquire(id)) {
+            boolean success = false;
             try {
                 E saved = transactionTemplate.execute(status -> {
-                    E s = repository.saveAndFlush(toSave);
-
-                    //publish inside transaction so @TransactionalEventListener fires after commit
-                    //regardless of whether an outer transaction exists
-                    if (eventPublisher != null) {
-                        log.debug("publish event: create for {}", s.getId());
-
-                        //detach to prevent accidental dirty writes while keeping all fields
-                        //(including JPA audit fields set by AuditingEntityListener)
-                        entityManager.detach(s);
-                        EntityEvent<E> event = new EntityEvent<>(s, EntityAction.CREATE);
-                        if (log.isTraceEnabled()) {
-                            log.trace("event: {}", String.valueOf(event));
-                        }
-
-                        eventPublisher.publishEvent(event);
+                    //check inside the turn: concurrent creates for the same id are ordered
+                    if (repository.existsById(id)) {
+                        throw new WrappedException(new DuplicatedEntityException(type, id));
                     }
 
-                    return s;
+                    //persist (not merge): an existing row must never be silently updated
+                    entityManager.persist(entity);
+                    entityManager.flush();
+
+                    //detach to keep all fields (including audit fields) as a stable snapshot
+                    entityManager.detach(entity);
+
+                    //publish inside transaction so @TransactionalEventListener fires after commit
+                    publish(new EntityEvent<>(entity, EntityAction.CREATE));
+
+                    return entity;
                 });
 
-                if (log.isTraceEnabled()) {
-                    log.trace("entity: {}", saved);
-                }
+                //committed: write-through
+                cachePut(id, saved);
+                success = true;
 
                 D res = dtoBuilder.convert(saved);
                 if (log.isTraceEnabled()) {
-                    log.trace("res: {}", saved);
+                    log.trace("res: {}", res);
                 }
 
                 return res;
-            } catch (DataIntegrityViolationException ex) {
-                throw new DuplicatedEntityException(type, id);
+            } catch (WrappedException e) {
+                if (e.getWrapped() instanceof DuplicatedEntityException de) {
+                    throw de;
+                }
+                throw e.asStoreException();
+            } catch (DataIntegrityViolationException | PersistenceException e) {
+                if (isUniqueViolation(e)) {
+                    throw new DuplicatedEntityException(type, id);
+                }
+                throw new StoreException("integrity violation on create for " + id + ": " + e.getMessage(), e);
             } finally {
-                getLock(id).unlock();
+                if (!success) {
+                    //extra invalidation on any failure
+                    cacheEvict(id);
+                }
             }
-        } catch (InterruptedException e) {
-            log.error("Thread interrupted waiting for create lock on id {}", id);
-            throw new StoreException("unable to access the store: " + e.getMessage());
         }
     }
 
     @Override
-    @CacheEvict(cacheResolver = "resolvableTypeCacheResolver", value = "repository.find", key = "#id")
     public D update(@NotNull String id, @NotNull D dto) throws NoSuchEntityException, StoreException {
-        log.debug("update with id {}", String.valueOf(dto.getId()));
+        log.debug("update with id {}", String.valueOf(id));
         if (log.isTraceEnabled()) {
             log.trace("dto: {}", dto);
         }
 
-        try {
-            //acquire write lock BEFORE starting the transaction to avoid holding a connection while waiting
-            if (!getLock(id).tryLock(timeout, TimeUnit.SECONDS)) {
-                log.warn("Lock timeout on update for id {}", id);
-                throw new StoreException("unable to acquire lock for update " + id);
-            }
+        //the dto can not target a different entity
+        if (dto.getId() == null) {
+            dto.setId(id);
+        } else if (!id.equals(dto.getId())) {
+            throw new IllegalArgumentException("id mismatch");
+        }
 
+        checkNoOuterTransaction("update");
+
+        try (EntityLock lock = acquire(id)) {
+            boolean success = false;
             try {
                 E updated = transactionTemplate.execute(status -> {
-                    E entity = repository.findById(id).orElseThrow(() -> new NoSuchEntityException(type));
+                    E prev = repository
+                        .findById(id)
+                        .orElseThrow(() -> new WrappedException(new NoSuchEntityException(type)));
 
                     //detach prev snapshot before overwriting — keeps all fields including audit fields
-                    entityManager.detach(entity);
-                    E prev = entity;
+                    entityManager.detach(prev);
 
                     //build entity
                     E e = entityBuilder.convert(dto);
+                    if (e == null) {
+                        throw new WrappedException(new StoreException("failed to convert dto to entity"));
+                    }
 
+                    //restore non-modifiable fields, derived entities may freely change any other field
                     if (e instanceof AbstractEntity ae && prev instanceof AbstractEntity prevAe) {
-                        //enforce non-modifiable fields
                         ae.setId(prevAe.getId());
                         ae.setKind(prevAe.getKind());
                         ae.setProject(prevAe.getProject());
@@ -350,55 +476,48 @@ public abstract class BaseEntityRepositoryImpl<
 
                     E saved = repository.saveAndFlush(e);
 
+                    //detach to keep all fields (including audit fields) as a stable snapshot
+                    entityManager.detach(saved);
+
                     //publish inside transaction so @TransactionalEventListener fires after commit
-                    //regardless of whether an outer transaction exists
-                    if (eventPublisher != null) {
-                        log.debug("publish event: update for {}", id);
-
-                        //detach to prevent accidental dirty writes while keeping all fields
-                        //(including JPA audit fields set by AuditingEntityListener)
-                        entityManager.detach(saved);
-                        EntityEvent<E> event = new EntityEvent<>(saved, prev, EntityAction.UPDATE);
-                        if (log.isTraceEnabled()) {
-                            log.trace("event: {}", String.valueOf(event));
-                        }
-
-                        eventPublisher.publishEvent(event);
-                    }
+                    publish(new EntityEvent<>(saved, prev, EntityAction.UPDATE));
 
                     return saved;
                 });
 
-                if (log.isTraceEnabled()) {
-                    log.trace("entity: {}", updated);
-                }
+                //committed: write-through
+                cachePut(id, updated);
+                success = true;
 
                 D res = dtoBuilder.convert(updated);
                 if (log.isTraceEnabled()) {
-                    log.trace("res: {}", updated);
+                    log.trace("res: {}", res);
                 }
 
                 return res;
+            } catch (WrappedException e) {
+                if (e.getWrapped() instanceof NoSuchEntityException ne) {
+                    throw ne;
+                }
+                throw e.asStoreException();
+            } catch (DataIntegrityViolationException | PersistenceException e) {
+                throw new StoreException("integrity violation on update for " + id + ": " + e.getMessage(), e);
             } finally {
-                getLock(id).unlock();
+                if (!success) {
+                    //extra invalidation on any failure
+                    cacheEvict(id);
+                }
             }
-        } catch (InterruptedException ex) {
-            log.error("Thread interrupted waiting for update lock on id {}", id);
-            throw new StoreException("unable to access the store: " + ex.getMessage());
         }
     }
 
     @Override
-    @CacheEvict(cacheResolver = "resolvableTypeCacheResolver", value = "repository.find", key = "#id")
     public void delete(@NotNull String id) throws StoreException {
         log.debug("delete with id {}", id);
-        try {
-            //acquire write lock BEFORE starting the transaction to avoid holding a connection while waiting
-            if (!getLock(id).tryLock(timeout, TimeUnit.SECONDS)) {
-                log.warn("Lock timeout on delete for id {}", id);
-                throw new StoreException("unable to acquire lock for delete " + id);
-            }
 
+        checkNoOuterTransaction("delete");
+
+        try (EntityLock lock = acquire(id)) {
             try {
                 transactionTemplate.executeWithoutResult(status ->
                     repository
@@ -411,103 +530,47 @@ public abstract class BaseEntityRepositoryImpl<
                             //detach to get a snapshot with all fields (including audit fields)
                             //then delete by id so JPA uses a fresh managed instance
                             entityManager.detach(entity);
-                            E prev = entity;
-
                             repository.deleteById(id);
 
                             //publish inside transaction so @TransactionalEventListener fires after commit
-                            //regardless of whether an outer transaction exists
-                            if (eventPublisher != null) {
-                                log.debug("publish event: delete for {}", id);
-                                EntityEvent<E> event = new EntityEvent<>(prev, EntityAction.DELETE);
-                                if (log.isTraceEnabled()) {
-                                    log.trace("event: {}", String.valueOf(event));
-                                }
-
-                                eventPublisher.publishEvent(event);
-                            }
+                            publish(new EntityEvent<>(entity, EntityAction.DELETE));
                         })
                 );
             } finally {
-                getLock(id).unlock();
+                //always invalidate, even on failure
+                cacheEvict(id);
             }
-        } catch (InterruptedException e) {
-            log.error("Thread interrupted waiting for delete lock on id {}", id);
-            throw new StoreException("unable to access the store: " + e.getMessage());
         }
     }
 
     @Override
-    @Transactional(readOnly = true)
-    @Cacheable(
-        cacheResolver = "resolvableTypeCacheResolver",
-        value = "repository.find",
-        key = "#id",
-        unless = "#result == null"
-    )
     public D find(@NotNull String id) throws StoreException {
         log.debug("find with id {}", id);
 
-        try {
-            //acquire read lock
-            if (!getLock(id).tryLock(timeout, TimeUnit.SECONDS)) {
-                log.warn("Lock timeout on find for id {}", id);
-                throw new StoreException("unable to acquire lock for find " + id);
-            }
-
-            try {
-                D res = repository
-                    .findById(id)
-                    .map(e -> dtoBuilder.convert(e))
-                    .orElse(null);
-                if (log.isTraceEnabled()) {
-                    log.trace("res: {}", res);
-                }
-
-                return res;
-            } finally {
-                getLock(id).unlock();
-            }
-        } catch (InterruptedException e) {
-            log.error("Thread interrupted waiting for find lock on id {}", id);
-            throw new StoreException("unable to access the store: " + e.getMessage());
+        E e = load(id);
+        D res = e != null ? dtoBuilder.convert(e) : null;
+        if (log.isTraceEnabled()) {
+            log.trace("res: {}", res);
         }
+
+        return res;
     }
 
     @Override
-    @Transactional(readOnly = true)
-    @Cacheable(
-        cacheResolver = "resolvableTypeCacheResolver",
-        value = "repository.find",
-        key = "#id",
-        unless = "#result == null"
-    )
     public D get(@NotNull String id) throws NoSuchEntityException, StoreException {
         log.debug("get with id {}", id);
-        try {
-            //acquire read lock
-            if (!getLock(id).tryLock(timeout, TimeUnit.SECONDS)) {
-                log.warn("Lock timeout on get for id {}", id);
-                throw new StoreException("unable to acquire lock for get " + id);
-            }
 
-            try {
-                D res = repository
-                    .findById(id)
-                    .map(e -> dtoBuilder.convert(e))
-                    .orElseThrow(() -> new NoSuchEntityException(type));
-                if (log.isTraceEnabled()) {
-                    log.trace("res: {}", res);
-                }
-
-                return res;
-            } finally {
-                getLock(id).unlock();
-            }
-        } catch (InterruptedException e) {
-            log.error("Thread interrupted waiting for get lock on id {}", id);
-            throw new StoreException("unable to access the store: " + e.getMessage());
+        E e = load(id);
+        if (e == null) {
+            throw new NoSuchEntityException(type);
         }
+
+        D res = dtoBuilder.convert(e);
+        if (log.isTraceEnabled()) {
+            log.trace("res: {}", res);
+        }
+
+        return res;
     }
 
     @Override
@@ -652,118 +715,121 @@ public abstract class BaseEntityRepositoryImpl<
         return repository.findBy(example, query -> query.as(projection).all());
     }
 
-    @Transactional
-    @CacheEvict(cacheResolver = "resolvableTypeCacheResolver", value = "repository.find", allEntries = true)
-    public long deleteAll() {
+    /*
+     * Bulk deletes: a single transaction for the data change, events built from the loaded rows
+     */
+    @Override
+    public long deleteAll() throws StoreException {
         log.debug("delete all");
-
-        //collect all via search
-        List<E> entities = repository.findAll();
-
-        //NOTE: to avoid issues with entity manager owned objs
-        //we clone entities to detach and keep the version
-        //sent as event payload immutable
-        List<E> prevs = entities
-            .stream()
-            .map(entity -> entityBuilder.convert(dtoBuilder.convert(entity)))
-            .toList();
-
-        //remove in batch
-        repository.deleteAllInBatch(entities);
-
-        //publish
-        if (eventPublisher != null) {
-            prevs.forEach(entity -> {
-                log.debug("publish event: delete for {}", entity.getId());
-
-                EntityEvent<E> event = new EntityEvent<>(entity, EntityAction.DELETE);
-                if (log.isTraceEnabled()) {
-                    log.trace("event: {}", String.valueOf(event));
-                }
-
-                eventPublisher.publishEvent(event);
-            });
-        }
-
-        return entities.size();
+        return bulkDelete(() -> repository.findAll());
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    @Transactional
-    @CacheEvict(cacheResolver = "resolvableTypeCacheResolver", value = "repository.find", allEntries = true)
-    public long deleteAll(Specification<E> specification) {
+    public long deleteAll(Specification<E> specification) throws StoreException {
         log.debug("delete all with spec {} ", specification);
 
         if (repository instanceof JpaSpecificationExecutor) {
-            //collect all via search
-            List<E> entities = ((JpaSpecificationExecutor<E>) repository).findAll(specification);
-
-            //NOTE: to avoid issues with entity manager owned objs
-            //we clone entities to detach and keep the version
-            //sent as event payload immutable
-            List<E> prevs = entities
-                .stream()
-                .map(entity -> entityBuilder.convert(dtoBuilder.convert(entity)))
-                .toList();
-
-            //remove in batch
-            repository.deleteAllInBatch(entities);
-
-            //publish
-            if (eventPublisher != null) {
-                prevs.forEach(entity -> {
-                    log.debug("publish event: delete for {}", entity.getId());
-
-                    EntityEvent<E> event = new EntityEvent<>(entity, EntityAction.DELETE);
-                    if (log.isTraceEnabled()) {
-                        log.trace("event: {}", String.valueOf(event));
-                    }
-
-                    eventPublisher.publishEvent(event);
-                });
-            }
-
-            return entities.size();
+            return bulkDelete(() -> ((JpaSpecificationExecutor<E>) repository).findAll(specification));
         }
 
         throw new UnsupportedOperationException();
     }
 
     @Override
-    @Transactional
-    @CacheEvict(cacheResolver = "resolvableTypeCacheResolver", value = "repository.find", allEntries = true)
-    public long deleteAll(Example<E> example) {
+    public long deleteAll(Example<E> example) throws StoreException {
         log.debug("delete all with example {} ", example);
+        return bulkDelete(() -> repository.findAll(example));
+    }
 
-        //collect all via search
-        List<E> entities = repository.findAll(example);
+    private long bulkDelete(Supplier<List<E>> finder) throws StoreException {
+        checkNoOuterTransaction("deleteAll");
 
-        //NOTE: to avoid issues with entity manager owned objs
-        //we clone entities to detach and keep the version
-        //sent as event payload immutable
-        List<E> prevs = entities
-            .stream()
-            .map(entity -> entityBuilder.convert(dtoBuilder.convert(entity)))
-            .toList();
-
-        //remove in batch
-        repository.deleteAllInBatch(entities);
-
-        //publish
-        if (eventPublisher != null) {
-            prevs.forEach(entity -> {
-                log.debug("publish event: delete for {}", entity.getId());
-
-                EntityEvent<E> event = new EntityEvent<>(entity, EntityAction.DELETE);
-                if (log.isTraceEnabled()) {
-                    log.trace("event: {}", String.valueOf(event));
+        try {
+            Integer count = transactionTemplate.execute(status -> {
+                //collect all via search
+                List<E> entities = finder.get();
+                if (entities.isEmpty()) {
+                    return 0;
                 }
 
-                eventPublisher.publishEvent(event);
+                //detach to keep the loaded rows (with all fields, including audit) as event payload
+                entities.forEach(entityManager::detach);
+                List<String> ids = entities.stream().map(BaseEntity::getId).toList();
+
+                //remove in batch
+                repository.deleteAllByIdInBatch(ids);
+
+                //publish inside transaction so @TransactionalEventListener fires after commit
+                entities.forEach(entity -> publish(new EntityEvent<>(entity, EntityAction.DELETE)));
+
+                return entities.size();
             });
+
+            return count != null ? count : 0;
+        } catch (DataIntegrityViolationException | PersistenceException e) {
+            throw new StoreException("error deleting " + clazz.getSimpleName() + ": " + e.getMessage(), e);
+        } finally {
+            //always invalidate everything for bulk changes
+            cacheClear();
+        }
+    }
+
+    /*
+     * Events
+     */
+    private void publish(EntityEvent<E> event) {
+        if (eventPublisher != null) {
+            log.debug("publish event: {} for {}", event.getAction(), event.getEntity().getId());
+            if (log.isTraceEnabled()) {
+                log.trace("event: {}", String.valueOf(event));
+            }
+
+            eventPublisher.publishEvent(event);
+        }
+    }
+
+    /*
+     * Exceptions
+     */
+    private static boolean isUniqueViolation(Throwable e) {
+        //only unique violations are duplicates, everything else is a store error
+        Throwable t = e;
+        while (t != null) {
+            if (t instanceof ConstraintViolationException cve) {
+                return cve.getKind() == ConstraintViolationException.ConstraintKind.UNIQUE;
+            }
+            t = t.getCause();
+        }
+        return false;
+    }
+
+    private static class MissingEntityException extends RuntimeException {
+
+        MissingEntityException() {
+            super(null, null, false, false);
+        }
+    }
+
+    /*
+     * Carrier for checked exceptions raised inside transaction callbacks:
+     * runtime, so the transaction is rolled back
+     */
+    private static class WrappedException extends RuntimeException {
+
+        private final Exception wrapped;
+
+        WrappedException(Exception wrapped) {
+            super(wrapped.getMessage(), wrapped, false, false);
+            this.wrapped = wrapped;
         }
 
-        return entities.size();
+        Exception getWrapped() {
+            return wrapped;
+        }
+
+        StoreException asStoreException() {
+            return wrapped instanceof StoreException se ? se : new StoreException(wrapped.getMessage(), wrapped);
+        }
     }
 }
