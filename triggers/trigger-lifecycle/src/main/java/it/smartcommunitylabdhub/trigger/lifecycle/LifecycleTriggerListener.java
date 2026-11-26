@@ -154,7 +154,7 @@ public class LifecycleTriggerListener {
                 applicationEventPublisher.publishEvent(e);
             });
         } catch (StoreException e) {
-            log.error("Error with store", e.getMessage());
+            log.error("Error with store: {}", e.getMessage());
         }
     }
 }

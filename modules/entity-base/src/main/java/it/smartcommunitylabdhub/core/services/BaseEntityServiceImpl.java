@@ -68,6 +68,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -337,6 +338,8 @@ public abstract class BaseEntityServiceImpl<
 
             try {
                 // try specification-based search first, more efficient
+                // NOTE: encoded keys are lowercase, match names case-insensitively;
+                // the pattern may over-match, collisions are evaluated on encoded keys below
                 String likePattern = key.replaceAll("%[0-9A-Fa-f]{2}", "%").replace("__", "%");
 
                 existing = repository
@@ -345,7 +348,7 @@ public abstract class BaseEntityServiceImpl<
                             query.distinct(true);
                             return cb.and(
                                 cb.equal(root.get(AbstractEntity_.PROJECT), projectId),
-                                cb.like(root.get("name"), likePattern)
+                                cb.like(cb.lower(root.<String>get("name")), likePattern)
                             );
                         },
                         NameAndKind.class
@@ -375,7 +378,7 @@ public abstract class BaseEntityServiceImpl<
             //sanity check: same name must have same kind
             boolean kindMismatch = existing
                 .stream()
-                .anyMatch(n -> dto.getName().equals(n.getName()) && !dto.getKind().equals(n.getKind()));
+                .anyMatch(n -> dto.getName().equals(n.getName()) && !Objects.equals(dto.getKind(), n.getKind()));
             if (kindMismatch) {
                 throw new IllegalArgumentException("name already exists with different kind");
             }
@@ -822,7 +825,11 @@ public abstract class BaseEntityServiceImpl<
                     return cb.and(
                         cb.equal(root.get(AbstractEntity_.PROJECT), accessor.getProject()),
                         cb.equal(root.get(AbstractEntity_.KIND), accessor.getKind()),
-                        cb.like(root.get(AbstractEntity_.KEY), key + ":%")
+                        cb.like(
+                            root.get(AbstractEntity_.KEY),
+                            CommonSpecification.escapeLike(key) + ":%",
+                            CommonSpecification.LIKE_ESCAPE
+                        )
                     );
                 });
 
@@ -836,7 +843,8 @@ public abstract class BaseEntityServiceImpl<
                     AbstractEntity_.KIND,
                     accessor.getKind(),
                     AbstractEntity_.KEY,
-                    key + ":%"
+                    //startsWith escapes wildcards: literal prefix
+                    key + ":"
                 );
 
                 E probe = JacksonMapper.OBJECT_MAPPER.convertValue(probeData, clazz);
@@ -889,7 +897,11 @@ public abstract class BaseEntityServiceImpl<
                         return cb.and(
                             cb.equal(root.get(AbstractEntity_.PROJECT), accessor.getProject()),
                             cb.equal(root.get(AbstractEntity_.KIND), accessor.getKind()),
-                            cb.like(root.get(AbstractEntity_.KEY), key + ":%")
+                            cb.like(
+                            root.get(AbstractEntity_.KEY),
+                            CommonSpecification.escapeLike(key) + ":%",
+                            CommonSpecification.LIKE_ESCAPE
+                        )
                         );
                     },
                     pageable
@@ -905,7 +917,8 @@ public abstract class BaseEntityServiceImpl<
                     AbstractEntity_.KIND,
                     accessor.getKind(),
                     AbstractEntity_.KEY,
-                    key + ":%"
+                    //startsWith escapes wildcards: literal prefix
+                    key + ":"
                 );
 
                 E probe = JacksonMapper.OBJECT_MAPPER.convertValue(probeData, clazz);

@@ -76,7 +76,15 @@ public class EntityOperationsDispatcher {
                         listener.getClass().getSimpleName(),
                         entityClass.getSimpleName()
                     );
-                    listeners.put(entityClass, listener);
+                    EntityOperationsListener<?> previous = listeners.put(entityClass, listener);
+                    if (previous != null && previous != listener) {
+                        log.warn(
+                            "multiple entity operations listeners for entity class {}: {} replaces {}",
+                            entityClass.getSimpleName(),
+                            listener.getClass().getSimpleName(),
+                            previous.getClass().getSimpleName()
+                        );
+                    }
                 }
             }
         }
@@ -105,9 +113,13 @@ public class EntityOperationsDispatcher {
             return;
         }
 
-        EntityOperationsListener<BaseDTO> listener = (EntityOperationsListener<BaseDTO>) listeners.get(clazz);
+        //resolve by class, walking up the hierarchy for dto subclasses
+        EntityOperationsListener<BaseDTO> listener = null;
+        for (Class<?> c = clazz; c != null && listener == null; c = c.getSuperclass()) {
+            listener = (EntityOperationsListener<BaseDTO>) listeners.get(c);
+        }
         if (listener == null) {
-            log.warn("no listener registered for entity class {}", clazz.getName());
+            log.warn("no listener registered for entity class {}", clazz != null ? clazz.getName() : null);
             return;
         }
 

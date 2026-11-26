@@ -29,6 +29,7 @@ import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
+import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilterConverter;
@@ -357,9 +358,12 @@ public abstract class BaseVersionableEntityServiceImpl<
             Subquery<Number> subquery = query.subquery(Number.class);
             Root<T> subqueryRoot = (Root<T>) subquery.from(root.getJavaType());
 
+            //latest version of the same name within the same project
             subquery.select(criteriaBuilder.max(subqueryRoot.get(AbstractEntity_.CREATED)));
-            subquery.where(criteriaBuilder.equal(subqueryRoot.get(Fields.NAME), root.get(Fields.NAME)));
-            subquery.groupBy(subqueryRoot.get(Fields.NAME), subqueryRoot.get(AbstractEntity_.PROJECT));
+            subquery.where(
+                criteriaBuilder.equal(subqueryRoot.get(Fields.NAME), root.get(Fields.NAME)),
+                criteriaBuilder.equal(subqueryRoot.get(AbstractEntity_.PROJECT), root.get(AbstractEntity_.PROJECT))
+            );
 
             return criteriaBuilder.and(criteriaBuilder.in(root.get(AbstractEntity_.CREATED)).value(subquery));
         };
@@ -415,7 +419,7 @@ public abstract class BaseVersionableEntityServiceImpl<
                 throw new IllegalArgumentException("Project in key does not match the provided project");
             }
 
-            if (!this.type.getName().toLowerCase().equals(accessor.getType())) {
+            if (!EntityUtils.getEntityName(this.type).equalsIgnoreCase(accessor.getType())) {
                 throw new IllegalArgumentException("Type in key does not match the expected type");
             }
 
@@ -426,17 +430,16 @@ public abstract class BaseVersionableEntityServiceImpl<
                     criteriaBuilder.equal(root.get(AbstractEntity_.ID), accessor.getId())
                 );
             } else {
-                //like match on key without id
-                //exact match with id
+                //key without id: latest among all the versions of this key
                 subquery.select(criteriaBuilder.max(subqueryRoot.get(AbstractEntity_.CREATED)));
                 subquery.where(
                     criteriaBuilder.equal(subqueryRoot.get(AbstractEntity_.PROJECT), project),
-                    criteriaBuilder.like(subqueryRoot.get(AbstractEntity_.KEY), key + "%")
+                    CommonSpecification.keyVersions(criteriaBuilder, subqueryRoot.get(AbstractEntity_.KEY), key)
                 );
 
                 return criteriaBuilder.and(
                     criteriaBuilder.equal(root.get(AbstractEntity_.PROJECT), project),
-                    criteriaBuilder.like(root.get(AbstractEntity_.KEY), key + "%"),
+                    CommonSpecification.keyVersions(criteriaBuilder, root.get(AbstractEntity_.KEY), key),
                     criteriaBuilder.in(root.get(AbstractEntity_.CREATED)).value(subquery)
                 );
             }

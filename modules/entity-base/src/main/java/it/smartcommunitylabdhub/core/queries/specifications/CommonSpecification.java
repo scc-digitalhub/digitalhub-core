@@ -26,9 +26,31 @@ package it.smartcommunitylabdhub.core.queries.specifications;
 import it.smartcommunitylabdhub.commons.Fields;
 import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
 import it.smartcommunitylabdhub.core.persistence.BaseEntity;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
 public class CommonSpecification {
+
+    public static final char LIKE_ESCAPE = '\\';
+
+    /**
+     * Escape LIKE wildcards (and the escape char itself) for a literal match
+     */
+    public static String escapeLike(String value) {
+        if (value == null) {
+            return null;
+        }
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    }
+
+    /**
+     * Match all the versions of a key without id: the exact key (id equals name) or "key:<id>"
+     */
+    public static Predicate keyVersions(CriteriaBuilder cb, Expression<String> keyPath, String key) {
+        return cb.or(cb.equal(keyPath, key), cb.like(keyPath, escapeLike(key) + ":%", LIKE_ESCAPE));
+    }
 
     public static <T extends BaseEntity> Specification<T> projectEquals(String project) {
         return (root, query, criteriaBuilder) -> {
