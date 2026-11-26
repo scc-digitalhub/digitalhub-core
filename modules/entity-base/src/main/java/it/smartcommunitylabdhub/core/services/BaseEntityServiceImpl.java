@@ -425,10 +425,18 @@ public abstract class BaseEntityServiceImpl<
     @Override
     public D update(@NotNull String id, @NotNull D dto, boolean forceUpdate, boolean merge)
         throws NoSuchEntityException, StoreException {
-        log.debug("update with id {}", String.valueOf(dto.getId()));
+        log.debug("update with id {}", String.valueOf(id));
         if (log.isTraceEnabled()) {
             log.trace("dto: {}", dto);
         }
+
+        //id is the one provided by the caller: the dto can not target a different entity
+        if (dto.getId() == null) {
+            dto.setId(id);
+        } else if (!id.equals(dto.getId())) {
+            throw new IllegalArgumentException("id mismatch");
+        }
+
         //fetch current and merge
         D current = repository.get(id);
         if (current == null) {
