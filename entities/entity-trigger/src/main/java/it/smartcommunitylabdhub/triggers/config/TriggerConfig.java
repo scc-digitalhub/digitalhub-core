@@ -20,6 +20,7 @@ package it.smartcommunitylabdhub.triggers.config;
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
+import it.smartcommunitylabdhub.templates.service.TemplateServiceImpl;
 import it.smartcommunitylabdhub.triggers.Trigger;
 import it.smartcommunitylabdhub.triggers.persistence.TriggerEntity;
 import it.smartcommunitylabdhub.triggers.persistence.TriggerRepository;
@@ -43,4 +44,10 @@ public class TriggerConfig {
     SpecRegistryImpl<Trigger> triggerSpecRegistry() {
         return new SpecRegistryImpl<>(Trigger.class);
     }
+
+    @Bean
+    TemplateServiceImpl<Trigger> triggerTemplateService() {
+        return new TemplateServiceImpl<>(Trigger.class) {};
+    }
+
 }
