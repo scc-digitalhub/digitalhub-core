@@ -41,6 +41,7 @@ public class RunStateDeleting<
     public RunStateDeleting(Runtime<S, Z, R> runtime) {
         super(RunState.DELETING.name(), runtime);
         //transitions
-        txs = List.of(toDelete().build(), toError().build());
+        //loop: delete again (retry), DELETED/ERROR reachable only via handle
+        txs = List.of(toDeleting().build(), toDelete().build(), toError().build());
     }
 }

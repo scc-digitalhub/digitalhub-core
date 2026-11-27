@@ -162,7 +162,7 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
                             log.trace("k8s api response: {}", e.getResponseBody());
                         }
 
-                        throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+                        throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
                     }
                 }
             }
@@ -233,7 +233,13 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
         K8sWorkflowObject workflow;
         try {
             workflow = get(build(runnable));
-        } catch (K8sFrameworkException | IllegalArgumentException e) {
+        } catch (K8sFrameworkException e) {
+            //missing means already deleted, any other failure is an error on the main resource
+            if (!e.isNotFound()) {
+                throw e;
+            }
+            workflow = null;
+        } catch (IllegalArgumentException e) {
             workflow = null;
         }
 
@@ -275,13 +281,14 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
                         log.trace("k8s api response: {}", e.getResponseBody());
                     }
                     //don't propagate
-                    // throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+                    // throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
                 }
             }
         }
 
         //update state
-        runnable.setState(K8sRunnableState.DELETED.name());
+        //deletion requested: the monitor confirms when the resources are gone
+        runnable.setState(K8sRunnableState.DELETING.name());
         runnable.setMessage(String.join(", ", messages));
 
         if (log.isTraceEnabled()) {
@@ -532,7 +539,7 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
                 log.debug("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 
@@ -566,7 +573,7 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
                 log.debug("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 
@@ -594,7 +601,7 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
                 log.debug("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 
@@ -632,7 +639,7 @@ public class K8sArgoWorkflowFramework extends K8sBaseFramework<K8sArgoWorkflowRu
                 log.trace("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 

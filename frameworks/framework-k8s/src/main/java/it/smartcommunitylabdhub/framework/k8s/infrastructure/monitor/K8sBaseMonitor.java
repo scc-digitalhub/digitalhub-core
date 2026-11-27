@@ -27,18 +27,25 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kubernetes.client.openapi.models.V1Pod;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
+import it.smartcommunitylabdhub.framework.k8s.exceptions.K8sFrameworkException;
 import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sBaseFramework;
 import it.smartcommunitylabdhub.framework.k8s.jackson.KubernetesMapper;
 import it.smartcommunitylabdhub.framework.k8s.objects.CoreLog;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
+import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import it.smartcommunitylabdhub.framework.k8s.runnables.RunnableEventPublisher;
 import it.smartcommunitylabdhub.runtimes.events.RunnableChangedEvent;
+import it.smartcommunitylabdhub.lifecycle.locks.EntityLockException;
+import it.smartcommunitylabdhub.lifecycle.locks.EntityLockManager;
+import it.smartcommunitylabdhub.lifecycle.locks.EntityLockManager.EntityLock;
+import it.smartcommunitylabdhub.lifecycle.locks.LocalEntityLockManager;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.Callable;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -59,6 +66,9 @@ public abstract class K8sBaseMonitor<T extends K8sRunnable> implements Runnable 
     protected final RunnableStore<T> store;
     private RunnableEventPublisher eventPublisher;
 
+    //per-runnable turn, shared with the listener
+    private EntityLockManager lockManager = LocalEntityLockManager.shared();
+
     protected Boolean collectLogs = Boolean.TRUE;
     protected Boolean collectMetrics = Boolean.TRUE;
     protected String collectResults = "default";
@@ -67,6 +77,13 @@ public abstract class K8sBaseMonitor<T extends K8sRunnable> implements Runnable 
         Assert.notNull(runnableStore, "runnable store is required");
 
         this.store = runnableStore;
+    }
+
+    @Autowired(required = false)
+    public void setLockManager(EntityLockManager lockManager) {
+        if (lockManager != null) {
+            this.lockManager = lockManager;
+        }
     }
 
     @Autowired
@@ -97,51 +114,32 @@ public abstract class K8sBaseMonitor<T extends K8sRunnable> implements Runnable 
     public void monitor() {
         log.debug("monitor all active...");
 
-        //fetch all active runnables and THEN update to detach from repository and avoid lazy loading issues
-        List<T> runnables = store
+        //snapshot of the ids only: every runnable is re-read within its turn
+        List<String> ids = store
             .findAll()
             .stream()
-            .filter(runnable -> runnable.getState() != null && !runnable.isTransient())
+            .filter(r -> r.getState() != null && (!r.isTransient() || isDeleting(r)))
+            .map(K8sRunnable::getId)
             .toList();
 
-        runnables
-            .stream()
-            .forEach(runnable -> {
-                log.debug("monitor run {}", runnable.getId());
-
-                if (log.isTraceEnabled()) {
-                    log.trace("runnable: {}", runnable);
-                }
-
-                //if final avoid refresh
-                T refreshed = runnable.isFinal() ? runnable : refresh(runnable);
-                if (log.isTraceEnabled()) {
-                    log.trace("refreshed: {}", refreshed);
-                }
-
-                // Update the runnable
-                try {
-                    //if runnable state is final, remove from store, otherwise update
-                    if (refreshed.isFinal()) {
-                        log.debug("delete run {} with state {}", refreshed.getId(), refreshed.getState());
-                        store.remove(refreshed.getId());
-                    } else {
-                        log.debug("store run {} with state {}", refreshed.getId(), refreshed.getState());
-                        store.store(refreshed.getId(), refreshed);
-                    }
-
-                    //always publish, even if final. We expect receivers to be idempotent
-                    publish(refreshed);
-                } catch (StoreException e) {
-                    log.error("Error with runnable store: {}", e.getMessage());
-                }
-            });
+        for (String id : ids) {
+            log.debug("monitor run {}", id);
+            try {
+                monitor(id);
+            } catch (StoreException | RuntimeException e) {
+                //never stop the loop for a single runnable
+                log.error("Error monitoring runnable {}: {}", id, e.getMessage());
+            }
+        }
 
         log.debug("monitor completed.");
     }
 
     public void monitor(String id) throws StoreException {
-        try {
+        T refreshed;
+
+        //turn shared with the listener: one operation at a time per runnable
+        try (EntityLock lock = lockManager.acquire(lockType(), id)) {
             T runnable = store.find(id);
             if (runnable == null) {
                 //nothing to do
@@ -149,14 +147,21 @@ public abstract class K8sBaseMonitor<T extends K8sRunnable> implements Runnable 
                 return;
             }
 
-            //skip refresh for transient states, we don't wanna override an operation in progress
-            if (runnable.getState() != null && runnable.isTransient()) {
+            if (isDeleting(runnable)) {
+                //deletion requested: wait for the resources to be gone
+                refreshed = refreshDeleting(runnable);
+                if (refreshed == null) {
+                    return;
+                }
+            } else if (runnable.getState() != null && runnable.isTransient()) {
+                //skip refresh for transient states, we don't wanna override an operation in progress
                 log.debug("runnable {} in transient state {}, skipping refresh", id, runnable.getState());
                 return;
+            } else {
+                //if final avoid refresh
+                refreshed = runnable.isFinal() ? runnable : refresh(runnable);
             }
 
-            //if final avoid refresh
-            T refreshed = runnable.isFinal() ? runnable : refresh(runnable);
             if (log.isTraceEnabled()) {
                 log.trace("refreshed: {}", refreshed);
             }
@@ -170,13 +175,67 @@ public abstract class K8sBaseMonitor<T extends K8sRunnable> implements Runnable 
                 log.debug("store run {} with state {}", refreshed.getId(), refreshed.getState());
                 store.store(refreshed.getId(), refreshed);
             }
-
-            //always publish, even if final. We expect receivers to be idempotent
-            publish(refreshed);
+        } catch (EntityLockException e) {
+            //busy (ex. the listener is acting on it): next cycle
+            log.debug("runnable {} busy, skipping: {}", id, e.getMessage());
+            return;
         } catch (StoreException e) {
             log.error("Error with runnable store: {}", e.getMessage());
             throw e;
         }
+
+        //always publish, even if final. We expect receivers to be idempotent
+        publish(refreshed);
+    }
+
+    /**
+     * A runnable in DELETING becomes DELETED once its resources are gone. Still there, or unknown
+     * (any failure other than missing): null, nothing changes.
+     */
+    protected T refreshDeleting(T runnable) {
+        try {
+            if (exists(runnable)) {
+                log.debug("runnable {} still deleting", runnable.getId());
+                return null;
+            }
+
+            log.debug("runnable {} resources gone, deleted", runnable.getId());
+            runnable.setState(K8sRunnableState.DELETED.name());
+            return runnable;
+        } catch (K8sFrameworkException e) {
+            log.warn("unable to check resources of runnable {}: {}", runnable.getId(), e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * True if the main resources of the runnable still exist
+     */
+    protected abstract boolean exists(T runnable) throws K8sFrameworkException;
+
+    /**
+     * Resolve a resource: missing (null or API 404) means not found, any other failure is thrown
+     */
+    protected static boolean found(Callable<?> get) throws K8sFrameworkException {
+        try {
+            return get.call() != null;
+        } catch (K8sFrameworkException e) {
+            if (e.isNotFound()) {
+                return false;
+            }
+            throw e;
+        } catch (Exception e) {
+            throw new K8sFrameworkException(e.getMessage());
+        }
+    }
+
+    protected static boolean isDeleting(K8sRunnable runnable) {
+        return K8sRunnableState.DELETING.name().equals(runnable.getState());
+    }
+
+    private Class<?> lockType() {
+        //same key as the listener: the runnable type of the store
+        return store.getResolvableType().resolve();
     }
 
     public abstract T refresh(T runnable);

@@ -44,6 +44,12 @@ public class K8sArgoWorkflowMonitor extends K8sBaseMonitor<K8sArgoWorkflowRunnab
     }
 
     @Override
+    protected boolean exists(K8sArgoWorkflowRunnable runnable) throws K8sFrameworkException {
+        //main resources of the runnable
+        return found(() -> framework.get(framework.build(runnable)));
+    }
+
+    @Override
     public K8sArgoWorkflowRunnable refresh(K8sArgoWorkflowRunnable runnable) {
         try {
             K8sWorkflowObject workflow = framework.get(framework.build(runnable));

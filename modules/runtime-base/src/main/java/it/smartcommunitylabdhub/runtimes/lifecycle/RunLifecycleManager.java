@@ -22,7 +22,7 @@
 
 package it.smartcommunitylabdhub.runtimes.lifecycle;
 
-import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.core.lifecycle.BaseLifecycleManager;
 import it.smartcommunitylabdhub.runs.Run;
@@ -32,9 +32,11 @@ import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
 import it.smartcommunitylabdhub.runtimes.Runtime;
 import it.smartcommunitylabdhub.runtimes.events.RunnableMessagePublisher;
+import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.function.BiConsumer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +49,9 @@ public class RunLifecycleManager<
 > extends BaseLifecycleManager<Run> {
 
     protected RunnableMessagePublisher runnablePublisher;
+
+    //runnable stores across frameworks: the runnable of a run has the run id
+    protected Collection<RunnableStore<?>> runnableStores = Collections.emptyList();
 
     public RunLifecycleManager(Runtime<S, Z, R> runtime) {
         this(new RunFsmFactory<>(runtime));
@@ -65,6 +70,13 @@ public class RunLifecycleManager<
         this.runnablePublisher = runnablePublisher;
     }
 
+    @Autowired(required = false)
+    public void setRunnableStores(Collection<RunnableStore<?>> runnableStores) {
+        if (runnableStores != null) {
+            this.runnableStores = runnableStores;
+        }
+    }
+
     @Override
     public <I extends Serializable, RT extends Serializable> Run handle(
         @NotNull Run dto,
@@ -74,13 +86,7 @@ public class RunLifecycleManager<
     ) {
         //by default we expect a runnable as optional output from runtimes
         BiConsumer<Run, RT> callback = (run, runnable) -> {
-            //support multiple returns from runtimes, we will publish all runnables returned by the runtime
-            if (runnable instanceof Collection) {
-                ((Collection<?>) runnable).stream()
-                    .filter(RunRunnable.class::isInstance)
-                    .map(r -> (RunRunnable) r)
-                    .forEach(r -> dispatch(run, r));
-            } else if (runnable instanceof RunRunnable runRunnable) {
+            if (runnable instanceof RunRunnable runRunnable) {
                 dispatch(run, runRunnable);
             }
 
@@ -102,33 +108,47 @@ public class RunLifecycleManager<
     ) {
         //by default we expect a runnable as optional output from runtimes
         BiConsumer<Run, RT> callback = (run, runnable) -> {
-            if (runnable != null) {
-                if (runnable instanceof Collection) {
-                    ((Collection<?>) runnable).stream()
-                        .filter(RunRunnable.class::isInstance)
-                        .map(r -> (RunRunnable) r)
-                        .forEach(r -> dispatch(run, r));
-                } else if (runnable instanceof RunRunnable runRunnable) {
-                    dispatch(run, runRunnable);
-                }
+            if (runnable instanceof RunRunnable runRunnable) {
+                dispatch(run, runRunnable);
             }
 
-            //if provided, execute the effect (ex. finalizer on DELETING)
-            if (effect != null) {
-                effect.accept(run, runnable);
-            }
-
-            if (runnable == null && RunEvent.DELETE.name().equals(event)) {
-                StatusFieldAccessor status = StatusFieldAccessor.with(run.getStatus());
-                if (RunState.DELETING.name().equals(status.getState())) {
-                    //nothing to delete on the runtime side: no callback will come,
-                    //complete the deletion via the FSM (DELETING -> DELETED removes the entity)
+            if (RunEvent.DELETE.name().equals(event) && RunState.DELETING.name().equals(state(run))) {
+                //after the detached effects, within the turn: the runnable is a child of the run
+                if (hasRunnable(run.getId())) {
+                    //still there: run the detached delete again, later
+                    log.debug("runnable for run {} still present, delete again", run.getId());
+                    perform(run, RunEvent.DELETE.name());
+                } else {
+                    log.debug("runnable for run {} gone, complete delete", run.getId());
                     handle(run, RunState.DELETED.name());
                 }
+            }
+
+            //if provided, execute the effect
+            if (effect != null) {
+                effect.accept(run, runnable);
             }
         };
 
         return super.perform(dto, event, input, callback);
+    }
+
+    /**
+     * Check the runnable stores for the runnable of the run: unknown means present
+     */
+    protected boolean hasRunnable(String id) {
+        for (RunnableStore<?> store : runnableStores) {
+            try {
+                if (store.find(id) != null) {
+                    return true;
+                }
+            } catch (StoreException e) {
+                log.error("error reading runnable {} from store: {}", id, e.getMessage());
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void dispatch(Run run, RunRunnable runnable) {

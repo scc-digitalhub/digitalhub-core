@@ -60,6 +60,12 @@ public class K8sJobMonitor extends K8sBaseMonitor<K8sJobRunnable> {
     }
 
     @Override
+    protected boolean exists(K8sJobRunnable runnable) throws K8sFrameworkException {
+        //main resources of the runnable
+        return found(() -> framework.get(framework.build(runnable)));
+    }
+
+    @Override
     public K8sJobRunnable refresh(K8sJobRunnable runnable) {
         try {
             log.debug("load job for {}", runnable.getId());

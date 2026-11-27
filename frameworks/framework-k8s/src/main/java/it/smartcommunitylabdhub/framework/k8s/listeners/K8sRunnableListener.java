@@ -31,27 +31,24 @@ import it.smartcommunitylabdhub.framework.k8s.infrastructure.k8s.K8sBaseFramewor
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnableState;
 import it.smartcommunitylabdhub.framework.k8s.runnables.RunnableEventPublisher;
+import it.smartcommunitylabdhub.lifecycle.locks.EntityLockException;
+import it.smartcommunitylabdhub.lifecycle.locks.EntityLockManager;
+import it.smartcommunitylabdhub.lifecycle.locks.EntityLockManager.EntityLock;
+import it.smartcommunitylabdhub.lifecycle.locks.LocalEntityLockManager;
 import it.smartcommunitylabdhub.runtimes.events.RunnableChangedEvent;
 import it.smartcommunitylabdhub.runtimes.events.RunnableListener;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
-import java.time.Instant;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.ResolvableTypeProvider;
-import org.springframework.data.util.Pair;
 import org.springframework.util.Assert;
 
 @Slf4j
 public abstract class K8sRunnableListener<
     R extends K8sRunnable
 > implements RunnableListener<R>, ResolvableTypeProvider {
-
-    private static final int LOCK_TIMEOUT = 30;
 
     private final Class<R> clazz;
 
@@ -61,17 +58,8 @@ public abstract class K8sRunnableListener<
 
     private RunnableEventPublisher eventPublisher;
 
-    private Map<String, Pair<ReentrantLock, Instant>> locks = new ConcurrentHashMap<>();
-
-    private synchronized ReentrantLock getLock(String id) {
-        //build lock
-        ReentrantLock l = locks.containsKey(id) ? locks.get(id).getFirst() : new ReentrantLock();
-
-        //update last used date
-        locks.put(id, Pair.of(l, Instant.now()));
-
-        return l;
-    }
+    //per-runnable turn, shared with the monitor (keyed by runnable type + id)
+    private EntityLockManager lockManager = LocalEntityLockManager.shared();
 
     @SuppressWarnings("unchecked")
     protected K8sRunnableListener(K8sBaseFramework<R, ?> k8sFramework, RunnableStore<R> runnableStore) {
@@ -83,6 +71,13 @@ public abstract class K8sRunnableListener<
 
         this.clazz = (Class<R>) runnableStore.getResolvableType().resolve();
         log.debug("started listener for {} with framework {}", clazz.getName(), k8sFramework.getClass().getName());
+    }
+
+    @Autowired(required = false)
+    public void setLockManager(EntityLockManager lockManager) {
+        if (lockManager != null) {
+            this.lockManager = lockManager;
+        }
     }
 
     @Autowired
@@ -114,22 +109,11 @@ public abstract class K8sRunnableListener<
         String framework = runnable.getFramework();
         String state = runnable.getState();
 
-        ReentrantLock lock = getLock(id);
-        boolean acquired = false;
+        EntityLock lock;
         try {
-            acquired = lock.tryLock(LOCK_TIMEOUT, TimeUnit.SECONDS);
-            if (!acquired) {
-                log.warn(
-                    "Unable to acquire lock for runnable {} {}, skipping state {}",
-                    clazz.getSimpleName(),
-                    id,
-                    state
-                );
-                return;
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.warn("Interrupted waiting for lock on runnable {} {}", clazz.getSimpleName(), id);
+            lock = lockManager.acquire(clazz, id);
+        } catch (EntityLockException e) {
+            log.warn("Unable to acquire lock for runnable {} {}, skipping state {}", clazz.getSimpleName(), id, state);
             return;
         }
 
@@ -209,6 +193,14 @@ public abstract class K8sRunnableListener<
 
                         //sanity check: reset left-over messages
                         runnable.setMessage(null);
+
+                        //mark as DELETING in store before acting: the monitor waits for the resources to be gone
+                        try {
+                            runnableStore.store(id, runnable);
+                        } catch (StoreException e) {
+                            log.error("Error storing runnable {} {}: {}", clazz.getSimpleName(), id, e.getMessage());
+                        }
+
                         yield k8sFramework.delete(runnable);
                     }
                     default -> {
@@ -253,7 +245,8 @@ public abstract class K8sRunnableListener<
                     try {
                         log.debug("update runnable {} {} in store", clazz.getSimpleName(), id);
                         //runnables shouldn't have a transient state at this point, but we can have a state change in case of error, so we update the store with the new state
-                        if (runnable.isTransient()) {
+                        //DELETING is kept: the monitor confirms when the resources are gone
+                        if (runnable.isTransient() && !K8sRunnableState.DELETING.name().equals(runnable.getState())) {
                             log.warn(
                                 "runnable {} {} in transient state {}, updating to non-transient state {}",
                                 clazz.getSimpleName(),
@@ -293,9 +286,7 @@ public abstract class K8sRunnableListener<
                 }
             }
         } finally {
-            if (acquired) {
-                lock.unlock();
-            }
+            lock.close();
         }
     }
 

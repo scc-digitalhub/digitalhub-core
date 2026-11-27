@@ -56,6 +56,12 @@ public abstract class K8sRayBaseMonitor<T extends K8sRayRunnable<?>> extends K8s
     protected abstract void storeStatus(T runnable, Map<String, Serializable> status);
 
     @Override
+    protected boolean exists(T runnable) throws K8sFrameworkException {
+        //main resources of the runnable
+        return found(() -> framework.get(framework.build(runnable)));
+    }
+
+    @Override
     public T refresh(T runnable) {
         try {
             DynamicKubernetesObject cr = framework.get(framework.build(runnable));

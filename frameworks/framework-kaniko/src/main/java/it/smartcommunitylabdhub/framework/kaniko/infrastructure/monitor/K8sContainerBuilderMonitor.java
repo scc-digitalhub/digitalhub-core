@@ -57,6 +57,12 @@ public class K8sContainerBuilderMonitor extends K8sBaseMonitor<K8sContainerBuild
     }
 
     @Override
+    protected boolean exists(K8sContainerBuilderRunnable runnable) throws K8sFrameworkException {
+        //main resources of the runnable
+        return framework != null && found(() -> framework.get(framework.build(runnable)));
+    }
+
+    @Override
     public K8sContainerBuilderRunnable refresh(K8sContainerBuilderRunnable runnable) {
         if (framework == null) {
             log.warn("No builder framework available");

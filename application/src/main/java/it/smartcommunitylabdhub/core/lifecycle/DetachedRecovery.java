@@ -120,9 +120,10 @@ public class DetachedRecovery implements InitializingBean {
                     return;
                 }
 
+                //the message goes in the status: the transition input is FSM specific (ex. runnables)
                 dto.setStatus(MapUtils.mergeMultipleMaps(dto.getStatus(), Map.of("message", message)));
                 //re-enters the turn: the dto read within it is trusted
-                manager.handle((BaseDTO) dto, "ERROR", message);
+                manager.handle((BaseDTO) dto, "ERROR");
             }
         } catch (Exception e) {
             log.error("unable to move object of detached {} to ERROR: {}", entry.key(), e.getMessage(), e);

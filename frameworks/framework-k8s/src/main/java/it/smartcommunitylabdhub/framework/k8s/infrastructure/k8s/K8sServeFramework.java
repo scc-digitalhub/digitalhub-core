@@ -171,7 +171,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
                 log.trace("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
 
         //pvcs
@@ -196,7 +196,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
                         log.trace("k8s api response: {}", e.getResponseBody());
                     }
 
-                    throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+                    throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
                 }
             }
 
@@ -235,7 +235,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
                         log.trace("k8s api response: {}", e.getResponseBody());
                     }
 
-                    throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+                    throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
                 }
             }
 
@@ -314,7 +314,13 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
         try {
             // Retrieve the deployment
             deployment = get(buildDeployment(runnable));
-        } catch (K8sFrameworkException | IllegalArgumentException e) {
+        } catch (K8sFrameworkException e) {
+            //missing means already deleted, any other failure is an error on the main resource
+            if (!e.isNotFound()) {
+                exception = e;
+            }
+            deployment = null;
+        } catch (IllegalArgumentException e) {
             deployment = null;
         }
 
@@ -379,7 +385,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
                             log.trace("k8s api response: {}", e.getResponseBody());
                         }
                         //don't propagate
-                        // throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+                        // throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
                     }
                 }
             }
@@ -392,7 +398,12 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
         try {
             // Retrieve the service
             service = get(build(runnable));
-        } catch (K8sFrameworkException | IllegalArgumentException e) {
+        } catch (K8sFrameworkException e) {
+            //missing means already deleted, any other failure is an error on the main resource
+            if (!e.isNotFound() && exception == null) {
+                exception = e;
+            }
+        } catch (IllegalArgumentException e) {
             //skip
             log.debug("error deleting  services k8s results: {}", e.getMessage());
         }
@@ -445,7 +456,8 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
         }
 
         //update state
-        runnable.setState(K8sRunnableState.DELETED.name());
+        //deletion requested: the monitor confirms when the resources are gone
+        runnable.setState(K8sRunnableState.DELETING.name());
         runnable.setMessage(String.join(", ", messages));
 
         if (log.isTraceEnabled()) {
@@ -668,7 +680,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
                 log.trace("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 
@@ -686,7 +698,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
                 log.trace("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 
@@ -713,7 +725,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
                 log.trace("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 
@@ -732,7 +744,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
                 log.trace("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 
@@ -892,7 +904,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
                 log.trace("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 
@@ -910,7 +922,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
                 log.trace("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 
@@ -927,7 +939,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
                 log.trace("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 
@@ -954,7 +966,7 @@ public class K8sServeFramework extends K8sBaseFramework<K8sServeRunnable, V1Serv
                 log.trace("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 }

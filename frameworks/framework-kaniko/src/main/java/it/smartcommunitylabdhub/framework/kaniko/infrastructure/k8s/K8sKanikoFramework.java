@@ -171,7 +171,7 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
         } catch (NullPointerException e) {
             throw new K8sFrameworkException(e.getMessage());
         } catch (ApiException e) {
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
 
         log.info("create job for {}", String.valueOf(job.getMetadata().getName()));
@@ -236,6 +236,10 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
         try {
             job = get(build(runnable));
         } catch (K8sFrameworkException e) {
+            //missing means already deleted, any other failure is an error on the main resource
+            if (!e.isNotFound()) {
+                exception = e;
+            }
             job = null;
         }
 
@@ -267,7 +271,8 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
         }
 
         //update state
-        runnable.setState(K8sRunnableState.DELETED.name());
+        //deletion requested: the monitor confirms when the resources are gone
+        runnable.setState(K8sRunnableState.DELETING.name());
         runnable.setMessage(String.join(", ", messages));
 
         if (log.isTraceEnabled()) {
@@ -464,7 +469,7 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
                 log.debug("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 
@@ -483,7 +488,7 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
                 log.debug("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 
@@ -501,7 +506,7 @@ public class K8sKanikoFramework extends K8sBaseFramework<K8sContainerBuilderRunn
                 log.debug("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 }

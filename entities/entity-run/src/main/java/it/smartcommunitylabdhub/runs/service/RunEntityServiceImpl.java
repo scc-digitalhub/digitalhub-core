@@ -51,8 +51,8 @@ import org.springframework.validation.annotation.Validated;
 @Slf4j
 public class RunEntityServiceImpl extends BaseEntityServiceImpl<Run, RunEntity> {
 
-    //TODO transitional (detached perform refactor, group C): runs keep the current delete flow,
-    //DELETING is concluded by the runtime callback, replaced in group D
+    //runs: no caller effect, the run lifecycle manager concludes the delete itself once the
+    //runnable (child of the run) is gone, for every caller of perform(DELETE)
     @Override
     protected Run doDelete(@NotNull String id, @NotNull Run e, @Nullable Boolean cascade) throws StoreException {
         StatusFieldAccessor status = StatusFieldAccessor.with(e.getStatus());

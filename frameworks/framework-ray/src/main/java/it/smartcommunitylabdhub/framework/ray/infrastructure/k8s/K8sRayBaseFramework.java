@@ -278,7 +278,7 @@ public abstract class K8sRayBaseFramework<
                 log.trace("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
 
         //pvcs considered to be shared
@@ -303,7 +303,7 @@ public abstract class K8sRayBaseFramework<
                         log.trace("k8s api response: {}", e.getResponseBody());
                     }
 
-                    throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+                    throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
                 }
             }
 
@@ -373,9 +373,14 @@ public abstract class K8sRayBaseFramework<
         DynamicKubernetesObject cr;
         try {
             cr = get(build(runnable), dynamicApi);
-        } catch (K8sFrameworkException | IllegalArgumentException e) {
-            runnable.setState(K8sRunnableState.DELETED.name());
-            return runnable;
+        } catch (K8sFrameworkException e) {
+            //missing means already deleted, any other failure is an error on the main resource
+            if (!e.isNotFound()) {
+                throw e;
+            }
+            cr = null;
+        } catch (IllegalArgumentException e) {
+            cr = null;
         }
 
         if (cr != null) {
@@ -433,12 +438,13 @@ public abstract class K8sRayBaseFramework<
                         log.trace("k8s api response: {}", e.getResponseBody());
                     }
                     //don't propagate
-                    // throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+                    // throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
                 }
             }
         }
 
-        runnable.setState(K8sRunnableState.DELETED.name());
+        //deletion requested: the monitor confirms when the resources are gone
+        runnable.setState(K8sRunnableState.DELETING.name());
         runnable.setMessage(String.join(", ", messages));
 
         return runnable;
@@ -546,14 +552,29 @@ public abstract class K8sRayBaseFramework<
     public DynamicKubernetesObject get(@NotNull DynamicKubernetesObject cr, DynamicKubernetesApi dynamicApi)
         throws K8sFrameworkException {
         Assert.notNull(cr.getMetadata(), "metadata can not be null");
+        String crName = cr.getMetadata().getName();
+        log.debug("get Ray {} for {}", getKind(), crName);
+
+        KubernetesApiResponse<DynamicKubernetesObject> response;
         try {
-            String crName = cr.getMetadata().getName();
-            log.debug("get Ray {} for {}", getKind(), crName);
-            return dynamicApi.get(namespace, crName, null).getObject();
+            response = dynamicApi.get(namespace, crName, null);
         } catch (Exception e) {
             log.info("Error with k8s: {}", e.getMessage());
             throw new K8sFrameworkException(e.getMessage(), e.getMessage());
         }
+
+        if (response.isSuccess()) {
+            return response.getObject();
+        }
+
+        //missing: null, any other failure is an error
+        if (response.getHttpStatusCode() == 404) {
+            return null;
+        }
+
+        String message = response.getStatus() != null ? response.getStatus().getMessage() : "error reading " + crName;
+        log.info("Error with k8s: {}", message);
+        throw new K8sFrameworkException(message, message, response.getHttpStatusCode());
     }
 
     @Override
@@ -665,7 +686,7 @@ public abstract class K8sRayBaseFramework<
             if (log.isTraceEnabled()) {
                 log.trace("k8s api response: {}", e.getResponseBody());
             }
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 
@@ -1048,7 +1069,7 @@ public abstract class K8sRayBaseFramework<
                 log.trace("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 

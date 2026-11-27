@@ -174,7 +174,7 @@ public class K8sJobFramework extends K8sBaseFramework<K8sJobRunnable, V1Job> {
                 log.trace("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
 
         //pvcs
@@ -199,7 +199,7 @@ public class K8sJobFramework extends K8sBaseFramework<K8sJobRunnable, V1Job> {
                         log.trace("k8s api response: {}", e.getResponseBody());
                     }
 
-                    throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+                    throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
                 }
             }
 
@@ -238,7 +238,7 @@ public class K8sJobFramework extends K8sBaseFramework<K8sJobRunnable, V1Job> {
                         log.trace("k8s api response: {}", e.getResponseBody());
                     }
 
-                    throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+                    throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
                 }
             }
 
@@ -311,7 +311,13 @@ public class K8sJobFramework extends K8sBaseFramework<K8sJobRunnable, V1Job> {
         V1Job job = null;
         try {
             job = get(build(runnable));
-        } catch (K8sFrameworkException | IllegalArgumentException e) {
+        } catch (K8sFrameworkException e) {
+            //missing means already deleted, any other failure is an error on the main resource
+            if (!e.isNotFound()) {
+                exception = e;
+            }
+            job = null;
+        } catch (IllegalArgumentException e) {
             job = null;
         }
 
@@ -376,7 +382,7 @@ public class K8sJobFramework extends K8sBaseFramework<K8sJobRunnable, V1Job> {
                             log.trace("k8s api response: {}", e.getResponseBody());
                         }
                         //don't propagate
-                        // throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+                        // throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
                     }
                 }
             }
@@ -395,7 +401,8 @@ public class K8sJobFramework extends K8sBaseFramework<K8sJobRunnable, V1Job> {
         }
 
         //update state
-        runnable.setState(K8sRunnableState.DELETED.name());
+        //deletion requested: the monitor confirms when the resources are gone
+        runnable.setState(K8sRunnableState.DELETING.name());
         runnable.setMessage(String.join(", ", messages));
 
         if (log.isTraceEnabled()) {
@@ -567,7 +574,7 @@ public class K8sJobFramework extends K8sBaseFramework<K8sJobRunnable, V1Job> {
                 log.trace("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 
@@ -588,7 +595,7 @@ public class K8sJobFramework extends K8sBaseFramework<K8sJobRunnable, V1Job> {
                 log.trace("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 
@@ -606,7 +613,7 @@ public class K8sJobFramework extends K8sBaseFramework<K8sJobRunnable, V1Job> {
                 log.trace("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 }

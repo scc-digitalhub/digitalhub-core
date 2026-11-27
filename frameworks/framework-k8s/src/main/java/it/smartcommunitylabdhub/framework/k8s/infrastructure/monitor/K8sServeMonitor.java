@@ -72,6 +72,13 @@ public class K8sServeMonitor extends K8sBaseMonitor<K8sServeRunnable> {
     }
 
     @Override
+    protected boolean exists(K8sServeRunnable runnable) throws K8sFrameworkException {
+        //main resources of the runnable
+        return found(() -> deploymentFramework.get(serveFramework.buildDeployment(runnable))) ||
+            found(() -> serveFramework.get(serveFramework.build(runnable)));
+    }
+
+    @Override
     public K8sServeRunnable refresh(K8sServeRunnable runnable) {
         try {
             V1Deployment deployment = deploymentFramework.get(serveFramework.buildDeployment(runnable));

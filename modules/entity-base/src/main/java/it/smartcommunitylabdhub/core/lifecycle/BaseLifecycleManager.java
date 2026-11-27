@@ -60,7 +60,6 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -661,15 +660,6 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
 
         long deadline = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(POST_PROCESSOR_CHAIN_TIMEOUT);
 
-        if (output instanceof Collection<?> collection) {
-            //multiple outputs: each element goes through the chain
-            ArrayList<Serializable> list = new ArrayList<>();
-            for (Object o : collection) {
-                list.add(o instanceof Serializable so ? chain(dto, stage, so, postProcessors, deadline) : null);
-            }
-            return (R) list;
-        }
-
         return (R) chain(dto, stage, output, postProcessors, deadline);
     }
 
@@ -938,10 +928,11 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
                 return;
             }
 
+            //the message goes in the status: the transition input is FSM specific (ex. runnables)
             if (message != null) {
                 current.setStatus(MapUtils.mergeMultipleMaps(current.getStatus(), Map.of("message", message)));
             }
-            handle(current, STATE_ERROR, message);
+            handle(current, STATE_ERROR);
         } catch (RuntimeException e) {
             log.error("unable to move {} to ERROR from detached {}: {}", id, state, e.getMessage());
         }

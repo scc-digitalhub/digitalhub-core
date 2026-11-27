@@ -26,11 +26,13 @@ package it.smartcommunitylabdhub.core.events;
 import it.smartcommunitylabdhub.authorization.UserAuthenticationManager;
 import it.smartcommunitylabdhub.authorization.UserAuthenticationManagerBuilder;
 import it.smartcommunitylabdhub.authorization.providers.NoOpAuthenticationProvider;
+import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
 import it.smartcommunitylabdhub.core.runs.lifecycle.KindAwareRunLifecycleManager;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.RunManager;
+import it.smartcommunitylabdhub.runs.lifecycle.RunState;
 import it.smartcommunitylabdhub.runtimes.events.RunnableChangedEvent;
 import it.smartcommunitylabdhub.runtimes.store.RunnableStore;
 import java.util.Collection;
@@ -190,6 +192,24 @@ public class RunnableEventListener {
 
             if (state == null) {
                 log.error("State is null for run id {}", id);
+                return;
+            }
+
+            //runnables never complete a run delete: the run lifecycle concludes when its runnable is gone
+            //(a DELETED runnable can also come from the cleanup of completed or failed runs)
+            if (RunState.DELETED.name().equals(state)) {
+                log.debug("runnable for run {} deleted, nothing to handle", id);
+                return;
+            }
+
+            //a run being deleted only reacts to a failed delete
+            String runState = StatusFieldAccessor.with(run.getStatus()).getState();
+            if (RunState.DELETING.name().equals(runState)) {
+                if (RunState.ERROR.name().equals(state)) {
+                    wrap(run, event.getRunnable(), (r, rb) -> runManager.handle(r, RunState.ERROR.name(), rb));
+                } else {
+                    log.debug("run {} is deleting, ignore runnable state {}", id, state);
+                }
                 return;
             }
 

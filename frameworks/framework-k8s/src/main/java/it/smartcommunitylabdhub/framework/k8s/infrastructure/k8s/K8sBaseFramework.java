@@ -590,7 +590,7 @@ public abstract class K8sBaseFramework<
                 log.trace("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 
@@ -636,7 +636,7 @@ public abstract class K8sBaseFramework<
                 log.trace("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 
@@ -795,7 +795,7 @@ public abstract class K8sBaseFramework<
                 log.trace("k8s api response: {}", e.getResponseBody());
             }
 
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 
@@ -1503,7 +1503,7 @@ public abstract class K8sBaseFramework<
         } catch (JsonProcessingException e) {
             throw new K8sFrameworkException(e.getMessage());
         } catch (ApiException e) {
-            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody());
+            throw new K8sFrameworkException(e.getMessage(), e.getResponseBody(), e.getCode());
         }
     }
 

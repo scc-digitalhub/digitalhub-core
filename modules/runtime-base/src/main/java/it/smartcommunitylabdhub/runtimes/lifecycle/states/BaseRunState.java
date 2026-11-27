@@ -81,8 +81,8 @@ public class BaseRunState<
                     run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), status.toMap()))
                 );
 
-                //final state, cleanup
-                if (runnable != null) {
+                //final state, cleanup (a failed delete is not cleaned up again)
+                if (runnable != null && !RunState.DELETING.name().equals(currentState)) {
                     return Optional.ofNullable(runtime.delete(run));
                 }
 
@@ -92,10 +92,12 @@ public class BaseRunState<
     }
 
     protected Transition.Builder<String, String, Run> toDeleting() {
-        //(DELETE)->DELETING
+        //(DELETE)->DELETING, detached: effects (finalizers) then the conclusion by the lifecycle manager
+        //the runtime delete is requested on every pass (idempotent, retry)
         return new Transition.Builder<String, String, Run>()
             .event(RunEvent.DELETE.name())
             .nextState(RunState.DELETING.name())
+            .detached()
             .<R, R>withInternalLogic((currentState, nextState, event, run, runnable) -> {
                 RunSpecAccessor specAccessor = RunSpecAccessor.with(run.getSpec());
                 if (specAccessor.isLocalExecution()) {
@@ -229,8 +231,8 @@ public class BaseRunState<
                     run.setStatus(MapUtils.mergeMultipleMaps(run.getStatus(), status.toMap()))
                 );
 
-                //final state, cleanup
-                if (runnable != null) {
+                //final state, cleanup (a failed delete is not cleaned up again)
+                if (runnable != null && !RunState.DELETING.name().equals(currentState)) {
                     return Optional.ofNullable(runtime.delete(run));
                 }
 

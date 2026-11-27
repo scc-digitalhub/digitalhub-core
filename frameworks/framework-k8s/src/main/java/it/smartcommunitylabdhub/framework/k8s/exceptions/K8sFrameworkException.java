@@ -30,24 +30,48 @@ public class K8sFrameworkException extends FrameworkException {
     public static final String DEFAULT_MESSAGE = "Error with the Kubernetes API.";
     private final String apiResponse;
 
+    //http status of the API response, when known (0 otherwise)
+    private final int status;
+
     public K8sFrameworkException() {
         super(DEFAULT_MESSAGE);
         this.apiResponse = null;
+        this.status = 0;
     }
 
     public K8sFrameworkException(String msg) {
         super(msg);
         this.apiResponse = null;
+        this.status = 0;
     }
 
     public K8sFrameworkException(String msg, String apiResponse) {
         super(msg);
         this.apiResponse = apiResponse;
+        this.status = 0;
     }
 
     public K8sFrameworkException(String msg, Throwable cause) {
         super(msg, cause);
         this.apiResponse = null;
+        this.status = 0;
+    }
+
+    public K8sFrameworkException(String msg, String apiResponse, int status) {
+        super(msg);
+        this.apiResponse = apiResponse;
+        this.status = status;
+    }
+
+    public int getStatus() {
+        return status;
+    }
+
+    /**
+     * The resource does not exist (API 404)
+     */
+    public boolean isNotFound() {
+        return status == 404;
     }
 
     public String getApiResponse() {

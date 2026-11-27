@@ -61,6 +61,12 @@ public class K8sCRMonitor extends K8sBaseMonitor<K8sCRRunnable> {
     }
 
     @Override
+    protected boolean exists(K8sCRRunnable runnable) throws K8sFrameworkException {
+        //main resources of the runnable
+        return found(() -> framework.get(framework.build(runnable), framework.getDynamicKubernetesApi(runnable)));
+    }
+
+    @Override
     public K8sCRRunnable refresh(K8sCRRunnable runnable) {
         try {
             DynamicKubernetesApi dynamicApi = framework.getDynamicKubernetesApi(runnable);
