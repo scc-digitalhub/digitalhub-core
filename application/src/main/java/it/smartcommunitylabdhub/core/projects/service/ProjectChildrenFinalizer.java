@@ -7,9 +7,14 @@
 package it.smartcommunitylabdhub.core.projects.service;
 
 import it.smartcommunitylabdhub.artifacts.Artifact;
+import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
+import it.smartcommunitylabdhub.authorization.services.CredentialsService;
+import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.annotations.common.EffectType;
+import it.smartcommunitylabdhub.commons.exceptions.CoreRuntimeException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
+import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.Effect;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
@@ -17,6 +22,8 @@ import it.smartcommunitylabdhub.commons.services.EntityService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
 import it.smartcommunitylabdhub.containerimage.ContainerImage;
 import it.smartcommunitylabdhub.dataitems.DataItem;
+import it.smartcommunitylabdhub.files.service.FilesService;
+import it.smartcommunitylabdhub.files.utils.PathUtils;
 import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.labels.LabelService;
 import it.smartcommunitylabdhub.models.Model;
@@ -34,8 +41,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * Project finalizer: delete every child, then the shared content (secrets, labels) once no child is
- * left. Children deletes run inline in the project detached execution: the project lifecycle
+ * Project finalizer: delete every child, then the shared content (project files, secrets, labels) once
+ * no child is left. Children deletes run inline in the project detached execution: the project lifecycle
  * concludes when no child is left.
  */
 @EffectType(stages = { "onDeleting" }, type = Project.class)
@@ -57,6 +64,9 @@ public class ProjectChildrenFinalizer implements Effect<Project> {
 
     private LabelService labelService;
     private SecretService secretService;
+
+    private FilesService filesService;
+    private CredentialsService credentialsService;
 
     @Autowired(required = false)
     public void setTriggerService(EntityService<Trigger> triggerService) {
@@ -106,6 +116,16 @@ public class ProjectChildrenFinalizer implements Effect<Project> {
     @Autowired(required = false)
     public void setLabelService(LabelService labelService) {
         this.labelService = labelService;
+    }
+
+    @Autowired(required = false)
+    public void setFilesService(FilesService filesService) {
+        this.filesService = filesService;
+    }
+
+    @Autowired(required = false)
+    public void setCredentialsService(CredentialsService credentialsService) {
+        this.credentialsService = credentialsService;
     }
 
     /**
@@ -162,6 +182,9 @@ public class ProjectChildrenFinalizer implements Effect<Project> {
             return;
         }
 
+        //project files (raw files included), before secrets: removal may need project credentials
+        removeFiles(id);
+
         if (secretService != null) {
             log.debug("cascade delete secrets for project with id {}", id);
             secretService.deleteSecretsByProject(id);
@@ -174,6 +197,37 @@ public class ProjectChildrenFinalizer implements Effect<Project> {
             } catch (StoreException e) {
                 log.error("error deleting labels for project {}: {}", id, e.getMessage());
             }
+        }
+    }
+
+    /**
+     * Remove the whole project base path. Acts only on a well formed base ending with "/<project>/":
+     * a misconfigured store must never lead to removing anything else.
+     */
+    private void removeFiles(String project) {
+        if (filesService == null) {
+            return;
+        }
+
+        String base = filesService.getProjectBasePath(project);
+        String normalized = PathUtils.normalize(base);
+        if (normalized == null || !normalized.endsWith("/" + project + "/")) {
+            log.error("invalid base path {} for project {}, files not removed", base, project);
+            return;
+        }
+
+        log.debug("cascade delete files in {} for project {}", normalized, project);
+        try {
+            //credentials of the current user (the owner)
+            UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
+            List<Credentials> credentials = auth != null && credentialsService != null
+                ? credentialsService.getCredentials(auth)
+                : null;
+
+            filesService.remove(normalized, credentials);
+        } catch (StoreException e) {
+            log.error("error deleting files for project {}: {}", project, e.getMessage());
+            throw new CoreRuntimeException("error deleting project files: " + e.getMessage(), e);
         }
     }
 
