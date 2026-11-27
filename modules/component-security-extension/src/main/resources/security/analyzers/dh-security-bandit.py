@@ -124,6 +124,7 @@ def _build_extension(project, function, report, extension_id, path):
         "function": report["target"],
         "assessment": report["assessment"],
         "findings": report["findings"],
+        "report_name": report["report_name"]
     }
     if run is not None:
         spec["run"] = str(run)
