@@ -20,7 +20,9 @@ package it.smartcommunitylabdhub.functions.config;
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
+import it.smartcommunitylabdhub.fsm.Fsm;
 import it.smartcommunitylabdhub.functions.Function;
+import it.smartcommunitylabdhub.functions.lifecycle.FunctionFsmFactoryBuilder;
 import it.smartcommunitylabdhub.functions.persistence.FunctionEntity;
 import it.smartcommunitylabdhub.functions.persistence.FunctionRepository;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
@@ -32,6 +34,11 @@ import org.springframework.core.convert.converter.Converter;
 
 @Configuration
 public class FunctionConfig {
+
+    @Bean
+    Fsm.Factory<String, String, Function> functionFsmFactory(FunctionFsmFactoryBuilder builder) {
+        return builder.build();
+    }
 
     @Bean
     public SearchableEntityRepository<FunctionEntity, Function> functionSearchableEntityRepository(

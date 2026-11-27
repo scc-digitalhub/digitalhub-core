@@ -23,6 +23,7 @@
 
 package it.smartcommunitylabdhub.projects.service;
 
+import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
 import it.smartcommunitylabdhub.core.services.BaseEntityServiceImpl;
@@ -41,6 +42,19 @@ import org.springframework.stereotype.Service;
 @Service
 @Slf4j
 public class ProjectEntityServiceImpl extends BaseEntityServiceImpl<Project, ProjectEntity> {
+
+    //projects: no caller effect, the project lifecycle manager concludes the delete itself once no
+    //child is left, for every caller of perform(DELETE)
+    @Override
+    protected Project doDelete(@NotNull String id, @NotNull Project e, @Nullable Boolean cascade)
+        throws StoreException {
+        String state = StatusFieldAccessor.with(e.getStatus()).getState();
+        if (getLifecycleManager() != null && !"DELETED".equals(state)) {
+            return getLifecycleManager().perform(e, "DELETE");
+        }
+
+        return super.doDelete(id, e, cascade);
+    }
 
     @Override
     public void deleteByProject(@NotNull String project, @Nullable Boolean cascade) throws StoreException {

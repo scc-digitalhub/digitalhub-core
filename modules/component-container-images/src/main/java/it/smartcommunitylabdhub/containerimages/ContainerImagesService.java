@@ -460,30 +460,39 @@ public class ContainerImagesService {
         //sanity check: delete without credentials doesn't make sense
         Credential credential = buildCredential(imageRef.getRegistry());
         if (credential != null) {
-            String digest = imageRef.getDigest().orElse(null);
-            if (!StringUtils.hasText(digest)) {
-                try {
-                    digest = getDigest(imageReference);
-                } catch (InvalidImageReferenceException e) {
-                    throw new IOException("Invalid image reference: " + imageReference, e);
+            try {
+                String digest = imageRef.getDigest().orElse(null);
+                if (!StringUtils.hasText(digest)) {
+                    try {
+                        digest = getDigest(imageReference);
+                    } catch (InvalidImageReferenceException e) {
+                        throw new IOException("Invalid image reference: " + imageReference, e);
+                    }
+                }
+                if (!StringUtils.hasText(digest)) {
+                    throw new StoreException("Unable to resolve image digest for deletion: " + imageReference);
+                }
+
+                String manifestUrl = buildManifestUrlByDigest(imageRef, digest);
+                log.debug("Deleting image: {} from URL: {}", imageReference, manifestUrl);
+
+                withAuth(imageRef.getRegistry(), authHeader -> {
+                    restTemplate.exchange(
+                        manifestUrl,
+                        HttpMethod.DELETE,
+                        new HttpEntity<>(buildManifestHeaders(authHeader)),
+                        Void.class
+                    );
+                    return null;
+                });
+            } catch (IOException e) {
+                //missing image (digest lookup or delete): nothing to delete
+                if (e.getCause() instanceof HttpClientErrorException.NotFound) {
+                    log.debug("image {} not found in registry, nothing to delete", imageReference);
+                } else {
+                    throw e;
                 }
             }
-            if (!StringUtils.hasText(digest)) {
-                throw new StoreException("Unable to resolve image digest for deletion: " + imageReference);
-            }
-
-            String manifestUrl = buildManifestUrlByDigest(imageRef, digest);
-            log.debug("Deleting image: {} from URL: {}", imageReference, manifestUrl);
-
-            withAuth(imageRef.getRegistry(), authHeader -> {
-                restTemplate.exchange(
-                    manifestUrl,
-                    HttpMethod.DELETE,
-                    new HttpEntity<>(buildManifestHeaders(authHeader)),
-                    Void.class
-                );
-                return null;
-            });
         }
 
         //always cleanup cache

@@ -1,100 +1,19 @@
-/**
- * Copyright 2025 the original author or authors
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package it.smartcommunitylabdhub.dataitems.services;
 
-import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
-import it.smartcommunitylabdhub.authorization.services.CredentialsService;
-import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.commons.annotations.common.EffectType;
-import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
-import it.smartcommunitylabdhub.commons.infrastructure.Effect;
-import it.smartcommunitylabdhub.commons.utils.EntityUtils;
 import it.smartcommunitylabdhub.dataitems.DataItem;
-import it.smartcommunitylabdhub.dataitems.specs.DataItemBaseSpec;
-import it.smartcommunitylabdhub.files.service.FilesInfoService;
-import it.smartcommunitylabdhub.files.service.FilesService;
-import jakarta.validation.constraints.NotNull;
-import java.io.Serializable;
-import java.util.List;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import it.smartcommunitylabdhub.files.service.BaseFilesFinalizer;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
+/**
+ * DataItem files cleanup on delete
+ */
 @EffectType(stages = { "onDeleting" }, type = DataItem.class)
 @Component
-@Slf4j
-public class DataItemFilesFinalizer implements Effect<DataItem> {
-
-    private FilesService filesService;
-    private FilesInfoService filesInfoService;
-    private CredentialsService credentialsService;
-
-    @Autowired(required = false)
-    public void setFilesService(FilesService filesService) {
-        this.filesService = filesService;
-    }
-
-    @Autowired(required = false)
-    public void setFilesInfoService(FilesInfoService filesInfoService) {
-        this.filesInfoService = filesInfoService;
-    }
-
-    @Autowired(required = false)
-    public void setCredentialsService(CredentialsService credentialsService) {
-        this.credentialsService = credentialsService;
-    }
-
-    @Override
-    public void process(String stage, DataItem dataItem, Serializable output) {
-        try {
-            cleanup(dataItem);
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage(), e);
-        }
-    }
-
-    private void cleanup(@NotNull DataItem dataItem) throws StoreException {
-        log.debug("finalize dataItem with id {}", dataItem.getId());
-
-        String id = dataItem.getId();
-
-        if (filesService != null && filesInfoService != null) {
-            //files
-            log.debug("cascade delete files for dataItem with id {}", id);
-
-            //extract path from spec
-            DataItemBaseSpec spec = new DataItemBaseSpec();
-            spec.configure(dataItem.getSpec());
-
-            String path = spec.getPath();
-            if (StringUtils.hasText(path)) {
-                //try to resolve credentials
-                UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-                List<Credentials> credentials =
-                    auth != null && credentialsService != null ? credentialsService.getCredentials(auth) : null;
-
-                //delete files
-                filesService.remove(path, credentials);
-                filesInfoService.clearFilesInfo(EntityUtils.getEntityName(DataItem.class), id);
-            }
-        }
-    }
-}
+public class DataItemFilesFinalizer extends BaseFilesFinalizer<DataItem> {}

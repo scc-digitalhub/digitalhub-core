@@ -20,7 +20,9 @@ package it.smartcommunitylabdhub.projects.config;
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
+import it.smartcommunitylabdhub.fsm.Fsm;
 import it.smartcommunitylabdhub.projects.Project;
+import it.smartcommunitylabdhub.projects.lifecycle.ProjectFsmFactoryBuilder;
 import it.smartcommunitylabdhub.projects.persistence.ProjectEntity;
 import it.smartcommunitylabdhub.projects.persistence.ProjectRepository;
 import org.springframework.context.annotation.Bean;
@@ -29,6 +31,11 @@ import org.springframework.core.convert.converter.Converter;
 
 @Configuration
 public class ProjectConfig {
+
+    @Bean
+    Fsm.Factory<String, String, Project> projectFsmFactory(ProjectFsmFactoryBuilder builder) {
+        return builder.build();
+    }
 
     @Bean
     SearchableEntityRepository<ProjectEntity, Project> projectSearchableEntityRepository(

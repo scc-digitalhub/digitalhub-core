@@ -20,9 +20,11 @@ package it.smartcommunitylabdhub.workflows.config;
 import it.smartcommunitylabdhub.core.repositories.BaseEntityRepositoryImpl;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.core.specs.SpecRegistryImpl;
+import it.smartcommunitylabdhub.fsm.Fsm;
 import it.smartcommunitylabdhub.search.indexers.EntityIndexer;
 import it.smartcommunitylabdhub.templates.service.TemplateServiceImpl;
 import it.smartcommunitylabdhub.workflows.Workflow;
+import it.smartcommunitylabdhub.workflows.lifecycle.WorkflowFsmFactoryBuilder;
 import it.smartcommunitylabdhub.workflows.persistence.WorkflowEntity;
 import it.smartcommunitylabdhub.workflows.persistence.WorkflowRepository;
 import java.util.Optional;
@@ -32,6 +34,11 @@ import org.springframework.core.convert.converter.Converter;
 
 @Configuration
 public class WorkflowConfig {
+
+    @Bean
+    Fsm.Factory<String, String, Workflow> workflowFsmFactory(WorkflowFsmFactoryBuilder builder) {
+        return builder.build();
+    }
 
     @Bean
     public SearchableEntityRepository<WorkflowEntity, Workflow> workflowSearchableEntityRepository(

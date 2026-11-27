@@ -1,104 +1,55 @@
-/**
- * Copyright 2025 the original author or authors
+/*
+ * SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package it.smartcommunitylabdhub.core.workflows.service;
 
-import it.smartcommunitylabdhub.commons.Fields;
 import it.smartcommunitylabdhub.commons.annotations.common.EffectType;
-import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.infrastructure.Effect;
-import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
-import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
-import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
+import it.smartcommunitylabdhub.workflows.Workflow;
 import it.smartcommunitylabdhub.tasks.Task;
 import it.smartcommunitylabdhub.tasks.TaskService;
-import it.smartcommunitylabdhub.tasks.persistence.TaskEntity;
-import it.smartcommunitylabdhub.workflows.Workflow;
-import jakarta.validation.constraints.NotNull;
+import it.smartcommunitylabdhub.tasks.filters.TaskEntityFilter;
+import jakarta.annotation.Nullable;
 import java.io.Serializable;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
+/**
+ * Workflow finalizer: delete the tasks of the workflow, with cascade (runs).
+ *
+ * TODO also track and cleanup runs: wait for the runs of the tasks to be gone before concluding
+ */
 @EffectType(stages = { "onDeleting" }, type = Workflow.class)
 @Component
 @Slf4j
 public class WorkflowTasksFinalizer implements Effect<Workflow> {
 
-    //TODO replace with finalizer!
     @Autowired
     private TaskService taskService;
 
-    @Autowired
-    private SearchableEntityRepository<TaskEntity, Task> taskEntityService;
-
     @Override
-    public void process(String stage, Workflow workflow, Serializable output) {
-        try {
-            cleanup(workflow);
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage(), e);
-        }
-    }
-
-    private void cleanup(@NotNull Workflow workflow) throws StoreException {
+    public void process(String stage, Workflow workflow, @Nullable Serializable output) {
         log.debug("finalize workflow with id {}", workflow.getId());
 
-        try {
-            //delete tasks
-            //define a spec for tasks building workflow path
-            String path =
-                (workflow.getKind() +
-                    "://" +
-                    workflow.getProject() +
-                    "/" +
-                    workflow.getName() +
-                    ":" +
-                    workflow.getId());
+        //tasks reference the workflow by path
+        String path = workflow.getKind() + "://" + workflow.getProject() + "/" + workflow.getName() + ":" + workflow.getId();
+        TaskEntityFilter filter = new TaskEntityFilter();
+        filter.setWorkflow(path);
 
-            Specification<TaskEntity> where = Specification.allOf(
-                CommonSpecification.projectEquals(workflow.getProject()),
-                createWorkflowSpecification(path)
-            );
+        List<Task> tasks = taskService.searchTasksByProject(workflow.getProject(), filter.toSearchFilter());
 
-            //fetch all tasks ordered by kind ASC
-            Specification<TaskEntity> specification = (root, query, builder) -> {
-                query.orderBy(builder.asc(root.get(AbstractEntity_.KIND)));
-                return where.toPredicate(root, query, builder);
-            };
-
-            List<Task> tasks = taskEntityService.searchAll(specification);
-
-            //delete all with cascade
-            tasks.forEach(task -> {
+        //delete all with cascade, a failure does not stop the others (idempotent: retried by the loop)
+        for (Task task : tasks) {
+            try {
                 taskService.deleteTask(task.getId(), true);
-            });
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
+            } catch (RuntimeException e) {
+                log.error("error deleting task {} of workflow {}: {}", task.getId(), workflow.getId(), e.getMessage());
+            }
         }
-    }
-
-    private Specification<TaskEntity> createWorkflowSpecification(String workflow) {
-        return (root, query, criteriaBuilder) -> {
-            return criteriaBuilder.equal(root.get(Fields.WORKFLOW), workflow);
-        };
     }
 }
