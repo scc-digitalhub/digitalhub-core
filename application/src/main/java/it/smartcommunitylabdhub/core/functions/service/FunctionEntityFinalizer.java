@@ -16,81 +16,12 @@
 
 package it.smartcommunitylabdhub.core.functions.service;
 
-import it.smartcommunitylabdhub.commons.Fields;
-import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
-import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
-import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
-import it.smartcommunitylabdhub.core.services.EntityFinalizer;
+import it.smartcommunitylabdhub.core.services.BaseEntityFinalizer;
 import it.smartcommunitylabdhub.functions.Function;
-import it.smartcommunitylabdhub.tasks.Task;
-import it.smartcommunitylabdhub.tasks.TaskService;
-import it.smartcommunitylabdhub.tasks.persistence.TaskEntity;
-import jakarta.validation.constraints.NotNull;
-import java.util.List;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
+/**
+ * Finalizer for Function: runs the "onDeleting" effects of the type
+ */
 @Component
-@Slf4j
-public class FunctionEntityFinalizer implements EntityFinalizer<Function>, InitializingBean {
-
-    //TODO replace with finalizer!
-    @Autowired
-    private TaskService taskService;
-
-    @Autowired
-    private SearchableEntityRepository<TaskEntity, Task> taskEntityService;
-
-    @Override
-    public void afterPropertiesSet() throws Exception {}
-
-    @Override
-    public void finalize(@NotNull Function function) throws StoreException {
-        log.debug("finalize function with id {}", function.getId());
-
-        try {
-            //delete tasks
-            //define a spec for tasks building function path
-            String path =
-                (function.getKind() +
-                    "://" +
-                    function.getProject() +
-                    "/" +
-                    function.getName() +
-                    ":" +
-                    function.getId());
-
-            Specification<TaskEntity> where = Specification.allOf(
-                CommonSpecification.projectEquals(function.getProject()),
-                createFunctionSpecification(path)
-            );
-
-            //fetch all tasks ordered by kind ASC
-            Specification<TaskEntity> specification = (root, query, builder) -> {
-                query.orderBy(builder.asc(root.get(AbstractEntity_.KIND)));
-                return where.toPredicate(root, query, builder);
-            };
-
-            List<Task> tasks = taskEntityService.searchAll(specification);
-
-            //delete all with cascade
-            tasks.forEach(task -> {
-                taskService.deleteTask(task.getId(), true);
-            });
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    private Specification<TaskEntity> createFunctionSpecification(String function) {
-        return (root, query, criteriaBuilder) -> {
-            return criteriaBuilder.equal(root.get(Fields.FUNCTION), function);
-        };
-    }
-}
+public class FunctionEntityFinalizer extends BaseEntityFinalizer<Function> {}

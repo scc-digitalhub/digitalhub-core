@@ -622,21 +622,10 @@ public abstract class BaseEntityServiceImpl<
         String curState = curStatus.getState() == null ? "CREATED" : curStatus.getState();
 
         if (getLifecycleManager() != null && !"DELETED".equals(curState)) {
-            //delegate to lifecycle manager: the effect runs after the turn is released,
-            //once per persisted step, with the persisted object
+            //delegate to lifecycle manager: finalization is part of the lifecycle, run by the
+            //effects of the DELETING step (cascade is not considered)
             log.debug("handle delete via lifecycle manager for {}", id);
-            return lifecycleManager.perform(e, "DELETE", null, (dto, r) -> {
-                String state = StatusFieldAccessor.with(dto.getStatus()).getState();
-                if ("ERROR".equals(state)) {
-                    //delete failed: never garbage collect related objects
-                    log.debug("delete of {} ended in ERROR, skip finalize", id);
-                    return;
-                }
-
-                if (Boolean.TRUE.equals(cascade)) {
-                    finalize(dto);
-                }
-            });
+            return lifecycleManager.perform(e, "DELETE");
         }
 
         //no lifecycle manager or already completed, just delete
@@ -644,7 +633,7 @@ public abstract class BaseEntityServiceImpl<
         repository.delete(id);
 
         if (Boolean.TRUE.equals(cascade)) {
-            //garbage collect outside the turn
+            //not fully managed: finalize best effort, outside the turn
             lockManager.runAfterRelease(type, id, () -> finalize(e));
         }
 
@@ -652,7 +641,8 @@ public abstract class BaseEntityServiceImpl<
     }
 
     /**
-     * Garbage collect related objects via finalizer: dispatched via operations bus when available
+     * Finalize an object removed without lifecycle via the finalizer: dispatched via operations bus
+     * when available, inline otherwise
      */
     protected void finalize(@NotNull D dto) {
         if (getFinalizer() == null) {

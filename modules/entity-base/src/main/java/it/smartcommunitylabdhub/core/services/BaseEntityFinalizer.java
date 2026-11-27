@@ -23,52 +23,67 @@
 
 package it.smartcommunitylabdhub.core.services;
 
+import it.smartcommunitylabdhub.commons.infrastructure.Effect;
+import it.smartcommunitylabdhub.commons.infrastructure.EffectRegistry;
+import it.smartcommunitylabdhub.commons.jackson.JacksonMapper;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
-import it.smartcommunitylabdhub.core.events.EntityOperationsPublisher;
-import it.smartcommunitylabdhub.events.EntityOperation;
+import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
+import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
+import jakarta.validation.constraints.NotNull;
+import java.io.IOException;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
 
 /**
- * Base implementation of EntityFinalizer with no-op finalize method, to be extended by specific finalizers when needed.
- * Exposes operations channel to let finalizers asyncronously delete related entities, if needed.
+ * Finalizer driver: runs the "onDeleting" effects registered for the type, in order.
+ *
+ * Used for objects removed without a lifecycle (not fully managed): best effort, every effect runs
+ * and failures (CoreRuntimeException included) are logged. With a lifecycle the same effects run as
+ * part of the DELETING step instead.
+ *
+ * Every entity extends it with its concrete type, to be wired where needed.
  */
-
 @Slf4j
-public abstract class BaseEntityFinalizer<D extends BaseDTO> implements EntityFinalizer<D> {
+public abstract class BaseEntityFinalizer<D extends BaseDTO & SpecDTO & StatusDTO> implements EntityFinalizer<D> {
 
-    private ApplicationEventPublisher eventPublisher;
-    private EntityOperationsPublisher operationsPublisher;
+    public static final String STAGE = "onDeleting";
 
-    @Autowired(required = false)
-    public void setOperationsPublisher(EntityOperationsPublisher operationsPublisher) {
-        this.operationsPublisher = operationsPublisher;
-    }
+    protected EffectRegistry<D> effectRegistry;
 
     @Autowired(required = false)
-    public void setEventPublisher(ApplicationEventPublisher eventPublisher) {
-        this.eventPublisher = eventPublisher;
+    public void setEffectRegistry(EffectRegistry<D> effectRegistry) {
+        this.effectRegistry = effectRegistry;
     }
 
-    protected void dispatch(EntityOperation<?> operation) {
-        if (operation.getDto() == null) {
+    @Override
+    public void finalize(@NotNull D dto) {
+        if (effectRegistry == null) {
             return;
         }
 
-        Class<?> clazz = operation.getResolvableType().getGeneric(0).resolve();
-        log.debug("dispatching operation {} for {}:{}", operation.getAction(), clazz, operation.getDto().getId());
-
-        if (log.isTraceEnabled()) {
-            log.trace("dto: {}", String.valueOf(operation.getDto()));
+        List<Effect<D>> effects = effectRegistry.getEffects(STAGE);
+        if (effects == null || effects.isEmpty()) {
+            return;
         }
 
-        if (operationsPublisher != null) {
-            //dispatch via operations bus, no transaction required
-            operationsPublisher.publish(operation);
-        } else if (eventPublisher != null) {
-            //fallback to application events
-            eventPublisher.publishEvent(operation);
+        log.debug("finalize {} with {} effects", dto.getId(), effects.size());
+        for (Effect<D> effect : effects) {
+            try {
+                //each effect works on its own copy
+                effect.process(STAGE, copy(dto), null);
+            } catch (RuntimeException e) {
+                log.error("finalize effect failed for {}: {}", dto.getId(), e.getMessage());
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private D copy(D dto) throws IllegalStateException {
+        try {
+            return JacksonMapper.deepClone(dto, (Class<D>) dto.getClass());
+        } catch (IOException e) {
+            throw new IllegalStateException("unable to copy " + dto.getId() + ": " + e.getMessage(), e);
         }
     }
 }

@@ -16,41 +16,12 @@
 
 package it.smartcommunitylabdhub.core.runs.service;
 
-import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.core.services.EntityFinalizer;
-import it.smartcommunitylabdhub.logs.LogStore;
+import it.smartcommunitylabdhub.core.services.BaseEntityFinalizer;
 import it.smartcommunitylabdhub.runs.Run;
-import jakarta.validation.constraints.NotNull;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+/**
+ * Finalizer for Run: runs the "onDeleting" effects of the type
+ */
 @Component
-@Slf4j
-public class RunEntityFinalizer implements EntityFinalizer<Run>, InitializingBean {
-
-    private LogStore logStore;
-
-    //TODO remove metrics
-
-    @Autowired(required = false)
-    public void setLogStore(LogStore logStore) {
-        this.logStore = logStore;
-    }
-
-    @Override
-    public void afterPropertiesSet() throws Exception {}
-
-    @Override
-    public void finalize(@NotNull Run run) throws StoreException {
-        log.debug("finalize run with id {}", run.getId());
-
-        String id = run.getId();
-
-        if (logStore != null) {
-            log.debug("cascade delete logs for run with id {}", String.valueOf(id));
-            logStore.deleteLogsByRunId(id);
-        }
-    }
-}
+public class RunEntityFinalizer extends BaseEntityFinalizer<Run> {}

@@ -16,81 +16,12 @@
 
 package it.smartcommunitylabdhub.core.workflows.service;
 
-import it.smartcommunitylabdhub.commons.Fields;
-import it.smartcommunitylabdhub.commons.exceptions.StoreException;
-import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.core.persistence.AbstractEntity_;
-import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
-import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
-import it.smartcommunitylabdhub.core.services.EntityFinalizer;
-import it.smartcommunitylabdhub.tasks.Task;
-import it.smartcommunitylabdhub.tasks.TaskService;
-import it.smartcommunitylabdhub.tasks.persistence.TaskEntity;
+import it.smartcommunitylabdhub.core.services.BaseEntityFinalizer;
 import it.smartcommunitylabdhub.workflows.Workflow;
-import jakarta.validation.constraints.NotNull;
-import java.util.List;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
+/**
+ * Finalizer for Workflow: runs the "onDeleting" effects of the type
+ */
 @Component
-@Slf4j
-public class WorkflowEntityFinalizer implements EntityFinalizer<Workflow>, InitializingBean {
-
-    //TODO replace with finalizer!
-    @Autowired
-    private TaskService taskService;
-
-    @Autowired
-    private SearchableEntityRepository<TaskEntity, Task> taskEntityService;
-
-    @Override
-    public void afterPropertiesSet() throws Exception {}
-
-    @Override
-    public void finalize(@NotNull Workflow workflow) throws StoreException {
-        log.debug("finalize workflow with id {}", workflow.getId());
-
-        try {
-            //delete tasks
-            //define a spec for tasks building workflow path
-            String path =
-                (workflow.getKind() +
-                    "://" +
-                    workflow.getProject() +
-                    "/" +
-                    workflow.getName() +
-                    ":" +
-                    workflow.getId());
-
-            Specification<TaskEntity> where = Specification.allOf(
-                CommonSpecification.projectEquals(workflow.getProject()),
-                createWorkflowSpecification(path)
-            );
-
-            //fetch all tasks ordered by kind ASC
-            Specification<TaskEntity> specification = (root, query, builder) -> {
-                query.orderBy(builder.asc(root.get(AbstractEntity_.KIND)));
-                return where.toPredicate(root, query, builder);
-            };
-
-            List<Task> tasks = taskEntityService.searchAll(specification);
-
-            //delete all with cascade
-            tasks.forEach(task -> {
-                taskService.deleteTask(task.getId(), true);
-            });
-        } catch (StoreException e) {
-            log.error("store error: {}", e.getMessage());
-            throw new SystemException(e.getMessage());
-        }
-    }
-
-    private Specification<TaskEntity> createWorkflowSpecification(String workflow) {
-        return (root, query, criteriaBuilder) -> {
-            return criteriaBuilder.equal(root.get(Fields.WORKFLOW), workflow);
-        };
-    }
-}
+public class WorkflowEntityFinalizer extends BaseEntityFinalizer<Workflow> {}

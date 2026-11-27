@@ -176,13 +176,14 @@ class BaseEntityServiceLifecycleTest {
     }
 
     @Test
-    void deleteWithCascadeFinalizesOutsideTheTurn() throws Exception {
+    void deleteWithLifecycleLeavesFinalizationToTheLifecycle() throws Exception {
         service.create(dto("e1", null));
 
         service.delete("e1", true);
 
+        //finalization runs as effects of the delete step, never via the service finalizer
         assertThat(repository.find("e1")).isNull();
-        assertThat(finalized).containsExactly("e1:held=false");
+        assertThat(finalized).isEmpty();
     }
 
     @Test
@@ -235,6 +236,7 @@ class BaseEntityServiceLifecycleTest {
 
         assertThat(jpaRepository.count()).isZero();
         assertThat(fsm.calls()).containsExactlyInAnyOrder("CREATED>DELETED", "CREATED>DELETED");
-        assertThat(finalized).containsExactlyInAnyOrder("e1:held=false", "e2:held=false");
+        //with a lifecycle finalization is part of the lifecycle, not of the service
+        assertThat(finalized).isEmpty();
     }
 }
