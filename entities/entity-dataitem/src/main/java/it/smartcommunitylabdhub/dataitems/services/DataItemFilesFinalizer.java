@@ -7,8 +7,8 @@
 package it.smartcommunitylabdhub.dataitems.services;
 
 import it.smartcommunitylabdhub.commons.annotations.common.EffectType;
+import it.smartcommunitylabdhub.core.services.BaseVersionableFilesFinalizer;
 import it.smartcommunitylabdhub.dataitems.DataItem;
-import it.smartcommunitylabdhub.files.service.BaseFilesFinalizer;
 import org.springframework.stereotype.Component;
 
 /**
@@ -16,4 +16,4 @@ import org.springframework.stereotype.Component;
  */
 @EffectType(stages = { "onDeleting" }, type = DataItem.class)
 @Component
-public class DataItemFilesFinalizer extends BaseFilesFinalizer<DataItem> {}
+public class DataItemFilesFinalizer extends BaseVersionableFilesFinalizer<DataItem> {}

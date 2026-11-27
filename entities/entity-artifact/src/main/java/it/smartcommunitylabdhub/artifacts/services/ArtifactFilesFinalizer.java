@@ -8,7 +8,7 @@ package it.smartcommunitylabdhub.artifacts.services;
 
 import it.smartcommunitylabdhub.artifacts.Artifact;
 import it.smartcommunitylabdhub.commons.annotations.common.EffectType;
-import it.smartcommunitylabdhub.files.service.BaseFilesFinalizer;
+import it.smartcommunitylabdhub.core.services.BaseVersionableFilesFinalizer;
 import org.springframework.stereotype.Component;
 
 /**
@@ -16,4 +16,4 @@ import org.springframework.stereotype.Component;
  */
 @EffectType(stages = { "onDeleting" }, type = Artifact.class)
 @Component
-public class ArtifactFilesFinalizer extends BaseFilesFinalizer<Artifact> {}
+public class ArtifactFilesFinalizer extends BaseVersionableFilesFinalizer<Artifact> {}
