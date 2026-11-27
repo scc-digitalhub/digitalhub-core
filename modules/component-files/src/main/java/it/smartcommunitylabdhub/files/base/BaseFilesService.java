@@ -82,9 +82,8 @@ public abstract class BaseFilesService<
     }
 
     protected String resolveBasePath(String project, String name, String id, String filename) throws StoreException {
-        return (
-            filesService.getDefaultStore(null) + "/" + project + "/" + EntityUtils.getEntityName(type).toLowerCase()
-        );
+        //managed files live under the project base path
+        return filesService.getProjectBasePath(project) + EntityUtils.getEntityName(type).toLowerCase();
     }
 
     private String resolveUploadBasePath(String path) {

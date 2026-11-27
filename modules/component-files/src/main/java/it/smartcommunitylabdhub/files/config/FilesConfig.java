@@ -20,6 +20,7 @@ import it.smartcommunitylabdhub.commons.config.YamlPropertySourceFactory;
 import it.smartcommunitylabdhub.files.service.FilesInfoService;
 import it.smartcommunitylabdhub.files.service.FilesInfoServiceImpl;
 import it.smartcommunitylabdhub.files.service.FilesService;
+import it.smartcommunitylabdhub.files.service.ProjectPathResolver;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,6 +34,15 @@ public class FilesConfig {
     @Bean
     FilesService filesService(FilesProperties filesProperties) {
         return new FilesService(filesProperties);
+    }
+
+    /**
+     * Default project base path: default store + "/<project>/". Project aware resolvers override it
+     * as @Primary.
+     */
+    @Bean
+    ProjectPathResolver defaultProjectPathResolver(FilesService filesService) {
+        return project -> filesService.getDefaultStore(null) + "/" + project + "/";
     }
 
     @Bean

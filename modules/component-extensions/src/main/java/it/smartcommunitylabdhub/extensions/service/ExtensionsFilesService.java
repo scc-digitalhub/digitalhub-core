@@ -81,22 +81,8 @@ public class ExtensionsFilesService extends BaseFilesService<Extension> {
             }
         }
 
-        //TODO resolve project as fallback - not possible because of circular dependency
-        // Project prj = projectService.get(project);
-        // ConfigSpecAccessor cfg = ConfigSpecAccessor.with(prj.getSpec());
-
-        // return (
-        //     filesService.getDefaultStore(cfg.getConfig()) +
-        //     "/" +
-        //     project +
-        //     "/" +
-        //     EntityUtils.getEntityName(Extension.class).toLowerCase()
-        // );
-
-        //fallback to default
-        return (
-            filesService.getDefaultStore(null) + "/" + project + "/" + EntityUtils.getEntityName(type).toLowerCase()
-        );
+        //fallback to the project base path
+        return filesService.getProjectBasePath(project) + EntityUtils.getEntityName(type).toLowerCase();
     }
 
     /** Returns true when the DTO type handled by the given service implements {@link ExtensibleDTO}. */

@@ -21,7 +21,6 @@ import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.CredentialsService;
 import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.commons.Keys;
-import it.smartcommunitylabdhub.commons.accessors.spec.ConfigSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
@@ -78,11 +77,12 @@ public class FilesStoreController {
     public Collection<String> getFilesStores(
         @PathVariable @Valid @NotNull @Pattern(regexp = Keys.SLUG_PATTERN) String project
     ) throws NoSuchEntityException, StoreException {
-        //TODO remove workaround and expose project file store as is
-        Project prj = projectService.get(project);
-        ConfigSpecAccessor cfg = ConfigSpecAccessor.with(prj.getSpec());
+        //check the project exists
+        projectService.get(project);
 
-        return Collections.singleton(filesService.getDefaultStore(cfg.getConfig()) + "/" + project);
+        //project base path, exposed without the trailing slash
+        String base = filesService.getProjectBasePath(project);
+        return Collections.singleton(base.endsWith("/") ? base.substring(0, base.length() - 1) : base);
     }
 
     @GetMapping(path = "/info", produces = "application/json; charset=UTF-8")

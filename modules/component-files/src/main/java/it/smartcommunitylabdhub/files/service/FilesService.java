@@ -43,6 +43,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.util.Assert;
@@ -62,6 +64,9 @@ public class FilesService implements ConfigurationProvider, InitializingBean {
 
     private FilesConfig config;
 
+    //resolved lazily: resolvers may depend on this service (ex. default store)
+    private ObjectProvider<ProjectPathResolver> projectPathResolver;
+
     public FilesService(FilesProperties properties) {
         Assert.notNull(properties, "files properties are required");
 
@@ -77,6 +82,23 @@ public class FilesService implements ConfigurationProvider, InitializingBean {
         registerStore("http://", store);
         registerStore("https://", store);
         registerStore("ftp://", store);
+    }
+
+    @Autowired(required = false)
+    public void setProjectPathResolver(ObjectProvider<ProjectPathResolver> projectPathResolver) {
+        this.projectPathResolver = projectPathResolver;
+    }
+
+    /**
+     * Base path for the files of the project, ending with "/": every managed file of the project
+     * lives under it
+     */
+    public String getProjectBasePath(@NotNull String project) {
+        Assert.hasText(project, "project can not be null or empty");
+
+        ProjectPathResolver resolver = projectPathResolver != null ? projectPathResolver.getIfAvailable() : null;
+        String base = resolver != null ? resolver.resolve(project) : getDefaultStore(null) + "/" + project + "/";
+        return base.endsWith("/") ? base : base + "/";
     }
 
     @Override
