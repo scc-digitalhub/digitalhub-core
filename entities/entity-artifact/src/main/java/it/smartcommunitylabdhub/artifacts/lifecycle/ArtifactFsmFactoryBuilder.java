@@ -27,6 +27,7 @@ import it.smartcommunitylabdhub.core.lifecycle.BaseEntityStateBuilder;
 import it.smartcommunitylabdhub.core.lifecycle.BaseFsmFactory;
 import it.smartcommunitylabdhub.core.lifecycle.BaseFsmFactoryBuilder;
 import it.smartcommunitylabdhub.fsm.FsmState;
+import it.smartcommunitylabdhub.fsm.Transition;
 import java.util.List;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,42 +43,56 @@ public class ArtifactFsmFactoryBuilder {
         builder = new BaseFsmFactoryBuilder<>();
         // Define the base FSM states and transitions
         builder.builders(
-            new BaseEntityStateBuilder<>(
+            new BaseEntityStateBuilder<Artifact>(
                 ArtifactState.CREATED.name(),
                 Set.of(
                     Pair.of(ArtifactEvents.UPLOAD.name(), ArtifactState.UPLOADING.name()),
                     Pair.of(ArtifactEvents.READY.name(), ArtifactState.READY.name()),
-                    Pair.of(ArtifactEvents.ERROR.name(), ArtifactState.ERROR.name()),
-                    Pair.of(ArtifactEvents.DELETE.name(), ArtifactState.DELETED.name())
+                    Pair.of(ArtifactEvents.ERROR.name(), ArtifactState.ERROR.name())
                 )
-            ),
-            new BaseEntityStateBuilder<>(
+            ).tx(toDeleting()),
+            new BaseEntityStateBuilder<Artifact>(
                 ArtifactState.UPLOADING.name(),
                 Set.of(
                     Pair.of(ArtifactEvents.READY.name(), ArtifactState.READY.name()),
-                    Pair.of(ArtifactEvents.ERROR.name(), ArtifactState.ERROR.name()),
-                    Pair.of(ArtifactEvents.DELETE.name(), ArtifactState.DELETED.name())
+                    Pair.of(ArtifactEvents.ERROR.name(), ArtifactState.ERROR.name())
                 )
-            ),
-            new BaseEntityStateBuilder<>(
+            ).tx(toDeleting()),
+            new BaseEntityStateBuilder<Artifact>(
                 ArtifactState.READY.name(),
                 Set.of(
                     Pair.of(ArtifactEvents.READY.name(), ArtifactState.READY.name()),
-                    Pair.of(ArtifactEvents.ERROR.name(), ArtifactState.ERROR.name()),
-                    Pair.of(ArtifactEvents.DELETE.name(), ArtifactState.DELETED.name())
+                    Pair.of(ArtifactEvents.ERROR.name(), ArtifactState.ERROR.name())
                 )
-            ),
-            new BaseEntityStateBuilder<>(
+            ).tx(toDeleting()),
+            new BaseEntityStateBuilder<Artifact>(
                 ArtifactState.ERROR.name(),
                 Set.of(
                     Pair.of(ArtifactEvents.UPLOAD.name(), ArtifactState.UPLOADING.name()),
                     Pair.of(ArtifactEvents.READY.name(), ArtifactState.READY.name()),
-                    Pair.of(ArtifactEvents.ERROR.name(), ArtifactState.ERROR.name()),
-                    Pair.of(ArtifactEvents.DELETE.name(), ArtifactState.DELETED.name())
+                    Pair.of(ArtifactEvents.ERROR.name(), ArtifactState.ERROR.name())
                 )
+            ).tx(toDeleting()),
+            //cleanup (finalizers) runs as detached effects of DELETING, the caller concludes
+            new BaseEntityStateBuilder<>(
+                ArtifactState.DELETING.name(),
+                List.of(toDeleting(), to(ArtifactState.DELETED.name()), to(ArtifactState.ERROR.name()))
             ),
             new BaseEntityStateBuilder<>(ArtifactState.DELETED.name(), Set.of())
         );
+    }
+
+    private static Transition<String, String, Artifact> toDeleting() {
+        return new Transition.Builder<String, String, Artifact>()
+            .event(ArtifactEvents.DELETE.name())
+            .nextState(ArtifactState.DELETING.name())
+            .detached()
+            .build();
+    }
+
+    //no event: reachable only via handle
+    private static Transition<String, String, Artifact> to(String state) {
+        return new Transition.Builder<String, String, Artifact>().nextState(state).build();
     }
 
     @Autowired(required = false)

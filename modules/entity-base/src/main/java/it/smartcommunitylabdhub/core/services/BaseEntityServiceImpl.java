@@ -625,7 +625,12 @@ public abstract class BaseEntityServiceImpl<
             //delegate to lifecycle manager: finalization is part of the lifecycle, run by the
             //effects of the DELETING step (cascade is not considered)
             log.debug("handle delete via lifecycle manager for {}", id);
-            return lifecycleManager.perform(e, "DELETE");
+            return lifecycleManager.perform(e, "DELETE", null, (D dto, Serializable out) -> {
+                //after the detached effects, within the turn: conclude the delete
+                if ("DELETING".equals(StatusFieldAccessor.with(dto.getStatus()).getState())) {
+                    lifecycleManager.handle(dto, "DELETED");
+                }
+            });
         }
 
         //no lifecycle manager or already completed, just delete

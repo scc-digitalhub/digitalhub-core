@@ -31,6 +31,7 @@ import jakarta.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.data.util.Pair;
@@ -53,8 +54,10 @@ public class BaseEntityStateBuilder<D extends BaseDTO & StatusDTO> implements Fs
     public BaseEntityStateBuilder(@NotNull String state, @NotNull List<Transition<String, String, D>> txs) {
         this.state = state;
         this.txs = txs;
+        //transitions without an event are reachable only via handle (next state)
         this.nextStates = txs
             .stream()
+            .filter(t -> t.getEvent() != null)
             .map(t -> Pair.of(t.getEvent(), t.getNextState()))
             .toList()
             .stream()
@@ -74,7 +77,9 @@ public class BaseEntityStateBuilder<D extends BaseDTO & StatusDTO> implements Fs
                     txs
                         .stream()
                         .noneMatch(
-                            t -> t.getEvent().equals(pair.getFirst()) && t.getNextState().equals(pair.getSecond())
+                            t ->
+                                Objects.equals(t.getEvent(), pair.getFirst()) &&
+                                t.getNextState().equals(pair.getSecond())
                         )
                 ) {
                     txs.add(

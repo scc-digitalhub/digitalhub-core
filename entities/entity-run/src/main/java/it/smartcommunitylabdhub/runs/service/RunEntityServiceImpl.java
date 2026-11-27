@@ -36,6 +36,7 @@ import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.lifecycle.RunState;
 import it.smartcommunitylabdhub.runs.persistence.RunEntity;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
+import jakarta.annotation.Nullable;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +50,18 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @Slf4j
 public class RunEntityServiceImpl extends BaseEntityServiceImpl<Run, RunEntity> {
+
+    //TODO transitional (detached perform refactor, group C): runs keep the current delete flow,
+    //DELETING is concluded by the runtime callback, replaced in group D
+    @Override
+    protected Run doDelete(@NotNull String id, @NotNull Run e, @Nullable Boolean cascade) throws StoreException {
+        StatusFieldAccessor status = StatusFieldAccessor.with(e.getStatus());
+        if (getLifecycleManager() != null && !RunState.DELETED.name().equals(status.getState())) {
+            return getLifecycleManager().perform(e, "DELETE");
+        }
+
+        return super.doDelete(id, e, cascade);
+    }
 
     private EntityRepository<Project> projectRepository;
 

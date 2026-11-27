@@ -24,5 +24,6 @@ public enum DataItemState implements LifecycleState<DataItem> {
     UPLOADING,
     READY,
     ERROR,
+    DELETING,
     DELETED,
 }

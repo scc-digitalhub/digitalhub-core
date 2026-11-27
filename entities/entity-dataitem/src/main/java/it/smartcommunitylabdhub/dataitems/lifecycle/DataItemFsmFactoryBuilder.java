@@ -27,6 +27,7 @@ import it.smartcommunitylabdhub.core.lifecycle.BaseFsmFactory;
 import it.smartcommunitylabdhub.core.lifecycle.BaseFsmFactoryBuilder;
 import it.smartcommunitylabdhub.dataitems.DataItem;
 import it.smartcommunitylabdhub.fsm.FsmState;
+import it.smartcommunitylabdhub.fsm.Transition;
 import java.util.List;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,42 +43,56 @@ public class DataItemFsmFactoryBuilder {
         builder = new BaseFsmFactoryBuilder<>();
         // Define the base FSM states and transitions
         builder.builders(
-            new BaseEntityStateBuilder<>(
+            new BaseEntityStateBuilder<DataItem>(
                 DataItemState.CREATED.name(),
                 Set.of(
                     Pair.of(DataItemEvents.UPLOAD.name(), DataItemState.UPLOADING.name()),
                     Pair.of(DataItemEvents.READY.name(), DataItemState.READY.name()),
-                    Pair.of(DataItemEvents.ERROR.name(), DataItemState.ERROR.name()),
-                    Pair.of(DataItemEvents.DELETE.name(), DataItemState.DELETED.name())
+                    Pair.of(DataItemEvents.ERROR.name(), DataItemState.ERROR.name())
                 )
-            ),
-            new BaseEntityStateBuilder<>(
+            ).tx(toDeleting()),
+            new BaseEntityStateBuilder<DataItem>(
                 DataItemState.UPLOADING.name(),
                 Set.of(
                     Pair.of(DataItemEvents.READY.name(), DataItemState.READY.name()),
-                    Pair.of(DataItemEvents.ERROR.name(), DataItemState.ERROR.name()),
-                    Pair.of(DataItemEvents.DELETE.name(), DataItemState.DELETED.name())
+                    Pair.of(DataItemEvents.ERROR.name(), DataItemState.ERROR.name())
                 )
-            ),
-            new BaseEntityStateBuilder<>(
+            ).tx(toDeleting()),
+            new BaseEntityStateBuilder<DataItem>(
                 DataItemState.READY.name(),
                 Set.of(
                     Pair.of(DataItemEvents.READY.name(), DataItemState.READY.name()),
-                    Pair.of(DataItemEvents.ERROR.name(), DataItemState.ERROR.name()),
-                    Pair.of(DataItemEvents.DELETE.name(), DataItemState.DELETED.name())
+                    Pair.of(DataItemEvents.ERROR.name(), DataItemState.ERROR.name())
                 )
-            ),
-            new BaseEntityStateBuilder<>(
+            ).tx(toDeleting()),
+            new BaseEntityStateBuilder<DataItem>(
                 DataItemState.ERROR.name(),
                 Set.of(
                     Pair.of(DataItemEvents.UPLOAD.name(), DataItemState.UPLOADING.name()),
                     Pair.of(DataItemEvents.READY.name(), DataItemState.READY.name()),
-                    Pair.of(DataItemEvents.ERROR.name(), DataItemState.ERROR.name()),
-                    Pair.of(DataItemEvents.DELETE.name(), DataItemState.DELETED.name())
+                    Pair.of(DataItemEvents.ERROR.name(), DataItemState.ERROR.name())
                 )
+            ).tx(toDeleting()),
+            //cleanup (finalizers) runs as detached effects of DELETING, the caller concludes
+            new BaseEntityStateBuilder<>(
+                DataItemState.DELETING.name(),
+                List.of(toDeleting(), to(DataItemState.DELETED.name()), to(DataItemState.ERROR.name()))
             ),
             new BaseEntityStateBuilder<>(DataItemState.DELETED.name(), Set.of())
         );
+    }
+
+    private static Transition<String, String, DataItem> toDeleting() {
+        return new Transition.Builder<String, String, DataItem>()
+            .event(DataItemEvents.DELETE.name())
+            .nextState(DataItemState.DELETING.name())
+            .detached()
+            .build();
+    }
+
+    //no event: reachable only via handle
+    private static Transition<String, String, DataItem> to(String state) {
+        return new Transition.Builder<String, String, DataItem>().nextState(state).build();
     }
 
     @Autowired(required = false)

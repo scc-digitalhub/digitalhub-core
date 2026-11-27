@@ -24,5 +24,6 @@ public enum ModelState implements LifecycleState<Model> {
     UPLOADING,
     READY,
     ERROR,
+    DELETING,
     DELETED,
 }

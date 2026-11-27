@@ -24,5 +24,6 @@ public enum ArtifactState implements LifecycleState<Artifact> {
     UPLOADING,
     READY,
     ERROR,
+    DELETING,
     DELETED,
 }

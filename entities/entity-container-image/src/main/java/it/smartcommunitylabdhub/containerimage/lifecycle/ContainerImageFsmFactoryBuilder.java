@@ -27,6 +27,7 @@ import it.smartcommunitylabdhub.core.lifecycle.BaseEntityStateBuilder;
 import it.smartcommunitylabdhub.core.lifecycle.BaseFsmFactory;
 import it.smartcommunitylabdhub.core.lifecycle.BaseFsmFactoryBuilder;
 import it.smartcommunitylabdhub.fsm.FsmState;
+import it.smartcommunitylabdhub.fsm.Transition;
 import java.util.List;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,43 +43,57 @@ public class ContainerImageFsmFactoryBuilder {
         builder = new BaseFsmFactoryBuilder<>();
         // Define the base FSM states and transitions
         builder.builders(
-            new BaseEntityStateBuilder<>(
+            new BaseEntityStateBuilder<ContainerImage>(
                 ContainerImageState.CREATED.name(),
                 Set.of(
                     Pair.of(ContainerImageEvents.UPLOAD.name(), ContainerImageState.UPLOADING.name()),
                     Pair.of(ContainerImageEvents.READY.name(), ContainerImageState.READY.name()),
-                    Pair.of(ContainerImageEvents.ERROR.name(), ContainerImageState.ERROR.name()),
-                    Pair.of(ContainerImageEvents.DELETE.name(), ContainerImageState.DELETED.name())
+                    Pair.of(ContainerImageEvents.ERROR.name(), ContainerImageState.ERROR.name())
                 )
-            ),
-            new BaseEntityStateBuilder<>(
+            ).tx(toDeleting()),
+            new BaseEntityStateBuilder<ContainerImage>(
                 ContainerImageState.UPLOADING.name(),
                 Set.of(
                     Pair.of(ContainerImageEvents.READY.name(), ContainerImageState.READY.name()),
-                    Pair.of(ContainerImageEvents.ERROR.name(), ContainerImageState.ERROR.name()),
-                    Pair.of(ContainerImageEvents.DELETE.name(), ContainerImageState.DELETED.name())
+                    Pair.of(ContainerImageEvents.ERROR.name(), ContainerImageState.ERROR.name())
                 )
-            ),
-            new BaseEntityStateBuilder<>(
+            ).tx(toDeleting()),
+            new BaseEntityStateBuilder<ContainerImage>(
                 ContainerImageState.READY.name(),
                 Set.of(
                     Pair.of(ContainerImageEvents.UPDATE.name(), ContainerImageState.CREATED.name()),
                     Pair.of(ContainerImageEvents.READY.name(), ContainerImageState.READY.name()),
-                    Pair.of(ContainerImageEvents.ERROR.name(), ContainerImageState.ERROR.name()),
-                    Pair.of(ContainerImageEvents.DELETE.name(), ContainerImageState.DELETED.name())
+                    Pair.of(ContainerImageEvents.ERROR.name(), ContainerImageState.ERROR.name())
                 )
-            ),
-            new BaseEntityStateBuilder<>(
+            ).tx(toDeleting()),
+            new BaseEntityStateBuilder<ContainerImage>(
                 ContainerImageState.ERROR.name(),
                 Set.of(
                     Pair.of(ContainerImageEvents.UPLOAD.name(), ContainerImageState.UPLOADING.name()),
                     Pair.of(ContainerImageEvents.READY.name(), ContainerImageState.READY.name()),
-                    Pair.of(ContainerImageEvents.ERROR.name(), ContainerImageState.ERROR.name()),
-                    Pair.of(ContainerImageEvents.DELETE.name(), ContainerImageState.DELETED.name())
+                    Pair.of(ContainerImageEvents.ERROR.name(), ContainerImageState.ERROR.name())
                 )
+            ).tx(toDeleting()),
+            //cleanup (finalizers) runs as detached effects of DELETING, the caller concludes
+            new BaseEntityStateBuilder<>(
+                ContainerImageState.DELETING.name(),
+                List.of(toDeleting(), to(ContainerImageState.DELETED.name()), to(ContainerImageState.ERROR.name()))
             ),
             new BaseEntityStateBuilder<>(ContainerImageState.DELETED.name(), Set.of())
         );
+    }
+
+    private static Transition<String, String, ContainerImage> toDeleting() {
+        return new Transition.Builder<String, String, ContainerImage>()
+            .event(ContainerImageEvents.DELETE.name())
+            .nextState(ContainerImageState.DELETING.name())
+            .detached()
+            .build();
+    }
+
+    //no event: reachable only via handle
+    private static Transition<String, String, ContainerImage> to(String state) {
+        return new Transition.Builder<String, String, ContainerImage>().nextState(state).build();
     }
 
     @Autowired(required = false)

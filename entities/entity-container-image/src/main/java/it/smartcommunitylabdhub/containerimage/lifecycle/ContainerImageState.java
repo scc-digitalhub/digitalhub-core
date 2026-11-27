@@ -24,5 +24,6 @@ public enum ContainerImageState implements LifecycleState<ContainerImage> {
     UPLOADING,
     READY,
     ERROR,
+    DELETING,
     DELETED,
 }
