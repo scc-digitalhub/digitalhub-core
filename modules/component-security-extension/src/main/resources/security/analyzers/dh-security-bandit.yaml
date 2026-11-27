@@ -1,0 +1,28 @@
+name: dh-security-bandit
+description: "Static security analysis of Python sources with Bandit"
+script: dh-security-bandit.py
+function:
+  kind: python
+  metadata:
+    description: Bandit operation to perform static security analysis of Python sources.  
+    labels:
+      - security
+      - python
+  spec:
+    python_version: PYTHON3_12
+    requirements:
+      - bandit[sarif]
+      - boto3
+    source:
+      lang: python
+      handler: main
+
+trigger:
+  kind: lifecycle
+  spec:
+    key: "store://${project}/function/python"
+    states: [CREATED]
+    task: python+job
+    template:
+      parameters:
+        function_key: "{{input.key}}"

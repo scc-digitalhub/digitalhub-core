@@ -435,23 +435,26 @@ public abstract class BaseEntityServiceImpl<
             throw new StoreException("Invalid or broken entity in store");
         }
 
-        boolean specProvided = dto.getSpec() != null &&
-            (!merge || !dto.getSpec().isEmpty() || current.getSpec() == null);
+        boolean specProvided =
+            dto.getSpec() != null && (!merge || !dto.getSpec().isEmpty() || current.getSpec() == null);
         if (merge) {
             if (dto instanceof MetadataDTO metadata && current instanceof MetadataDTO currentMetadata) {
                 metadata.setMetadata(
                     metadata.getMetadata() == null
                         ? currentMetadata.getMetadata()
                         : MapUtils.applyMergePatch(
-                            currentMetadata.getMetadata() != null ? currentMetadata.getMetadata() : Map.of(),
-                            metadata.getMetadata()
-                        )
+                              currentMetadata.getMetadata() != null ? currentMetadata.getMetadata() : Map.of(),
+                              metadata.getMetadata()
+                          )
                 );
             }
             dto.setStatus(
                 dto.getStatus() == null
                     ? current.getStatus()
-                    : MapUtils.applyMergePatch(current.getStatus() != null ? current.getStatus() : Map.of(), dto.getStatus())
+                    : MapUtils.applyMergePatch(
+                          current.getStatus() != null ? current.getStatus() : Map.of(),
+                          dto.getStatus()
+                      )
             );
             if (forceUpdate && specProvided) {
                 dto.setSpec(
@@ -1063,11 +1066,13 @@ public abstract class BaseEntityServiceImpl<
         return page;
     }
 
-    private interface NameOnly {
+    // NOTE: projection interfaces must be public: spring data builds JDK proxies for them,
+    // and non-public interfaces fail when the proxy classloader differs (ex. devtools restart loader)
+    public interface NameOnly {
         String getName();
     }
 
-    private interface NameAndKind {
+    public interface NameAndKind {
         String getName();
         String getKind();
     }

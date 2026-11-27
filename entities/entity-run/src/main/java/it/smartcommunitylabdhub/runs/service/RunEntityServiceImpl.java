@@ -23,31 +23,89 @@
 
 package it.smartcommunitylabdhub.runs.service;
 
+import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
+import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
+import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
+import it.smartcommunitylabdhub.commons.utils.MapUtils;
 import it.smartcommunitylabdhub.core.services.BaseEntityServiceImpl;
+import it.smartcommunitylabdhub.projects.Project;
 import it.smartcommunitylabdhub.runs.Run;
+import it.smartcommunitylabdhub.runs.lifecycle.RunState;
 import it.smartcommunitylabdhub.runs.persistence.RunEntity;
+import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.BindException;
+import org.springframework.validation.annotation.Validated;
 
 @Service
 @Transactional
+@Validated
 @Slf4j
 public class RunEntityServiceImpl extends BaseEntityServiceImpl<Run, RunEntity> {
+
+    private EntityRepository<Project> projectRepository;
+
+    @Autowired
+    public void setProjectRepository(EntityRepository<Project> projectRepository) {
+        this.projectRepository = projectRepository;
+    }
 
     @Override
     public Run create(@NotNull Run dto)
         throws IllegalArgumentException, BindException, DuplicatedEntityException, StoreException {
-        //generate random name if missing
-        if (!StringUtils.hasText(dto.getName())) {
+        String projectId = dto.getProject();
+        if (!StringUtils.hasText(projectId) || projectRepository.find(projectId) == null) {
+            throw new IllegalArgumentException("invalid or missing project");
+        }
+
+        RunSpecAccessor runSpecAccessor = RunSpecAccessor.with(dto.getSpec());
+        //task is required, either as full reference or as generic identifier
+        if (!StringUtils.hasText(runSpecAccessor.getTask())) {
+            throw new IllegalArgumentException("spec: missing task");
+        }
+        //if full referenced project, it must match the one in the DTO
+        if (StringUtils.hasText(runSpecAccessor.getProject()) && !projectId.equals(runSpecAccessor.getProject())) {
+            throw new IllegalArgumentException("project mismatch");
+        }
+
+        //generate random name if missing OR if matching provided id
+        if (
+            !StringUtils.hasText(dto.getName()) ||
+            (StringUtils.hasText(dto.getId()) && dto.getName().equals(dto.getId()))
+        ) {
             String name = nameGenerator.generateKey();
             dto.setName(name);
         }
+
         return super.create(dto);
+    }
+
+    @Override
+    public Run update(@NotNull String id, @NotNull Run dto, boolean forceUpdate, boolean merge)
+        throws NoSuchEntityException, StoreException {
+        Run current = super.get(id);
+
+        //additional protection: spec is modifiable ONLY when run is in CREATED state then is sealed
+        StatusFieldAccessor status = StatusFieldAccessor.with(current.getStatus());
+        if (!RunState.CREATED.name().equals(status.getState())) {
+            dto.setSpec(current.getSpec());
+        }
+
+        RunSpecAccessor specAccessor = RunSpecAccessor.with(current.getSpec());
+        if (!specAccessor.isLocalExecution()) {
+            //for MANAGED runs we explicitly avoid externally provided status updates
+            RunBaseStatus baseStatus = RunBaseStatus.with(current.getSpec());
+            dto.setStatus(MapUtils.mergeMultipleMaps(dto.getStatus(), baseStatus.toMap()));
+        }
+
+        return super.update(id, dto, forceUpdate, merge);
     }
 }

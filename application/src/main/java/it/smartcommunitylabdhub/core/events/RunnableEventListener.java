@@ -164,7 +164,7 @@ public class RunnableEventListener {
             String state = event.getState();
 
             // Use service to retrieve the run and check if state is changed
-            Run run = runService.findRun(id);
+            Run run = runService.find(id);
             if (run == null) {
                 log.warn("Run with id {} not found", id);
                 // orphan run, remove from store

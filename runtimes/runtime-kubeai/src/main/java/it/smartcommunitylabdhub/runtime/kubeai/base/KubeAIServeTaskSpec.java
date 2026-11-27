@@ -24,7 +24,8 @@
 package it.smartcommunitylabdhub.runtime.kubeai.base;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import it.smartcommunitylabdhub.commons.models.function.FunctionTaskBaseSpec;
+import it.smartcommunitylabdhub.functions.specs.FunctionTaskBaseSpec;
+
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;

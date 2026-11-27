@@ -23,8 +23,8 @@
 
 package it.smartcommunitylabdhub.workflows.service;
 
-import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.search.base.BaseIndexableEntityService;
+import it.smartcommunitylabdhub.workflows.Workflow;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

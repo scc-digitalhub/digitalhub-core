@@ -8,7 +8,6 @@ package it.smartcommunitylabdhub.runtime.tvm.runners.serve;
 
 import it.smartcommunitylabdhub.commons.Keys;
 import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
-import it.smartcommunitylabdhub.commons.models.function.Function;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sBuilderHelper;
 import it.smartcommunitylabdhub.framework.k8s.kubernetes.K8sLabelHelper;
 import it.smartcommunitylabdhub.framework.k8s.model.ContextRef;
@@ -17,6 +16,7 @@ import it.smartcommunitylabdhub.framework.k8s.objects.CoreEnv;
 import it.smartcommunitylabdhub.framework.k8s.objects.CorePort;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sServeRunnable;
+import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.models.Model;
 import it.smartcommunitylabdhub.models.ModelManager;
@@ -103,7 +103,7 @@ public class TvmServeRunner extends TvmBaseRunner {
         // Alias registration is best-effort and must not prevent serving.
         if (functionService != null) {
             try {
-                Function latest = functionService.getLatestFunctionByName(run.getProject(), funcName);
+                Function latest = functionService.getLatestByName(run.getProject(), funcName);
                 if (latest != null && latest.getId().equals(taskAccessor.getFunctionId())) {
                     serviceNames.add(funcName + "-latest");
                 }

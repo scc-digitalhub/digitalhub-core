@@ -7,6 +7,12 @@
   <version>0.16.0-SNAPSHOT</version>
   <dependencies>
     <dependency>
+      <groupId>org.jsoup</groupId>
+      <artifactId>jsoup</artifactId>
+      <version>1.21.2</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
       <groupId>it.smartcommunitylabdhub</groupId>
       <artifactId>dh-commons</artifactId>
       <version>0.16.0-SNAPSHOT</version>

@@ -24,9 +24,10 @@
 package it.smartcommunitylabdhub.runtime.kubeai.stt.specs;
 
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.runtime.kubeai.base.KubeAIServeTaskSpec;
 import it.smartcommunitylabdhub.runtime.kubeai.stt.KubeAISpeechToTextRuntime;
+import it.smartcommunitylabdhub.tasks.Task;
+
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;

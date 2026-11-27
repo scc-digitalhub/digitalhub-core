@@ -42,24 +42,33 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.keygen.StringKeyGenerator;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
+import org.springframework.validation.annotation.Validated;
 
 @Component
 @Slf4j
+@Validated
 public class MetricsManager {
 
     @Value("${metrics.max-column-size}")
     private Integer maxColumnSize;
 
-    @Autowired
-    private MetricsEntityBuilder entityBuilder;
+    private final MetricsEntityBuilder entityBuilder;
 
-    @Autowired
-    private MetricsDTOBuilder dtoBuilder;
+    private final MetricsDTOBuilder dtoBuilder;
 
-    @Autowired
-    private MetricsRepository repository;
+    private final MetricsRepository repository;
 
     private StringKeyGenerator keyGenerator = () -> UUID.randomUUID().toString().replace("-", "");
+
+    MetricsManager(MetricsEntityBuilder entityBuilder, MetricsDTOBuilder dtoBuilder, MetricsRepository repository) {
+        Assert.notNull(repository, "repository is required");
+        Assert.notNull(entityBuilder, "entity builder is required");
+        Assert.notNull(dtoBuilder, "dto builder is required");
+
+        this.entityBuilder = entityBuilder;
+        this.dtoBuilder = dtoBuilder;
+        this.repository = repository;
+    }
 
     @Autowired(required = false)
     public void setKeyGenerator(StringKeyGenerator keyGenerator) {
@@ -122,5 +131,15 @@ public class MetricsManager {
 
         entity = repository.save(entity);
         return dtoBuilder.build(entity);
+    }
+
+    public void deleteMetrics(@NotNull String entityName, @NotNull String entityId, @NotNull String name)
+        throws StoreException, SystemException {
+        log.debug("delete {} metrics info for entity {} id {}", name, entityName, entityId);
+
+        MetricsEntity entity = repository.findByEntityNameAndEntityIdAndName(entityName.toLowerCase(), entityId, name);
+        if (entity != null) {
+            repository.delete(entity);
+        }
     }
 }

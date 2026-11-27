@@ -16,8 +16,8 @@
 
 package it.smartcommunitylabdhub.tasks.filters;
 
-import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilterConverter;
+import it.smartcommunitylabdhub.tasks.Task;
 import it.smartcommunitylabdhub.tasks.persistence.TaskEntity;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.stereotype.Component;

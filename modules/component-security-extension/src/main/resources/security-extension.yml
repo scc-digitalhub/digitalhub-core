@@ -1,0 +1,3 @@
+security-extension:
+  enabled: ${SECURITY_EXTENSION_ENABLED:false}
+  analyzers-path: ${SECURITY_EXTENSION_ANALYZERS_PATH:classpath*:security/analyzers/}

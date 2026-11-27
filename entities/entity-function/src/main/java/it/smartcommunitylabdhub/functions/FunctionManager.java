@@ -23,229 +23,128 @@
 
 package it.smartcommunitylabdhub.functions;
 
-import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
+import it.smartcommunitylabdhub.commons.accessors.spec.TaskSpecAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
+import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.models.function.Function;
-import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import it.smartcommunitylabdhub.commons.models.task.Task;
+import it.smartcommunitylabdhub.commons.services.EntityAwareService;
+import it.smartcommunitylabdhub.commons.services.EntityService;
+import it.smartcommunitylabdhub.commons.services.SchemaService;
+import it.smartcommunitylabdhub.commons.services.SpecRegistry;
+import it.smartcommunitylabdhub.core.events.EntityOperationsListener;
+import it.smartcommunitylabdhub.core.services.EntityFinalizer;
+import it.smartcommunitylabdhub.core.services.VersionableEntityService;
+import it.smartcommunitylabdhub.relationships.RelationshipsAwareEntityService;
+import it.smartcommunitylabdhub.search.service.IndexableEntityService;
+import it.smartcommunitylabdhub.tasks.Task;
+import it.smartcommunitylabdhub.tasks.TaskService;
+import it.smartcommunitylabdhub.tasks.filters.TaskEntityFilter;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.lang.Nullable;
-import org.springframework.validation.BindException;
+import lombok.experimental.Delegate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.validation.annotation.Validated;
 
 /*
- * Service for managing function
+ * Exposed manager for function-related operations via services
  */
-public interface FunctionManager {
-    /**
-     * List all functions
-     * @param pageable
-     * @return
-     */
-    Page<Function> listFunctions(Pageable pageable) throws SystemException;
+@Component
+@Validated
+public class FunctionManager {
 
-    /**
-     * List the latest version of every function
-     * @return
-     */
-    List<Function> listLatestFunctions() throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private EntityService<Function> functionEntityService;
 
-    /**
-     * List the latest version of every function
-     * @param pageable
-     * @return
-     */
-    Page<Function> listLatestFunctions(Pageable pageable) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private VersionableEntityService<Function> functionVersionableEntityService;
 
-    /**
-     * List all versions of every function for a user
-     * @param user
-     * @return
-     */
-    List<Function> listFunctionsByUser(@NotNull String user) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private IndexableEntityService<Function> functionIndexableEntityService;
 
-    /**
-     * List all versions of every function for a project
-     * @param project
-     * @return
-     */
-    List<Function> listFunctionsByProject(@NotNull String project) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private RelationshipsAwareEntityService<Function> functionRelationshipsAwareEntityService;
 
-    /**
-     * List all versions of every function for a project
-     * @param project
-     * @param pageable
-     * @return
-     */
-    Page<Function> listFunctionsByProject(@NotNull String project, Pageable pageable) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private EntityFinalizer<Function> functionEntityFinalizer;
 
-    /**
-     * List the latest version of every function for a project
-     * @param project
-     * @return
-     */
-    List<Function> listLatestFunctionsByProject(@NotNull String project) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private EntityOperationsListener<Function> functionOperationsListener;
 
-    /**
-     * List the latest version of every function for a project
-     * @param project
-     * @param pageable
-     * @return
-     */
-    Page<Function> listLatestFunctionsByProject(@NotNull String project, Pageable pageable) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private SpecRegistry<Function> functionSpecRegistry;
 
-    /**
-     * List all functions, with optional filters
-     * @param pageable
-     * @param filter
-     * @return
-     */
-    Page<Function> searchFunctions(Pageable pageable, @Nullable SearchFilter<Function> filter) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private SchemaService<Function> functionSchemaService;
 
-    /**
-     * List the latest version of every function, with optional filters
-     * @param pageable
-     * @param filter
-     * @return
-     */
-    Page<Function> searchLatestFunctions(Pageable pageable, @Nullable SearchFilter<Function> filter)
-        throws SystemException;
-    /**
-     * List all version of every function, with optional filters
-     * @param project
-     * @param pageable
-     * @param filter
-     * @return
-     */
-    Page<Function> searchFunctionsByProject(
-        @NotNull String project,
-        Pageable pageable,
-        @Nullable SearchFilter<Function> filter
-    ) throws SystemException;
+    private TaskService taskService;
 
-    /**
-     * List the latest version of every function, with optional filters
-     * @param project
-     * @param pageable
-     * @param filter
-     * @return
-     */
-    Page<Function> searchLatestFunctionsByProject(
-        @NotNull String project,
-        Pageable pageable,
-        @Nullable SearchFilter<Function> filter
-    ) throws SystemException;
+    @Autowired
+    public void setTaskService(TaskService taskService) {
+        this.taskService = taskService;
+    }
 
-    /**
-     * Find all versions of a given function
-     * @param project
-     * @param name
-     * @return
-     */
-    List<Function> findFunctions(@NotNull String project, @NotNull String name) throws SystemException;
+    @Autowired
+    public void setFunctionEntityService(EntityService<Function> functionEntityService) {
+        this.functionEntityService = functionEntityService;
+    }
 
-    /**
-     * Find all versions of a given function
-     * @param project
-     * @param name
-     * @param pageable
-     * @return
-     */
-    Page<Function> findFunctions(@NotNull String project, @NotNull String name, Pageable pageable)
-        throws SystemException;
+    @Autowired
+    public void setFunctionVersionableEntityService(
+        VersionableEntityService<Function> functionVersionableEntityService
+    ) {
+        this.functionVersionableEntityService = functionVersionableEntityService;
+    }
 
-    /**
-     * Find a specific function (version) via unique ID. Returns null if not found
-     * @param id
-     * @return
-     */
-    @Nullable
-    Function findFunction(@NotNull String id) throws SystemException;
+    @Autowired
+    public void setFunctionIndexableEntityService(IndexableEntityService<Function> functionIndexableEntityService) {
+        this.functionIndexableEntityService = functionIndexableEntityService;
+    }
 
-    /**
-     * Get a specific function (version) via unique ID. Throws exception if not found
-     * @param id
-     * @return
-     * @throws NoSuchEntityException
-     */
-    Function getFunction(@NotNull String id) throws NoSuchEntityException, SystemException;
+    @Autowired
+    public void setFunctionRelationshipsAwareEntityService(
+        RelationshipsAwareEntityService<Function> functionRelationshipsAwareEntityService
+    ) {
+        this.functionRelationshipsAwareEntityService = functionRelationshipsAwareEntityService;
+    }
 
-    /**
-     * Get the latest version of a given function
-     * @param project
-     * @param name
-     * @return
-     * @throws NoSuchEntityException
-     */
-    Function getLatestFunctionByName(@NotNull String project, @NotNull String name)
-        throws NoSuchEntityException, SystemException;
+    @Autowired
+    public void setFunctionEntityFinalizer(EntityFinalizer<Function> functionEntityFinalizer) {
+        this.functionEntityFinalizer = functionEntityFinalizer;
+    }
 
-    /**
-     * Get the latest version of a given function
-     * @param project
-     * @param key
-     * @return
-     * @throws NoSuchEntityException
-     */
-    Function getLatestFunctionByKey(@NotNull String project, @NotNull String key)
-        throws NoSuchEntityException, SystemException;
+    @Autowired
+    public void setFunctionOperationsListener(EntityOperationsListener<Function> functionOperationsListener) {
+        this.functionOperationsListener = functionOperationsListener;
+    }
 
-    /**
-     * Create a new function and store it
-     * @param functionDTO
-     * @return
-     * @throws DuplicatedEntityException
-     */
-    Function createFunction(@NotNull Function functionDTO)
-        throws DuplicatedEntityException, BindException, SystemException;
+    @Autowired
+    public void setFunctionSpecRegistry(SpecRegistry<Function> functionSpecRegistry) {
+        this.functionSpecRegistry = functionSpecRegistry;
+    }
 
-    /**
-     * Update a specific function version
-     * @param id
-     * @param functionDTO
-     * @return
-     * @throws NoSuchEntityException
-     */
-    Function updateFunction(@NotNull String id, @NotNull Function functionDTO)
-        throws NoSuchEntityException, BindException, IllegalArgumentException, SystemException;
+    @Autowired
+    public void setFunctionSchemaService(SchemaService<Function> functionSchemaService) {
+        this.functionSchemaService = functionSchemaService;
+    }
 
-    /**
-     * Update a specific function version
-     * @param id
-     * @param functionDTO
-     * @param force
-     * @return
-     * @throws NoSuchEntityException
+    /*
+     * Additional methods
      */
-    Function updateFunction(@NotNull String id, @NotNull Function functionDTO, boolean force)
-        throws NoSuchEntityException, SystemException;
+    public List<Task> getTasksByFunctionId(@NotNull String functionId)
+        throws SystemException, NoSuchEntityException, StoreException {
+        Function function = functionEntityService.get(functionId);
 
-    /**
-     * Delete a specific function (version) via unique ID, with optional cascade
-     * @param id
-     */
-    void deleteFunction(@NotNull String id, @Nullable Boolean cascade) throws SystemException;
+        //search via key
+        String fn = TaskSpecAccessor.build(
+            function.getKind(),
+            function.getProject(),
+            function.getName(),
+            function.getId()
+        );
+        TaskEntityFilter filter = new TaskEntityFilter();
+        filter.setFunction(fn);
 
-    /**
-     * Delete all versions of a given function, with cascade
-     * @param project
-     * @param name
-     */
-    void deleteFunctions(@NotNull String project, @NotNull String name) throws SystemException;
-
-    /**
-     * Delete all functions for a given project, with cascade.
-     * @param project
-     */
-    void deleteFunctionsByProject(@NotNull String project) throws SystemException;
-
-    /**
-     * List all tasks for a given function
-     * @param function
-     * @return
-     */
-    List<Task> getTasksByFunctionId(@NotNull String functionId) throws SystemException;
+        return taskService.searchTasksByProject(function.getProject(), filter.toSearchFilter());
+    }
 }

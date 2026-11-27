@@ -28,20 +28,21 @@ import it.smartcommunitylabdhub.authorization.services.CredentialsService;
 import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
 import it.smartcommunitylabdhub.commons.accessors.spec.RunSpecAccessor;
 import it.smartcommunitylabdhub.commons.annotations.infrastructure.RuntimeComponent;
+import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.infrastructure.Configuration;
 import it.smartcommunitylabdhub.commons.infrastructure.Credentials;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.models.function.Function;
-import it.smartcommunitylabdhub.commons.models.task.Task;
 import it.smartcommunitylabdhub.commons.services.ConfigurationService;
 import it.smartcommunitylabdhub.commons.services.SecretService;
+import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionBaseRuntime;
 import it.smartcommunitylabdhub.framework.k8s.base.K8sFunctionTaskBaseSpec;
 import it.smartcommunitylabdhub.framework.k8s.runnables.K8sRunnable;
 import it.smartcommunitylabdhub.framework.kaniko.runnables.K8sContainerBuilderRunnable;
+import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.functions.FunctionManager;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.persistence.RunEntity;
@@ -58,6 +59,7 @@ import it.smartcommunitylabdhub.runtime.python.hydra.specs.HydraRunSpec;
 import it.smartcommunitylabdhub.runtime.python.hydra.specs.HydraRunStatus;
 import it.smartcommunitylabdhub.runtime.python.hydra.specs.HydraSubtaskRunSpec;
 import it.smartcommunitylabdhub.runtime.python.hydra.specs.HydraSubtaskTaskSpec;
+import it.smartcommunitylabdhub.tasks.Task;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Arrays;
@@ -71,6 +73,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.Assert;
+import org.springframework.validation.BindException;
 
 @Slf4j
 @RuntimeComponent(runtime = HydraRuntime.RUNTIME)
@@ -100,6 +103,7 @@ public class HydraRuntime
     @Autowired
     private ConfigurationService configurationService;
 
+    //TODO remove direct usage of repository, only managers are public api
     @Autowired
     private SearchableEntityRepository<RunEntity, Run> entityRepository;
 
@@ -204,18 +208,22 @@ public class HydraRuntime
 
         //update image name after build
         if (runnable instanceof K8sContainerBuilderRunnable) {
-            String image = ((K8sContainerBuilderRunnable) runnable).getImage();
+            try {
+                String image = ((K8sContainerBuilderRunnable) runnable).getImage();
 
-            String functionId = runAccessor.getFunctionId();
-            Function function = functionService.getFunction(functionId);
+                String functionId = runAccessor.getFunctionId();
+                Function function = functionService.get(functionId);
 
-            log.debug("update function {} spec to use built image: {}", functionId, image);
+                log.debug("update function {} spec to use built image: {}", functionId, image);
 
-            HydraFunctionSpec funSpec = new HydraFunctionSpec(function.getSpec());
-            if (!image.equals(funSpec.getImage())) {
-                funSpec.setImage(image);
-                function.setSpec(funSpec.toMap());
-                functionService.updateFunction(functionId, function, true);
+                HydraFunctionSpec funSpec = new HydraFunctionSpec(function.getSpec());
+                if (!image.equals(funSpec.getImage())) {
+                    funSpec.setImage(image);
+                    function.setSpec(funSpec.toMap());
+                    functionService.update(functionId, function, true);
+                }
+            } catch (StoreException | IllegalArgumentException | NoSuchEntityException | BindException ex) {
+                log.error("Error updating workflow: {}", ex.getMessage());
             }
         }
 
@@ -252,24 +260,25 @@ public class HydraRuntime
         //cleanup
         super.onDeleted(run, runnable);
         if (run.getKind().equals(HydraJobRunSpec.KIND)) {
-            RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
-            String functionId = runAccessor.getFunctionId();
-            // find subtask task
-            Optional<Task> task = functionService
-                .getTasksByFunctionId(functionId)
-                .stream()
-                .filter(t -> t.getKind().equals(HydraSubtaskTaskSpec.KIND))
-                .findFirst();
-            if (task.isPresent()) {
-                // find subtask runs and delete them
-                try {
+            try {
+                RunSpecAccessor runAccessor = RunSpecAccessor.with(run.getSpec());
+                String functionId = runAccessor.getFunctionId();
+                // find subtask task
+                Optional<Task> task = functionService
+                    .getTasksByFunctionId(functionId)
+                    .stream()
+                    .filter(t -> t.getKind().equals(HydraSubtaskTaskSpec.KIND))
+                    .findFirst();
+                if (task.isPresent()) {
+                    // find subtask runs and delete them
+
                     List<Run> subtaskRuns = findSubtaskRuns(runAccessor.getProject(), task.get(), run.getId());
                     for (Run r : subtaskRuns) {
                         entityRepository.delete(r.getId());
                     }
-                } catch (StoreException e) {
-                    log.error("Error deleting subtasks run {}", run.getId(), e);
                 }
+            } catch (StoreException e) {
+                log.error("Error deleting subtasks run {}", run.getId(), e);
             }
         }
         return null;
@@ -299,7 +308,7 @@ public class HydraRuntime
         return runs;
     }
 
-    private Specification<RunEntity> createTaskSpecification(String task) {
+    private <T extends BaseEntity> Specification<T> createTaskSpecification(String task) {
         return (root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("task"), task);
     }
 

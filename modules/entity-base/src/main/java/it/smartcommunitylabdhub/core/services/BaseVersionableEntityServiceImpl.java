@@ -23,6 +23,8 @@
 
 package it.smartcommunitylabdhub.core.services;
 
+import it.smartcommunitylabdhub.commons.Fields;
+import it.smartcommunitylabdhub.commons.accessors.fields.KeyAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
@@ -32,6 +34,8 @@ import it.smartcommunitylabdhub.core.persistence.BaseEntity;
 import it.smartcommunitylabdhub.core.queries.filters.AbstractEntityFilterConverter;
 import it.smartcommunitylabdhub.core.queries.specifications.CommonSpecification;
 import it.smartcommunitylabdhub.core.repositories.SearchableEntityRepository;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import jakarta.validation.constraints.NotNull;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -45,6 +49,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 /*
  * Entity service for VERSIONABLE DTOs, where versions are grouped by `project`+`name` and identified by `id`.
@@ -131,6 +136,10 @@ public abstract class BaseVersionableEntityServiceImpl<
     /*
      * Service
      */
+    @Override
+    public Class<D> getType() {
+        return type;
+    }
 
     @Override
     public List<D> findAll(@NotNull String project, @NotNull String name) throws StoreException {
@@ -173,11 +182,29 @@ public abstract class BaseVersionableEntityServiceImpl<
     }
 
     @Override
-    public D getLatest(@NotNull String project, @NotNull String name) throws NoSuchEntityException, StoreException {
+    public D getLatestByName(@NotNull String project, @NotNull String name)
+        throws NoSuchEntityException, StoreException {
         log.debug("get latest by project {} and name {}", project, name);
 
         D res = repository
-            .searchAll(CommonSpecification.latestByProject(project, name))
+            .searchAll(latestByProjectAndName(project, name))
+            .stream()
+            .findFirst()
+            .orElseThrow(NoSuchEntityException::new);
+
+        if (log.isTraceEnabled()) {
+            log.trace("res: {}", res);
+        }
+
+        return res;
+    }
+
+    @Override
+    public D getLatestByKey(@NotNull String project, @NotNull String key) throws NoSuchEntityException, StoreException {
+        log.debug("get latest by project {} and key {}", project, key);
+
+        D res = repository
+            .searchAll(latestByProjectAndKey(project, key))
             .stream()
             .findFirst()
             .orElseThrow(NoSuchEntityException::new);
@@ -193,7 +220,7 @@ public abstract class BaseVersionableEntityServiceImpl<
     public List<D> listLatest() throws StoreException {
         log.debug("list latest");
 
-        List<D> list = repository.searchAll(CommonSpecification.latest());
+        List<D> list = repository.searchAll(latest());
         log.debug("found {} entities", list.size());
 
         return list;
@@ -203,7 +230,7 @@ public abstract class BaseVersionableEntityServiceImpl<
     public Page<D> listLatest(Pageable pageable) throws StoreException {
         log.debug("list latest page {} ", pageable.getPageNumber());
 
-        Page<D> page = repository.search(CommonSpecification.latest(), pageable);
+        Page<D> page = repository.search(latest(), pageable);
         log.debug("found {} entities in total", page.getTotalElements());
 
         return page;
@@ -215,7 +242,7 @@ public abstract class BaseVersionableEntityServiceImpl<
 
         Specification<E> spec = Specification.allOf(
             CommonSpecification.projectEquals(project),
-            CommonSpecification.latestByProject(project)
+            latestByProject(project)
         );
 
         List<D> list = repository.searchAll(spec);
@@ -230,7 +257,7 @@ public abstract class BaseVersionableEntityServiceImpl<
 
         Specification<E> spec = Specification.allOf(
             CommonSpecification.projectEquals(project),
-            CommonSpecification.latestByProject(project)
+            latestByProject(project)
         );
 
         Page<D> page = repository.search(spec, pageable);
@@ -250,10 +277,7 @@ public abstract class BaseVersionableEntityServiceImpl<
         SearchFilter<E> ef = filter != null ? filterConverter.convert(filter) : null;
 
         //convert filter to spec
-        Specification<E> spec = Specification.allOf(
-            CommonSpecification.latest(),
-            ef != null ? ef.toSpecification() : null
-        );
+        Specification<E> spec = Specification.allOf(latest(), ef != null ? ef.toSpecification() : null);
 
         List<D> list = repository.searchAll(spec);
         log.debug("found {} entities", list.size());
@@ -272,10 +296,7 @@ public abstract class BaseVersionableEntityServiceImpl<
         SearchFilter<E> ef = filter != null ? filterConverter.convert(filter) : null;
 
         //convert filter to spec
-        Specification<E> spec = Specification.allOf(
-            CommonSpecification.latest(),
-            ef != null ? ef.toSpecification() : null
-        );
+        Specification<E> spec = Specification.allOf(latest(), ef != null ? ef.toSpecification() : null);
 
         Page<D> page = repository.search(spec, pageable);
         log.debug("found {} entities in total", page.getTotalElements());
@@ -296,7 +317,7 @@ public abstract class BaseVersionableEntityServiceImpl<
         //convert filter to spec
         Specification<E> spec = Specification.allOf(
             CommonSpecification.projectEquals(project),
-            CommonSpecification.latestByProject(project),
+            latestByProject(project),
             ef != null ? ef.toSpecification() : null
         );
 
@@ -320,7 +341,7 @@ public abstract class BaseVersionableEntityServiceImpl<
         //convert filter to spec
         Specification<E> spec = Specification.allOf(
             CommonSpecification.projectEquals(project),
-            CommonSpecification.latestByProject(project),
+            latestByProject(project),
             ef != null ? ef.toSpecification() : null
         );
 
@@ -328,5 +349,99 @@ public abstract class BaseVersionableEntityServiceImpl<
         log.debug("found {} entities in total", page.getTotalElements());
 
         return page;
+    }
+
+    /*
+     * Queries
+     */
+    public <T extends BaseEntity> Specification<T> latest() {
+        return (root, query, criteriaBuilder) -> {
+            Subquery<Number> subquery = query.subquery(Number.class);
+            Root<T> subqueryRoot = (Root<T>) subquery.from(root.getJavaType());
+
+            subquery.select(criteriaBuilder.max(subqueryRoot.get(AbstractEntity_.CREATED)));
+            subquery.where(criteriaBuilder.equal(subqueryRoot.get(Fields.NAME), root.get(Fields.NAME)));
+            subquery.groupBy(subqueryRoot.get(Fields.NAME), subqueryRoot.get(AbstractEntity_.PROJECT));
+
+            return criteriaBuilder.and(criteriaBuilder.in(root.get(AbstractEntity_.CREATED)).value(subquery));
+        };
+    }
+
+    public <T extends BaseEntity> Specification<T> latestByProject(String project) {
+        return (root, query, criteriaBuilder) -> {
+            Subquery<Number> subquery = query.subquery(Number.class);
+            Root<T> subqueryRoot = (Root<T>) subquery.from(root.getJavaType());
+
+            subquery.select(criteriaBuilder.max(subqueryRoot.get(AbstractEntity_.CREATED)));
+            subquery.where(
+                criteriaBuilder.equal(subqueryRoot.get(AbstractEntity_.PROJECT), project),
+                criteriaBuilder.equal(subqueryRoot.get(Fields.NAME), root.get(Fields.NAME))
+            );
+            subquery.groupBy(subqueryRoot.get(Fields.NAME), subqueryRoot.get(AbstractEntity_.PROJECT));
+
+            return criteriaBuilder.and(
+                criteriaBuilder.equal(root.get(AbstractEntity_.PROJECT), project),
+                criteriaBuilder.in(root.get(AbstractEntity_.CREATED)).value(subquery)
+            );
+        };
+    }
+
+    public <T extends BaseEntity> Specification<T> latestByProjectAndName(String project, String name) {
+        return (root, query, criteriaBuilder) -> {
+            Subquery<Number> subquery = query.subquery(Number.class);
+            Root<T> subqueryRoot = (Root<T>) subquery.from(root.getJavaType());
+
+            subquery.select(criteriaBuilder.max(subqueryRoot.get(AbstractEntity_.CREATED)));
+            subquery.where(
+                criteriaBuilder.equal(subqueryRoot.get(AbstractEntity_.PROJECT), project),
+                criteriaBuilder.equal(subqueryRoot.get(Fields.NAME), name)
+            );
+
+            return criteriaBuilder.and(
+                criteriaBuilder.equal(root.get(AbstractEntity_.PROJECT), project),
+                criteriaBuilder.equal(root.get(Fields.NAME), name),
+                criteriaBuilder.in(root.get(AbstractEntity_.CREATED)).value(subquery)
+            );
+        };
+    }
+
+    public <T extends BaseEntity> Specification<T> latestByProjectAndKey(String project, String key) {
+        return (root, query, criteriaBuilder) -> {
+            Subquery<Number> subquery = query.subquery(Number.class);
+            Root<T> subqueryRoot = (Root<T>) subquery.from(root.getJavaType());
+
+            KeyAccessor accessor = KeyAccessor.with(key);
+
+            //validate key
+            if (!project.equals(accessor.getProject())) {
+                throw new IllegalArgumentException("Project in key does not match the provided project");
+            }
+
+            if (!this.type.getName().toLowerCase().equals(accessor.getType())) {
+                throw new IllegalArgumentException("Type in key does not match the expected type");
+            }
+
+            if (StringUtils.hasText(accessor.getId())) {
+                //exact match with id
+                return criteriaBuilder.and(
+                    criteriaBuilder.equal(root.get(AbstractEntity_.PROJECT), project),
+                    criteriaBuilder.equal(root.get(AbstractEntity_.ID), accessor.getId())
+                );
+            } else {
+                //like match on key without id
+                //exact match with id
+                subquery.select(criteriaBuilder.max(subqueryRoot.get(AbstractEntity_.CREATED)));
+                subquery.where(
+                    criteriaBuilder.equal(subqueryRoot.get(AbstractEntity_.PROJECT), project),
+                    criteriaBuilder.like(subqueryRoot.get(AbstractEntity_.KEY), key + "%")
+                );
+
+                return criteriaBuilder.and(
+                    criteriaBuilder.equal(root.get(AbstractEntity_.PROJECT), project),
+                    criteriaBuilder.like(root.get(AbstractEntity_.KEY), key + "%"),
+                    criteriaBuilder.in(root.get(AbstractEntity_.CREATED)).value(subquery)
+                );
+            }
+        };
     }
 }

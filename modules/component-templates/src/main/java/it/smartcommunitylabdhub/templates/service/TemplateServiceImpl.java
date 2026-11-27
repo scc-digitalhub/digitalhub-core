@@ -32,6 +32,7 @@ import it.smartcommunitylabdhub.commons.models.specs.Spec;
 import it.smartcommunitylabdhub.commons.models.template.Template;
 import it.smartcommunitylabdhub.commons.services.SpecRegistry;
 import it.smartcommunitylabdhub.commons.services.SpecValidator;
+import it.smartcommunitylabdhub.templates.TemplateProvider;
 import it.smartcommunitylabdhub.templates.TemplateService;
 import it.smartcommunitylabdhub.templates.filter.TemplateFilter;
 import jakarta.validation.constraints.NotNull;
@@ -78,6 +79,8 @@ public abstract class TemplateServiceImpl<D> implements TemplateService<D>, Init
     private SpecRegistry<D> specRegistry;
     private SpecValidator validator;
 
+    private List<TemplateProvider<D>> templateProviders;
+
     private Map<String, Template> templates = new LinkedHashMap<>();
 
     @SuppressWarnings("unchecked")
@@ -113,11 +116,29 @@ public abstract class TemplateServiceImpl<D> implements TemplateService<D>, Init
         this.keyGenerator = keyGenerator;
     }
 
+    @Autowired(required = false)
+    public void setTemplateProviders(List<TemplateProvider<D>> templateProviders) {
+        this.templateProviders = templateProviders;
+    }
+    
     @Override
     public void afterPropertiesSet() throws Exception {
         log.debug("Load templates for {}...", type);
         List<Template> list = readTemplates(templatesPath);
+        if (templateProviders != null) {
+            log.debug("Load templates from providers for {}...", type);
+            String key = type.getSimpleName().toLowerCase();
+            for (TemplateProvider<D> provider : templateProviders) {
+                List<Template> providerTemplates = provider.getTemplates();
+                if (providerTemplates != null) {
+                    providerTemplates.forEach(t -> t.setType(key));
+                    list.addAll(providerTemplates);
+                }
+            }
+        }
         this.templates = list.stream().collect(Collectors.toMap(Template::getId, t -> t));
+
+
         log.debug("Initialized {} templates for {}", list.size(), type);
     }
 

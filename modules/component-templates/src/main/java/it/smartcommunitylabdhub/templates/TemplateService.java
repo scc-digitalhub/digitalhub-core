@@ -47,4 +47,5 @@ public interface TemplateService<D> {
 
     List<Template> listTemplates(@Valid TemplateFilter filter) throws SystemException;
     Page<Template> searchTemplates(@Valid TemplateFilter filter, Pageable pageable) throws SystemException;
+
 }

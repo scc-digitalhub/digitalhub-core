@@ -23,124 +23,88 @@
 
 package it.smartcommunitylabdhub.runs;
 
-import it.smartcommunitylabdhub.commons.exceptions.DuplicatedEntityException;
-import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
-import it.smartcommunitylabdhub.commons.exceptions.SystemException;
-import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
-import jakarta.validation.constraints.NotNull;
-import java.util.List;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.lang.Nullable;
-import org.springframework.validation.BindException;
+import it.smartcommunitylabdhub.commons.services.EntityAwareService;
+import it.smartcommunitylabdhub.commons.services.EntityService;
+import it.smartcommunitylabdhub.commons.services.SchemaService;
+import it.smartcommunitylabdhub.commons.services.SpecRegistry;
+import it.smartcommunitylabdhub.core.events.EntityOperationsListener;
+import it.smartcommunitylabdhub.core.services.EntityFinalizer;
+import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
+import it.smartcommunitylabdhub.metrics.service.MetricsService;
+import it.smartcommunitylabdhub.relationships.RelationshipsAwareEntityService;
+import lombok.experimental.Delegate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 /*
- * Service for managing runs
+ * Exposed manager for run-related operations via services
  */
-public interface RunManager {
-    /*
-     * Tasks
-     */
-    List<Run> getRunsByTaskId(@NotNull String taskId) throws SystemException;
+@Component
+public class RunManager {
 
-    void deleteRunsByTaskId(@NotNull String taskId) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private EntityService<Run> runEntityService;
 
-    /**
-     * List all runs
-     *
-     * @param pageable
-     * @return
-     */
-    Page<Run> listRuns(Pageable pageable) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private LifecycleManager<Run> runLifecycleManager;
 
-    /**
-     * List all runs for a given user
-     *
-     * @param user
-     * @return
-     */
-    List<Run> listRunsByUser(@NotNull String user) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private RelationshipsAwareEntityService<Run> runRelationshipsAwareEntityService;
 
-    /**
-     * List all runs for a given project
-     *
-     * @param project
-     * @return
-     */
-    List<Run> listRunsByProject(@NotNull String project) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private MetricsService<Run> runMetricsService;
 
-    /**
-     * List all runs for a given project
-     *
-     * @param project
-     * @param pageable
-     * @return
-     */
-    Page<Run> listRunsByProject(@NotNull String project, Pageable pageable) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private EntityFinalizer<Run> runEntityFinalizer;
 
-    /**
-     * List all runs, with optional filters
-     * @param pageable
-     * @param filter
-     * @return
-     */
-    Page<Run> searchRuns(Pageable pageable, @Nullable SearchFilter<Run> filter) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private EntityOperationsListener<Run> runOperationsListener;
 
-    /**
-     * List the runs for a given project, with optional filters
-     * @param project
-     * @param pageable
-     * @param filter
-     * @return
-     */
-    Page<Run> searchRunsByProject(@NotNull String project, Pageable pageable, @Nullable SearchFilter<Run> filter)
-        throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private SpecRegistry<Run> runSpecRegistry;
 
-    /**
-     * Find a specific run via unique ID. Returns null if not found
-     *
-     * @param id
-     * @return
-     */
-    @Nullable
-    Run findRun(@NotNull String id) throws SystemException;
+    @Delegate(excludes = { EntityAwareService.class })
+    private SchemaService<Run> runSchemaService;
 
-    /**
-     * Get a specific run via unique ID. Throws exception if not found
-     *
-     * @param id
-     * @return
-     * @throws NoSuchEntityException
-     */
-    Run getRun(@NotNull String id) throws NoSuchEntityException, SystemException;
+    @Autowired
+    public void setRunEntityService(EntityService<Run> runEntityService) {
+        this.runEntityService = runEntityService;
+    }
 
-    /**
-     * Create a new run and store it
-     *
-     * @param runDTO
-     * @return
-     * @throws DuplicatedEntityException
-     */
-    Run createRun(@NotNull Run runDTO)
-        throws DuplicatedEntityException, NoSuchEntityException, BindException, SystemException;
+    @Autowired
+    public void setRunLifecycleManager(LifecycleManager<Run> runLifecycleManager) {
+        this.runLifecycleManager = runLifecycleManager;
+    }
 
-    /**
-     * Update a specific run
-     *
-     * @param id
-     * @param runDTO
-     * @return
-     * @throws NoSuchEntityException
-     */
-    Run updateRun(@NotNull String id, @NotNull Run runDTO)
-        throws NoSuchEntityException, BindException, IllegalArgumentException, SystemException;
+    @Autowired
+    public void setRunRelationshipsAwareEntityService(
+        RelationshipsAwareEntityService<Run> runRelationshipsAwareEntityService
+    ) {
+        this.runRelationshipsAwareEntityService = runRelationshipsAwareEntityService;
+    }
 
-    /**
-     * Delete a specific run via unique ID, with optional cascade
-     *
-     * @param id
-     * @param cascade
-     */
-    @Nullable
-    Run deleteRun(@NotNull String id, @Nullable Boolean cascade) throws SystemException;
+    @Autowired
+    public void setRunEntityFinalizer(EntityFinalizer<Run> runEntityFinalizer) {
+        this.runEntityFinalizer = runEntityFinalizer;
+    }
+
+    @Autowired
+    public void setRunOperationsListener(EntityOperationsListener<Run> runOperationsListener) {
+        this.runOperationsListener = runOperationsListener;
+    }
+
+    @Autowired
+    public void setRunSpecRegistry(SpecRegistry<Run> runSpecRegistry) {
+        this.runSpecRegistry = runSpecRegistry;
+    }
+
+    @Autowired
+    public void setRunMetricsService(MetricsService<Run> runMetricsService) {
+        this.runMetricsService = runMetricsService;
+    }
+
+    @Autowired
+    public void setRunSchemaService(SchemaService<Run> runSchemaService) {
+        this.runSchemaService = runSchemaService;
+    }
 }

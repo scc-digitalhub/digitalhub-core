@@ -25,12 +25,13 @@ package it.smartcommunitylabdhub.core.projects.specs;
 
 import it.smartcommunitylabdhub.artifacts.Artifact;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.function.Function;
-import it.smartcommunitylabdhub.commons.models.workflow.Workflow;
 import it.smartcommunitylabdhub.dataitems.DataItem;
+import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.models.Model;
 import it.smartcommunitylabdhub.projects.Project;
 import it.smartcommunitylabdhub.projects.specs.ProjectBaseSpec;
+import it.smartcommunitylabdhub.workflows.Workflow;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;

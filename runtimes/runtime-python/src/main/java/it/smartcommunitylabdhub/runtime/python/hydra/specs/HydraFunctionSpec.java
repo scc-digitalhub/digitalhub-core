@@ -26,7 +26,7 @@ package it.smartcommunitylabdhub.runtime.python.hydra.specs;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.smartcommunitylabdhub.commons.annotations.common.SpecType;
-import it.smartcommunitylabdhub.commons.models.function.Function;
+import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.runtime.python.hydra.HydraRuntime;
 import it.smartcommunitylabdhub.runtime.python.hydra.model.HydraConfig;
 import it.smartcommunitylabdhub.runtime.python.hydra.model.HydraSourceCode;

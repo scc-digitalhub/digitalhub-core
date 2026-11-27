@@ -32,15 +32,15 @@ import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
 import it.smartcommunitylabdhub.commons.infrastructure.RunRunnable;
-import it.smartcommunitylabdhub.commons.models.function.Function;
-import it.smartcommunitylabdhub.commons.models.function.FunctionBaseSpec;
-import it.smartcommunitylabdhub.commons.models.task.Task;
-import it.smartcommunitylabdhub.commons.services.TaskService;
 import it.smartcommunitylabdhub.commons.utils.MapUtils;
+import it.smartcommunitylabdhub.functions.Function;
 import it.smartcommunitylabdhub.functions.FunctionManager;
+import it.smartcommunitylabdhub.functions.specs.FunctionBaseSpec;
 import it.smartcommunitylabdhub.runs.Run;
 import it.smartcommunitylabdhub.runs.specs.RunBaseSpec;
 import it.smartcommunitylabdhub.runs.specs.RunBaseStatus;
+import it.smartcommunitylabdhub.tasks.Task;
+import it.smartcommunitylabdhub.tasks.TaskService;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Map;
@@ -100,7 +100,7 @@ public abstract class AbstractFunctionBaseRuntime<
                     throw new IllegalArgumentException("Function ID mismatch between task and run spec");
                 }
 
-                Function function = functionManager.getFunction(taskSpecAccessor.getFunctionId());
+                Function function = functionManager.get(taskSpecAccessor.getFunctionId());
                 if (log.isTraceEnabled()) {
                     log.trace("build for function {}", function);
                     log.trace("build for task {}", task);
@@ -116,8 +116,8 @@ public abstract class AbstractFunctionBaseRuntime<
                 //dereference task
                 Function function =
                     specAccessor.getFunctionId() != null
-                        ? functionManager.getFunction(specAccessor.getFunctionId())
-                        : functionManager.getLatestFunctionByName(run.getProject(), specAccessor.getFunction());
+                        ? functionManager.get(specAccessor.getFunctionId())
+                        : functionManager.getLatestByName(run.getProject(), specAccessor.getFunction());
                 List<Task> tasks = functionManager.getTasksByFunctionId(function.getId());
                 Task task = tasks
                     .stream()

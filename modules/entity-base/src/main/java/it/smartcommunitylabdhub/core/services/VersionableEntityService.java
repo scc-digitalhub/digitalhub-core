@@ -27,6 +27,7 @@ import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.queries.SearchFilter;
+import it.smartcommunitylabdhub.commons.services.EntityAwareService;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import org.springframework.data.domain.Page;
@@ -35,11 +36,12 @@ import org.springframework.data.domain.Pageable;
 /*
  * Entity service for VERSIONABLE DTOs, where versions are grouped by `project`+`name` and identified by `id`.
  */
-public interface VersionableEntityService<D extends BaseDTO> {
+public interface VersionableEntityService<D extends BaseDTO> extends EntityAwareService<D> {
     List<D> findAll(@NotNull String project, @NotNull String name) throws StoreException;
     Page<D> findAll(@NotNull String project, @NotNull String name, Pageable page) throws StoreException;
 
-    D getLatest(@NotNull String project, @NotNull String name) throws NoSuchEntityException, StoreException;
+    D getLatestByName(@NotNull String project, @NotNull String name) throws NoSuchEntityException, StoreException;
+    D getLatestByKey(@NotNull String project, @NotNull String key) throws NoSuchEntityException, StoreException;
 
     List<D> listLatest() throws StoreException;
     Page<D> listLatest(Pageable page) throws StoreException;
