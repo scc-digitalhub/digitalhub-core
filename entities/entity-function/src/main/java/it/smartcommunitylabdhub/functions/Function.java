@@ -30,9 +30,11 @@ import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.metadata.MetadataDTO;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
+import it.smartcommunitylabdhub.extensions.model.ExtensibleDTO;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
+import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.AllArgsConstructor;
@@ -50,7 +52,7 @@ import org.springframework.lang.Nullable;
 @Builder
 @ToString
 @JsonPropertyOrder(alphabetic = true)
-public class Function implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO {
+public class Function implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO, ExtensibleDTO {
 
     @Nullable
     @Pattern(regexp = Keys.SLUG_PATTERN)
@@ -83,4 +85,8 @@ public class Function implements BaseDTO, MetadataDTO, SpecDTO, StatusDTO {
 
     @Builder.Default
     private Map<String, Serializable> status = new HashMap<>();
+
+    @Nullable
+    private List<Map<String, Serializable>> extensions;
+
 }
