@@ -26,6 +26,8 @@ package it.smartcommunitylabdhub.files.base;
 import it.smartcommunitylabdhub.authorization.model.UserAuthentication;
 import it.smartcommunitylabdhub.authorization.services.CredentialsService;
 import it.smartcommunitylabdhub.authorization.utils.UserAuthenticationHelper;
+import it.smartcommunitylabdhub.commons.accessors.fields.KeyAccessor;
+import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.NoSuchEntityException;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.exceptions.SystemException;
@@ -35,6 +37,7 @@ import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.commons.repositories.EntityRepository;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
+import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import it.smartcommunitylabdhub.files.models.DownloadInfo;
 import it.smartcommunitylabdhub.files.models.FileInfo;
 import it.smartcommunitylabdhub.files.models.FileInfoFieldAccessor;
@@ -44,6 +47,7 @@ import it.smartcommunitylabdhub.files.models.UploadInfo;
 import it.smartcommunitylabdhub.files.service.EntityFilesService;
 import it.smartcommunitylabdhub.files.service.FilesInfoService;
 import it.smartcommunitylabdhub.files.service.FilesService;
+import it.smartcommunitylabdhub.files.utils.PathUtils;
 import jakarta.validation.constraints.NotNull;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -65,6 +69,8 @@ import org.springframework.util.StringUtils;
 public abstract class BaseFilesService<
     D extends BaseDTO & SpecDTO & StatusDTO
 > implements EntityFilesService<D>, InitializingBean {
+
+    public static final String STATE_UPLOADING = "UPLOADING";
 
     protected final Class<D> type;
 
@@ -110,11 +116,6 @@ public abstract class BaseFilesService<
         return basePath + filePath;
     }
 
-    private boolean isUploadPathAllowed(String specPath, String path) {
-        String basePath = resolveUploadBasePath(specPath);
-        return basePath.isEmpty() ? path.equals(specPath) : path.startsWith(basePath);
-    }
-
     @Autowired
     public void setEntityService(EntityRepository<D> entityService) {
         this.entityService = entityService;
@@ -148,7 +149,9 @@ public abstract class BaseFilesService<
     }
 
     protected String defaultPath(D dto) throws StoreException {
-        String name = dto.getName();
+        //name as encoded in the key, same as the managed path assigned on UPLOADING
+        String keyName = KeyAccessor.with(dto.getKey()).getName();
+        String name = StringUtils.hasText(keyName) ? keyName : KeyUtils.encode(dto.getName());
         String subpath = (name != null ? name + "/" : "") + dto.getId();
         return resolveBasePath(dto.getProject(), name, dto.getId(), null) + "/" + subpath + "/";
     }
@@ -302,6 +305,73 @@ public abstract class BaseFilesService<
         }
     }
 
+    /*
+     * Uploads
+     */
+
+    /**
+     * The folder where uploads are allowed for the object, ending with "/".
+     *
+     * Default: only for objects in UPLOADING, in the folder of their spec.path (assigned when entering
+     * UPLOADING).
+     */
+    protected String uploadFolder(@NotNull D dto) throws StoreException {
+        String state = StatusFieldAccessor.with(dto.getStatus()).getState();
+        if (!STATE_UPLOADING.equals(state)) {
+            throw new IllegalArgumentException("uploads are allowed only in " + STATE_UPLOADING + " state");
+        }
+
+        String specPath = PathAccessor.with(dto.getSpec()).getPath();
+        if (!StringUtils.hasText(specPath)) {
+            throw new IllegalArgumentException("missing path");
+        }
+
+        String folder = resolveUploadBasePath(specPath);
+        if (!StringUtils.hasText(folder)) {
+            throw new IllegalArgumentException("invalid path");
+        }
+
+        return folder;
+    }
+
+    /**
+     * Folder for uploads of an object not created yet (pre-create flow): <base><type>/<name>/<id>/,
+     * name encoded as in keys, random id when missing
+     */
+    protected String preCreateFolder(@NotNull String project, @Nullable String name, @Nullable String id)
+        throws NoSuchEntityException, StoreException {
+        String subpath =
+            (StringUtils.hasText(name) ? KeyUtils.encode(name) + "/" : "") +
+            (id != null ? id : UUID.randomUUID().toString());
+        return resolveBasePath(project, name, id, null) + "/" + subpath + "/";
+    }
+
+    /**
+     * Base for multipart uploads of an object not created yet: the type folder <base><type>/
+     */
+    protected String preCreateBase(@NotNull String project, @Nullable String id)
+        throws NoSuchEntityException, StoreException {
+        return resolveBasePath(project, null, id, null) + "/";
+    }
+
+    private D find(@Nullable String id) throws StoreException {
+        return id != null ? entityService.find(id) : null;
+    }
+
+    private List<Credentials> credentials() {
+        //credentials of the current user (the owner)
+        UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
+        return auth != null && credentialsService != null ? credentialsService.getCredentials(auth) : null;
+    }
+
+    private String uploadPath(String folder, String filename) {
+        String fullPath = resolveUploadPath(folder, filename);
+        if (!PathUtils.isWithin(fullPath, folder)) {
+            throw new IllegalArgumentException("invalid file path");
+        }
+        return fullPath;
+    }
+
     @Override
     public UploadInfo uploadFileAsUrl(
         @NotNull String project,
@@ -310,60 +380,32 @@ public abstract class BaseFilesService<
         @Nullable String filename
     ) throws NoSuchEntityException, SystemException {
         log.debug("upload url for dto with id {}: {}", String.valueOf(id), filename);
-
         try {
-            //always set a subpath to avoid collisions
-            String subpath = (name != null ? name + "/" : "") + (id != null ? id : UUID.randomUUID().toString());
-            String path = resolveBasePath(project, name, id, filename) + "/" + subpath + "/";
-
-            //entity may not exists (yet)
-            D dto = entityService.find(id);
-            if (dto != null) {
-                //extract path from spec
-                PathAccessor accessor = PathAccessor.with(dto.getSpec());
-                String specPath = accessor.getPath();
-                // if (!StringUtils.hasText(specPath)) {
-                //     throw new NoSuchEntityException("file");
-                // }
-                // //use as basePath
-
-                // path = specPath;
-                if (StringUtils.hasText(specPath)) {
-                    //use as basePath
-                    path = specPath;
-                }
-            }
-
-            String basePath = resolveUploadBasePath(path);
-
-            if (!StringUtils.hasText(filename)) {
-                //build only base upload info, we can not provide a full file path
-                UploadInfo info = UploadInfo.builder().path(basePath).build();
-
-                if (log.isTraceEnabled()) {
-                    log.trace("upload url for dto with id {}: {}", id, info);
-                }
-
-                return info;
-            }
-
-            String fullPath = resolveUploadPath(path, filename);
-
-            //try to resolve credentials
-            UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials =
-                auth != null && credentialsService != null ? credentialsService.getCredentials(auth) : null;
-
-            UploadInfo info = filesService.getUploadAsUrl(fullPath, credentials);
-            if (log.isTraceEnabled()) {
-                log.trace("upload url for dto with id {}: {}", id, info);
-            }
-
-            return info;
+            //existing objects follow their upload rules, missing ones the pre-create folder
+            D dto = find(id);
+            String folder = dto != null ? uploadFolder(dto) : preCreateFolder(project, name, id);
+            return uploadFileAsUrl(folder, filename);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
         }
+    }
+
+    /**
+     * Upload url for a file within the given folder
+     */
+    protected UploadInfo uploadFileAsUrl(@NotNull String folder, @Nullable String filename) throws StoreException {
+        if (!StringUtils.hasText(filename)) {
+            //build only base upload info, we can not provide a full file path
+            return UploadInfo.builder().path(folder).build();
+        }
+
+        UploadInfo info = filesService.getUploadAsUrl(uploadPath(folder, filename), credentials());
+        if (log.isTraceEnabled()) {
+            log.trace("upload url in {}: {}", folder, info);
+        }
+
+        return info;
     }
 
     @Override
@@ -374,46 +416,26 @@ public abstract class BaseFilesService<
         @NotNull String filename
     ) throws NoSuchEntityException, SystemException {
         log.debug("start upload url for dto with id {}: {}", String.valueOf(id), filename);
-
         try {
-            //always set a subpath to avoid collisions
-            String subpath = (name != null ? name + "/" : "") + (id != null ? id : UUID.randomUUID().toString());
-            String path = resolveBasePath(project, name, id, filename) + "/" + subpath + "/";
-
-            //entity may not exists (yet)
-            D dto = entityService.find(id);
-            if (dto != null) {
-                //extract path from spec
-                PathAccessor accessor = PathAccessor.with(dto.getSpec());
-                String specPath = accessor.getPath();
-                // if (!StringUtils.hasText(specPath)) {
-                //     throw new NoSuchEntityException("file");
-                // }
-                //use as basePath
-                // path = specPath;
-                if (StringUtils.hasText(specPath)) {
-                    //use as basePath
-                    path = specPath;
-                }
-            }
-
-            String fullPath = resolveUploadPath(path, filename);
-
-            //try to resolve credentials
-            UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials =
-                auth != null && credentialsService != null ? credentialsService.getCredentials(auth) : null;
-
-            UploadInfo info = filesService.startMultiPartUpload(fullPath, credentials);
-            if (log.isTraceEnabled()) {
-                log.trace("start upload url for dto with id {}: {}", id, info);
-            }
-
-            return info;
+            D dto = find(id);
+            String folder = dto != null ? uploadFolder(dto) : preCreateFolder(project, name, id);
+            return startMultiPartUpload(folder, filename);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
         }
+    }
+
+    /**
+     * Start a multipart upload for a file within the given folder
+     */
+    protected UploadInfo startMultiPartUpload(@NotNull String folder, @NotNull String filename) throws StoreException {
+        UploadInfo info = filesService.startMultiPartUpload(uploadPath(folder, filename), credentials());
+        if (log.isTraceEnabled()) {
+            log.trace("start upload url in {}: {}", folder, info);
+        }
+
+        return info;
     }
 
     @Override
@@ -426,37 +448,34 @@ public abstract class BaseFilesService<
     ) throws NoSuchEntityException, SystemException {
         log.debug("upload part url for dto {}: {}", String.valueOf(id), partNumber);
         try {
-            //entity may not exists (yet)
-            D dto = entityService.find(id);
-            if (dto != null) {
-                //extract path from spec
-                PathAccessor accessor = PathAccessor.with(dto.getSpec());
-                String specPath = accessor.getPath();
-                if (!StringUtils.hasText(specPath)) {
-                    specPath = defaultPath(dto);
-                    // throw new NoSuchEntityException("file");
-                }
-
-                if (!isUploadPathAllowed(specPath, path)) {
-                    throw new IllegalArgumentException("invalid file path");
-                }
-            }
-
-            //try to resolve credentials
-            UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials =
-                auth != null && credentialsService != null ? credentialsService.getCredentials(auth) : null;
-
-            UploadInfo info = filesService.uploadMultiPart(path, uploadId, partNumber, credentials);
-            if (log.isTraceEnabled()) {
-                log.trace("part upload url for dto with path {}: {}", path, info);
-            }
-
-            return info;
+            D dto = find(id);
+            String folder = dto != null ? uploadFolder(dto) : preCreateBase(project, id);
+            return uploadMultiPart(folder, path, uploadId, partNumber);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
         }
+    }
+
+    /**
+     * Upload url for a part of a multipart upload within the given folder
+     */
+    protected UploadInfo uploadMultiPart(
+        @NotNull String folder,
+        @NotNull String path,
+        @NotNull String uploadId,
+        @NotNull Integer partNumber
+    ) throws StoreException {
+        if (!PathUtils.isWithin(path, folder)) {
+            throw new IllegalArgumentException("invalid file path");
+        }
+
+        UploadInfo info = filesService.uploadMultiPart(path, uploadId, partNumber, credentials());
+        if (log.isTraceEnabled()) {
+            log.trace("part upload url for path {}: {}", path, info);
+        }
+
+        return info;
     }
 
     @Override
@@ -469,36 +488,33 @@ public abstract class BaseFilesService<
     ) throws NoSuchEntityException, SystemException {
         log.debug("complete upload url for dto {}: {}", String.valueOf(id), path);
         try {
-            //entity may not exists (yet)
-            D dto = entityService.find(id);
-            if (dto != null) {
-                //extract path from spec
-                PathAccessor accessor = PathAccessor.with(dto.getSpec());
-                String specPath = accessor.getPath();
-                if (!StringUtils.hasText(specPath)) {
-                    specPath = defaultPath(dto);
-                    // throw new NoSuchEntityException("file");
-                }
-
-                if (!isUploadPathAllowed(specPath, path)) {
-                    throw new IllegalArgumentException("invalid file path");
-                }
-            }
-
-            //try to resolve credentials
-            UserAuthentication<?> auth = UserAuthenticationHelper.getUserAuthentication();
-            List<Credentials> credentials =
-                auth != null && credentialsService != null ? credentialsService.getCredentials(auth) : null;
-
-            UploadInfo info = filesService.completeMultiPartUpload(path, uploadId, eTagPartList, credentials);
-            if (log.isTraceEnabled()) {
-                log.trace("complete upload url for dto with path {}: {}", path, info);
-            }
-
-            return info;
+            D dto = find(id);
+            String folder = dto != null ? uploadFolder(dto) : preCreateBase(project, id);
+            return completeMultiPartUpload(folder, path, uploadId, eTagPartList);
         } catch (StoreException e) {
             log.error("store error: {}", e.getMessage());
             throw new SystemException(e.getMessage());
         }
+    }
+
+    /**
+     * Complete a multipart upload within the given folder
+     */
+    protected UploadInfo completeMultiPartUpload(
+        @NotNull String folder,
+        @NotNull String path,
+        @NotNull String uploadId,
+        @NotNull List<String> eTagPartList
+    ) throws StoreException {
+        if (!PathUtils.isWithin(path, folder)) {
+            throw new IllegalArgumentException("invalid file path");
+        }
+
+        UploadInfo info = filesService.completeMultiPartUpload(path, uploadId, eTagPartList, credentials());
+        if (log.isTraceEnabled()) {
+            log.trace("complete upload url for path {}: {}", path, info);
+        }
+
+        return info;
     }
 }

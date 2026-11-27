@@ -9,6 +9,7 @@ package it.smartcommunitylabdhub.extensions.persistence;
 import it.smartcommunitylabdhub.commons.annotations.common.EffectType;
 import it.smartcommunitylabdhub.extensions.model.Extension;
 import it.smartcommunitylabdhub.extensions.model.ParentAccessor;
+import it.smartcommunitylabdhub.extensions.service.ExtensionsFilesService;
 import it.smartcommunitylabdhub.files.service.BaseFilesFinalizer;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
@@ -39,16 +40,13 @@ public class ExtensionFilesFinalizer extends BaseFilesFinalizer<Extension> {
                 return null;
             }
 
-            return (
-                base +
-                extension.getEntity().toLowerCase() +
-                "/" +
-                parent.getName() +
-                "/" +
-                parent.getId() +
-                "/extensions/" +
-                extension.getName() +
-                "/"
+            //same folder used for uploads (parent name encoded as in keys)
+            return ExtensionsFilesService.extensionFolder(
+                base,
+                extension.getEntity(),
+                parent.getName(),
+                parent.getId(),
+                extension.getName()
             );
         } catch (IllegalArgumentException e) {
             //invalid parent: nothing owned
