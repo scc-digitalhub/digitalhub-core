@@ -25,7 +25,6 @@ package it.smartcommunitylabdhub.dataitems.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import it.smartcommunitylabdhub.commons.models.base.BaseSpec;
-import jakarta.validation.constraints.NotBlank;
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;
@@ -37,7 +36,6 @@ import lombok.Setter;
 @NoArgsConstructor
 public class DataItemBaseSpec extends BaseSpec {
 
-    @NotBlank
     @JsonProperty("path")
     private String path;
 

@@ -25,7 +25,6 @@ package it.smartcommunitylabdhub.artifacts.specs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import it.smartcommunitylabdhub.commons.models.base.BaseSpec;
-import jakarta.validation.constraints.NotBlank;
 import java.io.Serializable;
 import java.util.Map;
 import lombok.Getter;
@@ -40,7 +39,6 @@ public class ArtifactBaseSpec extends BaseSpec {
     @JsonProperty("src_path")
     private String srcPath;
 
-    @NotBlank
     @JsonProperty("path")
     private String path;
 

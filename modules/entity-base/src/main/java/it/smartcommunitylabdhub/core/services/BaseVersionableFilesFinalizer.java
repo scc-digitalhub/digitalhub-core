@@ -6,12 +6,14 @@
 
 package it.smartcommunitylabdhub.core.services;
 
+import it.smartcommunitylabdhub.commons.accessors.fields.KeyAccessor;
 import it.smartcommunitylabdhub.commons.accessors.fields.StatusFieldAccessor;
 import it.smartcommunitylabdhub.commons.exceptions.StoreException;
 import it.smartcommunitylabdhub.commons.models.base.BaseDTO;
 import it.smartcommunitylabdhub.commons.models.specs.SpecDTO;
 import it.smartcommunitylabdhub.commons.models.status.StatusDTO;
 import it.smartcommunitylabdhub.commons.utils.EntityUtils;
+import it.smartcommunitylabdhub.commons.utils.KeyUtils;
 import it.smartcommunitylabdhub.files.models.PathAccessor;
 import it.smartcommunitylabdhub.files.service.BaseFilesFinalizer;
 import it.smartcommunitylabdhub.files.utils.PathUtils;
@@ -25,7 +27,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
 
 /**
- * Files finalizer for versioned entities: a version owns its folder <base>/<type>/<name>/<id>/.
+ * Files finalizer for versioned entities: a version owns its folder <base>/<type>/<name>/<id>/, with
+ * type and name as encoded in the entity key.
  *
  * Versions of the same name may share a folder (a new version pointing to the folder of a previous
  * one): the folder is removed only when no other version still in use references it, so the last
@@ -49,8 +52,13 @@ public abstract class BaseVersionableFilesFinalizer<D extends BaseDTO & SpecDTO 
     @Override
     @Nullable
     protected String ownedFolder(@NotNull D dto, @NotNull String base) {
-        String type = EntityUtils.getEntityName(dto.getClass()).toLowerCase();
-        return versionFolder(PathAccessor.with(dto.getSpec()).getPath(), base, type, dto.getName());
+        //type and name as encoded in the key, same as the managed path assigned on UPLOADING
+        KeyAccessor key = KeyAccessor.with(dto.getKey());
+        String type = StringUtils.hasText(key.getType())
+            ? key.getType()
+            : EntityUtils.getEntityName(dto.getClass()).toLowerCase();
+        String name = StringUtils.hasText(key.getName()) ? key.getName() : KeyUtils.encode(dto.getName());
+        return versionFolder(PathAccessor.with(dto.getSpec()).getPath(), base, type, name);
     }
 
     @Override
