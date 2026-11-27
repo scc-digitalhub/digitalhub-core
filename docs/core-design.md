@@ -169,7 +169,7 @@ FSM definitions are beans injected into their managers. To avoid dependency cycl
 
 Deleting an object usually means cleaning up what it owns: child objects (a project's functions and runs, a function's tasks) and content living elsewhere (files in stores, logs, metrics, registry images, Kubernetes resources). That is the finalizers' job.
 
-**Finalizers are effects on the `onDeleting` stage**, many per type, ordered with `@Order`, idempotent (retries re-run them). They use services and managers, never repositories: children have children, and going through their lifecycle keeps every level consistent. Shared logic lives in base classes extended per type (`BaseFilesFinalizer` for artifacts, data items, models and extensions; `BaseEntityMetricsFinalizer` for runs and models).
+**Finalizers are effects on the `onDeleting` stage**, many per type, ordered with `@Order`, idempotent (retries re-run them). They use services and managers, never repositories: children have children, and going through their lifecycle keeps every level consistent. Shared logic lives in base classes extended per type (`BaseFilesFinalizer` and `BaseVersionableFilesFinalizer` for artifacts, data items, models and extensions, see "Files and ownership"; `BaseEntityMetricsFinalizer` for runs and models).
 
 ### With a lifecycle
 
@@ -218,6 +218,28 @@ The listener and the monitors share the per-runnable turn (`EntityLockManager`, 
 
 Runnable events never complete a run delete: a `DELETED` runnable also comes from the cleanup of completed or failed runs and is ignored. For a run being deleted only a runnable `ERROR` is handled, moving the run to ERROR.
 
+## Files and ownership
+
+The project is the root of its files: everything lives under the **project base path**, `<store>/<project>/`, where the store is the one configured for the project or the default one. The base is resolved in one place, `FilesService.getProjectBasePath(project)`, through a `ProjectPathResolver`: a default bean (default store) and a project aware one in the application, `@Primary`, which reads the project configuration. Stores know only paths; the files module knows nothing about entity types.
+
+Under the base, managed entities have a fixed layout; anything else is raw project files:
+
+```
+<store>/<project>/                                  project base (raw files allowed anywhere else)
+  <type>/<name>/<id>/                               a version of an entity (type, name as in the key)
+  <type>/<name>/<id>/extensions/<ext name>/         an extension, inside its parent folder
+```
+
+Every entity type name is reserved as first level folder. The layout gives each version its own folder, so ownership is structural: deleting an entity removes its folder, with no guessing about who else uses the files.
+
+**The path is assigned when uploading.** `spec.path` is optional at create. On the transition to `UPLOADING` a processor of the entity type (in the application, which knows all types) sets an empty path to the own folder, or validates a given one: within the own type folder it must be a folder of the same name (any version, to reuse files of a previous version); within another type folder it is invalid; anything else (other stores, external URLs, raw files) is accepted but never owned. The step returns the actual path: SDK and CLI write there directly with their keys, the console asks for upload links. After that `spec.path` is the source of truth, never recomputed, and changes only if the client forces a spec update (a warning: it may break things, like changing the store of a project).
+
+**Upload links** are issued only for objects in `UPLOADING`, inside the folder of their path; for objects not created yet, in the pre-create folder of their type, name and id. Extensions upload in their folder with the parent in any state (a validation report on a `READY` dataset), also before the extension exists through the parent endpoints. Clients holding keys write directly: the backend controls where paths point, not who writes.
+
+**Deletes remove only owned folders.** A version owns `<base><type>/<name>/<id>/`; versions of the same name may share a folder (a new version reusing the code of the previous one), so the folder is removed only when no other version still in use references it: the last one removes it. Versions sharing a folder share its content, `READY` does not freeze it. An extension owns its folder. Files outside the layout, external or under an old base after a store change are never removed (they drifted, and that is fine). The project delete removes the whole base, raw files included, after its children and before its secrets, only when the base is well formed.
+
+Why a fixed layout instead of mirroring user organization in storage: moving files is expensive and not atomic on object stores, and every path is referenced by runs, lineage and workloads. Organization belongs to the (virtual) catalog, storage addresses stay stable. Content addressed storage was considered and set aside: workloads read real folders.
+
 ## Identity and ownership
 
 Every object has an owner (its creator). The rule:
@@ -253,4 +275,6 @@ The design keeps transaction and locking details behind interfaces on purpose:
 - the repository contract (atomic write, event after it is durable) can be implemented on top of Kubernetes custom resources, for a core-side operator managing runnables;
 - `EntityLockManager` can get a distributed implementation for multiple replicas;
 - the detached registry would then need an owner or lease per entry; an operator would take over with requeues;
-- an entry transition "from nothing" in the FSM (instead of the conventional `CREATED`) is planned and would make creation fully FSM driven.
+- an entry transition "from nothing" in the FSM (instead of the conventional `CREATED`) is planned and would make creation fully FSM driven;
+- a virtual file system (folders as entities, `folderId` on the name) will organize entities without moving files: views resolve names to the latest `READY` version folder through `spec.path`;
+- per-project credentials become possible since every managed access is inside the project base.

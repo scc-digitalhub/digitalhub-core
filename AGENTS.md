@@ -67,7 +67,7 @@ After the outermost turn is released: the caller effect runs once per written (a
 
 ### Delete and finalize
 
-- Finalizers ARE effects on stage `onDeleting` (`@EffectType(stages = "onDeleting", type = X.class)`), many per type, `@Order`, `void`, idempotent (re-run by retries). They clean children and owned content (files, logs, metrics, registry images), never the object itself; they use services/managers, not repositories. Shared logic lives in base classes (`BaseFilesFinalizer`, `BaseEntityMetricsFinalizer`) extended per type.
+- Finalizers ARE effects on stage `onDeleting` (`@EffectType(stages = "onDeleting", type = X.class)`), many per type, `@Order`, `void`, idempotent (re-run by retries). They clean children and owned content (files, logs, metrics, registry images), never the object itself; they use services/managers, not repositories. Shared logic lives in base classes (`BaseFilesFinalizer`, `BaseVersionableFilesFinalizer`, `BaseEntityMetricsFinalizer`) extended per type.
 - With a lifecycle: `DELETE` → `DELETING` (detached, with a `DELETING -(DELETE)-> DELETING` loop for retries) → finalizers → the caller concludes: `DELETED` (repository delete) or ERROR; `DELETING → DELETED/ERROR` have no event. `cascade` is not considered.
   - Default conclusion: inline lambda in `BaseEntityServiceImpl.doDelete` (`DELETING` → `handle(DELETED)`).
   - Entities with children to wait for conclude in their lifecycle manager (wrapping `DELETE` for every caller), with the service overriding `doDelete` without lambda: runs (`RunLifecycleManager`: runnable still present → delete again, gone → `DELETED`) and projects (`ProjectLifecycleManager`: child in ERROR → ERROR, children left → delete again, none → `DELETED`).
@@ -82,6 +82,16 @@ After the outermost turn is released: the caller effect runs once per written (a
 - The runnable delete is requested by the `DELETING` transition logic (`runtime.delete`), on every pass (retry). Framework deletes treat "not found" (404) as already deleted, fail on any other error of the MAIN resource (secondary resources only logged), and return the runnable in `DELETING`.
 - Listener and monitors share a per-runnable turn (`EntityLockManager`, keyed by runnable type + id). The listener stores `DELETING` before acting and keeps it; monitors re-read each runnable within its turn and confirm `DELETED` only when the main resources are gone (HTTP 404, `K8sFrameworkException.isNotFound()`).
 - Runnable events never drive `handle(DELETED)` (a `DELETED` runnable also comes from the cleanup of completed/failed runs). For a run in `DELETING` only a runnable `ERROR` is handled (→ run ERROR).
+
+### Files and ownership
+
+- The project is the root: all its files live under the PROJECT BASE PATH, resolved ONLY via `FilesService.getProjectBasePath(project)` (`ProjectPathResolver`: default bean = default store + `/<project>/`, `ProjectAwarePathResolver` in application is `@Primary` and uses the project config store). Stores are physical (paths only); the files module has NO knowledge of entity types.
+- Managed layout under the base: `<base><type>/<name>/<id>/` (type and name as encoded in the entity KEY); extensions: `<base><parent type>/<parent name>/<parent id>/extensions/<ext name>/` (`ExtensionsFilesService.extensionFolder`). Every entity type name is a reserved first level folder; anything else under the base is raw project files.
+- `spec.path` is optional at create and is the SOURCE OF TRUTH: never recomputed from the layout, immutable unless the client forces the spec update (allowed, may break things: a user warning, like changing a project store).
+- On the transition to `UPLOADING` the files path processors (application, one per type, `BaseFilesPathProcessor`) set an empty path to the own folder and validate: within `<base><own type>/` it must be `<base><own type>/<name>/<some id>/`; within another type folder → ERROR; anything else (external, other stores, raw) is accepted and never owned.
+- Upload links (`BaseFilesService.uploadFolder`): existing objects only in `UPLOADING`, inside the folder of `spec.path`; missing objects use the pre-create folder (`<base><type>/<name>/<id>/`); every requested path must stay inside the allowed folder (`PathUtils.isWithin`). Extensions upload in their folder with the parent in any state; by id only when they exist, otherwise via the parent endpoints (`/{id}/extensions/{name}/files/...`). Direct writes by key holding clients are not controlled.
+- Deletes remove only OWNED folders (`BaseFilesFinalizer.ownedFolder`, default none): versioned entities own `<base><type>/<name>/<id>/`, removed when no other version of the same name in use references it (`BaseVersionableFilesFinalizer`); extensions own their folder. Files info is always cleared. The project delete removes the whole base (guarded) after its children, before secrets. Files outside the layout, external or under an old base are never removed.
+- Versions sharing a folder share its content: `READY` does not freeze a shared folder.
 
 ### Identity and ownership
 
