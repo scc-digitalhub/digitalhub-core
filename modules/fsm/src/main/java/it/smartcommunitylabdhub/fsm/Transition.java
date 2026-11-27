@@ -26,7 +26,6 @@ package it.smartcommunitylabdhub.fsm;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import java.util.Optional;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
@@ -38,9 +37,10 @@ import lombok.Getter;
  * @param <C> The type of the context.
  * @param <I> The type of the input (side effect)
  * @param <R> The type of the return (side effect)
+ *
+ * A transition can be declared DETACHED: the step is written as usual, then the effects of the
+ * reached stage run detached from the caller (in order, without time bounds).
  */
-
-@AllArgsConstructor
 public class Transition<S, E, C> {
 
     // event definition
@@ -55,6 +55,26 @@ public class Transition<S, E, C> {
 
     @Nullable
     private final TransitionLogic<S, E, C, ?, ?> internalLogic;
+
+    // detached execution of effects
+    @Getter
+    private final boolean detached;
+
+    public Transition(@Nullable E event, @NotNull S nextState, @Nullable TransitionLogic<S, E, C, ?, ?> internalLogic) {
+        this(event, nextState, internalLogic, false);
+    }
+
+    public Transition(
+        @Nullable E event,
+        @NotNull S nextState,
+        @Nullable TransitionLogic<S, E, C, ?, ?> internalLogic,
+        boolean detached
+    ) {
+        this.event = event;
+        this.nextState = nextState;
+        this.internalLogic = internalLogic;
+        this.detached = detached;
+    }
 
     @SuppressWarnings("unchecked")
     public <I, R> Optional<TransitionLogic<S, E, C, I, R>> getInternalLogic() {
@@ -93,6 +113,7 @@ public class Transition<S, E, C> {
         private E event;
         private S nextState;
         private TransitionLogic<S, E, C, ?, ?> internalLogic = null;
+        private boolean detached = false;
 
         // public Builder() {}
 
@@ -111,8 +132,16 @@ public class Transition<S, E, C> {
             return this;
         }
 
+        /**
+         * Declare the transition as detached: the effects of the reached stage run detached
+         */
+        public Builder<S, E, C> detached() {
+            this.detached = true;
+            return this;
+        }
+
         public Transition<S, E, C> build() {
-            return new Transition<>(event, nextState, internalLogic);
+            return new Transition<>(event, nextState, internalLogic, detached);
         }
     }
 }

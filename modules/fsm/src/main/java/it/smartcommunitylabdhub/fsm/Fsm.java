@@ -64,6 +64,11 @@ public class Fsm<S, E, C> {
     //context
     private final C context;
 
+    //last executed transition (ex. to know if it is detached)
+    @Getter
+    @Nullable
+    private Transition<S, E, C> lastTransition;
+
     public @NotNull C getContext() {
         //NOTE: context shouldn't be modified outside of the FSM
         //TODO enforce immutability via serialization
@@ -241,6 +246,7 @@ public class Fsm<S, E, C> {
 
         // Update the current state
         currentState = nextState;
+        lastTransition = transition;
 
         return result;
     }

@@ -21,13 +21,15 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /**
  * Test FSM, modeled after runs:
  *
- * CREATED   -> BUILT [BUILD], ERROR, DELETED [DELETE]
+ * CREATED   -> BUILT [BUILD], ERROR, DELETED [DELETE], DELETING [REMOVE]
  * BUILT     -> READY [RUN], ERROR, DELETED [DELETE]
  * READY     -> RUNNING, ERROR, DELETED [DELETE]
  * RUNNING   -> RUNNING (loop), COMPLETED, ERROR, DELETED [DELETE]
  * COMPLETED -> DELETED [DELETE]
- * ERROR     -> DELETED [DELETE]
+ * ERROR     -> DELETED [DELETE], DELETING [REMOVE]
+ * DELETING  -> DELETING [REMOVE] (loop, optional), DELETED, ERROR
  *
+ * Transitions into DELETING are DETACHED.
  * Transition logic is pluggable per target state, every executed transition is recorded.
  */
 public class TestFsm {
@@ -38,6 +40,8 @@ public class TestFsm {
     private final List<String> calls = new CopyOnWriteArrayList<>();
     //custom logic by target state
     private final Map<String, Logic> logic = new ConcurrentHashMap<>();
+    //DELETING self loop, decided when building the factory
+    private boolean deletingLoop = true;
 
     public List<String> calls() {
         return calls;
@@ -47,16 +51,27 @@ public class TestFsm {
         logic.put(nextState, l);
     }
 
+    public void noDeletingLoop() {
+        this.deletingLoop = false;
+    }
+
     public BaseFsmFactory<TestDTO> factory() {
         List<FsmState.Builder<String, String, TestDTO>> builders = new ArrayList<>();
-        builders.add(state("CREATED", tx("BUILT", "BUILD"), tx("ERROR", null), tx("DELETED", "DELETE")));
+        builders.add(
+            state("CREATED", tx("BUILT", "BUILD"), tx("ERROR", null), tx("DELETED", "DELETE"), tx("DELETING", "REMOVE"))
+        );
         builders.add(state("BUILT", tx("READY", "RUN"), tx("ERROR", null), tx("DELETED", "DELETE")));
         builders.add(state("READY", tx("RUNNING", null), tx("ERROR", null), tx("DELETED", "DELETE")));
         builders.add(
             state("RUNNING", tx("RUNNING", null), tx("COMPLETED", null), tx("ERROR", null), tx("DELETED", "DELETE"))
         );
         builders.add(state("COMPLETED", tx("DELETED", "DELETE")));
-        builders.add(state("ERROR", tx("DELETED", "DELETE")));
+        builders.add(state("ERROR", tx("DELETED", "DELETE"), tx("DELETING", "REMOVE")));
+        if (deletingLoop) {
+            builders.add(state("DELETING", tx("DELETING", "REMOVE"), tx("DELETED", null), tx("ERROR", null)));
+        } else {
+            builders.add(state("DELETING", tx("DELETED", null), tx("ERROR", null)));
+        }
         builders.add(state("DELETED"));
 
         return new BaseFsmFactory<TestDTO>(builders) {};
@@ -71,14 +86,19 @@ public class TestFsm {
     }
 
     private Transition<String, String, TestDTO> tx(String next, String event) {
-        return new Transition.Builder<String, String, TestDTO>()
+        Transition.Builder<String, String, TestDTO> builder = new Transition.Builder<String, String, TestDTO>()
             .event(event)
             .nextState(next)
             .<Serializable, Serializable>withInternalLogic((cur, nxt, ev, ctx, input) -> {
                 calls.add(cur + ">" + nxt);
                 Logic l = logic.get(nxt);
                 return l != null ? l.apply(cur, nxt, ev, ctx, input) : Optional.empty();
-            })
-            .build();
+            });
+
+        if ("DELETING".equals(next)) {
+            builder.detached();
+        }
+
+        return builder.build();
     }
 }

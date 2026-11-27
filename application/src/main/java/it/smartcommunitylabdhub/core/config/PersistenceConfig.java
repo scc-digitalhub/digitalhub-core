@@ -24,9 +24,13 @@
 package it.smartcommunitylabdhub.core.config;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
+import it.smartcommunitylabdhub.core.lifecycle.JdbcDetachedRegistry;
 import it.smartcommunitylabdhub.core.repositories.ResolvableTypeCacheResolver;
+import it.smartcommunitylabdhub.lifecycle.detached.DetachedOperations;
 import it.smartcommunitylabdhub.lifecycle.locks.EntityLockManager;
 import it.smartcommunitylabdhub.lifecycle.locks.LocalEntityLockManager;
+import java.time.Duration;
+import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.caffeine.CaffeineCacheManager;
@@ -47,6 +51,23 @@ public class PersistenceConfig {
     EntityLockManager entityLockManager() {
         //single replica: share the local turns with any component not wired via spring
         return LocalEntityLockManager.shared();
+    }
+
+    @Bean
+    DetachedOperations detachedOperations(
+        DataSource dataSource,
+        @Value("${lifecycle.detached.timeout:12h}") Duration timeout,
+        @Value("${lifecycle.detached.base-delay:1s}") Duration baseDelay,
+        @Value("${lifecycle.detached.max-delay:1h}") Duration maxDelay,
+        @Value("${lifecycle.detached.check-interval:1m}") Duration checkInterval
+    ) {
+        //persistent ledger: after a restart, operations left without execution move their object to ERROR
+        DetachedOperations operations = new DetachedOperations(new JdbcDetachedRegistry(dataSource));
+        operations.setTimeout(timeout);
+        operations.setBaseDelay(baseDelay);
+        operations.setMaxDelay(maxDelay);
+        operations.setCheckInterval(checkInterval);
+        return operations;
     }
 
     @Bean(name = "resolvableTypeCacheResolver")

@@ -46,9 +46,11 @@ import it.smartcommunitylabdhub.core.security.OwnerContextManager;
 import it.smartcommunitylabdhub.events.EntityAction;
 import it.smartcommunitylabdhub.events.EntityOperation;
 import it.smartcommunitylabdhub.fsm.Fsm;
+import it.smartcommunitylabdhub.fsm.Transition;
 import it.smartcommunitylabdhub.fsm.exceptions.InvalidTransitionException;
 import it.smartcommunitylabdhub.lifecycle.AbstractLifecycleManager;
 import it.smartcommunitylabdhub.lifecycle.LifecycleManager;
+import it.smartcommunitylabdhub.lifecycle.detached.DetachedOperations;
 import it.smartcommunitylabdhub.lifecycle.locks.EntityLockManager.EntityLock;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
@@ -100,9 +102,18 @@ import org.springframework.util.StringUtils;
  * 3. post processors (chained on the transition output, time bound each and as a chain)
  * 4. write (the step is persisted, DELETED removes the object)
  * 5. effects dispatched asynchronously (fire and forget)
- * After the turn is fully released, the caller effect runs once per written step, in order, then a
- * single LifecycleEvent is published for the whole operation (events publish outcomes, they are
- * never used to perform work).
+ *
+ * DETACHED transitions (declared by the FSM) replace step 5: after the write and the release of the
+ * turn, the effects run in order on a detached execution (registered, delayed, without time bounds),
+ * then the caller effect runs within the turn, only if the object is still in the detached state:
+ * its calls on the manager re-enter the turn. A detached step started by the detached execution of
+ * the same object is scheduled again (delayed, with backoff); one reached while running the detached
+ * execution of another object runs inline. Timeout moves the object to ERROR (restart is handled by
+ * the application recovery, never re-run).
+ *
+ * After the turn is fully released, the caller effect runs once per written (attached) step, in
+ * order, then a single LifecycleEvent is published for the whole operation (events publish
+ * outcomes, they are never used to perform work).
  *
  * Processors run in batches (metadata, spec, status): every processor gets its own copy of the dto,
  * and each batch sees the results merged by the previous ones.
@@ -154,6 +165,9 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
     private Executor effectExecutor = DEFAULT_EXECUTOR;
 
     protected OwnerContextManager ownerContextManager;
+
+    //fallback resolved lazily: wired managers never create the shared instance
+    private DetachedOperations detachedOperations;
 
     @SuppressWarnings("unchecked")
     protected BaseLifecycleManager() {
@@ -234,6 +248,13 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
     @Autowired(required = false)
     public void setOwnerContextManager(OwnerContextManager ownerContextManager) {
         this.ownerContextManager = ownerContextManager;
+    }
+
+    @Autowired(required = false)
+    public void setDetachedOperations(DetachedOperations detachedOperations) {
+        if (detachedOperations != null) {
+            this.detachedOperations = detachedOperations;
+        }
     }
 
     /**
@@ -359,7 +380,18 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
                     StepResult<D, R> result = execute(current, step.event(), step.input(), step.logic());
                     res = result.dto();
 
-                    if (effect != null) {
+                    Transition<String, String, D> transition = result.transition();
+                    boolean detached = transition != null && transition.isDetached();
+
+                    if (detached) {
+                        //declared detached by the fsm: effects, then the caller effect, run detached
+                        D written = copy(result.dto());
+                        R output = result.output();
+                        String event = step.event();
+                        lockManager.runAfterRelease(typeClass, id, () ->
+                            detach(written, state(written), output, event, effect)
+                        );
+                    } else if (effect != null) {
                         //caller effect runs after the turn is fully released, once per written step
                         D written = copy(result.dto());
                         R output = result.output();
@@ -412,6 +444,7 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
     ) {
         //transition output escapes the update logic via holder
         AtomicReference<R> holder = new AtomicReference<>();
+        AtomicReference<Transition<String, String, D>> executed = new AtomicReference<>();
 
         //write back via exec: logic is applied within the (re-entrant) turn, then persisted
         D saved = exec(new EntityOperation<>(current, EntityAction.UPDATE), dto -> {
@@ -419,6 +452,7 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
             FsmOutcome<D, R> outcome = runFsm(dto, logic);
             String state = outcome.state();
             R output = outcome.output();
+            executed.set(outcome.transition());
 
             //merge back ONLY metadata, spec and status from the fsm context:
             //every other field is effectively final
@@ -458,10 +492,13 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
             exec(new EntityOperation<>(saved, EntityAction.DELETE), d -> d);
         }
 
-        //5. effects, async
-        dispatchEffects(saved, state, output);
+        Transition<String, String, D> transition = executed.get();
+        if (transition == null || !transition.isDetached()) {
+            //5. effects, async (detached transitions run them after the turn is released)
+            dispatchEffects(saved, state, output);
+        }
 
-        return new StepResult<>(saved, output, false);
+        return new StepResult<>(saved, output, false, transition);
     }
 
     /**
@@ -481,7 +518,7 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
             StepResult<D, R> res = step(failed, event, input, fsm ->
                 fsm.<Serializable, R>goToState(STATE_ERROR, input)
             );
-            return new StepResult<>(res.dto(), res.output(), true);
+            return new StepResult<>(res.dto(), res.output(), true, res.transition());
         } catch (StepFailure e) {
             //ERROR transition itself failed: propagate, nothing more is written
             log.error("unable to move {} to ERROR: {}", failed.getId(), e.getMessage());
@@ -500,7 +537,12 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
         FutureTask<FsmOutcome<D, R>> task = new FutureTask<>(
             withContext(() -> {
                 Optional<R> out = logic.apply(fsm);
-                return new FsmOutcome<>(fsm.getCurrentState(), fsm.getContext(), out.orElse(null));
+                return new FsmOutcome<>(
+                    fsm.getCurrentState(),
+                    fsm.getContext(),
+                    out.orElse(null),
+                    fsm.getLastTransition()
+                );
             })
         );
 
@@ -747,6 +789,165 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
     }
 
     /*
+     * Detached transitions
+     */
+
+    protected DetachedOperations detachedOperations() {
+        if (detachedOperations == null) {
+            detachedOperations = DetachedOperations.shared();
+        }
+        return detachedOperations;
+    }
+
+    private String detachedType() {
+        return typeClass.getName();
+    }
+
+    /**
+     * Start the detached part of a written step:
+     * - started by the detached execution of the same object: scheduled again, delayed
+     * - nested in the detached execution of another object: inline, never registered
+     * - otherwise: registered and delayed on its own thread
+     */
+    private <R extends Serializable> void detach(
+        D saved,
+        String state,
+        @Nullable R output,
+        @Nullable String event,
+        @Nullable BiConsumer<D, R> effect
+    ) {
+        String type = detachedType();
+        String id = saved.getId();
+
+        if (!detachedOperations().isRunningObject(type, id) && detachedOperations().isInside()) {
+            log.debug("run detached {} for {} inline", state, id);
+            //marked as running: a step started by its own caller effect is scheduled, never recursive
+            detachedOperations().runAs(type, id, state, () -> runDetached(saved, state, output, effect, false));
+            return;
+        }
+
+        log.debug("schedule detached {} for {}", state, id);
+        detachedOperations().schedule(
+            type,
+            id,
+            state,
+            event,
+            withContext(() -> runDetached(saved, state, output, effect, true)),
+            withContext(() -> fail(id, state, "detached " + state + " timed out"))
+        );
+    }
+
+    /**
+     * Detached execution: effects in order, then the caller effect within the turn
+     */
+    private <R extends Serializable> void runDetached(
+        D saved,
+        String state,
+        @Nullable R output,
+        @Nullable BiConsumer<D, R> effect,
+        boolean owned
+    ) {
+        //owned: running as the registered execution of this operation (not nested inline)
+        String type = detachedType();
+        String id = saved.getId();
+
+        try {
+            runEffectsInline(saved, state, output);
+        } catch (CoreRuntimeException e) {
+            log.debug("detached {} effects failed for {}: {}", state, id, e.getMessage());
+            finish(owned, id, state);
+            fail(id, state, e.getMessage());
+            return;
+        }
+
+        if (Thread.currentThread().isInterrupted()) {
+            //expired meanwhile: the expiry has already handled the object
+            log.debug("detached {} for {} interrupted", state, id);
+            return;
+        }
+
+        if (effect != null) {
+            //within the turn: calls on the manager re-enter it, nobody else can step in
+            try (EntityLock turn = lockManager.acquire(typeClass, id)) {
+                D current = find(id);
+                if (current == null || !state.equals(state(current))) {
+                    log.debug("detached {} for {}: object changed meanwhile, caller effect skipped", state, id);
+                } else {
+                    effect.accept(copy(current), output);
+                }
+            } catch (CoreRuntimeException e) {
+                log.debug("detached {} caller effect failed for {}: {}", state, id, e.getMessage());
+                finish(owned, id, state);
+                fail(id, state, e.getMessage());
+                return;
+            } catch (RuntimeException e) {
+                log.error("detached {} caller effect failed for {}: {}", state, id, e.getMessage());
+            }
+        }
+
+        //a re-run scheduled meanwhile keeps the entry (and its start time)
+        if (!detachedOperations().isPending(type, id, state)) {
+            finish(owned, id, state);
+        }
+    }
+
+    private void finish(boolean owned, String id, String state) {
+        if (owned) {
+            detachedOperations().complete(detachedType(), id, state);
+        }
+    }
+
+    /**
+     * Effects of a detached step: in order, CoreRuntimeException fails, anything else is skipped
+     */
+    private void runEffectsInline(D saved, String state, @Nullable Serializable output) {
+        if (effectRegistry == null) {
+            return;
+        }
+
+        String stage = stage(state);
+        List<Effect<D>> effects = effectRegistry.getEffects(stage);
+        if (effects == null || effects.isEmpty()) {
+            return;
+        }
+
+        for (Effect<D> effect : effects) {
+            if (Thread.currentThread().isInterrupted()) {
+                return;
+            }
+
+            try {
+                //each effect works on its own copies
+                effect.process(stage, copy(saved), output != null ? SerializationUtils.clone(output) : null);
+            } catch (CoreRuntimeException e) {
+                throw e;
+            } catch (RuntimeException e) {
+                log.error("Effect failed for stage {} on {}: {}", stage, saved.getId(), e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Move to ERROR, within the turn, only if the object is still in the given state
+     */
+    private void fail(String id, String state, @Nullable String message) {
+        try (EntityLock turn = lockManager.acquire(typeClass, id)) {
+            D current = find(id);
+            if (current == null || !state.equals(state(current))) {
+                log.debug("detached {} for {}: object changed meanwhile, not moved to ERROR", state, id);
+                return;
+            }
+
+            if (message != null) {
+                current.setStatus(MapUtils.mergeMultipleMaps(current.getStatus(), Map.of("message", message)));
+            }
+            handle(current, STATE_ERROR, message);
+        } catch (RuntimeException e) {
+            log.error("unable to move {} to ERROR from detached {}: {}", id, state, e.getMessage());
+        }
+    }
+
+    /*
      * Helpers
      */
     protected static String stage(String state) {
@@ -780,6 +981,22 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
     /**
      * Propagate the current security context (the owner) to the executing thread
      */
+    private static Runnable withContext(Runnable runnable) {
+        SecurityContext context = SecurityContextHolder.getContext();
+        return () -> {
+            SecurityContext previous = SecurityContextHolder.getContext();
+            SecurityContextHolder.setContext(context);
+            try {
+                runnable.run();
+            } finally {
+                SecurityContextHolder.setContext(previous);
+            }
+        };
+    }
+
+    /**
+     * Propagate the current security context (the owner) to the executing thread
+     */
     private static <T> Callable<T> withContext(Callable<T> callable) {
         SecurityContext context = SecurityContextHolder.getContext();
         return () -> {
@@ -802,9 +1019,19 @@ public abstract class BaseLifecycleManager<D extends BaseDTO & SpecDTO & StatusD
      */
     protected record Step<F, R>(@Nullable String event, @Nullable Serializable input, Function<F, Optional<R>> logic) {}
 
-    private record StepResult<D, R>(D dto, @Nullable R output, boolean failed) {}
+    private record StepResult<D, R>(
+        D dto,
+        @Nullable R output,
+        boolean failed,
+        @Nullable Transition<String, String, D> transition
+    ) {}
 
-    private record FsmOutcome<D, R>(String state, D context, @Nullable R output) {}
+    private record FsmOutcome<D, R>(
+        String state,
+        D context,
+        @Nullable R output,
+        @Nullable Transition<String, String, D> transition
+    ) {}
 
     /**
      * Failure during a step: carries the dto to move to ERROR

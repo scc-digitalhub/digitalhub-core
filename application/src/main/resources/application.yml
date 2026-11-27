@@ -88,6 +88,14 @@ springdoc:
 logs:
   max-length: ${LOGS_MAX_LENGTH:2097152}
 
+# Detached lifecycle operations (ex. finalization on DELETING)
+lifecycle:
+  detached:
+    timeout: ${LIFECYCLE_DETACHED_TIMEOUT:12h}
+    base-delay: ${LIFECYCLE_DETACHED_BASE_DELAY:1s}
+    max-delay: ${LIFECYCLE_DETACHED_MAX_DELAY:1h}
+    check-interval: ${LIFECYCLE_DETACHED_CHECK_INTERVAL:1m}
+
 
 # Application endpoint
 application:

@@ -107,6 +107,19 @@ public abstract class AbstractLifecycleManager<D extends BaseDTO & SpecDTO & Sta
     }
 
     /**
+     * Find the stored object, null when missing. Reads never take the turn.
+     */
+    protected D find(@NotNull String id) throws SystemException {
+        Assert.hasText(id, "id can not be null or empty");
+        try {
+            return entityRepository.find(id);
+        } catch (StoreException e) {
+            log.error("store error: {}", e.getMessage());
+            throw new SystemException(e.getMessage(), e);
+        }
+    }
+
+    /**
      * Write back under the turn: apply the logic, then persist according to the action
      */
 
