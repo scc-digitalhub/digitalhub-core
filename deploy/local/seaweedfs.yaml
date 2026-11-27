@@ -1,0 +1,113 @@
+# Minimal single-node SeaweedFS (master + volume + filer + S3 gateway).
+# Exposed on NodePort 30833, mapped to host port 8333 by kind-config.yaml.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: seaweedfs
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: seaweedfs-s3-config
+  namespace: seaweedfs
+type: Opaque
+stringData:
+  # keep in sync with AWS_ACCESS_KEY / AWS_SECRET_KEY in core.env
+  s3.json: |
+    {
+      "identities": [
+        {
+          "name": "dhcore",
+          "credentials": [
+            { "accessKey": "dhcore", "secretKey": "dhcore-secret" }
+          ],
+          "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+        }
+      ]
+    }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: seaweedfs-data
+  namespace: seaweedfs
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seaweedfs
+  namespace: seaweedfs
+  labels:
+    app: seaweedfs
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: seaweedfs
+  template:
+    metadata:
+      labels:
+        app: seaweedfs
+    spec:
+      containers:
+        - name: seaweedfs
+          image: docker.io/chrislusf/seaweedfs:3.80
+          args:
+            - server
+            - -dir=/data
+            - -ip.bind=0.0.0.0
+            - -master.volumeSizeLimitMB=1024
+            - -volume.max=0
+            - -s3
+            - -s3.port=8333
+            - -s3.config=/etc/seaweedfs/s3.json
+          ports:
+            - name: s3
+              containerPort: 8333
+            - name: master
+              containerPort: 9333
+            - name: filer
+              containerPort: 8888
+          readinessProbe:
+            tcpSocket:
+              port: 8333
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: s3-config
+              mountPath: /etc/seaweedfs
+              readOnly: true
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: seaweedfs-data
+        - name: s3-config
+          secret:
+            secretName: seaweedfs-s3-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seaweedfs
+  namespace: seaweedfs
+spec:
+  type: NodePort
+  selector:
+    app: seaweedfs
+  ports:
+    - name: s3
+      port: 8333
+      targetPort: 8333
+      nodePort: 30833
+    - name: filer
+      port: 8888
+      targetPort: 8888
