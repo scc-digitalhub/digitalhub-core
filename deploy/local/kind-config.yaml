@@ -1,0 +1,15 @@
+# Kind cluster for running digitalhub-core OUTSIDE kubernetes (on the host).
+#
+# - the API server is reached by core through the kubeconfig exported by up.sh
+# - SeaweedFS (S3) runs inside the cluster and is published on the host via
+#   a NodePort + extraPortMapping, so that both core (host) and run pods
+#   (cluster) can reach it through the same URL
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      # SeaweedFS S3 API -> http://<host>:8333
+      - containerPort: 30833
+        hostPort: 8333
+        protocol: TCP
