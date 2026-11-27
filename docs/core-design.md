@@ -76,7 +76,7 @@ A transition works on a copy of the object; from its result only `metadata`, `sp
 
 - **Invalid transition, or no path**: thrown back to the caller. Nothing is written, the object does not move to ERROR.
 - **FSM executor full**: the transition never started, so it is thrown back to the caller, nothing written.
-- **Failure during a step**: the step's logic may already have acted on the outside world, and that can not be undone. The object moves to ERROR, which is terminal, keeping the partially changed DTO: it records what was done. When the transition logic timed out its changes are discarded and the pre-step DTO is used. The ERROR step receives the operation input (runtimes use it to clean up).
+- **Failure during a step**: the step's logic may already have acted on the outside world, and that can not be undone. The object moves to ERROR, with no automatic recovery (the FSM decides what is allowed from ERROR, at least deleting again), keeping the partially changed DTO: it records what was done. When the transition logic timed out its changes are discarded and the pre-step DTO is used. The ERROR step receives the operation input (runtimes use it to clean up).
 - If ERROR itself can not be reached, the failure is propagated.
 
 All lifecycle writes go through `AbstractLifecycleManager.exec` (write-back under the turn) and all reads through `AbstractLifecycleManager.read`.
@@ -92,7 +92,7 @@ turn acquired, stored object read
 ├─ 2. processors                  metadata → spec → status batches, 10s each
 ├─ 3. post processors             chained on the transition output, 10s each, 30s chain
 ├─ 4. write                       via exec (DELETED removes the object)
-└─ 5. effects                     async, fire and forget
+└─ 5. effects                     async, fire and forget (detached transitions: see below)
 │
 next step (handle walks) or turn released
 │
@@ -111,7 +111,7 @@ Processors contribute partial `metadata`, `spec` or `status`, merged into the ob
 
 ### Post processors
 
-Post processors (`PostProcessor`, registered with `@PostProcessorType`) alter the **output** of a transition, typically the runnable a runtime produced, never the object. They are chained in `@Order` (default lowest precedence): each receives a copy of the previous output and returns a new one, or null to keep it. Registering on the stage `"*"` runs a post processor on every stage. Collection outputs go through the chain element by element.
+Post processors (`PostProcessor`, registered with `@PostProcessorType`) alter the **output** of a transition, typically the runnable a runtime produced, never the object. They are chained in `@Order` (default lowest precedence): each receives a copy of the previous output and returns a new one, or null to keep it. Registering on the stage `"*"` runs a post processor on every stage. A transition produces at most one output: for runs, one runnable with the run id.
 
 Examples: `RunCredentialsPostProcessor` and `RunConfigurationPostProcessor` (highest precedence) inject the owner's credentials and the platform configurations into runnables. Credentials are filled only when a runtime did not set any, so runtimes with restricted credentials (Hera, KFP pipelines) keep theirs; configurations are appended. `S3CredentialsProcessor` and `RunInitializerProcessor` then adapt the runnable.
 
@@ -126,26 +126,97 @@ Implementations are responsible for signalling real failures:
 
 Effects (`Effect`, returning `void`) are side effects: they are dispatched asynchronously after the step is written, each one isolated, and they never influence the transition. Example: the autoscaler, which requests a stop or a restart through the run lifecycle.
 
+Effects of a detached transition are the exception: they run in order on the detached execution, and their failure matters (see "Detached transitions"). Finalizers are effects of this kind.
+
 ### Caller effect and events
 
-A caller of `perform`/`handle` may pass its own effect. It runs after the turn is fully released, once per written step, with the persisted object. ERROR steps are included: the effect checks the state it receives.
+A caller of `perform`/`handle` may pass its own effect. It runs after the turn is fully released, once per written step, with the persisted object. ERROR steps are included: the effect checks the state it receives. For a detached step the caller effect runs later, on the detached execution (see below).
 
 Then **one** `LifecycleEvent` is published for the whole operation, carrying the final state. Intermediate steps of a walk are not published: how many steps were needed is not part of the caller's intent. Events are for publishing outcomes. Processing must never be driven by events: it belongs to the FSM, processors, post processors and effects.
 
+## Detached transitions
+
+Some transitions do work that can take long, minutes or hours: deleting the files of an artifact, waiting for Kubernetes to remove a job, deleting every child of a project. They can not hold a caller, nor a turn, nor fit the 10s bounds of a step. The FSM declares them **detached** (`Transition.Builder.detached()`); nothing else changes in the FSM, which stays self contained.
+
+```
+caller: perform(DELETE)                         detached execution (virtual thread)
+│                                               │
+├─ step written as usual (→ DELETING)           ├─ delay (backoff by attempts, capped)
+├─ registered in the DetachedRegistry           ├─ stage effects, in @Order, no time bound
+└─ returns: the object is DELETING              │    CoreRuntimeException → ERROR
+                                                ├─ turn acquired, object re-read
+                                                │    still DELETING? → caller effect
+                                                │      (calls on the manager re-enter the turn)
+                                                └─ done, or scheduled again
+```
+
+- The step is written synchronously by the caller: an invalid transition still throws back, nothing written. Only the effects and the caller effect are detached.
+- The **caller effect decides** what comes next, looking at the actual object, and acts like any code: `handle(DELETED)`, `perform(DELETE)` again, or nothing. It runs inside the object's turn after re-reading it, and only if the object is still in the detached state; its calls re-enter the turn. That is the whole safeguard: nobody can move the object between the check and the act, and a late callback can never resurrect or delete an object that someone else moved to ERROR meanwhile.
+- A `perform`/`handle` started from the detached execution of the **same** object writes its step now, and its detached part is scheduled again, delayed. With the same state it keeps the same registry entry: the start time is kept, attempts are counted and drive the backoff (1s base, 1h cap by default).
+- Detached work of **other** objects reached from a detached execution (a project deleting its children) runs **inline** in the same thread and is never registered: the parent sees the result when the call returns.
+- At most one live execution per object and state: launches collapse into it.
+
+The registry (`detached_operations` table, JDBC) is the ledger of executions in progress:
+
+- after the **timeout** (12h by default, `lifecycle.detached.timeout`) the execution is interrupted (cooperatively) and the object moves to ERROR;
+- after a **restart**, entries left without an execution move their object to ERROR (`DetachedRecovery`). They are never re-run: effects and services may have held state in memory, so resuming autonomously is not safe. The ERROR is visible to the user, on the object and in parent/child views, and the user can operate again from ERROR.
+
+Transitions without an event are a design feature: they can be reached only via `handle`, for example `DELETING → DELETED`.
+
+FSM definitions are beans injected into their managers. To avoid dependency cycles they never inject a service or manager of their own type; other dependencies are resolved lazily (`ObjectProvider`). Heavy work belongs to effects, which the effect registry resolves lazily.
+
 ## Delete and finalize
 
-Deleting an object may require garbage collecting related objects (a project's functions and runs, a function's tasks): that is the finalizer's job.
+Deleting an object usually means cleaning up what it owns: child objects (a project's functions and runs, a function's tasks) and content living elsewhere (files in stores, logs, metrics, registry images, Kubernetes resources). That is the finalizers' job.
 
-- **With a lifecycle manager** the FSM decides the order, and the finalizer never runs when the delete ended in ERROR:
-  - FSMs with an intermediate `DELETING` state (runs, triggers): `DELETE` moves the object to `DELETING`, the service's effect runs the finalizer, then the object reaches `DELETED` and is removed. Runs with nothing to delete on the runtime side complete `DELETING → DELETED` through the FSM right away; otherwise the runtime callback does.
-  - FSMs going directly to `DELETED` (models, artifacts, data items, …): the object is removed, then the finalizer runs.
-- **Without a lifecycle manager**: the object is removed, then finalized, best effort. Not having a lifecycle is a deliberate choice of the entity developer.
+**Finalizers are effects on the `onDeleting` stage**, many per type, ordered with `@Order`, idempotent (retries re-run them). They use services and managers, never repositories: children have children, and going through their lifecycle keeps every level consistent. Shared logic lives in base classes extended per type (`BaseFilesFinalizer` for artifacts, data items, models and extensions; `BaseEntityMetricsFinalizer` for runs and models).
 
-Finalization is dispatched through the operations bus; when the bus is unavailable or full it runs inline.
+### With a lifecycle
+
+The FSM has a detached `DELETING` state with a retry loop:
+
+```
+CREATED | READY | ERROR | ...  -(DELETE)->  DELETING   [detached]
+DELETING                       -(DELETE)->  DELETING   [detached, retry]
+DELETING                                ->  DELETED    (no event)
+DELETING                                ->  ERROR      (no event)
+```
+
+The finalizers run as the detached effects of `DELETING`, then the caller concludes. By default the conclusion is the inline lambda passed by `BaseEntityServiceImpl.doDelete`: still `DELETING`, so `handle(DELETED)`, which removes the object. A failed removal of owned content throws `CoreRuntimeException`: the object moves to ERROR with the message and the user deletes it again; a missing item (404) is not a failure.
+
+Entities that must wait for children conclude in their own lifecycle manager, which wraps `DELETE` for every caller (API, lifecycle actions, cascades); their service overrides `doDelete` without a lambda:
+
+- **runs**: the runnable is the child. While it is still in a runnable store the run deletes again later; once it is gone the run reaches `DELETED`.
+- **projects**: the project finalizer deletes every child one by one (inline, skipping children already `DELETING`), and removes the shared content (secrets, labels) only when no child is left. Then the project lifecycle checks the children: one in ERROR fails the project, children left mean another pass later (a run waiting for Kubernetes), none concludes the delete. No orphans, shared content removed last.
+
+Functions and workflows delete their tasks (no lifecycle, synchronous); tracking their runs is still to do.
+
+`cascade` is not considered with a lifecycle: deleting always cleans up.
+
+### Without a lifecycle
+
+The object is not fully managed: it is removed, then, with `cascade`, a FINALIZE operation (operations bus, inline as fallback) runs `BaseEntityFinalizer`, which every entity extends: the type's `onDeleting` effects, best effort, every effect runs and failures are logged. There is nothing left to move to ERROR.
+
+### Bulk deletes and internal work
 
 Bulk deletes (`deleteByProject`, `deleteByKind`, …) go object by object: with cascade each object goes through the full flow (via the operations bus, possibly in parallel, or sequentially as fallback); without cascade objects are removed from the store one by one, each in its own turn and transaction.
 
 Internal work uses the lifecycle and service APIs directly, for example a trigger firing creates its run as `BUILT` and then performs `RUN`. `EntityOperation`s are only used to dispatch work asynchronously.
+
+## Runs and runnables
+
+A run executes through a **runnable**, built by its runtime and executed by a framework (Kubernetes jobs, deployments, services, custom resources, Argo, Ray, Kaniko). Each run has at most one runnable, with the run id: it is the run's child, found across all runnable stores by run id.
+
+Deleting a run:
+
+1. `DELETE` moves the run to `DELETING`; the transition logic asks the runtime for the delete runnable, dispatched to the framework listener. Every retry pass asks again.
+2. The listener, holding the runnable's turn, stores it as `DELETING`, asks the framework to delete it and keeps it `DELETING`. "Not found" (404) means already deleted; any other failure on the main resource fails the delete (the run moves to ERROR); secondary resources are only logged.
+3. The monitor re-reads each runnable within its turn; for a `DELETING` runnable it checks whether the main resources still exist, and only when they are gone (404) marks it `DELETED` and removes it from the store.
+4. Meanwhile the run's finalizers remove logs and user metrics, and the run lifecycle checks the store on every pass: runnable still there, delete again later; gone, `DELETED`.
+
+The listener and the monitors share the per-runnable turn (`EntityLockManager`, keyed by runnable type and id), so the monitor never overwrites what the listener is doing with a stale view.
+
+Runnable events never complete a run delete: a `DELETED` runnable also comes from the cleanup of completed or failed runs and is ignored. For a run being deleted only a runnable `ERROR` is handled, moving the run to ERROR.
 
 ## Identity and ownership
 
@@ -181,4 +252,5 @@ The design keeps transaction and locking details behind interfaces on purpose:
 
 - the repository contract (atomic write, event after it is durable) can be implemented on top of Kubernetes custom resources, for a core-side operator managing runnables;
 - `EntityLockManager` can get a distributed implementation for multiple replicas;
+- the detached registry would then need an owner or lease per entry; an operator would take over with requeues;
 - an entry transition "from nothing" in the FSM (instead of the conventional `CREATED`) is planned and would make creation fully FSM driven.
